@@ -1,4 +1,3 @@
-// components/header.tsx
 "use client";
 
 import Link from "next/link";
@@ -8,17 +7,9 @@ import { SearchBar } from "./search-bar";
 import { Home, Users, MessageSquare, Bell, LogIn } from "lucide-react"; // Icons
 import Image from "next/image";
 
-/**
- * Header component for the UpDrafted application.
- * It includes the logo, navigation links (conditionally rendered based on auth state),
- * search bar, and Clerk user authentication button.
- * The UserButton now redirects to a custom profile page.
- * @returns The Header component.
- */
 export function Header() {
   const { isSignedIn } = useUser(); // Clerk hook to check authentication status
 
-  // Define all possible navigation items
   const allNavItems = [
     { href: "/", label: "Home", icon: <Home className="h-5 w-5" />, requiresAuth: false },
     { href: "/connections", label: "My Connections", icon: <Users className="h-5 w-5" />, requiresAuth: true },
@@ -26,7 +17,6 @@ export function Header() {
     { href: "/notifications", label: "Notifications", icon: <Bell className="h-5 w-5" />, requiresAuth: true },
   ];
 
-  // Filter navigation items based on authentication status
   const navItemsToDisplay = allNavItems.filter(item => !item.requiresAuth || isSignedIn);
 
   return (
