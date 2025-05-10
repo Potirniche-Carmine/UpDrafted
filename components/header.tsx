@@ -5,7 +5,7 @@ import Link from "next/link";
 import { UserButton, SignedIn, SignedOut, SignInButton, useUser } from "@clerk/nextjs";
 import { Button } from "@/components/ui/button"; // Assuming Shadcn UI 'Button' is available
 import { SearchBar } from "./search-bar";
-import { Home, Users, MessageSquare, Bell, Briefcase, LogIn } from "lucide-react"; // Icons
+import { Home, Users, MessageSquare, Bell, LogIn } from "lucide-react"; // Icons
 import Image from "next/image";
 
 /**
