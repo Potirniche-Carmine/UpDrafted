@@ -14,6 +14,7 @@ export function Header() {
     { href: "/connections", label: "My Connections", icon: <Users className="h-5 w-5" />, requiresAuth: true },
     { href: "/messaging", label: "Messaging", icon: <MessageSquare className="h-5 w-5" />, requiresAuth: true },
     { href: "/notifications", label: "Notifications", icon: <Bell className="h-5 w-5" />, requiresAuth: true },
+    { href: "/recruit-profile", label: "Profile", icon: <Users className="h-5 w-5" />, requiresAuth: true },
   ];
 
   const navItemsToDisplay = allNavItems.filter(item => !item.requiresAuth || isSignedIn);
