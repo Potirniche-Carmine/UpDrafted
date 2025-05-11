@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { UserButton, SignedIn, SignedOut, SignInButton, useUser } from "@clerk/nextjs";
+import { UserButton, SignedIn, SignedOut, SignInButton, useUser, SignUpButton } from "@clerk/nextjs";
 import { Button } from "@/components/ui/button";
 import { SearchBar } from "./search-bar";
 import { Users, MessageSquare, Bell, LogIn, ChevronDown } from "lucide-react";
@@ -102,11 +102,11 @@ export function Header() {
                 <span>Sign In</span>
               </Button>
             </SignInButton>
-            <Link href="/sign-up">
+            <SignUpButton mode="modal">
                 <Button variant="outline" size="sm" className="ml-2">
                     Sign Up
                 </Button>
-            </Link>
+            </SignUpButton>
           </SignedOut>
         </nav>
       </div>
