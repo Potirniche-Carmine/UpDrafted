@@ -4,7 +4,7 @@ import Link from "next/link";
 import { UserButton, SignedIn, SignedOut, SignInButton, useUser } from "@clerk/nextjs";
 import { Button } from "@/components/ui/button";
 import { SearchBar } from "./search-bar";
-import { Home, Users, MessageSquare, Bell, LogIn, ChevronDown } from "lucide-react";
+import { Users, MessageSquare, Bell, LogIn, ChevronDown } from "lucide-react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 
@@ -13,12 +13,10 @@ export function Header() {
   const router = useRouter();
 
   const allNavItems = [
-    { href: "/", label: "Home", icon: <Home className="h-5 w-5" />, requiresAuth: false },
     { href: "/connections", label: "My Connections", icon: <Users className="h-5 w-5" />, requiresAuth: true },
     { href: "/messaging", label: "Messaging", icon: <MessageSquare className="h-5 w-5" />, requiresAuth: true },
     { href: "/notifications", label: "Notifications", icon: <Bell className="h-5 w-5" />, requiresAuth: true },
   ];
-
   const navItemsToDisplay = allNavItems.filter(item => !item.requiresAuth || isSignedIn);
 
   const userButtonAppearance = {
@@ -99,11 +97,16 @@ export function Header() {
           </SignedIn>
           <SignedOut>
             <SignInButton mode="modal">
-              <Button variant="outline" size="sm" className="flex items-center space-x-2 ml-2">
+              <Button variant="default" size="sm" className="flex items-center space-x-2 ml-2 bg-primary hover:bg-primary/90 text-primary-foreground">
                 <LogIn className="h-4 w-4" />
                 <span>Sign In</span>
               </Button>
             </SignInButton>
+            <Link href="/sign-up">
+                <Button variant="outline" size="sm" className="ml-2">
+                    Sign Up
+                </Button>
+            </Link>
           </SignedOut>
         </nav>
       </div>
