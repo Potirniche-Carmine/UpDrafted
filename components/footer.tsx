@@ -1,17 +1,17 @@
 "use client"
 
 import * as React from 'react';
-import { Moon, Sun, Linkedin, Twitter, Facebook, Instagram } from 'lucide-react'; 
+import { Moon, Sun, Linkedin, Twitter, Facebook, Instagram } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import Link from 'next/link';
-import { Button } from './ui/button'; 
+import { Button } from './ui/button';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from './ui/dropdown-menu'; 
-import Image from 'next/image'; 
+} from './ui/dropdown-menu';
+import Image from 'next/image';
 
 export function Footer() {
   const { setTheme } = useTheme();
@@ -19,11 +19,11 @@ export function Footer() {
 
   const footerLinks = [
     { href: "/about", label: "About Us" },
-    { href: "/#for-athletes", label: "For Athletes" }, 
-    { href: "/#for-coaches", label: "For Coaches" }, 
+    { href: "/#for-athletes", label: "For Athletes" },
+    { href: "/#for-coaches", label: "For Coaches" },
     { href: "/contact", label: "Contact Us" },
     { href: "/terms-of-service", label: "Terms of Service" },
-    { href: "/privacy-policy", label: "Privacy Policy" }, 
+    { href: "/privacy-policy", label: "Privacy Policy" },
   ];
 
   const socialLinks = [
@@ -35,7 +35,7 @@ export function Footer() {
 
   return (
     <footer className="w-full border-t border-border/60 bg-background/90">
-      <div className="container mx-auto max-w-screen-xl px-4 sm:px-6 lg:px-8 py-8 md:py-12">
+      <div className="container mx-auto max-w-screen-xl px-4 sm:px-6 lg:px-8 pt-8 pb-4 md:pt-12 md:pb-8">
         <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-8 mb-8">
           <div className="space-y-3 md:col-span-1 lg:col-span-1">
             <Link href="/" className="flex items-center space-x-2">
@@ -49,7 +49,7 @@ export function Footer() {
           <div>
             <h5 className="font-semibold text-foreground mb-3">Platform</h5>
             <ul className="space-y-2">
-              {footerLinks.slice(0, 3).map(link => ( 
+              {footerLinks.slice(0, 3).map(link => (
                 <li key={link.label}>
                   <Link href={link.href} className="text-sm text-muted-foreground hover:text-primary transition-colors">
                     {link.label}
@@ -62,7 +62,7 @@ export function Footer() {
           <div>
             <h5 className="font-semibold text-foreground mb-3">Company</h5>
             <ul className="space-y-2">
-              {footerLinks.slice(3).map(link => ( 
+              {footerLinks.slice(3).map(link => (
                 <li key={link.label}>
                   <Link href={link.href} className="text-sm text-muted-foreground hover:text-primary transition-colors">
                     {link.label}
@@ -71,7 +71,7 @@ export function Footer() {
               ))}
             </ul>
           </div>
-          
+
           <div className="space-y-3">
             <h5 className="font-semibold text-foreground mb-3">Connect & Customize</h5>
             <div className="flex space-x-4 mb-4">
@@ -83,7 +83,7 @@ export function Footer() {
                 </Link>
               ))}
             </div>
-             <div> 
+             <div>
                 <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                     <Button variant="outline" size="sm" className="w-full md:w-auto justify-start text-muted-foreground">
@@ -108,7 +108,7 @@ export function Footer() {
           </div>
         </div>
 
-        <div className="flex flex-col md:flex-row justify-center items-center border-t border-border/60 pt-6">
+        <div className="flex flex-col md:flex-row justify-center items-center border-t border-border/60 pt-4">
           <p className="text-sm text-muted-foreground dark:muted-foreground-dark text-center md:text-left">
             &copy; {currentYear} UpDrafted. All rights reserved.
           </p>
