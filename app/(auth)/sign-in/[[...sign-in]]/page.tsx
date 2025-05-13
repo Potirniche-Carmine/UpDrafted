@@ -10,12 +10,12 @@ export default function SignInPage() {
       <div className="w-full max-w-md space-y-6">
         <div>
           <h2 className="text-center text-3xl font-bold tracking-tight text-foreground">
-            Sign in to your account
+            Sign in to your UpDrafted account
           </h2>
           <p className="mt-2 text-center text-sm text-muted-foreground">
-            Or{" "}
+            Don&apos;t have an account?{" "}
             <Link href="/sign-up" className="font-medium text-primary hover:text-primary/90">
-              create a new account
+              Create a new account
             </Link>
           </p>
         </div>
