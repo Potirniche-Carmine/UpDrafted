@@ -14,7 +14,7 @@ export default function HomePage() {
                   UpDrafted: Your Direct Line to College Sports Success.
                 </h1>
                 <p className="max-w-[600px] text-muted-foreground md:text-xl lg:text-lg xl:text-xl">
-                  Connect instantly. Athletes: Showcase your talent to D1, D2, D3, & JUCO coaches. Coaches: Discover your next star with unparalleled efficiency.
+                  Connect instantly. Athletes: Showcase your talent to D1, D2, D3, & JUCO Programs. College Programs: Discover your next star with unparalleled efficiency.
                 </p>
               </div>
               <div className="flex flex-col gap-3 min-[400px]:flex-row">
@@ -65,13 +65,13 @@ export default function HomePage() {
                 <h3 className="text-2xl font-bold text-primary">For Athletes: Get Seen, Get Recruited</h3>
               </div>
               <p className="text-muted-foreground">
-                Build a standout profile that highlights your skills, academics, and aspirations. Our platform puts you directly in front of coaches actively looking for talent like yours. Maximize your visibility, minimize the guesswork.
+                Build a standout profile that highlights your skills, academics, and aspirations. Our platform puts you directly in front of college programs actively looking for talent like yours. Maximize your visibility, minimize the guesswork.
               </p>
             </div>
             <div className="p-6 bg-card border border-border/50 rounded-xl shadow-lg hover:shadow-xl transition-shadow duration-300">
               <div className="flex items-center mb-3">
                 <Zap className="h-10 w-10 text-primary mr-4" />
-                <h3 className="text-2xl font-bold text-primary">For Coaches: Discover Talent, Instantly</h3>
+                <h3 className="text-2xl font-bold text-primary">For Programs: Discover Talent, Instantly</h3>
               </div>
               <p className="text-muted-foreground">
                 Cut through the noise. Our intuitive interface (inspired by quick-review mechanics) lets you efficiently assess athlete highlights and key stats at a glance. Spend less time searching, more time connecting with genuine prospects.
@@ -96,7 +96,7 @@ export default function HomePage() {
             </div>
             <div className="flex flex-col items-center text-center gap-2 p-6 border border-transparent rounded-lg hover:shadow-lg hover:border-primary/30 transition-all duration-300">
               <Target className="h-12 w-12 text-primary mb-3" />
-              <h3 className="text-xl font-bold text-primary/90">Precision Search for Coaches</h3>
+              <h3 className="text-xl font-bold text-primary/90">Precision Search for Programs</h3>
               <p className="text-sm text-muted-foreground">
                 Filter by sport, division, position, academic standing, and more. Find verified athletes that fit your program&apos;s exact needs.
               </p>
@@ -119,7 +119,7 @@ export default function HomePage() {
               Ready to Make Your Mark in College Sports?
             </h2>
             <p className="mx-auto max-w-[650px] text-muted-foreground md:text-xl/relaxed lg:text-base/relaxed xl:text-xl/relaxed">
-              Whether you&apos;re an athlete dreaming of college play or a coach searching for the next game-changer, UpDrafted is your ultimate recruitment platform.
+              Whether you&apos;re an athlete dreaming of college play or a college program searching for the next game-changer, UpDrafted is your ultimate recruitment platform.
             </p>
           </div>
           <div className="mx-auto w-full max-w-sm space-y-3">

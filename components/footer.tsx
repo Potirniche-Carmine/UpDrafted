@@ -19,13 +19,12 @@ export function Footer() {
 
   const footerLinks = [
     { href: "/about", label: "About Us" },
-    { href: "/#for-athletes", label: "For Athletes" },
-    { href: "/#for-coaches", label: "For Coaches" },
+    { href: "/for-athletes", label: "For Athletes" },
+    { href: "/for-college-programs", label: "For College Programs" },
     { href: "/contact", label: "Contact Us" },
     { href: "/terms-of-service", label: "Terms of Service" },
     { href: "/privacy-policy", label: "Privacy Policy" },
   ];
-
   const socialLinks = [
     { href: "https://linkedin.com", label: "LinkedIn", icon: <Linkedin className="h-5 w-5" /> },
     { href: "https://twitter.com", label: "Twitter", icon: <Twitter className="h-5 w-5" /> },
@@ -42,7 +41,7 @@ export function Footer() {
               <Image src="/logo.png" alt="UpDrafted Logo" width={150} height={40} className="h-auto w-[120px] sm:w-[150px]" />
             </Link>
             <p className="text-sm text-muted-foreground">
-              Connecting athletes and coaches for a brighter future in college sports.
+              Connecting athletes and college programs for a brighter future in college sports.
             </p>
           </div>
 
@@ -86,7 +85,7 @@ export function Footer() {
              <div>
                 <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                    <Button variant="outline" size="sm" className="w-full md:w-auto justify-start text-muted-foreground">
+                    <Button variant="outline" size="sm" className="w-auto md:w-auto justify-start text-muted-foreground">
                         <Sun className="h-[1.1rem] w-[1.1rem] rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0 mr-2" />
                         <Moon className="absolute h-[1.1rem] w-[1.1rem] rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100 mr-2" />
                         Toggle Theme

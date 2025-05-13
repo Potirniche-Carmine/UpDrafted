@@ -4,7 +4,7 @@ import Link from "next/link";
 import { UserButton, SignedIn, SignedOut, SignInButton, useUser, SignUpButton } from "@clerk/nextjs";
 import { Button } from "@/components/ui/button";
 import { SearchBar } from "./search-bar";
-import { Users, MessageSquare, Bell, LogIn, ChevronDown } from "lucide-react";
+import { Users, MessageSquare, Bell, LogIn, ChevronDown, TrendingUp } from "lucide-react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 
@@ -16,6 +16,13 @@ export function Header() {
     { href: "/connections", label: "My Connections", icon: <Users className="h-5 w-5" />, requiresAuth: true },
     { href: "/messaging", label: "Messaging", icon: <MessageSquare className="h-5 w-5" />, requiresAuth: true },
     { href: "/notifications", label: "Notifications", icon: <Bell className="h-5 w-5" />, requiresAuth: true },
+    { 
+      href: "/premium", 
+      label: "Premium", 
+      icon: <TrendingUp className="h-5 w-5 text-amber-500" />, 
+      requiresAuth: true,
+      className: "text-amber-500 hover:text-amber-600" 
+    },
   ];
   const navItemsToDisplay = allNavItems.filter(item => !item.requiresAuth || isSignedIn);
 
@@ -28,7 +35,7 @@ export function Header() {
   };
 
   const handleViewProfile = () => {
-    router.push('/recruit-profile');
+    router.push('athlete-profile');
   };
 
   return (
@@ -53,11 +60,15 @@ export function Header() {
             <Link
               key={item.href}
               href={item.href}
-              className="text-muted-foreground transition-colors hover:text-primary flex items-center p-1.5 sm:p-2 group rounded-lg"
+              className={`transition-colors flex items-center p-1.5 sm:p-2 group rounded-lg ${
+                item.className || "text-muted-foreground hover:text-primary"
+              }`}
               title={item.label}
             >
               {item.icon}
-              <span className="ml-2 text-sm font-medium hidden lg:inline group-hover:text-primary">
+              <span className={`ml-2 text-sm font-medium hidden lg:inline ${
+                item.className ? "" : "group-hover:text-primary"
+              }`}>
                 {item.label}
               </span>
             </Link>
