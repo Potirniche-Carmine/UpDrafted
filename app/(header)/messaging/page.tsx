@@ -94,18 +94,6 @@ export default function MessagingPage() {
 
   return (
     <div className="flex flex-col items-center min-h-screen">
-      <section className="w-full py-12 md:py-16 bg-gradient-to-b from-background to-secondary/10 dark:from-black dark:to-secondary/5">
-        <div className="container px-4 md:px-6 text-center">
-          <MessageSquare className="mx-auto h-16 w-16 text-primary mb-6" />
-          <h1 className="text-4xl font-bold tracking-tighter sm:text-5xl xl:text-6xl/none bg-clip-text text-transparent bg-gradient-to-r from-primary to-primary/70 py-2">
-            Messages
-          </h1>
-          <p className="max-w-3xl mx-auto mt-4 text-muted-foreground md:text-xl">
-            Connect and communicate directly with athletes and programs.
-          </p>
-        </div>
-      </section>
-
       <section className="w-full flex-grow py-8 md:py-10">
         <div className="container px-2 md:px-4 h-[calc(100vh-20rem)] md:h-[calc(100vh-22rem)]"> {/* Adjusted height */}
           <div className="flex h-full border border-border/50 rounded-lg shadow-lg bg-card overflow-hidden">

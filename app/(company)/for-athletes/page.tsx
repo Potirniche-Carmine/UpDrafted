@@ -2,23 +2,11 @@
 
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { ArrowRight, UserCheck, Target, TrendingUp, ShieldCheck, Zap, DollarSign, Users } from 'lucide-react';
+import { ArrowRight, Target, TrendingUp, ShieldCheck, Zap, DollarSign, Users } from 'lucide-react';
 
 export default function ForAthletesPage() {
   return (
     <div className="flex flex-col items-center">
-      <section className="w-full py-16 md:py-24 lg:py-32 bg-gradient-to-b from-background to-secondary/20 dark:from-black dark:to-secondary/15">
-        <div className="container px-4 md:px-6 text-center">
-          <UserCheck className="mx-auto h-16 w-16 text-primary mb-6" />
-          <h1 className="text-4xl font-bold tracking-tighter sm:text-5xl xl:text-6xl/none bg-clip-text text-transparent bg-gradient-to-r from-primary to-primary/70 py-2">
-            For Athletes: Showcase Your Talent
-          </h1>
-          <p className="max-w-3xl mx-auto mt-4 text-muted-foreground md:text-xl">
-            Your journey to college sports starts here. Get discovered, connect directly, and take control of your recruitment.
-          </p>
-        </div>
-      </section>
-
       <section className="w-full py-12 md:py-20 lg:py-28">
         <div className="container px-4 md:px-6">
           <div className="mx-auto max-w-4xl space-y-12">

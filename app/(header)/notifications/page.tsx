@@ -65,18 +65,6 @@ export default function NotificationsPage() {
 
   return (
     <div className="flex flex-col items-center min-h-screen">
-      <section className="w-full py-12 md:py-16 lg:py-20 bg-gradient-to-b from-background to-secondary/10 dark:from-black dark:to-secondary/5">
-        <div className="container px-4 md:px-6 text-center">
-          <Bell className="mx-auto h-16 w-16 text-primary mb-6" />
-          <h1 className="text-4xl font-bold tracking-tighter sm:text-5xl xl:text-6xl/none bg-clip-text text-transparent bg-gradient-to-r from-primary to-primary/70 py-2">
-            Notifications
-          </h1>
-          <p className="max-w-3xl mx-auto mt-4 text-muted-foreground md:text-xl">
-            Stay updated with the latest activity relevant to you.
-          </p>
-        </div>
-      </section>
-
       <section className="w-full py-8 md:py-12 flex-grow">
         <div className="container px-4 md:px-6 max-w-3xl mx-auto">
           <div className="flex flex-col sm:flex-row justify-between items-center mb-6 gap-3">

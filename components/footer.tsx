@@ -20,7 +20,7 @@ export function Footer() {
   const footerLinks = [
     { href: "/about", label: "About Us" },
     { href: "/for-athletes", label: "For Athletes" },
-    { href: "/for-college-programs", label: "For College Programs" },
+    { href: "/for-recruiters", label: "For Recruiters" },
     { href: "/contact", label: "Contact Us" },
     { href: "/terms-of-service", label: "Terms of Service" },
     { href: "/privacy-policy", label: "Privacy Policy" },
