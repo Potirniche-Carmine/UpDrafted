@@ -4,7 +4,6 @@ import React from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import Image from "next/image";
 import Link from "next/link";
 import {
@@ -16,9 +15,7 @@ import {
   Star,
   Users,
   Award,
-  ChevronLeft,
-  Timer,
-  Activity
+  ChevronLeft
 } from "lucide-react";
 
 export interface AthleteProfileData {
@@ -38,20 +35,11 @@ export interface AthleteProfileData {
   height: string;
   weight: string;
   positions: string[];
-  
+
   // Verification
   maxPrepsUrl: string;
   maxPrepsVerified: boolean;
-  
-  // Sport-specific measurables
-  measurables?: {
-    [sportName: string]: {
-      label: string;
-      value: string;
-      date: string;
-    }[];
-  };
-  
+
   // Media
   hudlUrl?: string;
   hudlEmbedUrl?: string;
@@ -60,19 +48,19 @@ export interface AthleteProfileData {
     url: string;
     embedUrl: string;
   }[];
-  
+
   // Social Media (highlighted)
   socialMedia?: {
     instagram?: string;
     twitter?: string;
   };
-  
+
   // Academic Information
   intendedMajor?: string;
-  
+
   // Personal Statement
   personalStatement?: string;
-  
+
   // Additional Info
   achievements: string[];
 }
@@ -128,7 +116,7 @@ export function AthleteProfile({ data, isOwnProfile = false, onConnect }: Athlet
                     <Users className="w-8 h-8 md:w-12 md:h-12 text-muted-foreground" />
                   </div>
                 )}
-                
+
                 <div>
                   <h1 className="text-xl md:text-2xl font-bold">{data.fullName}</h1>
                   <div className="flex items-center justify-center gap-2 text-muted-foreground text-sm md:text-base">
@@ -155,9 +143,9 @@ export function AthleteProfile({ data, isOwnProfile = false, onConnect }: Athlet
                     <p className="text-sm font-medium mb-2">Follow Me</p>
                     <div className="flex justify-center gap-3">
                       {data.socialMedia.instagram && (
-                        <a 
-                          href={`https://instagram.com/${data.socialMedia.instagram.replace('@', '')}`} 
-                          target="_blank" 
+                        <a
+                          href={`https://instagram.com/${data.socialMedia.instagram.replace('@', '')}`}
+                          target="_blank"
                           rel="noopener noreferrer"
                           className="flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-lg hover:opacity-90 transition-opacity"
                         >
@@ -166,9 +154,9 @@ export function AthleteProfile({ data, isOwnProfile = false, onConnect }: Athlet
                         </a>
                       )}
                       {data.socialMedia.twitter && (
-                        <a 
-                          href={`https://twitter.com/${data.socialMedia.twitter.replace('@', '')}`} 
-                          target="_blank" 
+                        <a
+                          href={`https://twitter.com/${data.socialMedia.twitter.replace('@', '')}`}
+                          target="_blank"
                           rel="noopener noreferrer"
                           className="flex items-center gap-2 px-3 py-2 bg-blue-500 text-white rounded-lg hover:opacity-90 transition-opacity"
                         >
@@ -198,69 +186,25 @@ export function AthleteProfile({ data, isOwnProfile = false, onConnect }: Athlet
                     <p className="font-semibold">{data.weight}</p>
                   </div>
                 </div>
-                
+
                 <div>
                   <p className="text-sm text-muted-foreground">Primary Sport</p>
                   <p className="font-semibold">{data.sport}</p>
                 </div>
-                
+
                 {data.secondarySports && data.secondarySports.length > 0 && (
                   <div>
                     <p className="text-sm text-muted-foreground">Secondary Sports</p>
                     <p className="font-semibold">{data.secondarySports.join(", ")}</p>
                   </div>
                 )}
-                
+
                 <div>
                   <p className="text-sm text-muted-foreground">High School</p>
                   <p className="font-semibold">{data.highSchool}</p>
                 </div>
               </CardContent>
             </Card>
-
-            {/* Sport-Specific Measurables */}
-            {data.measurables && Object.keys(data.measurables).length > 0 && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-base md:text-lg flex items-center gap-2">
-                    <Activity className="w-5 h-5" />
-                    Performance Measurables
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <Tabs defaultValue={Object.keys(data.measurables)[0]} className="w-full">
-                    <TabsList className="grid w-full grid-cols-2">
-                      {Object.keys(data.measurables).map((sport) => (
-                        <TabsTrigger key={sport} value={sport} className="text-sm">
-                          {sport}
-                        </TabsTrigger>
-                      ))}
-                    </TabsList>
-                    {Object.entries(data.measurables).map(([sport, measurements]) => (
-                      <TabsContent key={sport} value={sport} className="mt-4">
-                        <div className="grid grid-cols-1 gap-3">
-                          {measurements.map((measurement, index) => (
-                            <div
-                              key={index}
-                              className="flex items-center justify-between p-3 bg-muted/50 rounded-lg"
-                            >
-                              <div className="flex items-center gap-2">
-                                <Timer className="w-4 h-4 text-muted-foreground" />
-                                <span className="font-medium text-sm">{measurement.label}</span>
-                              </div>
-                              <div className="text-right">
-                                <p className="font-bold text-lg">{measurement.value}</p>
-                                <p className="text-xs text-muted-foreground">{new Date(measurement.date).toLocaleDateString()}</p>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </TabsContent>
-                    ))}
-                  </Tabs>
-                </CardContent>
-              </Card>
-            )}
 
             {/* Academic Info */}
             <Card>
@@ -274,7 +218,7 @@ export function AthleteProfile({ data, isOwnProfile = false, onConnect }: Athlet
                     <p className="font-semibold">{data.gpa.toFixed(2)}</p>
                   </div>
                 )}
-                
+
                 {(data.satScore || data.actScore) && (
                   <div className="grid grid-cols-2 gap-4">
                     {data.satScore && (
@@ -291,14 +235,14 @@ export function AthleteProfile({ data, isOwnProfile = false, onConnect }: Athlet
                     )}
                   </div>
                 )}
-                
+
                 {data.intendedMajor && (
                   <div>
                     <p className="text-sm text-muted-foreground">Intended Major</p>
                     <p className="font-semibold">{data.intendedMajor}</p>
                   </div>
                 )}
-                
+
               </CardContent>
             </Card>
           </div>
@@ -361,6 +305,28 @@ export function AthleteProfile({ data, isOwnProfile = false, onConnect }: Athlet
                 </CardContent>
               </Card>
             )}
+            {/* MaxPreps Verification - Simplified */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Official Stats & Verification</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="bg-gradient-to-r from-blue-50 to-green-50 dark:from-blue-950 dark:to-green-950 rounded-lg p-4 flex items-center justify-between">
+                  <div>
+                    <p className="font-medium">MaxPreps Profile</p>
+                    <p className="text-sm text-muted-foreground">
+                      Official stats, game logs, and team roster verification
+                    </p>
+                  </div>
+                  <Link href={data.maxPrepsUrl} target="_blank">
+                    <Button className="bg-blue-600 hover:bg-blue-700 text-white">
+                      <ExternalLink className="w-4 h-4 mr-1" />
+                      View Official Stats
+                    </Button>
+                  </Link>
+                </div>
+              </CardContent>
+            </Card>
 
             {/* YouTube Videos */}
             {data.youtubeVideos.length > 0 && (
@@ -395,30 +361,6 @@ export function AthleteProfile({ data, isOwnProfile = false, onConnect }: Athlet
                 </CardContent>
               </Card>
             )}
-
-            {/* MaxPreps Verification - Simplified */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Official Stats & Verification</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="bg-gradient-to-r from-blue-50 to-green-50 dark:from-blue-950 dark:to-green-950 rounded-lg p-4 flex items-center justify-between">
-                  <div>
-                    <p className="font-medium">MaxPreps Profile</p>
-                    <p className="text-sm text-muted-foreground">
-                      Official stats, game logs, and team roster verification
-                    </p>
-                  </div>
-                  <Link href={data.maxPrepsUrl} target="_blank">
-                    <Button className="bg-blue-600 hover:bg-blue-700 text-white">
-                      <ExternalLink className="w-4 h-4 mr-1" />
-                      View Official Stats
-                    </Button>
-                  </Link>
-                </div>
-              </CardContent>
-            </Card>
-
             {/* Achievements */}
             {data.achievements.length > 0 && (
               <Card>
