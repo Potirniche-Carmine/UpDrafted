@@ -158,8 +158,6 @@ async function getUserData(userId: string) {
     const user = await clerkClient.users.getUser(userId);
     const userRole = user.publicMetadata?.role as string;
     
-    // In a real implementation, you would fetch the actual profile data from your database
-    // based on the user ID and role
     if (userRole === 'athlete') {
       return { type: 'athlete' as const, data: mockAthleteData };
     } else if (userRole === 'coach') {
