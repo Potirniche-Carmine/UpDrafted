@@ -20,6 +20,7 @@ export function Footer() {
   const footerLinks = [
     { href: "/about", label: "About Us" },
     { href: "/for-athletes", label: "For Athletes" },
+    { href: "/for-coaches", label: "For Coaches" },
     { href: "/for-recruiters", label: "For Recruiters" },
     { href: "/contact", label: "Contact Us" },
     { href: "/terms-of-service", label: "Terms of Service" },
@@ -48,7 +49,7 @@ export function Footer() {
           <div>
             <h5 className="font-semibold text-foreground mb-3">Platform</h5>
             <ul className="space-y-2">
-              {footerLinks.slice(0, 3).map(link => (
+              {footerLinks.slice(0, 4).map(link => (
                 <li key={link.label}>
                   <Link href={link.href} className="text-sm text-muted-foreground hover:text-primary transition-colors">
                     {link.label}
@@ -61,7 +62,7 @@ export function Footer() {
           <div>
             <h5 className="font-semibold text-foreground mb-3">Company</h5>
             <ul className="space-y-2">
-              {footerLinks.slice(3).map(link => (
+              {footerLinks.slice(4).map(link => (
                 <li key={link.label}>
                   <Link href={link.href} className="text-sm text-muted-foreground hover:text-primary transition-colors">
                     {link.label}

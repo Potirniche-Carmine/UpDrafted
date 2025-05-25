@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { ArrowRight, Target, TrendingUp, ShieldCheck, Zap, DollarSign, Users } from 'lucide-react';
+import { ArrowRight, UserSquare, Ruler, Eye, DollarSign } from 'lucide-react';
 
 export default function ForAthletesPage() {
   return (
@@ -13,54 +13,44 @@ export default function ForAthletesPage() {
 
             <div className="text-center mb-10 md:mb-14">
                 <h2 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl text-foreground">
-                    Why UpDrafted for Athletes?
+                    Your MVP Season Starts Here
                 </h2>
                 <p className="max-w-3xl mx-auto mt-3 text-muted-foreground md:text-lg">
-                    We understand the challenges. Expensive camps, limited exposure, and the complex recruiting maze. UpDrafted offers a new way.
+                    UpDrafted helps you consolidate all your athletic achievements, highlights, and stats into one powerful profile to share with coaches and recruiters.
                 </p>
             </div>
             
             <div className="grid md:grid-cols-2 gap-8 lg:gap-12">
               <FeatureCard
-                icon={<Target className="h-10 w-10 text-primary" />}
-                title="Maximize Your Visibility"
-                description="Create a stunning, comprehensive profile with your stats, highlight reels, academic achievements, and personal story. Be seen by college coaches and recruiters from D1, D2, D3, and JUCO programs nationwide who are actively looking for talent like yours."
+                icon={<UserSquare className="h-10 w-10 text-primary" />}
+                title="Your Complete Recruiting Hub"
+                description="Bring your Hudl, MaxPreps, YouTube highlights, social media links, and key stats together in one professional, shareable athletic profile."
+              />
+              <FeatureCard
+                icon={<Ruler className="h-10 w-10 text-primary" />}
+                title="Showcase Key Measurables"
+                description="Easily add and update your sport-specific measurables and achievements. Let recruiters see your current capabilities and progress."
+              />
+              <FeatureCard
+                icon={<Eye className="h-10 w-10 text-primary" />}
+                title="Get Seen by College Programs"
+                description="Make your profile discoverable. UpDrafted is your platform to be seen by college coaches and recruiters actively searching for new talent."
               />
               <FeatureCard
                 icon={<DollarSign className="h-10 w-10 text-primary" />}
-                title="Free to Get Started"
-                description="We believe opportunity shouldn't have a price tag. Access core features for free – build your profile, get discovered, and make initial connections. Say goodbye to expensive showcase fees just to get noticed."
-              />
-              <FeatureCard
-                icon={<Zap className="h-10 w-10 text-primary" />}
-                title="Direct Connections"
-                description="No more waiting by the phone or relying on third parties. Engage directly with college programs that show interest. Our platform facilitates clear and direct communication."
-              />
-              <FeatureCard
-                icon={<TrendingUp className="h-10 w-10 text-primary" />}
-                title="Take Control of Your Narrative"
-                description="You decide what to showcase. Highlight your strengths, your progress, and what makes you unique. UpDrafted gives you the tools to present your best self to potential college programs."
-              />
-              <FeatureCard
-                icon={<ShieldCheck className="h-10 w-10 text-primary" />}
-                title="A Platform Built for You"
-                description="Designed with athletes in mind, our intuitive interface makes it easy to manage your profile, track interest, and explore opportunities. Focus on your training while we help with the exposure."
-              />
-               <FeatureCard
-                icon={<Users className="h-10 w-10 text-primary" />}
-                title="Expand Your Horizons"
-                description="Discover programs you might not have considered. Our extensive network helps you find the right academic and athletic fit, whether it's a major university or a smaller college with a strong program."
+                title="Free to Build Your Future"
+                description="Create your complete athletic profile, showcase your talent, and start your recruiting journey on UpDrafted—all at no cost."
               />
             </div>
 
             <div className="text-center pt-10">
-              <h3 className="text-2xl font-semibold text-foreground mb-4">Ready to Get Noticed?</h3>
+              <h3 className="text-2xl font-semibold text-foreground mb-4">Ready to Make Your Mark?</h3>
               <p className="text-muted-foreground md:text-lg max-w-xl mx-auto mb-6">
-                Stop waiting to be found. Create your free UpDrafted profile today and let college programs discover your talent.
+                Build your free UpDrafted profile today. It’s the first step to organizing your recruitment and getting noticed.
               </p>
               <Link href="/sign-up">
                 <Button size="lg" className="bg-primary hover:bg-primary/90 text-primary-foreground group">
-                  Create Your Athlete Profile <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
+                  Create Your Free Profile <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
                 </Button>
               </Link>
             </div>

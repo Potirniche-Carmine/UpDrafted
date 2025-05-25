@@ -2,9 +2,9 @@
 
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { ArrowRight, Users, Zap, ClipboardCheck, Microscope, BarChartBig } from 'lucide-react';
+import { ArrowRight, Users, Search, ShieldCheck, MessagesSquare } from 'lucide-react';
 
-export default function ForCollegeProgramsPage() {
+export default function ForRecruitersPage() {
   return (
     <div className="flex flex-col items-center">
       <section className="w-full py-12 md:py-20 lg:py-28">
@@ -13,54 +13,44 @@ export default function ForCollegeProgramsPage() {
 
             <div className="text-center mb-10 md:mb-14">
                 <h2 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl text-foreground">
-                    The UpDrafted Advantage for Recruiters
+                    Discover, Verify & Connect with Talent
                 </h2>
                 <p className="max-w-3xl mx-auto mt-3 text-muted-foreground md:text-lg">
-                    Tired of sifting through endless emails and costly scouting trips? UpDrafted provides a smarter, more efficient way to build your team.
+                    UpDrafted provides a simple platform to view detailed athlete profiles, build your trusted recruiter presence, and connect with emerging prospects.
                 </p>
             </div>
             
             <div className="grid md:grid-cols-2 gap-8 lg:gap-12">
               <FeatureCard
-                icon={<Microscope className="h-10 w-10 text-primary" />}
-                title="Precision Talent Discovery"
-                description="Utilize advanced search filters – sport, division, position, academics, location, and more – to pinpoint athletes who match your program's specific needs. Spend less time searching, more time evaluating qualified prospects."
-              />
-              <FeatureCard
                 icon={<Users className="h-10 w-10 text-primary" />}
-                title="Access a Diverse Talent Pool"
-                description="Discover athletes from across the nation, including those who might not be on traditional recruiting circuits. Our platform hosts profiles from D1, D2, D3, and JUCO aspiring athletes."
+                title="All-in-One Athlete Profiles"
+                description="Access comprehensive athlete data: embedded YouTube highlights, stats, MaxPreps/Hudl links, social media, and key measurables, all in one spot."
               />
               <FeatureCard
-                icon={<Zap className="h-10 w-10 text-primary" />}
-                title="Efficient Evaluation Tools"
-                description="Quickly review key information: verified stats, highlight videos, academic transcripts (where provided by athlete), and personal statements. Our intuitive 'Tinder-like' quick-review interface (for premium users) helps you assess fit rapidly."
+                icon={<Search className="h-10 w-10 text-primary" />}
+                title="Discover and View Talent"
+                description="Easily browse and view athlete profiles. See all their crucial recruiting information consolidated for quick assessment."
               />
               <FeatureCard
-                icon={<ClipboardCheck className="h-10 w-10 text-primary" />}
-                title="Verified & Comprehensive Profiles"
-                description="Access detailed athlete profiles that provide a holistic view of each prospect. We encourage athletes to provide accurate and up-to-date information, helping you make informed decisions."
-              />
-               <FeatureCard
-                icon={<BarChartBig className="h-10 w-10 text-primary" />}
-                title="Data-Driven Recruitment"
-                description="Leverage data to identify trends and uncover hidden gems. Our platform aims to provide insights that can enhance your recruitment strategy and save valuable budget on unnecessary travel."
+                icon={<ShieldCheck className="h-10 w-10 text-primary" />}
+                title="Build a Trusted Profile"
+                description="Share details about your school/program. You can submit verification materials (like a school profile link or PDF) for our team to review, helping you gain a trusted badge."
               />
               <FeatureCard
-                icon={<ArrowRight className="h-10 w-10 text-primary" />}
-                title="Direct & Streamlined Communication"
-                description="Connect directly with athletes or their designated contacts once mutual interest is established. Manage your prospects and communications all in one place."
+                icon={<MessagesSquare className="h-10 w-10 text-primary" />}
+                title="Connect With Prospects"
+                description="Once you find an athlete of interest, our platform facilitates making that initial connection to start the conversation."
               />
             </div>
 
             <div className="text-center pt-10">
-              <h3 className="text-2xl font-semibold text-foreground mb-4">Ready to Find Your Next Game-Changer?</h3>
+              <h3 className="text-2xl font-semibold text-foreground mb-4">Find Your Next Standout Athlete?</h3>
               <p className="text-muted-foreground md:text-lg max-w-xl mx-auto mb-6">
-                Join UpDrafted today to start discovering and connecting with the next generation of college athletes.
+                Create your UpDrafted account to start viewing detailed athlete profiles, build your verified presence, and connect with the talent that fits your program.
               </p>
-              <Link href="/sign-up">
+              <Link href="/sign-up-recruiter">
                 <Button size="lg" className="bg-primary hover:bg-primary/90 text-primary-foreground group">
-                  Access the Talent Pool <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
+                  Create Your Recruiter Profile <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
                 </Button>
               </Link>
             </div>

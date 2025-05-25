@@ -4,7 +4,7 @@ import Link from "next/link";
 import { UserButton, SignedIn, SignedOut, SignInButton, useUser, SignUpButton } from "@clerk/nextjs";
 import { Button } from "@/components/ui/button";
 import { SearchBar } from "./search-bar";
-import { Users, MessageSquare, Bell, LogIn, ChevronDown, TrendingUp } from "lucide-react";
+import { Users, MessageSquare, Bell, LogIn, ChevronDown} from "lucide-react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 
@@ -13,16 +13,9 @@ export function Header() {
   const router = useRouter();
 
   const allNavItems = [
-    { href: "/connections", label: "My Connections", icon: <Users className="h-5 w-5" />, requiresAuth: true },
-    { href: "/messaging", label: "Messaging", icon: <MessageSquare className="h-5 w-5" />, requiresAuth: true },
-    { href: "/notifications", label: "Notifications", icon: <Bell className="h-5 w-5" />, requiresAuth: true },
-    { 
-      href: "/premium", 
-      label: "Premium", 
-      icon: <TrendingUp className="h-5 w-5 text-amber-500" />, 
-      requiresAuth: true,
-      className: "text-amber-500 hover:text-amber-600" 
-    },
+    { href: "/connections", label: "My Connections", icon: <Users className="h-5 w-5" />, requiresAuth: true, className: undefined },
+    { href: "/messaging", label: "Messaging", icon: <MessageSquare className="h-5 w-5" />, requiresAuth: true, className: undefined },
+    { href: "/notifications", label: "Notifications", icon: <Bell className="h-5 w-5" />, requiresAuth: true, className: undefined }
   ];
   const navItemsToDisplay = allNavItems.filter(item => !item.requiresAuth || isSignedIn);
 
