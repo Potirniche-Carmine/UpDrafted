@@ -4,6 +4,7 @@ import React from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import Image from "next/image";
 import Link from "next/link";
 import {
@@ -15,7 +16,9 @@ import {
   Star,
   Users,
   Award,
-  ChevronLeft
+  ChevronLeft,
+  Timer,
+  Activity
 } from "lucide-react";
 
 export interface AthleteProfileData {
@@ -39,6 +42,15 @@ export interface AthleteProfileData {
   // Verification
   maxPrepsUrl: string;
   maxPrepsVerified: boolean;
+  
+  // Sport-specific measurables
+  measurables?: {
+    [sportName: string]: {
+      label: string;
+      value: string;
+      date: string;
+    }[];
+  };
   
   // Media
   hudlUrl?: string;
@@ -205,6 +217,50 @@ export function AthleteProfile({ data, isOwnProfile = false, onConnect }: Athlet
                 </div>
               </CardContent>
             </Card>
+
+            {/* Sport-Specific Measurables */}
+            {data.measurables && Object.keys(data.measurables).length > 0 && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base md:text-lg flex items-center gap-2">
+                    <Activity className="w-5 h-5" />
+                    Performance Measurables
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <Tabs defaultValue={Object.keys(data.measurables)[0]} className="w-full">
+                    <TabsList className="grid w-full grid-cols-2">
+                      {Object.keys(data.measurables).map((sport) => (
+                        <TabsTrigger key={sport} value={sport} className="text-sm">
+                          {sport}
+                        </TabsTrigger>
+                      ))}
+                    </TabsList>
+                    {Object.entries(data.measurables).map(([sport, measurements]) => (
+                      <TabsContent key={sport} value={sport} className="mt-4">
+                        <div className="grid grid-cols-1 gap-3">
+                          {measurements.map((measurement, index) => (
+                            <div
+                              key={index}
+                              className="flex items-center justify-between p-3 bg-muted/50 rounded-lg"
+                            >
+                              <div className="flex items-center gap-2">
+                                <Timer className="w-4 h-4 text-muted-foreground" />
+                                <span className="font-medium text-sm">{measurement.label}</span>
+                              </div>
+                              <div className="text-right">
+                                <p className="font-bold text-lg">{measurement.value}</p>
+                                <p className="text-xs text-muted-foreground">{new Date(measurement.date).toLocaleDateString()}</p>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </TabsContent>
+                    ))}
+                  </Tabs>
+                </CardContent>
+              </Card>
+            )}
 
             {/* Academic Info */}
             <Card>

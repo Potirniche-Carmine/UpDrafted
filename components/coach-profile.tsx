@@ -208,8 +208,25 @@ export function CoachProfile({ data, isOwnProfile = false, onShowInterest }: Coa
               </CardHeader>
               <CardContent className="space-y-3">
                 <div>
-                  <p className="text-sm text-muted-foreground">Sports</p>
-                  <p className="font-semibold">{data.sportsCoaching.join(", ")}</p>
+                  <p className="text-sm text-muted-foreground mb-2">
+                    {data.role === "recruiter" ? "Sports Recruiting For" : "Sport"}
+                  </p>
+                  <div className="grid grid-cols-1 gap-2">
+                    {data.sportsCoaching.map((sport) => (
+                      <div
+                        key={sport}
+                        className="flex items-center justify-between p-3 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950 dark:to-indigo-950 rounded-lg border cursor-pointer hover:shadow-md transition-all"
+                      >
+                        <div className="flex items-center gap-2">
+                          <Trophy className="w-4 h-4 text-blue-600" />
+                          <span className="font-medium text-sm">{sport}</span>
+                        </div>
+                        <Badge variant="outline" className="text-xs">
+                          {data.role === "coach" ? "Coaching" : "Recruiting"}
+                        </Badge>
+                      </div>
+                    ))}
+                  </div>
                 </div>
                 
                 <div>
