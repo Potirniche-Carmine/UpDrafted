@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Users, Trophy, Target } from "lucide-react";
+import { fetchGeoapifyData } from "./geoapify";
 
 type UserRole = "athlete" | "coach" | "recruiter";
 
@@ -36,12 +37,17 @@ interface OnboardingData {
   conference?: string;
 }
 
+
+
 export default function OnboardingPage() {
   const { user } = useUser();
   const router = useRouter();
   const [step, setStep] = useState<"role" | "details">("role");
   const [isLoading, setIsLoading] = useState(false);
   const [data, setData] = useState<OnboardingData>({ role: null });
+  const [schoolQuery, setSchoolQuery] = useState('');
+  const [schoolResults, setSchoolResults] = useState<string[]>([]);
+
 
   const handleRoleSelect = (role: UserRole) => {
     setData({ ...data, role });
@@ -188,7 +194,7 @@ export default function OnboardingPage() {
   }
 
   // Details form based on role
-  return (
+return (
     <div className="min-h-screen bg-background p-4">
       <div className="max-w-2xl mx-auto space-y-8">
         <div className="text-center space-y-4">
@@ -208,6 +214,50 @@ export default function OnboardingPage() {
             {data.role === 'athlete' ? (
               // Athlete Form
               <>
+                {/* First Name and Last Name Fields */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium mb-2">First Name *</label>
+                    <Input
+                      placeholder="John"
+                      value={data.firstName || ''}
+                      onChange={(e) => handleInputChange('firstName', e.target.value)}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Last Name *</label>
+                    <Input
+                      placeholder="Doe"
+                      value={data.lastName || ''}
+                      onChange={(e) => handleInputChange('lastName', e.target.value)}
+                    />
+                  </div>
+                </div>
+
+                {/* Profile Picture Upload Button */}
+                <div>
+                  <label className="block text-sm font-medium mb-2">Profile Picture</label>
+                  <Input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        // Here you would typically handle the file upload,
+                        // e.g., upload to a cloud storage and save the URL
+                        console.log("Selected file:", file);
+                        // For now, let's assume you store the file object or a temporary URL
+                        handleInputChange('profilePicture', file);
+                      }
+                    }}
+                  />
+                  {data.profilePicture && typeof data.profilePicture === 'string' && (
+                    <p className="text-sm text-muted-foreground mt-2">
+                      Current: <a href={data.profilePicture} target="_blank" rel="noopener noreferrer">View Image</a>
+                    </p>
+                  )}
+                </div>
+
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium mb-2">Primary Sport *</label>
@@ -218,6 +268,18 @@ export default function OnboardingPage() {
                     />
                   </div>
                   <div>
+                    {/* Secondary Sport Input */}
+                    <label className="block text-sm font-medium mb-2">Secondary Sport</label>
+                    <Input
+                      placeholder="e.g., Track and Field (Optional)"
+                      value={data.secondarySport || ''}
+                      onChange={(e) => handleInputChange('secondarySport', e.target.value)}
+                    />
+                  </div>
+                </div>
+                
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
                     <label className="block text-sm font-medium mb-2">Graduation Year *</label>
                     <Input
                       type="number"
@@ -227,14 +289,37 @@ export default function OnboardingPage() {
                     />
                   </div>
                 </div>
-
                 <div>
                   <label className="block text-sm font-medium mb-2">High School *</label>
                   <Input
                     placeholder="Your High School Name"
                     value={data.highSchool || ''}
-                    onChange={(e) => handleInputChange('highSchool', e.target.value)}
+                    // ADDED: onChange handler to call fetchGeoapifyData
+                    onChange={(e) => {
+                      const inputValue = e.target.value;
+                      handleInputChange('highSchool', inputValue); // Update your state
+                      const data = fetchGeoapifyData(inputValue); // Call your API function
+                    }}
                   />
+                  {/* You might want to add a div here to display suggestions */}
+                  {/* For example:
+                  {suggestions.length > 0 && (
+                    <ul className="border rounded-md mt-1 max-h-48 overflow-y-auto">
+                      {suggestions.map((suggestion, index) => (
+                        <li 
+                          key={index} 
+                          className="p-2 cursor-pointer hover:bg-gray-100"
+                          onClick={() => {
+                            handleInputChange('highSchool', suggestion.properties.name);
+                            setSuggestions([]); // Clear suggestions after selection
+                          }}
+                        >
+                          {suggestion.properties.name}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                  */}
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
@@ -327,7 +412,7 @@ export default function OnboardingPage() {
                 </div>
               </>
             ) : (
-              // Coach/Recruiter Form
+              // Coach/Recruiter Form (unchanged as the request was only for the athlete form)
               <>
                 <div>
                   <label className="block text-sm font-medium mb-2">Title *</label>
@@ -399,14 +484,14 @@ export default function OnboardingPage() {
             )}
 
             <div className="flex gap-4 pt-6">
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 onClick={() => setStep("role")}
                 disabled={isLoading}
               >
                 Back
               </Button>
-              <Button 
+              <Button
                 onClick={handleSubmit}
                 disabled={!canSubmit() || isLoading}
                 className="flex-1"
@@ -419,4 +504,4 @@ export default function OnboardingPage() {
       </div>
     </div>
   );
-} 
+}
