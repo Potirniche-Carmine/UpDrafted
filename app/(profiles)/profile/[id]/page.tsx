@@ -1,9 +1,9 @@
 import { notFound } from 'next/navigation';
 import { createClerkClient } from '@clerk/nextjs/server';
-import { AthleteProfileWrapper } from '@/components/athlete-profile-wrapper';
-import { CoachProfileWrapper } from '@/components/coach-profile-wrapper';
-import type { AthleteProfileData } from '@/components/athlete-profile';
-import type { CoachProfileData } from '@/components/coach-profile';
+import { AthleteProfileWrapper } from '../../components/athlete-profile-wrapper';
+import { CoachProfileWrapper } from '../../components/coach-profile-wrapper';
+import type { AthleteProfileData } from '@/app/(profiles)/components/athlete-profile';
+import type { CoachProfileData } from '@/app/(profiles)/components/coach-profile';
 
 // Mock data - in real implementation, this would come from your database
 const mockAthleteData = {

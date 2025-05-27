@@ -3,8 +3,7 @@ import { NextResponse } from 'next/server'
 
 const isPublicRoute = createRouteMatcher([
   '/sign-in(.*)', '/sign-up(.*)', '/', '/about', '/contact', '/for-athletes', 
-  '/for-recruiters', '/privacy-policy', '/terms-of-service', '/404', '/500',
-  '/profile(.*)', '/for-coaches'
+  '/for-recruiters', '/privacy-policy', '/terms-of-service', '/404', '/500', '/for-coaches'
 ]);
 
 const isAdminRoute = createRouteMatcher(['admin(.*)', '/admin']);
