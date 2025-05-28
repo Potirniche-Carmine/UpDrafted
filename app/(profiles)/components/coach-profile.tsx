@@ -21,10 +21,13 @@ import { ProfileCard } from "./shared/profile-card";
 interface CoachProfileProps {
   data: CoachProfileData;
   isOwnProfile?: boolean;
+  currentUserRole?: string | null;
   onShowInterest?: () => void;
+  onConnect?: () => void;
+  onShare?: () => void;
 }
 
-export function CoachProfile({ data, isOwnProfile = false, onShowInterest }: CoachProfileProps) {
+export function CoachProfile({ data, isOwnProfile = false, onShowInterest, onShare }: CoachProfileProps) {
   const handleEditSection = (section: string) => {
     console.log(`Edit ${section} clicked`);
     // TODO: Open edit modal for specific section
@@ -42,6 +45,7 @@ export function CoachProfile({ data, isOwnProfile = false, onShowInterest }: Coa
         isOwnProfile={isOwnProfile}
         onConnect={onShowInterest}
         onReport={handleReportProfile}
+        onShare={onShare}
         connectLabel="Connect with Coach"
       />
 

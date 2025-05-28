@@ -2,7 +2,7 @@ import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server'
 import { NextResponse } from 'next/server'
 
 const isPublicRoute = createRouteMatcher([
-  '/sign-in(.*)', '/sign-up(.*)', '/', '/about', '/contact', '/for-athletes', 
+  '/', '/sign-in(.*)', '/sign-up(.*)', '/about', '/contact', '/for-athletes', 
   '/for-recruiters', '/privacy-policy', '/terms-of-service', '/404', '/500', '/for-coaches'
 ]);
 
@@ -12,6 +12,12 @@ export default clerkMiddleware(async (auth, req) => {
   const { pathname } = req.nextUrl;
   const authState = await auth(); 
 
+  // Redirect authenticated users away from landing page to dashboard
+  if (authState.userId && pathname === '/') {
+    const url = new URL('/dashboard', req.url);
+    return NextResponse.redirect(url);
+  }
+
   if (!isPublicRoute(req)) {
     await auth.protect();
   }
@@ -20,7 +26,18 @@ export default clerkMiddleware(async (auth, req) => {
     const url = new URL('/', req.url);
     return NextResponse.redirect(url);
   }
+
+  // Prevent users with completed roles from accessing onboarding (except admins)
+  if (
+    authState.userId &&
+    pathname === '/onboarding' &&
+    ['athlete', 'coach', 'recruiter'].includes(authState.sessionClaims?.metadata?.role as string)
+  ) {
+    const url = new URL('/dashboard', req.url);
+    return NextResponse.redirect(url);
+  }
   
+  // Redirect users without roles to onboarding
   if (
     authState.userId && 
     !['admin', 'athlete', 'coach', 'recruiter'].includes(authState.sessionClaims?.metadata?.role as string) &&

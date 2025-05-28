@@ -1,5 +1,6 @@
 import { notFound } from 'next/navigation';
 import { createClerkClient } from '@clerk/nextjs/server';
+import { auth } from '@clerk/nextjs/server';
 import { AthleteProfileWrapper } from '../../components/athlete-profile-wrapper';
 import { CoachProfileWrapper } from '../../components/coach-profile-wrapper';
 import { RecruiterProfileWrapper } from '../../components/recruiter-profile-wrapper';
@@ -195,9 +196,16 @@ interface ProfilePageProps {
 
 async function getUserData(userId: string) {
   try {
+    // Validate userId format first
+    if (!userId || typeof userId !== 'string' || userId.trim() === '') {
+      console.warn('Invalid userId provided:', userId);
+      return null;
+    }
+
     const clerkClient = createClerkClient({
       secretKey: process.env.CLERK_SECRET_KEY
     });
+    
     const user = await clerkClient.users.getUser(userId);
     const userRole = user.publicMetadata?.role as string;
     
@@ -212,6 +220,7 @@ async function getUserData(userId: string) {
     return null;
   } catch (error) {
     console.error('Error fetching user data:', error);
+    // Return null instead of throwing to prevent 500 errors
     return null;
   }
 }
@@ -224,15 +233,30 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
     notFound();
   }
 
-  // Determine if this is the user's own profile
-  // For now, we'll simulate this being the user's own profile for testing
-  const isOwnProfile = true; // Change this logic based on your authentication system
+  // Get the current authenticated user to determine if this is their own profile
+  const { userId: currentUserId } = await auth();
+  const isOwnProfile = currentUserId === id;
+  
+  // Get current user's role to determine what actions they can take
+  let currentUserRole = null;
+  if (currentUserId) {
+    try {
+      const clerkClient = createClerkClient({
+        secretKey: process.env.CLERK_SECRET_KEY
+      });
+      const currentUser = await clerkClient.users.getUser(currentUserId);
+      currentUserRole = currentUser.publicMetadata?.role as string;
+    } catch (error) {
+      console.error('Error fetching current user role:', error);
+    }
+  }
 
   if (userData.type === 'athlete') {
     return (
       <AthleteProfileWrapper
         data={userData.data as AthleteProfileData}
         isOwnProfile={isOwnProfile}
+        currentUserRole={currentUserRole}
       />
     );
   }
@@ -242,6 +266,7 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
       <CoachProfileWrapper
         data={userData.data as CoachProfileData}
         isOwnProfile={isOwnProfile}
+        currentUserRole={currentUserRole}
       />
     );
   }
@@ -251,6 +276,7 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
       <RecruiterProfileWrapper
         data={userData.data as RecruitingProfileData}
         isOwnProfile={isOwnProfile}
+        currentUserRole={currentUserRole}
       />
     );
   }

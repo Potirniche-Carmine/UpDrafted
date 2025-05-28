@@ -234,7 +234,7 @@ export default function HomePage() {
                   </div>
                   <div>
                     <div className="font-semibold">100% Free Platform</div>
-                    <div className="text-sm text-muted-foreground">No hidden costs or premium tiers</div>
+                    <div className="text-sm text-muted-foreground">No hidden costs</div>
                   </div>
                 </div>
                 <p className="text-muted-foreground">

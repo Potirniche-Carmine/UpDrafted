@@ -21,10 +21,13 @@ import { ProfileCard } from "./shared/profile-card";
 interface RecruiterProfileProps {
   data: RecruitingProfileData;
   isOwnProfile?: boolean;
+  currentUserRole?: string | null;
   onShowInterest?: () => void;
+  onConnect?: () => void;
+  onShare?: () => void;
 }
 
-export function RecruiterProfile({ data, isOwnProfile = false, onShowInterest }: RecruiterProfileProps) {
+export function RecruiterProfile({ data, isOwnProfile = false, onShowInterest, onShare }: RecruiterProfileProps) {
   const handleEditSection = (section: string) => {
     console.log(`Edit ${section} clicked`);
     // TODO: Open edit modal for specific section
@@ -42,6 +45,7 @@ export function RecruiterProfile({ data, isOwnProfile = false, onShowInterest }:
         isOwnProfile={isOwnProfile}
         onConnect={onShowInterest}
         onReport={handleReportProfile}
+        onShare={onShare}
         connectLabel="Get Recruited"
       />
 

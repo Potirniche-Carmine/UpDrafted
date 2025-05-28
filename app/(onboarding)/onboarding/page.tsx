@@ -1,13 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import { useUser } from "@clerk/nextjs";
+import { useUser, useAuth } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Users, Trophy, Target } from "lucide-react";
+import { createSecureHeaders } from "@/utils/clerk-security";
 
 type UserRole = "athlete" | "coach" | "recruiter";
 
@@ -45,6 +46,7 @@ interface OnboardingData {
 
 export default function OnboardingPage() {
   const { user } = useUser();
+  const { getToken } = useAuth();
   const router = useRouter();
   const [step, setStep] = useState<"role" | "details">("role");
   const [isLoading, setIsLoading] = useState(false);
@@ -64,12 +66,17 @@ export default function OnboardingPage() {
     
     setIsLoading(true);
     try {
+      // Get the session token for authentication
+      const token = await getToken();
+      
+      if (!token) {
+        throw new Error('No authentication token available');
+      }
+
       // Create user in database and update Clerk metadata via API
       const response = await fetch('/api/onboarding', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: createSecureHeaders(token),
         body: JSON.stringify({
           userId: user.id,
           email: user.emailAddresses[0].emailAddress,
@@ -81,15 +88,16 @@ export default function OnboardingPage() {
       });
 
       if (response.ok) {
-        // Redirect to home or dashboard
-        router.push('/');
+        // Redirect to dashboard after successful onboarding
+        router.push('/dashboard');
         router.refresh(); // Refresh to update middleware state
       } else {
-        throw new Error('Failed to create profile');
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to create profile');
       }
     } catch (error) {
       console.error('Error during onboarding:', error);
-      alert('Something went wrong. Please try again.');
+      alert(`Something went wrong: ${error instanceof Error ? error.message : 'Please try again.'}`);
     } finally {
       setIsLoading(false);
     }

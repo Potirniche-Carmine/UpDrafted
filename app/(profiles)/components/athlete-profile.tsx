@@ -4,6 +4,12 @@ import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -18,7 +24,11 @@ import {
   ChevronLeft,
   Edit,
   Plus,
-  Flag
+  Flag,
+  Share2,
+  Copy,
+  Mail,
+  MessageCircle
 } from "lucide-react";
 
 export interface Measurable {
@@ -82,10 +92,12 @@ export interface AthleteProfileData {
 interface AthleteProfileProps {
   data: AthleteProfileData;
   isOwnProfile?: boolean;
+  currentUserRole?: string | null;
   onConnect?: () => void;
+  onShare?: () => void;
 }
 
-export function AthleteProfile({ data, isOwnProfile = false, onConnect }: AthleteProfileProps) {
+export function AthleteProfile({ data, isOwnProfile = false, currentUserRole, onConnect, onShare }: AthleteProfileProps) {
   const router = useRouter();
   const [selectedSport, setSelectedSport] = useState(data.sport);
   
@@ -94,6 +106,9 @@ export function AthleteProfile({ data, isOwnProfile = false, onConnect }: Athlet
   
   // Filter measurables by selected sport
   const sportMeasurables = data.measurables?.filter(m => m.sport === selectedSport) || [];
+
+  // Determine if current user can draft this athlete (coaches, recruiters, and admins)
+  const canDraft = !isOwnProfile && (currentUserRole === 'coach' || currentUserRole === 'recruiter' || currentUserRole === 'admin');
 
   const handleBackClick = () => {
     router.push('/search');
@@ -107,6 +122,30 @@ export function AthleteProfile({ data, isOwnProfile = false, onConnect }: Athlet
   const handleReportProfile = () => {
     console.log('Report profile clicked');
     // TODO: Open report modal or navigate to report page
+  };
+
+  const handleShareAction = (method: string) => {
+    const profileUrl = window.location.href;
+    
+    switch (method) {
+      case 'copy':
+        navigator.clipboard.writeText(profileUrl);
+        // TODO: Add toast notification
+        console.log('Link copied to clipboard');
+        break;
+      case 'email':
+        const subject = `Check out ${data.fullName}'s athletic profile on UpDrafted`;
+        const body = `I wanted to share ${data.fullName}'s athletic profile with you:\n\n${profileUrl}\n\n${data.fullName} is a ${data.positions.join('/')} from ${data.highSchool} (Class of ${data.graduationYear}).`;
+        window.location.href = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+        break;
+      case 'chat':
+        // TODO: Open internal chat/messaging if implemented
+        console.log('Share via chat');
+        onShare?.();
+        break;
+      default:
+        onShare?.();
+    }
   };
 
   return (
@@ -124,10 +163,38 @@ export function AthleteProfile({ data, isOwnProfile = false, onConnect }: Athlet
                 <Flag className="w-4 h-4 mr-1" />
                 Report
               </Button>
-              <Button size="sm" className="bg-blue-600 hover:bg-blue-700" onClick={onConnect}>
-                <Star className="w-4 h-4 mr-1" />
-                Connect
-              </Button>
+              
+              {/* Share Button - Available to everyone */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm">
+                    <Share2 className="w-4 h-4 mr-1" />
+                    Share
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => handleShareAction('copy')}>
+                    <Copy className="w-4 h-4 mr-2" />
+                    Copy Link
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleShareAction('email')}>
+                    <Mail className="w-4 h-4 mr-2" />
+                    Send via Email
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleShareAction('chat')}>
+                    <MessageCircle className="w-4 h-4 mr-2" />
+                    Send over Chat
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+
+              {/* Draft Button - Only for coaches/recruiters */}
+              {canDraft && (
+                <Button size="sm" className="bg-blue-600 hover:bg-blue-700" onClick={onConnect}>
+                  <Star className="w-4 h-4 mr-1" />
+                  Draft
+                </Button>
+              )}
             </div>
           )}
         </div>

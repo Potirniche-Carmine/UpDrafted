@@ -23,6 +23,9 @@ export function Header() {
 
   const isAdmin = user?.publicMetadata?.role === 'admin';
 
+  // Determine home URL based on authentication status
+  const homeUrl = isSignedIn ? '/dashboard' : '/';
+
   const regularNavItems: NavItem[] = [
     { key: "connections", href: "/connections", label: "My Connections", icon: <Users className="h-5 w-5" />, requiresAuth: true, className: undefined },
     { key: "messaging", href: "/messaging", label: "Messaging", icon: <MessageSquare className="h-5 w-5" />, requiresAuth: true, className: undefined },
@@ -56,7 +59,7 @@ export function Header() {
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container mx-auto flex h-16 max-w-screen-2xl items-center justify-between px-4 sm:px-6 lg:px-8">
-        <Link href="/" className="flex items-center space-x-2">
+        <Link href={homeUrl} className="flex items-center space-x-2">
           <Image 
             src="/logo.png" 
             alt="UpDrafted Logo" 
