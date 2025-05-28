@@ -278,7 +278,7 @@ export const messagesRelations = relations(messages, ({ one }) => ({
   }),
 }));
 
-export const sportsRelations = relations(sports, ({ many }) => ({
+export const sportsRelations = relations(sports, () => ({
   // No direct relations needed for now, but can be added later if needed
 }));
 

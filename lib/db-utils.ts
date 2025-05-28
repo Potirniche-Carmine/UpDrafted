@@ -1,4 +1,4 @@
-import { eq, and, desc, asc, ilike, inArray } from 'drizzle-orm';
+import { eq, and, desc } from 'drizzle-orm';
 import { db } from './db';
 import { 
   users, 
@@ -6,9 +6,6 @@ import {
   coachProfiles, 
   connections,
   activityLog,
-  type User,
-  type AthleteProfile,
-  type CoachProfile,
   type NewUser,
   type NewAthleteProfile,
   type NewCoachProfile
@@ -108,9 +105,9 @@ export const athleteOperations = {
     limit?: number;
     offset?: number;
   }) {
-    const { sport, graduationYear, state, positions, limit = 20, offset = 0 } = criteria;
+    const { sport, graduationYear, state, limit = 20, offset = 0 } = criteria;
     
-    let whereConditions = [];
+    const whereConditions = [];
     
     if (sport) {
       whereConditions.push(eq(athleteProfiles.sport, sport));
@@ -181,9 +178,9 @@ export const coachOperations = {
     limit?: number;
     offset?: number;
   }) {
-    const { sportsCoaching, division, state, isVerified, limit = 20, offset = 0 } = criteria;
+    const { division, state, isVerified, limit = 20, offset = 0 } = criteria;
     
-    let whereConditions = [];
+    const whereConditions = [];
     
     if (division) {
       whereConditions.push(eq(coachProfiles.division, division));
@@ -268,7 +265,7 @@ export const connectionOperations = {
 // Activity logging
 export const activityOperations = {
   // Log activity
-  async logActivity(viewerId: string, viewedUserId: string, action: string, metadata?: any) {
+  async logActivity(viewerId: string, viewedUserId: string, action: string, metadata?: Record<string, unknown>) {
     const [activity] = await db.insert(activityLog).values({
       viewerId,
       viewedUserId,
