@@ -361,24 +361,6 @@ export function AthleteProfile({ data, isOwnProfile = false, onConnect }: Athlet
                 </CardContent>
               </Card>
             )}
-            {/* Achievements */}
-            {data.achievements.length > 0 && (
-              <Card>
-                <CardHeader>
-                  <CardTitle>Key Achievements</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    {data.achievements.map((achievement, index) => (
-                      <div key={index} className="flex items-center gap-2 p-2 bg-muted/50 rounded-lg">
-                        <div className="w-2 h-2 bg-primary rounded-full flex-shrink-0"></div>
-                        <span className="text-sm font-medium">{achievement}</span>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            )}
           </div>
         </div>
       </div>
