@@ -2,8 +2,9 @@ import { notFound } from 'next/navigation';
 import { createClerkClient } from '@clerk/nextjs/server';
 import { AthleteProfileWrapper } from '../../components/athlete-profile-wrapper';
 import { CoachProfileWrapper } from '../../components/coach-profile-wrapper';
-import type { AthleteProfileData } from '@/app/(profiles)/components/athlete-profile';
-import type { CoachProfileData } from '@/app/(profiles)/components/coach-profile';
+import { RecruiterProfileWrapper } from '../../components/recruiter-profile-wrapper';
+import type { AthleteProfileData } from '../../components/athlete-profile';
+import type { CoachProfileData, RecruitingProfileData } from '../../lib/base-profile-types';
 
 // Mock data - in real implementation, this would come from your database
 const mockAthleteData = {
@@ -52,6 +53,66 @@ const mockAthleteData = {
     "Honor Roll Student",
     "State Championship Finalist"
   ],
+  measurables: [
+    // Basketball measurables
+    {
+      id: "1",
+      sport: "Basketball",
+      label: "Vertical Jump",
+      value: "32 inches",
+      measurementDate: "2024-03-15"
+    },
+    {
+      id: "2",
+      sport: "Basketball",
+      label: "Lane Agility",
+      value: "10.8 seconds",
+      measurementDate: "2024-03-15"
+    },
+    {
+      id: "3",
+      sport: "Basketball",
+      label: "3/4 Court Sprint",
+      value: "3.2 seconds",
+      measurementDate: "2024-03-15"
+    },
+    {
+      id: "4",
+      sport: "Basketball",
+      label: "Bench Press",
+      value: "185 lbs",
+      measurementDate: "2024-02-20"
+    },
+    // Track & Field measurables
+    {
+      id: "5",
+      sport: "Track & Field",
+      label: "100m Dash",
+      value: "11.2 seconds",
+      measurementDate: "2024-04-10"
+    },
+    {
+      id: "6",
+      sport: "Track & Field",
+      label: "200m Dash",
+      value: "22.8 seconds",
+      measurementDate: "2024-04-10"
+    },
+    {
+      id: "7",
+      sport: "Track & Field",
+      label: "Long Jump",
+      value: "21'3\"",
+      measurementDate: "2024-04-05"
+    },
+    {
+      id: "8",
+      sport: "Track & Field",
+      label: "40-Yard Dash",
+      value: "4.6 seconds",
+      measurementDate: "2024-03-22"
+    }
+  ],
   stats: {
     season: "2023-24",
     stats: [
@@ -70,13 +131,12 @@ const mockAthleteData = {
   ]
 };
 
-const mockCoachData = {
+const mockCoachData: CoachProfileData = {
   id: "coach-1",
   fullName: "Coach Sarah Williams",
   profileImage: "/api/placeholder/120/120",
   title: "Head Coach",
-  role: "coach" as const,
-  sportsCoaching: ["Basketball"],
+  sportCoaching: "Basketball",
   organizationName: "University of Texas Basketball",
   organizationLogo: "/api/placeholder/80/80",
   division: "NCAA Division I",
@@ -84,63 +144,46 @@ const mockCoachData = {
   city: "Austin",
   state: "TX",
   isVerified: true,
-  officialEmail: "s.williams@texassports.com",
-  programInfo: {
-    founded: 1906,
-    arena: "Frank Erwin Center",
-    capacity: 16734,
-    facilitiesDescription: "State-of-the-art $165M practice facility with cutting-edge training equipment and academic learning center.",
-    academicRanking: "#38 National University",
-    graduationRate: 89
-  },
+  programWebsite: "https://texassports.com/basketball",
+  schoolWebsite: "https://utexas.edu",
+  instagramHandle: "@texasmbb",
+  twitterHandle: "@TexasMBB",
+  showcaseVideoTitle: "Inside Our Championship Training Facility",
+  showcaseVideoUrl: "https://youtube.com/watch?v=facility123",
+  showcaseVideoEmbedUrl: "https://youtube.com/embed/facility123",
   recruitingNeeds: {
     graduationYears: [2025, 2026],
-    positions: ["Point Guard", "Center"],
+    positions: ["Point Guard", "Center", "Power Forward"],
     scholarshipsAvailable: 3,
     recruitingPhilosophy: "We're looking for student-athletes who excel both on the court and in the classroom. Our program emphasizes character, leadership, and academic achievement alongside basketball excellence."
-  },
-  contact: {
-    officialEmail: "recruiting@texassports.com",
-    phone: "(512) 471-7437",
-    website: "texassports.com/basketball",
-    socialMedia: {
-      twitter: "@TexasMBB",
-      instagram: "@texasmbb"
-    }
-  },
-  programSuccess: {
-    recentAchievements: [
-      "Big 12 Champions (2024)",
-      "NCAA Tournament Elite Eight (2023)",
-      "Big 12 Coach of the Year (2024)",
-      "Top 25 Ranking for 3 consecutive years"
-    ],
-    nbaAlumni: ["Kevin Durant", "LaMarcus Aldridge", "Myles Turner"],
-    conferenceChampionships: 3,
-    nationalChampionships: 1,
-    playoffAppearances: 15
-  },
-  recentActivity: [
-    { athlete: "James Wilson (PG)", action: "Connected", timeAgo: "1 hour ago", location: "Dallas, TX" },
-    { athlete: "Mike Rodriguez (SF)", action: "Viewed Profile", timeAgo: "3 hours ago", location: "Houston, TX" },
-    { athlete: "Tyler Johnson (C)", action: "Connected", timeAgo: "1 day ago", location: "San Antonio, TX" }
-  ],
-  stats: {
-    athletesRecruited: 89,
-    mutualConnections: 23,
-    profileViews: 456
   }
 };
 
-const mockRecruiterData = {
-  ...mockCoachData,
+const mockRecruiterData: RecruitingProfileData = {
   id: "recruiter-1",
   fullName: "John Davis",
+  profileImage: "/api/placeholder/120/120",
   title: "Recruiting Coordinator",
-  role: "recruiter" as const,
+  sportRecruiting: "Basketball",
+  organizationName: "University of Texas Athletics",
+  organizationLogo: "/api/placeholder/80/80",
+  division: "NCAA Division I",
+  conference: "Big 12",
+  city: "Austin",
+  state: "TX",
+  isVerified: true,
+  programWebsite: "https://texassports.com",
+  schoolWebsite: "https://utexas.edu",
+  instagramHandle: "@texasathletics",
+  twitterHandle: "@TexasAthletics",
+  showcaseVideoTitle: "Texas Athletics Recruiting Showcase",
+  showcaseVideoUrl: "https://youtube.com/watch?v=recruiting123",
+  showcaseVideoEmbedUrl: "https://youtube.com/embed/recruiting123",
   recruitingNeeds: {
-    ...mockCoachData.recruitingNeeds,
-    recruitingPhilosophy: "As a recruiter, I focus on identifying talented student-athletes who fit our program's culture and academic standards. I'm here to guide you through the recruitment process and help you find the right fit."
+    graduationYears: [2025, 2026, 2027],
+    positions: ["Point Guard", "Shooting Guard", "Small Forward"],
+    scholarshipsAvailable: 5,
+    recruitingPhilosophy: "As a recruiter, I focus on identifying talented student-athletes who fit our program's culture and academic standards. I'm here to guide you through the recruitment process and help you find the right fit for basketball."
   }
 };
 
@@ -181,18 +224,33 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
     notFound();
   }
 
+  // Determine if this is the user's own profile
+  // For now, we'll simulate this being the user's own profile for testing
+  const isOwnProfile = true; // Change this logic based on your authentication system
+
   if (userData.type === 'athlete') {
     return (
       <AthleteProfileWrapper
         data={userData.data as AthleteProfileData}
+        isOwnProfile={isOwnProfile}
       />
     );
   }
 
-  if (userData.type === 'coach' || userData.type === 'recruiter') {
+  if (userData.type === 'coach') {
     return (
       <CoachProfileWrapper
         data={userData.data as CoachProfileData}
+        isOwnProfile={isOwnProfile}
+      />
+    );
+  }
+
+  if (userData.type === 'recruiter') {
+    return (
+      <RecruiterProfileWrapper
+        data={userData.data as RecruitingProfileData}
+        isOwnProfile={isOwnProfile}
       />
     );
   }

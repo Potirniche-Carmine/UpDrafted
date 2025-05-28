@@ -6,25 +6,25 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import Link from "next/link";
 import {
-  Trophy,
   Target,
   GraduationCap,
   ExternalLink,
   Edit,
   Star,
+  Search,
   Users
 } from "lucide-react";
-import { CoachProfileData } from "../lib/base-profile-types";
+import { RecruitingProfileData } from "../lib/base-profile-types";
 import { ProfileHeader } from "./shared/profile-header";
 import { ProfileCard } from "./shared/profile-card";
 
-interface CoachProfileProps {
-  data: CoachProfileData;
+interface RecruiterProfileProps {
+  data: RecruitingProfileData;
   isOwnProfile?: boolean;
   onShowInterest?: () => void;
 }
 
-export function CoachProfile({ data, isOwnProfile = false, onShowInterest }: CoachProfileProps) {
+export function RecruiterProfile({ data, isOwnProfile = false, onShowInterest }: RecruiterProfileProps) {
   const handleEditSection = (section: string) => {
     console.log(`Edit ${section} clicked`);
     // TODO: Open edit modal for specific section
@@ -42,7 +42,7 @@ export function CoachProfile({ data, isOwnProfile = false, onShowInterest }: Coa
         isOwnProfile={isOwnProfile}
         onConnect={onShowInterest}
         onReport={handleReportProfile}
-        connectLabel="Connect with Coach"
+        connectLabel="Get Recruited"
       />
 
       <div className="container py-4 md:py-8">
@@ -53,22 +53,22 @@ export function CoachProfile({ data, isOwnProfile = false, onShowInterest }: Coa
             <ProfileCard
               data={data}
               isOwnProfile={isOwnProfile}
-              roleLabel="Coach"
+              roleLabel="Recruiter"
               onEditSection={handleEditSection}
             />
 
-            {/* Sport Overview */}
+            {/* Sport Recruiting Overview */}
             <Card>
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-base md:text-lg">
-                    {data.sportCoaching} Coaching
+                    {data.sportRecruiting} Recruiting
                   </CardTitle>
                   {isOwnProfile && (
                     <Button
                       size="sm"
                       variant="ghost"
-                      onClick={() => handleEditSection('coaching-overview')}
+                      onClick={() => handleEditSection('recruiting-overview')}
                     >
                       <Edit className="w-4 h-4 mr-1" />
                       Edit
@@ -77,13 +77,13 @@ export function CoachProfile({ data, isOwnProfile = false, onShowInterest }: Coa
                 </div>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="flex items-center justify-between p-3 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950 dark:to-indigo-950 rounded-lg border">
+                <div className="flex items-center justify-between p-3 bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-950 dark:to-emerald-950 rounded-lg border">
                   <div className="flex items-center gap-2">
-                    <Trophy className="w-4 h-4 text-blue-600" />
-                    <span className="font-medium text-sm">{data.sportCoaching}</span>
+                    <Search className="w-4 h-4 text-green-600" />
+                    <span className="font-medium text-sm">{data.sportRecruiting}</span>
                   </div>
                   <Badge variant="outline" className="text-xs">
-                    Coaching
+                    Recruiting
                   </Badge>
                 </div>
 
@@ -164,17 +164,17 @@ export function CoachProfile({ data, isOwnProfile = false, onShowInterest }: Coa
 
           {/* Main Content */}
           <div className="lg:col-span-2 space-y-6">
-            {/* Coaching Philosophy */}
+            {/* Recruiting Philosophy */}
             {data.recruitingNeeds?.recruitingPhilosophy && (
               <Card>
                 <CardHeader>
                   <div className="flex items-center justify-between">
-                    <CardTitle>Coaching Philosophy</CardTitle>
+                    <CardTitle>Recruiting Philosophy</CardTitle>
                     {isOwnProfile && (
                       <Button
                         size="sm"
                         variant="ghost"
-                        onClick={() => handleEditSection('coaching-philosophy')}
+                        onClick={() => handleEditSection('recruiting-philosophy')}
                       >
                         <Edit className="w-4 h-4 mr-1" />
                         Edit
@@ -188,20 +188,20 @@ export function CoachProfile({ data, isOwnProfile = false, onShowInterest }: Coa
               </Card>
             )}
 
-            {/* Current Recruiting Needs */}
+            {/* Active Recruiting Targets */}
             {data.recruitingNeeds && (
               <Card className="border-primary/20">
                 <CardHeader>
                   <div className="flex items-center justify-between">
                     <CardTitle className="flex items-center gap-2 text-primary">
                       <Target className="w-5 h-5" />
-                      Current Recruiting Needs - {data.sportCoaching}
+                      Active Recruiting Targets - {data.sportRecruiting}
                     </CardTitle>
                     {isOwnProfile && (
                       <Button
                         size="sm"
                         variant="ghost"
-                        onClick={() => handleEditSection('recruiting-needs')}
+                        onClick={() => handleEditSection('recruiting-targets')}
                       >
                         <Edit className="w-4 h-4 mr-1" />
                         Edit
@@ -212,7 +212,7 @@ export function CoachProfile({ data, isOwnProfile = false, onShowInterest }: Coa
                 <CardContent>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
                     <div className="text-center">
-                      <p className="text-sm text-muted-foreground mb-2">Graduation Years</p>
+                      <p className="text-sm text-muted-foreground mb-2">Target Graduation Years</p>
                       <div className="flex flex-wrap justify-center gap-1">
                         {data.recruitingNeeds.graduationYears.map((year) => (
                           <Badge key={year} variant="outline" className="text-sm">
@@ -223,10 +223,10 @@ export function CoachProfile({ data, isOwnProfile = false, onShowInterest }: Coa
                     </div>
 
                     <div className="text-center">
-                      <p className="text-sm text-muted-foreground mb-2">Positions Needed</p>
+                      <p className="text-sm text-muted-foreground mb-2">Priority Positions</p>
                       <div className="flex flex-wrap justify-center gap-1">
                         {data.recruitingNeeds.positions.map((position) => (
-                          <Badge key={position} className="bg-blue-100 text-blue-800 text-sm">
+                          <Badge key={position} className="bg-green-100 text-green-800 text-sm">
                             {position}
                           </Badge>
                         ))}
@@ -235,7 +235,7 @@ export function CoachProfile({ data, isOwnProfile = false, onShowInterest }: Coa
 
                     {data.recruitingNeeds.scholarshipsAvailable && (
                       <div className="text-center">
-                        <p className="text-sm text-muted-foreground mb-2">Scholarships Available</p>
+                        <p className="text-sm text-muted-foreground mb-2">Scholarships to Offer</p>
                         <div className="bg-green-50 dark:bg-green-950 p-4 rounded-lg">
                           <p className="font-bold text-green-600 text-2xl">{data.recruitingNeeds.scholarshipsAvailable}</p>
                         </div>
@@ -243,15 +243,15 @@ export function CoachProfile({ data, isOwnProfile = false, onShowInterest }: Coa
                     )}
                   </div>
 
-                  {/* What We're Looking For section */}
-                  <div className="mt-6 p-4 bg-gradient-to-r from-blue-50 to-orange-50 dark:from-blue-950 dark:to-orange-950 rounded-lg">
+                  {/* Additional recruiting info for recruiters */}
+                  <div className="mt-6 p-4 bg-gradient-to-r from-blue-50 to-green-50 dark:from-blue-950 dark:to-green-950 rounded-lg">
                     <div className="flex items-center gap-2 mb-2">
                       <Users className="w-5 h-5 text-blue-600" />
                       <h4 className="font-medium">What We&apos;re Looking For</h4>
                     </div>
                     <p className="text-sm text-muted-foreground">
-                      We seek student-athletes who demonstrate exceptional athletic ability, 
-                      strong academic performance, and character that aligns with our program&apos;s values and culture.
+                      We actively scout for student-athletes who demonstrate exceptional skills, 
+                      strong academic performance, and character that aligns with our program values.
                     </p>
                   </div>
                 </CardContent>
@@ -293,21 +293,21 @@ export function CoachProfile({ data, isOwnProfile = false, onShowInterest }: Coa
             )}
 
             {/* Call to Action for Athletes */}
-            <Card className="border-primary/20 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-950 dark:to-purple-950">
+            <Card className="border-primary/20 bg-gradient-to-r from-green-50 to-blue-50 dark:from-green-950 dark:to-blue-950">
               <CardContent className="text-center py-8">
-                <Users className="w-12 h-12 mx-auto text-primary mb-4" />
-                <h3 className="text-xl font-bold mb-2">Ready to Take the Next Step?</h3>
+                <Search className="w-12 h-12 mx-auto text-primary mb-4" />
+                <h3 className="text-xl font-bold mb-2">Ready to Get Recruited?</h3>
                 <p className="text-muted-foreground mb-4">
-                  Join our {data.sportCoaching} program and compete at the highest level while pursuing your academic goals.
+                  Join our {data.sportRecruiting} program and take your athletic career to the next level while earning your degree.
                 </p>
                 {!isOwnProfile && (
                   <Button
                     size="lg"
-                    className="bg-blue-600 hover:bg-blue-700"
+                    className="bg-green-600 hover:bg-green-700"
                     onClick={onShowInterest}
                   >
                     <Star className="w-5 h-5 mr-2" />
-                    Express Interest
+                    Get Recruited
                   </Button>
                 )}
               </CardContent>

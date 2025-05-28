@@ -3,12 +3,14 @@ import { db } from './db';
 import { 
   users, 
   athleteProfiles, 
-  coachProfiles, 
+  coachProfiles,
+  recruitingProfiles,
   connections,
   activityLog,
   type NewUser,
   type NewAthleteProfile,
-  type NewCoachProfile
+  type NewCoachProfile,
+  type NewRecruitingProfile
 } from './schema';
 
 // User operations
@@ -19,11 +21,8 @@ export const userOperations = {
       where: eq(users.id, userId),
       with: {
         athleteProfile: true,
-        coachProfile: {
-          with: {
-            recruitingNeeds: true,
-          }
-        }
+        coachProfile: true,
+        recruitingProfile: true
       }
     });
     return user;
@@ -51,7 +50,8 @@ export const userOperations = {
       where: eq(users.role, role),
       with: {
         athleteProfile: role === 'athlete' ? true : undefined,
-        coachProfile: role === 'coach' || role === 'recruiter' ? true : undefined,
+        coachProfile: role === 'coach' ? true : undefined,
+        recruitingProfile: role === 'recruiter' ? true : undefined,
       }
     });
   }
@@ -201,6 +201,71 @@ export const coachOperations = {
       limit,
       offset,
       orderBy: [desc(coachProfiles.createdAt)]
+    });
+  }
+};
+
+// Recruiting operations
+export const recruitingOperations = {
+  // Get recruiting profile with all related data
+  async getRecruitingProfile(userId: string) {
+    return await db.query.recruitingProfiles.findFirst({
+      where: eq(recruitingProfiles.userId, userId),
+      with: {
+        user: true,
+        recruitingNeeds: true,
+      }
+    });
+  },
+
+  // Create recruiting profile
+  async createRecruitingProfile(profileData: NewRecruitingProfile) {
+    const [profile] = await db.insert(recruitingProfiles).values(profileData).returning();
+    return profile;
+  },
+
+  // Update recruiting profile
+  async updateRecruitingProfile(userId: string, profileData: Partial<NewRecruitingProfile>) {
+    const [profile] = await db
+      .update(recruitingProfiles)
+      .set({ ...profileData, updatedAt: new Date() })
+      .where(eq(recruitingProfiles.userId, userId))
+      .returning();
+    return profile;
+  },
+
+  // Search recruiting profiles by criteria
+  async searchRecruitingProfiles(criteria: {
+    sportsRecruiting?: string[];
+    division?: string;
+    state?: string;
+    isVerified?: boolean;
+    limit?: number;
+    offset?: number;
+  }) {
+    const { division, state, isVerified, limit = 20, offset = 0 } = criteria;
+    
+    const whereConditions = [];
+    
+    if (division) {
+      whereConditions.push(eq(recruitingProfiles.division, division));
+    }
+    if (state) {
+      whereConditions.push(eq(recruitingProfiles.state, state));
+    }
+    if (isVerified !== undefined) {
+      whereConditions.push(eq(recruitingProfiles.isVerified, isVerified));
+    }
+    
+    return await db.query.recruitingProfiles.findMany({
+      where: whereConditions.length > 0 ? and(...whereConditions) : undefined,
+      with: {
+        user: true,
+        recruitingNeeds: true,
+      },
+      limit,
+      offset,
+      orderBy: [desc(recruitingProfiles.createdAt)]
     });
   }
 };

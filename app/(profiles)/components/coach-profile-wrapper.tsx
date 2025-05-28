@@ -10,9 +10,9 @@ interface CoachProfileWrapperProps {
 
 export function CoachProfileWrapper({ data, isOwnProfile = false }: CoachProfileWrapperProps) {
   const handleShowInterest = () => {
-    console.log('Show interest clicked');
+    console.log('Show interest in coach clicked');
     // TODO: Implement show interest logic
-    // This could make an API call to express interest in the program
+    // This could make an API call to express interest in the coaching program
   };
 
   return (

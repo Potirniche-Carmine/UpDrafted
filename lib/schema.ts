@@ -102,7 +102,7 @@ export const coachProfiles = pgTable('coach_profiles', {
   userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
   title: text('title').notNull(),
   role: coachRoleEnum('role').notNull(),
-  sportsCoaching: text('sports_coaching').array().notNull(),
+  sportCoaching: text('sport_coaching').notNull(),
   organizationName: text('organization_name').notNull(),
   organizationLogo: text('organization_logo'),
   division: text('division').notNull(),
@@ -114,12 +114,43 @@ export const coachProfiles = pgTable('coach_profiles', {
   schoolWebsite: text('school_website'),
   instagramHandle: text('instagram_handle'),
   twitterHandle: text('twitter_handle'),
+  showcaseVideoTitle: text('showcase_video_title'),
+  showcaseVideoUrl: text('showcase_video_url'),
+  showcaseVideoEmbedUrl: text('showcase_video_embed_url'),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
 }, (table) => [
   index('idx_coach_profiles_user_id').on(table.userId),
   index('idx_coach_profiles_role').on(table.role),
   unique('coach_profiles_user_id_unique').on(table.userId),
+]);
+
+// Separate recruiting profiles table for future flexibility
+export const recruitingProfiles = pgTable('recruiting_profiles', {
+  id: serial('id').primaryKey(),
+  userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  title: text('title').notNull(),
+  sportRecruiting: text('sport_recruiting').notNull(),
+  organizationName: text('organization_name').notNull(),
+  organizationLogo: text('organization_logo'),
+  division: text('division').notNull(),
+  conference: text('conference'),
+  city: text('city').notNull(),
+  state: text('state').notNull(),
+  isVerified: boolean('is_verified').default(false),
+  programWebsite: text('program_website'),
+  schoolWebsite: text('school_website'),
+  instagramHandle: text('instagram_handle'),
+  twitterHandle: text('twitter_handle'),
+  showcaseVideoTitle: text('showcase_video_title'),
+  showcaseVideoUrl: text('showcase_video_url'),
+  showcaseVideoEmbedUrl: text('showcase_video_embed_url'),
+  recruitingPhilosophy: text('recruiting_philosophy'),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+}, (table) => [
+  index('idx_recruiting_profiles_user_id').on(table.userId),
+  unique('recruiting_profiles_user_id_unique').on(table.userId),
 ]);
 
 export const recruitingNeeds = pgTable('recruiting_needs', {
@@ -133,6 +164,19 @@ export const recruitingNeeds = pgTable('recruiting_needs', {
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
 }, (table) => [
   unique('recruiting_needs_coach_id_unique').on(table.coachId),
+]);
+
+export const recruitingProfileNeeds = pgTable('recruiting_profile_needs', {
+  id: serial('id').primaryKey(),
+  recruitingProfileId: integer('recruiting_profile_id').notNull().references(() => recruitingProfiles.id, { onDelete: 'cascade' }),
+  graduationYears: integer('graduation_years').array().notNull(),
+  positions: text('positions').array().notNull(),
+  scholarshipsAvailable: integer('scholarships_available'),
+  recruitingPhilosophy: text('recruiting_philosophy'),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+}, (table) => [
+  unique('recruiting_profile_needs_recruiting_profile_id_unique').on(table.recruitingProfileId),
 ]);
 
 export const connections = pgTable('connections', {
@@ -199,6 +243,10 @@ export const usersRelations = relations(users, ({ one, many }) => ({
     fields: [users.id],
     references: [coachProfiles.userId],
   }),
+  recruitingProfile: one(recruitingProfiles, {
+    fields: [users.id],
+    references: [recruitingProfiles.userId],
+  }),
   sentMessages: many(messages),
 }));
 
@@ -237,10 +285,25 @@ export const athleteVideosRelations = relations(athleteVideos, ({ one }) => ({
   }),
 }));
 
+export const recruitingProfilesRelations = relations(recruitingProfiles, ({ one }) => ({
+  user: one(users, {
+    fields: [recruitingProfiles.userId],
+    references: [users.id],
+  }),
+  recruitingNeeds: one(recruitingProfileNeeds),
+}));
+
 export const recruitingNeedsRelations = relations(recruitingNeeds, ({ one }) => ({
   coach: one(coachProfiles, {
     fields: [recruitingNeeds.coachId],
     references: [coachProfiles.id],
+  }),
+}));
+
+export const recruitingProfileNeedsRelations = relations(recruitingProfileNeeds, ({ one }) => ({
+  recruitingProfile: one(recruitingProfiles, {
+    fields: [recruitingProfileNeeds.recruitingProfileId],
+    references: [recruitingProfiles.id],
   }),
 }));
 
@@ -291,9 +354,15 @@ export type AthleteProfile = typeof athleteProfiles.$inferSelect;
 export type NewAthleteProfile = typeof athleteProfiles.$inferInsert;
 export type CoachProfile = typeof coachProfiles.$inferSelect;
 export type NewCoachProfile = typeof coachProfiles.$inferInsert;
+export type RecruitingProfile = typeof recruitingProfiles.$inferSelect;
+export type NewRecruitingProfile = typeof recruitingProfiles.$inferInsert;
 export type Connection = typeof connections.$inferSelect;
 export type NewConnection = typeof connections.$inferInsert;
 export type Conversation = typeof conversations.$inferSelect;
 export type NewConversation = typeof conversations.$inferInsert;
 export type Message = typeof messages.$inferSelect;
-export type NewMessage = typeof messages.$inferInsert; 
+export type NewMessage = typeof messages.$inferInsert;
+export type RecruitingNeeds = typeof recruitingNeeds.$inferSelect;
+export type NewRecruitingNeeds = typeof recruitingNeeds.$inferInsert;
+export type RecruitingProfileNeeds = typeof recruitingProfileNeeds.$inferSelect;
+export type NewRecruitingProfileNeeds = typeof recruitingProfileNeeds.$inferInsert; 
