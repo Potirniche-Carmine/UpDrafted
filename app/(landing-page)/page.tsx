@@ -1,135 +1,293 @@
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import Link from "next/link";
-import { ArrowRight, Zap, Target, Users, TrendingUp } from "lucide-react"; 
+import { ArrowRight, Search, Users, TrendingUp, Star, Shield, Zap, CheckCircle, Award, Globe } from "lucide-react";
 
 export default function HomePage() {
   return (
-    <div className="flex flex-col items-center justify-center text-center space-y-12 md:space-y-16">
-      <section className="w-full py-16 md:py-24 lg:py-32 xl:py-48 bg-gradient-to-b from-background to-secondary/30 dark:from-black dark:to-secondary/20 rounded-b-xl">
-        <div className="container px-4 md:px-6">
-          <div className="grid gap-8 lg:grid-cols-[1fr_500px] lg:gap-12 xl:grid-cols-[1fr_650px]">
-            <div className="flex flex-col justify-center space-y-6 text-left">
-              <div className="space-y-3">
-                <h1 className="text-4xl font-bold tracking-tighter sm:text-5xl xl:text-6xl/none bg-clip-text text-transparent bg-gradient-to-r from-primary to-primary/70 py-2">
-                  UpDrafted: Your Direct Line to College Sports Success.
+    <div className="flex flex-col">
+      {/* Hero Section */}
+      <section className="relative w-full py-20 md:py-32 lg:py-40 bg-gradient-to-br from-background via-background to-primary/5 overflow-hidden">
+        <div className="absolute inset-0 bg-grid-pattern opacity-5"></div>
+        <div className="container px-4 md:px-6 relative">
+          <div className="grid gap-12 lg:grid-cols-2 lg:gap-16 items-center">
+            <div className="flex flex-col justify-center space-y-8">
+              <div className="space-y-6">
+                <Badge variant="outline" className="w-fit bg-primary/10 text-primary border-primary/20">
+                  <Star className="w-4 h-4 mr-2" />
+                  The Future of College Sports Recruiting
+                </Badge>
+                <h1 className="text-4xl font-bold tracking-tight sm:text-5xl xl:text-6xl/none">
+                  Connect. Showcase.{" "}
+                  <span className="bg-clip-text text-transparent bg-gradient-to-r from-primary to-green-600">
+                    Get Recruited.
+                  </span>
                 </h1>
-                <p className="max-w-[600px] text-muted-foreground md:text-xl lg:text-lg xl:text-xl">
-                  Connect instantly. Athletes: Showcase your talent to D1, D2, D3, & JUCO Programs. College Programs: Discover your next star with unparalleled efficiency.
+                <p className="max-w-[600px] text-lg text-muted-foreground md:text-xl">
+                  The premier platform connecting student-athletes with college programs across NCAA D1, D2, D3, and JUCO divisions. Your athletic journey starts here.
                 </p>
               </div>
-              <div className="flex flex-col gap-3 min-[400px]:flex-row">
+              
+              <div className="flex justify-center">
                 <Link href="/sign-up">
-                  <Button size="lg" className="w-full min-[400px]:w-auto bg-primary hover:bg-primary/90 text-primary-foreground group">
-                    Create Your Profile <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
-                  </Button>
-                </Link>
-                <Link href="/explore-athletes">
-                  <Button variant="outline" size="lg" className="w-full min-[400px]:w-auto border-primary text-primary hover:bg-primary/10">
-                    Explore Talent Now
+                  <Button size="lg" className="bg-primary hover:bg-primary/90 text-primary-foreground group px-12 py-4 text-lg">
+                    Start Your Journey
+                    <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
                   </Button>
                 </Link>
               </div>
+
+              <div className="flex items-center gap-6 pt-4">
+                <div className="flex items-center gap-2">
+                  <CheckCircle className="h-5 w-5 text-green-500" />
+                  <span className="text-sm text-muted-foreground">Free to join</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Shield className="h-5 w-5 text-green-500" />
+                  <span className="text-sm text-muted-foreground">Verified profiles</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Globe className="h-5 w-5 text-purple-500" />
+                  <span className="text-sm text-muted-foreground">Nationwide reach</span>
+                </div>
+              </div>
             </div>
-            <div className="hidden lg:flex items-center justify-center p-6">
-              {/* Suggestion: Replace with a dynamic image/graphic */}
-              {/* e.g., a montage of diverse athletes, or a stylized representation of connections */}
-              <div className="w-full h-72 lg:h-96 bg-muted/70 dark:bg-muted/40 rounded-xl shadow-xl flex flex-col items-center justify-center text-center p-8">
-                  <TrendingUp className="h-24 w-24 text-primary mb-6" />
-                  <p className="text-xl font-semibold text-primary/90">
-                    Next Level Connections, Simplified.
+
+                        <div className="relative">
+              <div className="relative bg-gradient-to-br from-primary/10 to-green-600/10 rounded-2xl p-8 backdrop-blur-sm border border-primary/20">
+                <div className="text-center">
+                  <TrendingUp className="h-16 w-16 text-primary mx-auto mb-4 opacity-80" />
+                  <h3 className="text-xl font-semibold mb-2">Your Athletic Journey Starts Here</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Connect with college programs and showcase your talent on the premier recruiting platform
                   </p>
-                  <p className="text-sm text-muted-foreground mt-2">
-                    Visualize your future team or your next opportunity.
-                  </p>
+                </div>
               </div>
             </div>
           </div>
         </div>
       </section>
 
-      {/* The UpDrafted Edge Section - Highlighting the "Tinder-like" benefit */}
-      <section className="w-full py-12 md:py-20 lg:py-28">
+      {/* How It Works Section */}
+      <section className="w-full py-16 md:py-24 bg-secondary/30">
         <div className="container px-4 md:px-6">
-          <div className="text-center mb-10 md:mb-14">
-            <h2 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl">
-              The UpDrafted Edge
+          <div className="text-center mb-16">
+            <h2 className="text-3xl font-bold tracking-tight sm:text-4xl md:text-5xl mb-4">
+              How UpDrafted Works
             </h2>
-            <p className="max-w-3xl mx-auto mt-3 text-muted-foreground md:text-lg">
-              We&apos;re revolutionizing college sports recruitment by making connections faster and more meaningful.
+            <p className="max-w-3xl mx-auto text-lg text-muted-foreground">
+              Three simple steps to transform your recruiting journey
             </p>
           </div>
-          <div className="mx-auto grid items-start gap-8 sm:max-w-4xl sm:grid-cols-1 md:gap-12 lg:max-w-5xl lg:grid-cols-2">
-            <div className="p-6 bg-card border border-border/50 rounded-xl shadow-lg hover:shadow-xl transition-shadow duration-300">
-              <div className="flex items-center mb-3">
-                <Target className="h-10 w-10 text-primary mr-4" />
-                <h3 className="text-2xl font-bold text-primary">For Athletes: Get Seen, Get Recruited</h3>
+
+          <div className="grid gap-8 md:grid-cols-3">
+            <div className="text-center space-y-4">
+              <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto">
+                <span className="text-2xl font-bold text-primary">1</span>
               </div>
+              <h3 className="text-xl font-semibold">Create Your Profile</h3>
               <p className="text-muted-foreground">
-                Build a standout profile that highlights your skills, academics, and aspirations. Our platform puts you directly in front of college programs actively looking for talent like yours. Maximize your visibility, minimize the guesswork.
+                Build a comprehensive athletic profile showcasing your stats, highlights, and achievements
               </p>
             </div>
-            <div className="p-6 bg-card border border-border/50 rounded-xl shadow-lg hover:shadow-xl transition-shadow duration-300">
-              <div className="flex items-center mb-3">
-                <Zap className="h-10 w-10 text-primary mr-4" />
-                <h3 className="text-2xl font-bold text-primary">For Programs: Discover Talent, Instantly</h3>
+            <div className="text-center space-y-4">
+              <div className="w-16 h-16 bg-green-600/10 rounded-full flex items-center justify-center mx-auto">
+                <span className="text-2xl font-bold text-green-600">2</span>
               </div>
+              <h3 className="text-xl font-semibold">Get Discovered</h3>
               <p className="text-muted-foreground">
-                Cut through the noise. Our intuitive interface (inspired by quick-review mechanics) lets you efficiently assess athlete highlights and key stats at a glance. Spend less time searching, more time connecting with genuine prospects.
+                College coaches and recruiters find you through our advanced search and matching system
+              </p>
+            </div>
+            <div className="text-center space-y-4">
+              <div className="w-16 h-16 bg-green-600/10 rounded-full flex items-center justify-center mx-auto">
+                <span className="text-2xl font-bold text-green-600">3</span>
+              </div>
+              <h3 className="text-xl font-semibold">Make Connections</h3>
+              <p className="text-muted-foreground">
+                Connect directly with programs that match your goals and academic interests
               </p>
             </div>
           </div>
         </div>
       </section>
 
-      <section className="w-full py-12 md:py-20 lg:py-28 bg-secondary/30 dark:bg-secondary/20">
+      {/* Features Section */}
+      <section className="w-full py-16 md:py-24">
         <div className="container px-4 md:px-6">
-          <h2 className="text-3xl font-bold tracking-tighter text-center sm:text-4xl md:text-5xl mb-10 md:mb-14">
-            Unlock Your Potential
-          </h2>
-          <div className="mx-auto grid items-start gap-6 sm:max-w-4xl sm:grid-cols-2 md:gap-10 lg:max-w-5xl lg:grid-cols-3">
-            <div className="flex flex-col items-center text-center gap-2 p-6 border border-transparent rounded-lg hover:shadow-lg hover:border-primary/30 transition-all duration-300">
-              <Users className="h-12 w-12 text-primary mb-3" />
-              <h3 className="text-xl font-bold text-primary/90">Dynamic Athlete Profiles</h3>
-              <p className="text-sm text-muted-foreground">
-                Showcase everything: highlight reels, stats, academic achievements, and personal statements. Make a lasting first impression.
-              </p>
-            </div>
-            <div className="flex flex-col items-center text-center gap-2 p-6 border border-transparent rounded-lg hover:shadow-lg hover:border-primary/30 transition-all duration-300">
-              <Target className="h-12 w-12 text-primary mb-3" />
-              <h3 className="text-xl font-bold text-primary/90">Precision Search for Programs</h3>
-              <p className="text-sm text-muted-foreground">
-                Filter by sport, division, position, academic standing, and more. Find verified athletes that fit your program&apos;s exact needs.
-              </p>
-            </div>
-            <div className="flex flex-col items-center text-center gap-2 p-6 border border-transparent rounded-lg hover:shadow-lg hover:border-primary/30 transition-all duration-300">
-              <TrendingUp className="h-12 w-12 text-primary mb-3" />
-              <h3 className="text-xl font-bold text-primary/90">Nationwide Network</h3>
-              <p className="text-sm text-muted-foreground">
-                Connect with opportunities across NCAA D1, D2, D3, and NJCAA (JUCO) institutions. Your next chapter starts here.
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section className="w-full py-16 md:py-24 lg:py-32">
-        <div className="container grid items-center justify-center gap-6 px-4 text-center md:px-6">
-          <div className="space-y-4">
-            <h2 className="text-3xl font-bold tracking-tighter md:text-4xl/tight">
-              Ready to Make Your Mark in College Sports?
+          <div className="text-center mb-16">
+            <h2 className="text-3xl font-bold tracking-tight sm:text-4xl md:text-5xl mb-4">
+              Built for Success
             </h2>
-            <p className="mx-auto max-w-[650px] text-muted-foreground md:text-xl/relaxed lg:text-base/relaxed xl:text-xl/relaxed">
-              Whether you&apos;re an athlete dreaming of college play or a college program searching for the next game-changer, UpDrafted is your ultimate recruitment platform.
+            <p className="max-w-3xl mx-auto text-lg text-muted-foreground">
+              Everything you need to take your athletic career to the next level
             </p>
           </div>
-          <div className="mx-auto w-full max-w-sm space-y-3">
-            <Link href="/sign-up">
-              <Button size="lg" className="w-full bg-primary hover:bg-primary/90 text-primary-foreground text-lg py-3 group">
-                Get Started with UpDrafted <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
-              </Button>
-            </Link>
-            <p className="text-xs py-2 text-muted-foreground">
-              Join free. Connect instantly.
+
+          <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
+            <Card className="border-0 shadow-lg hover:shadow-xl transition-shadow">
+              <CardHeader>
+                <Users className="h-10 w-10 text-primary mb-4" />
+                <CardTitle>Comprehensive Profiles</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-muted-foreground">
+                  Showcase stats, highlights, academic achievements, and personal statements in one professional profile
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card className="border-0 shadow-lg hover:shadow-xl transition-shadow">
+              <CardHeader>
+                <Search className="h-10 w-10 text-green-600 mb-4" />
+                <CardTitle>Advanced Search</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-muted-foreground">
+                  Powerful filtering by sport, division, position, academics, and location for perfect matches
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card className="border-0 shadow-lg hover:shadow-xl transition-shadow">
+              <CardHeader>
+                <Shield className="h-10 w-10 text-green-600 mb-4" />
+                <CardTitle>Verified Profiles</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-muted-foreground">
+                  MaxPreps integration and verification system ensures authentic athlete and coach profiles
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card className="border-0 shadow-lg hover:shadow-xl transition-shadow">
+              <CardHeader>
+                <Zap className="h-10 w-10 text-yellow-600 mb-4" />
+                <CardTitle>Instant Connections</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-muted-foreground">
+                  Direct messaging and connection system streamlines communication between athletes and programs
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card className="border-0 shadow-lg hover:shadow-xl transition-shadow">
+              <CardHeader>
+                <TrendingUp className="h-10 w-10 text-purple-600 mb-4" />
+                <CardTitle>Track Progress</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-muted-foreground">
+                  Monitor profile views, connections, and recruiting activity with detailed analytics
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card className="border-0 shadow-lg hover:shadow-xl transition-shadow">
+              <CardHeader>
+                <Award className="h-10 w-10 text-orange-600 mb-4" />
+                <CardTitle>All Divisions</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-muted-foreground">
+                  Connect with NCAA D1, D2, D3, and JUCO programs nationwide for maximum opportunities
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </section>
+
+      {/* Why Choose UpDrafted */}
+      <section className="w-full py-16 md:py-24 bg-secondary/30">
+        <div className="container px-4 md:px-6">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl font-bold tracking-tight sm:text-4xl md:text-5xl mb-4">
+              Why Choose UpDrafted?
+            </h2>
+            <p className="max-w-3xl mx-auto text-lg text-muted-foreground">
+              The advantages that set us apart from traditional recruiting methods
+            </p>
+          </div>
+
+          <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
+            <Card className="border-0 shadow-lg">
+              <CardContent className="p-6">
+                <div className="flex items-center gap-4 mb-4">
+                  <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center">
+                    <CheckCircle className="h-6 w-6 text-primary" />
+                  </div>
+                  <div>
+                    <div className="font-semibold">100% Free Platform</div>
+                    <div className="text-sm text-muted-foreground">No hidden costs or premium tiers</div>
+                  </div>
+                </div>
+                <p className="text-muted-foreground">
+                  Create your profile, connect with programs, and access all features without any fees. We believe talent shouldn&apos;t be limited by budget.
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card className="border-0 shadow-lg">
+              <CardContent className="p-6">
+                <div className="flex items-center gap-4 mb-4">
+                  <div className="w-12 h-12 bg-green-600/10 rounded-full flex items-center justify-center">
+                    <Shield className="h-6 w-6 text-green-600" />
+                  </div>
+                  <div>
+                    <div className="font-semibold">Verified Profiles</div>
+                    <div className="text-sm text-muted-foreground">MaxPreps integration & verification</div>
+                  </div>
+                </div>
+                <p className="text-muted-foreground">
+                  Our verification system ensures authentic profiles, giving coaches confidence and athletes credibility in the recruiting process.
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card className="border-0 shadow-lg">
+              <CardContent className="p-6">
+                <div className="flex items-center gap-4 mb-4">
+                  <div className="w-12 h-12 bg-green-600/10 rounded-full flex items-center justify-center">
+                    <Globe className="h-6 w-6 text-green-600" />
+                  </div>
+                  <div>
+                    <div className="font-semibold">All Division Levels</div>
+                    <div className="text-sm text-muted-foreground">D1, D2, D3, and JUCO programs</div>
+                  </div>
+                </div>
+                <p className="text-muted-foreground">
+                  Connect with programs across all NCAA divisions and NJCAA, ensuring you find the right academic and athletic fit for your goals.
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </section>
+
+      {/* CTA Section */}
+      <section className="w-full py-20 md:py-32 bg-gradient-to-r from-primary via-green-700 to-green-800">
+        <div className="container px-4 md:px-6">
+          <div className="text-center space-y-8 text-white">
+            <h2 className="text-3xl font-bold tracking-tight sm:text-4xl md:text-5xl">
+              Ready to Take the Next Step?
+            </h2>
+            <p className="max-w-3xl mx-auto text-lg opacity-90">
+              Join thousands of student-athletes and college programs already using UpDrafted to make meaningful connections and build successful futures.
+            </p>
+            <div className="flex justify-center">
+              <Link href="/sign-up">
+                <Button size="lg" variant="secondary" className="px-12 py-4 text-xl group">
+                  Create Your Profile
+                  <ArrowRight className="ml-2 h-6 w-6 group-hover:translate-x-1 transition-transform" />
+                </Button>
+              </Link>
+            </div>
+            <p className="text-sm opacity-75">
+              Free to join • No hidden fees • Start connecting today
             </p>
           </div>
         </div>

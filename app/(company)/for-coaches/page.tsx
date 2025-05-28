@@ -23,7 +23,7 @@ export default function ForHsClubCoachesPage() {
             <div className="p-6 bg-primary/10 border border-primary/30 rounded-xl text-center">
                 <h3 className="text-xl font-semibold text-primary mb-2">Are you a College Coach focused on Recruiting?</h3>
                 <p className="text-muted-foreground mb-4 text-sm">
-                    While creating your verified coach profile here is a great step, our dedicated **Recruiter Platform** offers the best tools for discovering, evaluating, and connecting with prospective student-athletes.
+                    While creating your verified coach profile here is a great step, our dedicated Recruiter Platform offers the best tools for discovering, evaluating, and connecting with prospective student-athletes.
                 </p>
                 <Link href="/for-recruiters"> 
                     <Button variant="outline" size="sm" className="border-primary text-primary hover:bg-primary/10">

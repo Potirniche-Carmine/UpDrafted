@@ -6,8 +6,9 @@ import { ArrowLeft } from "lucide-react";
 
 export default function SignInPage() {
   return (
-    <div className="flex flex-col items-center justify-center min-h-[calc(100vh-8rem)] pt-2 pb-12 px-4 sm:px-6 lg:px-8 bg-gradient-to-b from-background to-secondary/10 dark:from-black dark:to-secondary/5">
-      <div className="w-full max-w-md space-y-6">
+    <div className="relative flex flex-col items-center justify-center min-h-[calc(100vh-8rem)] pt-2 pb-12 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-background via-background to-primary/5 overflow-hidden">
+      <div className="absolute inset-0 bg-grid-pattern opacity-5"></div>
+      <div className="w-full max-w-md space-y-6 relative">
         <div>
           <h2 className="text-center text-3xl font-bold tracking-tight text-foreground">
             Sign in to your UpDrafted account
