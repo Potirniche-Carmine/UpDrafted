@@ -6,7 +6,7 @@ import { ArrowLeft } from "lucide-react";
 
 export default function SignUpPage() {
   return (
-    <div className="relative flex flex-col items-center justify-center min-h-[calc(100vh-8rem)] pt-2 pb-12 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-background via-background to-primary/5 overflow-hidden">
+    <div className="relative flex flex-col items-center justify-start min-h-screen pt-20 pb-12 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-background via-background to-emerald-50/30 dark:to-emerald-950/20 overflow-hidden">
       <div className="absolute inset-0 bg-grid-pattern opacity-5"></div>
       <div className="w-full max-w-md space-y-6 relative">
         <div>
@@ -15,7 +15,7 @@ export default function SignUpPage() {
           </h2>
           <p className="mt-2 text-center text-sm text-muted-foreground">
             Already have an account?{" "}
-            <Link href="/sign-in" className="font-medium text-primary hover:text-primary/90">
+            <Link href="/sign-in" className="font-medium text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300">
               Sign in
             </Link>
           </p>
@@ -29,16 +29,16 @@ export default function SignUpPage() {
             redirectUrl="/"
             appearance={{
               elements: {
-                card: "shadow-xl border border-border/30",
+                card: "shadow-xl border border-border/30 bg-card",
                 headerTitle: "text-foreground",
                 headerSubtitle: "text-muted-foreground",
                 socialButtonsBlockButton: "border-border/50 hover:bg-muted/80",
                 socialButtonsBlockButtonText: "text-foreground",
                 formFieldLabel: "text-muted-foreground",
-                formFieldInput: "border-border/50 focus:ring-primary focus:border-primary text-foreground",
-                formButtonPrimary: "bg-primary hover:bg-primary/90 text-primary-foreground",
+                formFieldInput: "border-border/50 focus:ring-emerald-500 focus:border-emerald-500 text-foreground bg-background",
+                formButtonPrimary: "bg-emerald-600 hover:bg-emerald-700 text-white",
                 footerActionText: "text-muted-foreground",
-                footerActionLink: "text-primary hover:text-primary/90",
+                footerActionLink: "text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 dark:hover:text-emerald-300",
                 dividerLine: "bg-border/50",
                 dividerText: "text-muted-foreground",
               }
@@ -47,7 +47,7 @@ export default function SignUpPage() {
         </div>
 
         <div className="text-center mt-6">
-          <Link href="/" className="inline-flex items-center text-sm text-primary hover:text-primary/90">
+          <Link href="/" className="inline-flex items-center text-sm text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300">
             <ArrowLeft className="mr-2 h-4 w-4" />
             Back to Home
           </Link>

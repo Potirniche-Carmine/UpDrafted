@@ -4,7 +4,7 @@ import Link from "next/link";
 import { UserButton, SignedIn, SignedOut, SignInButton, useUser, SignUpButton } from "@clerk/nextjs";
 import { Button } from "@/components/ui/button";
 import { SearchBar } from "./search-bar";
-import { Users, MessageSquare, Bell, LogIn, ChevronDown, Search} from "lucide-react";
+import { Users, MessageSquare, Bell, LogIn, ChevronDown } from "lucide-react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 
@@ -49,16 +49,6 @@ export function Header() {
             <SearchBar />
           </div>
         </SignedIn>
-        <SignedOut>
-          <div className="hidden md:flex flex-1 justify-center px-4">
-            <Link href="/search">
-              <Button variant="outline" size="sm" className="flex items-center space-x-2">
-                <Search className="h-4 w-4" />
-                <span>Search Athletes & Programs</span>
-              </Button>
-            </Link>
-          </div>
-        </SignedOut>
 
         <nav className="flex items-center space-x-1 sm:space-x-2 lg:space-x-3"> 
           {navItemsToDisplay.map((item) => (
@@ -131,16 +121,6 @@ export function Header() {
           <SearchBar />
         </div>
       </SignedIn>
-      <SignedOut>
-        <div className="md:hidden px-4 pb-3 pt-2 border-t border-border/40">
-          <Link href="/search">
-            <Button variant="outline" size="sm" className="w-full flex items-center justify-center space-x-2">
-              <Search className="h-4 w-4" />
-              <span>Search Athletes & Programs</span>
-            </Button>
-          </Link>
-        </div>
-      </SignedOut>
     </header>
   );
 }
