@@ -145,9 +145,9 @@ const mockRecruiterData = {
 };
 
 interface ProfilePageProps {
-  params: {
+  params: Promise<{
     id: string;
-  };
+  }>;
 }
 
 async function getUserData(userId: string) {
@@ -174,7 +174,8 @@ async function getUserData(userId: string) {
 }
 
 export default async function ProfilePage({ params }: ProfilePageProps) {
-  const userData = await getUserData(params.id);
+  const { id } = await params;
+  const userData = await getUserData(id);
   
   if (!userData) {
     notFound();

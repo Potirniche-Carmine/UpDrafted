@@ -8,15 +8,19 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Users, Trophy, Target } from "lucide-react";
-import { fetchGeoapifyData } from "./geoapify";
 
 type UserRole = "athlete" | "coach" | "recruiter";
 
 interface OnboardingData {
   role: UserRole | null;
+  // Common fields
+  firstName?: string;
+  lastName?: string;
+  profilePicture?: File | string;
   // Athlete fields
   sport?: string;
   secondarySports?: string[];
+  secondarySport?: string;
   graduationYear?: number;
   highSchool?: string;
   city?: string;
@@ -45,16 +49,13 @@ export default function OnboardingPage() {
   const [step, setStep] = useState<"role" | "details">("role");
   const [isLoading, setIsLoading] = useState(false);
   const [data, setData] = useState<OnboardingData>({ role: null });
-  const [schoolQuery, setSchoolQuery] = useState('');
-  const [schoolResults, setSchoolResults] = useState<string[]>([]);
-
 
   const handleRoleSelect = (role: UserRole) => {
     setData({ ...data, role });
     setStep("details");
   };
 
-  const handleInputChange = (field: string, value: string | number | string[]) => {
+  const handleInputChange = (field: string, value: string | number | string[] | File) => {
     setData({ ...data, [field]: value });
   };
 
@@ -214,7 +215,7 @@ return (
             {data.role === 'athlete' ? (
               // Athlete Form
               <>
-                {/* First Name and Last Name Fields */}
+                {/* First Name and Last Nsame Fields */}
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium mb-2">First Name *</label>
@@ -294,32 +295,8 @@ return (
                   <Input
                     placeholder="Your High School Name"
                     value={data.highSchool || ''}
-                    // ADDED: onChange handler to call fetchGeoapifyData
-                    onChange={(e) => {
-                      const inputValue = e.target.value;
-                      handleInputChange('highSchool', inputValue); // Update your state
-                      const data = fetchGeoapifyData(inputValue); // Call your API function
-                    }}
+                    onChange={(e) => handleInputChange('highSchool', e.target.value)}
                   />
-                  {/* You might want to add a div here to display suggestions */}
-                  {/* For example:
-                  {suggestions.length > 0 && (
-                    <ul className="border rounded-md mt-1 max-h-48 overflow-y-auto">
-                      {suggestions.map((suggestion, index) => (
-                        <li 
-                          key={index} 
-                          className="p-2 cursor-pointer hover:bg-gray-100"
-                          onClick={() => {
-                            handleInputChange('highSchool', suggestion.properties.name);
-                            setSuggestions([]); // Clear suggestions after selection
-                          }}
-                        >
-                          {suggestion.properties.name}
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                  */}
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">

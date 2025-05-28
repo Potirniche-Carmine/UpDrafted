@@ -3,21 +3,41 @@
 import Link from "next/link";
 import { UserButton, SignedIn, SignedOut, SignInButton, useUser, SignUpButton } from "@clerk/nextjs";
 import { Button } from "@/components/ui/button";
-import { SearchBar } from "./search-bar";
-import { Users, MessageSquare, Bell, LogIn, ChevronDown } from "lucide-react";
+import { Users, MessageSquare, Bell, LogIn, ChevronDown, Shield, BarChart3, UserCheck, Search } from "lucide-react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 
+interface NavItem {
+  key: string;
+  href: string;
+  label: string;
+  icon: React.ReactElement;
+  requiresAuth: boolean;
+  className?: string;
+  onClick?: () => void;
+}
+
 export function Header() {
-  const { isSignedIn } = useUser();
+  const { isSignedIn, user } = useUser();
   const router = useRouter();
 
-  const allNavItems = [
-    { href: "/connections", label: "My Connections", icon: <Users className="h-5 w-5" />, requiresAuth: true, className: undefined },
-    { href: "/messaging", label: "Messaging", icon: <MessageSquare className="h-5 w-5" />, requiresAuth: true, className: undefined },
-    { href: "/notifications", label: "Notifications", icon: <Bell className="h-5 w-5" />, requiresAuth: true, className: undefined }
+  const isAdmin = user?.publicMetadata?.role === 'admin';
+
+  const regularNavItems: NavItem[] = [
+    { key: "connections", href: "/connections", label: "My Connections", icon: <Users className="h-5 w-5" />, requiresAuth: true, className: undefined },
+    { key: "messaging", href: "/messaging", label: "Messaging", icon: <MessageSquare className="h-5 w-5" />, requiresAuth: true, className: undefined },
+    { key: "notifications", href: "/notifications", label: "Notifications", icon: <Bell className="h-5 w-5" />, requiresAuth: true, className: undefined }
   ];
-  const navItemsToDisplay = allNavItems.filter(item => !item.requiresAuth || isSignedIn);
+
+  const adminNavItems: NavItem[] = [
+    { key: "dashboard", href: "/admin", label: "Dashboard", icon: <Shield className="h-5 w-5" />, requiresAuth: true, className: undefined },
+    { key: "reports", href: "/admin", label: "Reports", icon: <BarChart3 className="h-5 w-5" />, requiresAuth: true, className: undefined, onClick: () => window.location.href = '/admin?tab=reports' },
+    { key: "verification", href: "/admin", label: "Verification", icon: <UserCheck className="h-5 w-5" />, requiresAuth: true, className: undefined, onClick: () => window.location.href = '/admin?tab=verification' }
+  ];
+
+  const navItemsToDisplay = isSignedIn ? 
+    (isAdmin ? adminNavItems : regularNavItems) : 
+    [];
 
   const userButtonAppearance = {
     elements: {
@@ -28,7 +48,9 @@ export function Header() {
   };
 
   const handleViewProfile = () => {
-    router.push('athlete-profile');
+    if (user?.id) {
+      router.push(`/profile/${user.id}`);
+    }
   };
 
   return (
@@ -44,29 +66,60 @@ export function Header() {
             className="mr-3 w-[110px] md:w-[150px] h-auto" 
           />
         </Link>
+        
+        {/* Admin header shows admin title */}
+        {isAdmin && isSignedIn && (
+          <div className="hidden md:flex items-center space-x-2 text-primary">
+            <Shield className="h-5 w-5" />
+            <span className="font-semibold text-lg">Admin Portal</span>
+          </div>
+        )}
+
+        {/* Search button for all users */}
         <SignedIn>
           <div className="hidden md:flex flex-1 justify-center px-4">
-            <SearchBar />
+            <Button variant="outline" size="sm" className="flex items-center space-x-2" onClick={() => router.push('/search')}>
+              <Search className="h-4 w-4" />
+              <span>Search</span>
+            </Button>
           </div>
         </SignedIn>
 
         <nav className="flex items-center space-x-1 sm:space-x-2 lg:space-x-3"> 
           {navItemsToDisplay.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={`transition-colors flex items-center p-1.5 sm:p-2 group rounded-lg ${
-                item.className || "text-muted-foreground hover:text-primary"
-              }`}
-              title={item.label}
-            >
-              {item.icon}
-              <span className={`ml-2 text-sm font-medium hidden lg:inline ${
-                item.className ? "" : "group-hover:text-primary"
-              }`}>
-                {item.label}
-              </span>
-            </Link>
+            item.onClick ? (
+              <button
+                key={item.key}
+                onClick={item.onClick}
+                className={`transition-colors flex items-center p-1.5 sm:p-2 group rounded-lg ${
+                  item.className || "text-muted-foreground hover:text-primary"
+                }`}
+                title={item.label}
+              >
+                {item.icon}
+                <span className={`ml-2 text-sm font-medium hidden lg:inline ${
+                  item.className ? "" : "group-hover:text-primary"
+                }`}>
+                  {item.label}
+                </span>
+              </button>
+            ) : (
+              <Link
+                key={item.key}
+                href={item.href}
+                className={`transition-colors flex items-center p-1.5 sm:p-2 group rounded-lg ${
+                  item.className || "text-muted-foreground hover:text-primary"
+                }`}
+                title={item.label}
+              >
+                {item.icon}
+                <span className={`ml-2 text-sm font-medium hidden lg:inline ${
+                  item.className ? "" : "group-hover:text-primary"
+                }`}>
+                  {item.label}
+                </span>
+              </Link>
+            )
           ))}
 
           <div className="md:hidden ml-2"> 
@@ -78,16 +131,30 @@ export function Header() {
                 appearance={userButtonAppearance}
               >
                 <UserButton.MenuItems>
-                  <UserButton.Action
-                    label="View Profile" 
-                    labelIcon={<Users className="mr-2 h-4 w-4" />}
-                    onClick={handleViewProfile}
-                  >
-                    <div className="flex items-center">
-                      <Users className="mr-2 h-4 w-4" /> 
-                      <span>View Profile</span>
-                    </div>
-                  </UserButton.Action>
+                  {!isAdmin && (
+                    <UserButton.Action
+                      label="View Profile" 
+                      labelIcon={<Users className="mr-2 h-4 w-4" />}
+                      onClick={handleViewProfile}
+                    >
+                      <div className="flex items-center">
+                        <Users className="mr-2 h-4 w-4" /> 
+                        <span>View Profile</span>
+                      </div>
+                    </UserButton.Action>
+                  )}
+                  {isAdmin && (
+                    <UserButton.Action
+                      label="Admin Dashboard" 
+                      labelIcon={<Shield className="mr-2 h-4 w-4" />}
+                      onClick={() => router.push('/admin')}
+                    >
+                      <div className="flex items-center">
+                        <Shield className="mr-2 h-4 w-4" /> 
+                        <span>Admin Dashboard</span>
+                      </div>
+                    </UserButton.Action>
+                  )}
                 </UserButton.MenuItems>
               </UserButton>
               <div
@@ -118,7 +185,12 @@ export function Header() {
       </div>
       <SignedIn>
         <div className="md:hidden px-4 pb-3 pt-2 border-t border-border/40">
-          <SearchBar />
+          <div className="flex justify-center">
+            <Button variant="outline" size="sm" className="flex items-center space-x-2" onClick={() => router.push('/search')}>
+              <Search className="h-4 w-4" />
+              <span>Search</span>
+            </Button>
+          </div>
         </div>
       </SignedIn>
     </header>
