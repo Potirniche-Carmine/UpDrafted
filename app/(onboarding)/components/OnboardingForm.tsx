@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { createSecureHeaders } from "@/utils/clerk-security";
-import { OnboardingData, UserRole } from "../onboarding/types";
+import { OnboardingData, UserRole } from "../components/types";
 import CommonFields from "./CommonFields";
 import AthleteForm from "./AthleteForm";
 import CoachRecruiterForm from "./CoachRecruiterForm";
@@ -197,7 +197,7 @@ export default function OnboardingForm({ role, onBack }: OnboardingFormProps) {
               agreeToTerms={data.agreeToTerms}
               ageConfirmation={data.ageConfirmation}
               role={data.role}
-              onInputChange={handleInputChange}
+              onInputChange={(field, value) => handleInputChange(field as keyof OnboardingData, value)}
             />
 
             <div className="flex gap-4 pt-6 border-t">

@@ -2,7 +2,7 @@
 
 import { Checkbox } from "@/components/ui/checkbox";
 import Link from "next/link";
-import { OnboardingData } from "../onboarding/types";
+import { OnboardingData } from "../components/types";
 
 interface TermsAndConditionsProps {
   agreeToTerms: boolean;

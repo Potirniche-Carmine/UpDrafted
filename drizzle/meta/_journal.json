@@ -15,6 +15,13 @@
       "when": 1748470701438,
       "tag": "0001_quick_crystal",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1748497482467,
+      "tag": "0002_parched_grandmaster",
+      "breakpoints": true
     }
   ]
 }

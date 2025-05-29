@@ -32,17 +32,6 @@ export const users = pgTable('users', {
   index('idx_users_email').on(table.email),
 ]);
 
-export const sports = pgTable('sports', {
-  id: serial('id').primaryKey(),
-  name: text('name').notNull(),
-  gender: genderEnum('gender').notNull(),
-  isActive: boolean('is_active').default(true).notNull(),
-  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
-}, (table) => [
-  index('idx_sports_gender').on(table.gender),
-  index('idx_sports_is_active').on(table.isActive),
-]);
-
 export const athleteProfiles = pgTable('athlete_profiles', {
   id: serial('id').primaryKey(),
   userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
@@ -341,15 +330,9 @@ export const messagesRelations = relations(messages, ({ one }) => ({
   }),
 }));
 
-export const sportsRelations = relations(sports, () => ({
-  // No direct relations needed for now, but can be added later if needed
-}));
-
 // Export types for use in your application
 export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
-export type Sport = typeof sports.$inferSelect;
-export type NewSport = typeof sports.$inferInsert;
 export type AthleteProfile = typeof athleteProfiles.$inferSelect;
 export type NewAthleteProfile = typeof athleteProfiles.$inferInsert;
 export type CoachProfile = typeof coachProfiles.$inferSelect;

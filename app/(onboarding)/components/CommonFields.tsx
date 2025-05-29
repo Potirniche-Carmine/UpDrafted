@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Upload, X } from "lucide-react";
 import Image from "next/image";
-import { OnboardingData } from "../onboarding/types";
+import { OnboardingData } from "../components/types";
 
 interface CommonFieldsProps {
   fullName: string;

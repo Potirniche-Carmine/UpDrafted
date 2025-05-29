@@ -12,7 +12,7 @@ import {
   getPositionsForSport, 
   getSportsList 
 } from "@/lib/sports-data";
-import { OnboardingData } from "../onboarding/types";
+import { OnboardingData } from "../components/types";
 
 interface CoachRecruiterFormProps {
   data: OnboardingData;
