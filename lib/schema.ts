@@ -15,11 +15,12 @@ import {
 import { relations } from 'drizzle-orm';
 
 export const userRoleEnum = pgEnum('user_role', ['athlete', 'coach', 'recruiter']);
-export const verificationStatusEnum = pgEnum('verification_status', ['pending', 'verified', 'rejected']);
 export const coachRoleEnum = pgEnum('coach_role', ['coach', 'recruiter']);
 export const connectionStatusEnum = pgEnum('connection_status', ['connected', 'interested', 'viewed']);
 export const initiatedByEnum = pgEnum('initiated_by', ['athlete', 'coach']);
 export const genderEnum = pgEnum('gender', ['male', 'female', 'coed']);
+export const reportStatusEnum = pgEnum('report_status', ['pending', 'under_review', 'resolved', 'dismissed']);
+export const verificationRequestStatusEnum = pgEnum('verification_request_status', ['pending', 'approved', 'rejected', 'under_review']);
 
 export const users = pgTable('users', {
   id: text('id').primaryKey(),
@@ -52,7 +53,7 @@ export const athleteProfiles = pgTable('athlete_profiles', {
   intendedMajor: text('intended_major'),
   gender: text('gender'),
   maxprepsUrl: text('maxpreps_url').notNull(),
-  verificationStatus: verificationStatusEnum('verification_status').default('pending').notNull(),
+  isVerified: boolean('is_verified').default(false),
   hudlUrl: text('hudl_url'),
   hudlEmbedUrl: text('hudl_embed_url'),
   instagramHandle: text('instagram_handle'),
@@ -222,6 +223,60 @@ export const messages = pgTable('messages', {
   index('idx_messages_created_at').on(table.createdAt),
 ]);
 
+// Verification Requests table
+export const verificationRequests = pgTable('verification_requests', {
+  id: serial('id').primaryKey(),
+  userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  role: userRoleEnum('role').notNull(), // coach or recruiter
+  status: verificationRequestStatusEnum('status').default('pending').notNull(),
+  submittedAt: timestamp('submitted_at', { withTimezone: true }).defaultNow().notNull(),
+  reviewedAt: timestamp('reviewed_at', { withTimezone: true }),
+  reviewedBy: text('reviewed_by').references(() => users.id),
+  rejectionReason: text('rejection_reason'),
+  additionalInfo: text('additional_info'),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+}, (table) => [
+  index('idx_verification_requests_user_id').on(table.userId),
+  index('idx_verification_requests_status').on(table.status),
+  index('idx_verification_requests_submitted_at').on(table.submittedAt),
+]);
+
+export const verificationFiles = pgTable('verification_files', {
+  id: serial('id').primaryKey(),
+  verificationRequestId: integer('verification_request_id').notNull().references(() => verificationRequests.id, { onDelete: 'cascade' }),
+  fileName: text('file_name').notNull(),
+  fileType: text('file_type').notNull(), // 'pdf', 'image', 'link'
+  fileUrl: text('file_url'), // For uploaded files
+  linkUrl: text('link_url'), // For web links
+  description: text('description'),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+}, (table) => [
+  index('idx_verification_files_verification_request_id').on(table.verificationRequestId),
+]);
+
+// Reports table
+export const reports = pgTable('reports', {
+  id: serial('id').primaryKey(),
+  reporterId: text('reporter_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  reportedUserId: text('reported_user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  reportReason: text('report_reason').notNull(),
+  additionalDetails: text('additional_details'),
+  status: reportStatusEnum('status').default('pending').notNull(),
+  submittedAt: timestamp('submitted_at', { withTimezone: true }).defaultNow().notNull(),
+  reviewedAt: timestamp('reviewed_at', { withTimezone: true }),
+  reviewedBy: text('reviewed_by').references(() => users.id),
+  moderatorNotes: text('moderator_notes'),
+  actionTaken: text('action_taken'),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+}, (table) => [
+  index('idx_reports_reporter_id').on(table.reporterId),
+  index('idx_reports_reported_user_id').on(table.reportedUserId),
+  index('idx_reports_status').on(table.status),
+  index('idx_reports_submitted_at').on(table.submittedAt),
+]);
+
 // Relations
 export const usersRelations = relations(users, ({ one, many }) => ({
   athleteProfile: one(athleteProfiles, {
@@ -330,6 +385,40 @@ export const messagesRelations = relations(messages, ({ one }) => ({
   }),
 }));
 
+export const verificationRequestsRelations = relations(verificationRequests, ({ one, many }) => ({
+  user: one(users, {
+    fields: [verificationRequests.userId],
+    references: [users.id],
+  }),
+  reviewer: one(users, {
+    fields: [verificationRequests.reviewedBy],
+    references: [users.id],
+  }),
+  files: many(verificationFiles),
+}));
+
+export const verificationFilesRelations = relations(verificationFiles, ({ one }) => ({
+  verificationRequest: one(verificationRequests, {
+    fields: [verificationFiles.verificationRequestId],
+    references: [verificationRequests.id],
+  }),
+}));
+
+export const reportsRelations = relations(reports, ({ one }) => ({
+  reporter: one(users, {
+    fields: [reports.reporterId],
+    references: [users.id],
+  }),
+  reportedUser: one(users, {
+    fields: [reports.reportedUserId],
+    references: [users.id],
+  }),
+  reviewer: one(users, {
+    fields: [reports.reviewedBy],
+    references: [users.id],
+  }),
+}));
+
 // Export types for use in your application
 export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
@@ -348,4 +437,10 @@ export type NewMessage = typeof messages.$inferInsert;
 export type RecruitingNeeds = typeof recruitingNeeds.$inferSelect;
 export type NewRecruitingNeeds = typeof recruitingNeeds.$inferInsert;
 export type RecruitingProfileNeeds = typeof recruitingProfileNeeds.$inferSelect;
-export type NewRecruitingProfileNeeds = typeof recruitingProfileNeeds.$inferInsert; 
+export type NewRecruitingProfileNeeds = typeof recruitingProfileNeeds.$inferInsert;
+export type VerificationRequest = typeof verificationRequests.$inferSelect;
+export type NewVerificationRequest = typeof verificationRequests.$inferInsert;
+export type VerificationFile = typeof verificationFiles.$inferSelect;
+export type NewVerificationFile = typeof verificationFiles.$inferInsert;
+export type Report = typeof reports.$inferSelect;
+export type NewReport = typeof reports.$inferInsert; 

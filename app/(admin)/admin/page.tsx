@@ -26,7 +26,6 @@ import {
   BarChart3,
   Loader2,
   UserX,
-  Settings,
   Ban,
   UserCog
 } from "lucide-react"
@@ -35,6 +34,8 @@ import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import type { SerializableUser } from '@/lib/admin-api'
 import { Separator } from "@/components/ui/separator"
+import { VerificationManagement } from '@/app/(admin)/components/verification-management'
+import { ReportsManagement } from '@/app/(admin)/components/reports-management'
 
 // Helper function to get role badge color styling
 const getRoleBadgeColor = (role: string) => {
@@ -189,60 +190,60 @@ function UserStatsCards() {
   if (!stats) return null
 
   return (
-    <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
+    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-2 sm:gap-4">
       <Card className="border-border/50 hover:shadow-lg transition-all duration-300 hover:scale-105">
-        <CardContent className="p-4">
-          <div className="text-center space-y-2">
-            <div className="text-2xl font-bold text-primary">{stats.total}</div>
-            <div className="text-sm text-muted-foreground">Total Users</div>
+        <CardContent className="p-2 sm:p-4">
+          <div className="text-center space-y-1 sm:space-y-2">
+            <div className="text-lg sm:text-2xl font-bold text-primary">{stats.total}</div>
+            <div className="text-xs sm:text-sm text-muted-foreground">Total Users</div>
           </div>
         </CardContent>
       </Card>
       <Card className="border-red-200 hover:shadow-lg transition-all duration-300 hover:scale-105 bg-red-50/50 dark:bg-red-950/20">
-        <CardContent className="p-4">
-          <div className="text-center space-y-2">
-            <div className="text-2xl font-bold text-red-600">{stats.admin}</div>
-            <div className="text-sm text-red-700 dark:text-red-300">Admins</div>
+        <CardContent className="p-2 sm:p-4">
+          <div className="text-center space-y-1 sm:space-y-2">
+            <div className="text-lg sm:text-2xl font-bold text-red-600">{stats.admin}</div>
+            <div className="text-xs sm:text-sm text-red-700 dark:text-red-300">Admins</div>
           </div>
         </CardContent>
       </Card>
       <Card className="border-blue-200 hover:shadow-lg transition-all duration-300 hover:scale-105 bg-blue-50/50 dark:bg-blue-950/20">
-        <CardContent className="p-4">
-          <div className="text-center space-y-2">
-            <div className="text-2xl font-bold text-blue-600">{stats.coach}</div>
-            <div className="text-sm text-blue-700 dark:text-blue-300">Coaches</div>
+        <CardContent className="p-2 sm:p-4">
+          <div className="text-center space-y-1 sm:space-y-2">
+            <div className="text-lg sm:text-2xl font-bold text-blue-600">{stats.coach}</div>
+            <div className="text-xs sm:text-sm text-blue-700 dark:text-blue-300">Coaches</div>
           </div>
         </CardContent>
       </Card>
       <Card className="border-green-200 hover:shadow-lg transition-all duration-300 hover:scale-105 bg-green-50/50 dark:bg-green-950/20">
-        <CardContent className="p-4">
-          <div className="text-center space-y-2">
-            <div className="text-2xl font-bold text-green-600">{stats.athlete}</div>
-            <div className="text-sm text-green-700 dark:text-green-300">Athletes</div>
+        <CardContent className="p-2 sm:p-4">
+          <div className="text-center space-y-1 sm:space-y-2">
+            <div className="text-lg sm:text-2xl font-bold text-green-600">{stats.athlete}</div>
+            <div className="text-xs sm:text-sm text-green-700 dark:text-green-300">Athletes</div>
           </div>
         </CardContent>
       </Card>
       <Card className="border-purple-200 hover:shadow-lg transition-all duration-300 hover:scale-105 bg-purple-50/50 dark:bg-purple-950/20">
-        <CardContent className="p-4">
-          <div className="text-center space-y-2">
-            <div className="text-2xl font-bold text-purple-600">{stats.recruiter}</div>
-            <div className="text-sm text-purple-700 dark:text-purple-300">Recruiters</div>
+        <CardContent className="p-2 sm:p-4">
+          <div className="text-center space-y-1 sm:space-y-2">
+            <div className="text-lg sm:text-2xl font-bold text-purple-600">{stats.recruiter}</div>
+            <div className="text-xs sm:text-sm text-purple-700 dark:text-purple-300">Recruiters</div>
           </div>
         </CardContent>
       </Card>
       <Card className="border-gray-200 hover:shadow-lg transition-all duration-300 hover:scale-105 bg-gray-50/50 dark:bg-gray-950/20">
-        <CardContent className="p-4">
-          <div className="text-center space-y-2">
-            <div className="text-2xl font-bold text-gray-600">{stats.noRole}</div>
-            <div className="text-sm text-gray-700 dark:text-gray-400">No Role</div>
+        <CardContent className="p-2 sm:p-4">
+          <div className="text-center space-y-1 sm:space-y-2">
+            <div className="text-lg sm:text-2xl font-bold text-gray-600">{stats.noRole}</div>
+            <div className="text-xs sm:text-sm text-gray-700 dark:text-gray-400">No Role</div>
           </div>
         </CardContent>
       </Card>
       <Card className="border-red-200 hover:shadow-lg transition-all duration-300 hover:scale-105 bg-red-50/50 dark:bg-red-950/20">
-        <CardContent className="p-4">
-          <div className="text-center space-y-2">
-            <div className="text-2xl font-bold text-red-600">{stats.banned}</div>
-            <div className="text-sm text-red-700 dark:text-red-300">Banned</div>
+        <CardContent className="p-2 sm:p-4">
+          <div className="text-center space-y-1 sm:space-y-2">
+            <div className="text-lg sm:text-2xl font-bold text-red-600">{stats.banned}</div>
+            <div className="text-xs sm:text-sm text-red-700 dark:text-red-300">Banned</div>
           </div>
         </CardContent>
       </Card>
@@ -349,13 +350,13 @@ function UserManagement() {
       {hasSearched && (
         <Card className="border-border/50 shadow-lg">
           <CardHeader className="pb-4">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
               <CardTitle className="flex items-center gap-2">
                 <Users className="w-5 h-5 text-primary" />
                 Search Results
               </CardTitle>
               {searchResults && searchResults.length > 0 && (
-                <Badge variant="outline" className="text-sm">
+                <Badge variant="outline" className="text-sm w-fit">
                   {searchResults.length} user{searchResults.length !== 1 ? 's' : ''} found
                 </Badge>
               )}
@@ -396,28 +397,28 @@ function UserManagement() {
                 {searchResults.map((user: SerializableUser) => (
                   <div
                     key={user.id}
-                    className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/30 transition-all duration-200"
+                    className="flex flex-col sm:flex-row sm:items-center justify-between p-3 sm:p-4 border rounded-lg hover:bg-muted/30 transition-all duration-200 space-y-3 sm:space-y-0"
                   >
-                    <div className="flex items-center gap-4">
-                      <Avatar className="h-12 w-12">
-                        <AvatarFallback className="bg-gradient-to-br from-blue-100 to-purple-100 text-gray-700 font-semibold">
+                    <div className="flex items-center gap-3 sm:gap-4 min-w-0 flex-1">
+                      <Avatar className="h-10 w-10 sm:h-12 sm:w-12 flex-shrink-0">
+                        <AvatarFallback className="bg-gradient-to-br from-blue-100 to-purple-100 text-gray-700 font-semibold text-xs sm:text-sm">
                           {((user.firstName?.[0] || '') + (user.lastName?.[0] || '')).toUpperCase() || 'U'}
                         </AvatarFallback>
                       </Avatar>
-                      <div className="space-y-1">
-                        <div className="font-medium text-base">
+                      <div className="space-y-1 min-w-0 flex-1">
+                        <div className="font-medium text-sm sm:text-base truncate">
                           {user.firstName || user.lastName 
                             ? `${user.firstName || ''} ${user.lastName || ''}`.trim()
                             : 'No name'
                           }
                         </div>
-                        <div className="text-sm text-muted-foreground">
+                        <div className="text-xs sm:text-sm text-muted-foreground truncate">
                           {user.emailAddresses[0]?.emailAddress || 'No email'}
                         </div>
-                        <div className="text-xs text-muted-foreground">
-                          ID: {user.id}
+                        <div className="text-xs text-muted-foreground font-mono">
+                          ID: {user.id.slice(0, 8)}...
                         </div>
-                        <div className="flex gap-2 mt-2">
+                        <div className="flex flex-wrap gap-1 sm:gap-2 mt-2">
                           <Badge 
                             className={`${getRoleBadgeColor(user.publicMetadata.role as string || '')} border-0 shadow-sm text-xs`}
                           >
@@ -433,25 +434,25 @@ function UserManagement() {
                       </div>
                     </div>
                     
-                    <div className="flex gap-3 items-center">
-                      <div className="flex flex-col gap-2">
-                        <Select
-                          value={(user.publicMetadata.role as string) || 'no-role'}
-                          onValueChange={(role) => handleUpdateRole(user.id, role === 'no-role' ? '' : role)}
-                          disabled={updateRoleMutation.isPending}
-                        >
-                          <SelectTrigger className="w-36 shadow-sm h-8 text-xs">
-                            <SelectValue placeholder="Role" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="no-role">No Role</SelectItem>
-                            <SelectItem value="admin">Admin</SelectItem>
-                            <SelectItem value="coach">Coach</SelectItem>
-                            <SelectItem value="athlete">Athlete</SelectItem>
-                            <SelectItem value="recruiter">Recruiter</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        
+                    <div className="flex flex-row sm:flex-col gap-2 sm:gap-2 w-full sm:w-auto">
+                      <Select
+                        value={(user.publicMetadata.role as string) || 'no-role'}
+                        onValueChange={(role) => handleUpdateRole(user.id, role === 'no-role' ? '' : role)}
+                        disabled={updateRoleMutation.isPending}
+                      >
+                        <SelectTrigger className="flex-1 sm:w-36 shadow-sm h-8 text-xs">
+                          <SelectValue placeholder="Role" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="no-role">No Role</SelectItem>
+                          <SelectItem value="admin">Admin</SelectItem>
+                          <SelectItem value="coach">Coach</SelectItem>
+                          <SelectItem value="athlete">Athlete</SelectItem>
+                          <SelectItem value="recruiter">Recruiter</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      
+                      <div className="flex-1 sm:flex-none">
                         <BanConfirmationDialog
                           user={user}
                           onConfirm={() => handleBanUser(user.id, !user.banned)}
@@ -511,47 +512,46 @@ function UserManagement() {
 export default function AdminDashboard() {
   return (
     <div className="min-h-screen bg-background">
-      <div className="container mx-auto py-8 px-4 md:px-6">
+      <div className="container mx-auto py-4 sm:py-8 px-3 sm:px-4 md:px-6 max-w-full overflow-x-hidden">
         {/* Header Section */}
-        <div className="mb-8 space-y-4">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-primary/10 rounded-lg">
-              <Shield className="h-8 w-8 text-primary" />
+        <div className="mb-4 sm:mb-8 space-y-2 sm:space-y-4">
+          <div className="flex items-center gap-2 sm:gap-3">
+            <div className="p-1.5 sm:p-2 bg-primary/10 rounded-lg">
+              <Shield className="h-6 w-6 sm:h-8 sm:w-8 text-primary" />
             </div>
-            <div>
-              <h1 className="text-4xl font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-primary to-primary/70">
+            <div className="min-w-0 flex-1">
+              <h1 className="text-2xl sm:text-4xl font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-primary to-primary/70">
                 Admin Dashboard
               </h1>
-              <p className="text-muted-foreground text-lg">
-                Manage user roles and platform security with precision
+              <p className="text-muted-foreground text-sm sm:text-lg">
+                Manage user roles and platform security
               </p>
             </div>
           </div>
         </div>
         
         <Tabs defaultValue="users" className="w-full space-y-6">
-          <TabsList className="grid w-full grid-cols-3 h-12 bg-muted/50">
-            <TabsTrigger value="users" className="flex items-center gap-2 data-[state=active]:bg-background data-[state=active]:text-foreground">
-              <UserCog className="w-4 h-4" />
-              User Management
+          <TabsList className="grid w-full grid-cols-3 h-auto sm:h-12 bg-muted/50">
+            <TabsTrigger value="users" className="flex items-center gap-1 sm:gap-2 data-[state=active]:bg-background data-[state=active]:text-foreground p-2 sm:p-3 text-xs sm:text-sm">
+              <UserCog className="w-3 h-3 sm:w-4 sm:h-4" />
+              <span className="hidden sm:inline">User Management</span>
+              <span className="sm:hidden">Users</span>
             </TabsTrigger>
-            <TabsTrigger value="reports" className="flex items-center gap-2 data-[state=active]:bg-background data-[state=active]:text-foreground">
-              <BarChart3 className="w-4 h-4" />
-              Reports
+            <TabsTrigger value="reports" className="flex items-center gap-1 sm:gap-2 data-[state=active]:bg-background data-[state=active]:text-foreground p-2 sm:p-3 text-xs sm:text-sm">
+              <BarChart3 className="w-3 h-3 sm:w-4 sm:h-4" />
+              <span className="hidden sm:inline">Reports</span>
+              <span className="sm:hidden">Reports</span>
             </TabsTrigger>
-            <TabsTrigger value="verification" className="flex items-center gap-2 data-[state=active]:bg-background data-[state=active]:text-foreground">
-              <UserCheck className="w-4 h-4" />
-              Verification
+            <TabsTrigger value="verification" className="flex items-center gap-1 sm:gap-2 data-[state=active]:bg-background data-[state=active]:text-foreground p-2 sm:p-3 text-xs sm:text-sm">
+              <UserCheck className="w-3 h-3 sm:w-4 sm:h-4" />
+              <span className="hidden sm:inline">Verification</span>
+              <span className="sm:hidden">Verify</span>
             </TabsTrigger>
           </TabsList>
 
           <TabsContent value="users" className="space-y-6">
             {/* Statistics Cards */}
             <div className="mb-8">
-              <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
-                <BarChart3 className="w-5 h-5" />
-                Platform Statistics
-              </h2>
               <UserStatsCards />
             </div>
             
@@ -562,49 +562,11 @@ export default function AdminDashboard() {
           </TabsContent>
 
           <TabsContent value="reports" className="space-y-6">
-            <Card className="border-border/50 shadow-lg">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-foreground">
-                  <BarChart3 className="w-5 h-5 text-primary" />
-                  Content Reports
-                </CardTitle>
-                <p className="text-sm text-muted-foreground">
-                  Review and manage user-submitted reports and content moderation
-                </p>
-              </CardHeader>
-              <CardContent>
-                <div className="text-center py-12 space-y-4">
-                  <Settings className="h-16 w-16 text-muted-foreground mx-auto" />
-                  <div>
-                    <h3 className="text-lg font-semibold text-foreground">Reports Management</h3>
-                    <p className="text-muted-foreground">Advanced reporting and moderation features coming soon...</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+            <ReportsManagement />
           </TabsContent>
 
           <TabsContent value="verification" className="space-y-6">
-            <Card className="border-border/50 shadow-lg">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-foreground">
-                  <UserCheck className="w-5 h-5 text-primary" />
-                  User Verification
-                </CardTitle>
-                <p className="text-sm text-muted-foreground">
-                  Manage athlete verification requests and profile authenticity
-                </p>
-              </CardHeader>
-              <CardContent>
-                <div className="text-center py-12 space-y-4">
-                  <UserCheck className="h-16 w-16 text-muted-foreground mx-auto" />
-                  <div>
-                    <h3 className="text-lg font-semibold text-foreground">Verification System</h3>
-                    <p className="text-muted-foreground">User verification management system coming soon...</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+            <VerificationManagement />
           </TabsContent>
         </Tabs>
       </div>
