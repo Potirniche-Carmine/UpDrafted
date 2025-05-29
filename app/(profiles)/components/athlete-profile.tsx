@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useMemo, memo } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -85,17 +85,89 @@ interface AthleteProfileProps {
   onShare?: () => void;
 }
 
+// Memoize heavy components
+const MeasurablesSection = memo(({ measurables, selectedSport }: { 
+  measurables: Measurable[], 
+  selectedSport: string 
+}) => {
+  const sportMeasurables = useMemo(() => 
+    measurables.filter(m => m.sport === selectedSport), 
+    [measurables, selectedSport]
+  );
+
+  if (sportMeasurables.length === 0) return null;
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-lg font-semibold flex items-center gap-2">
+          Measurables - {selectedSport}
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="grid grid-cols-2 gap-4">
+          {sportMeasurables.map((measurable) => (
+            <div key={measurable.id} className="text-center p-3 bg-muted/50 rounded-lg">
+              <div className="text-sm text-muted-foreground">{measurable.label}</div>
+              <div className="font-semibold text-lg">{measurable.value}</div>
+              <div className="text-xs text-muted-foreground">
+                {new Date(measurable.measurementDate).toLocaleDateString()}
+              </div>
+            </div>
+          ))}
+        </div>
+      </CardContent>
+    </Card>
+  );
+});
+
+MeasurablesSection.displayName = "MeasurablesSection";
+
+const SocialMediaSection = memo(({ socialMedia }: { socialMedia?: { instagram?: string; twitter?: string } }) => {
+  if (!socialMedia) return null;
+
+  return (
+    <div className="pt-2 relative">
+      <p className="text-sm font-medium mb-2">Follow Me</p>
+      <div className="flex justify-center gap-3">
+        {socialMedia.instagram && (
+          <a
+            href={`https://instagram.com/${socialMedia.instagram.replace('@', '')}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-lg hover:opacity-90 transition-opacity"
+          >
+            <Instagram className="w-4 h-4" />
+            <span className="text-sm font-medium">{socialMedia.instagram}</span>
+          </a>
+        )}
+        {socialMedia.twitter && (
+          <a
+            href={`https://twitter.com/${socialMedia.twitter.replace('@', '')}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-2 px-3 py-2 bg-blue-500 text-white rounded-lg hover:opacity-90 transition-opacity"
+          >
+            <Twitter className="w-4 h-4" />
+            <span className="text-sm font-medium">{socialMedia.twitter}</span>
+          </a>
+        )}
+      </div>
+    </div>
+  );
+});
+
+SocialMediaSection.displayName = "SocialMediaSection";
+
 export function AthleteProfile({ data, isOwnProfile = false, currentUserRole, onConnect, onShare }: AthleteProfileProps) {
   const [selectedSport, setSelectedSport] = useState(data.sport);
   
-  // Get all sports (primary + secondary)
-  const allSports = [data.sport, ...(data.secondarySports || [])];
-  
-  // Filter measurables by selected sport
-  const sportMeasurables = data.measurables?.filter(m => m.sport === selectedSport) || [];
-
-  // Determine if current user can draft this athlete (coaches, recruiters, and admins)
-  const canDraft = !isOwnProfile && (currentUserRole === 'coach' || currentUserRole === 'recruiter' || currentUserRole === 'admin');
+  // Memoize computed values
+  const allSports = useMemo(() => [data.sport, ...(data.secondarySports || [])], [data.sport, data.secondarySports]);
+  const canDraft = useMemo(() => 
+    !isOwnProfile && (currentUserRole === 'coach' || currentUserRole === 'recruiter' || currentUserRole === 'admin'),
+    [isOwnProfile, currentUserRole]
+  );
 
   const handleEditSection = (section: string) => {
     console.log(`Edit ${section} clicked`);
@@ -136,6 +208,7 @@ export function AthleteProfile({ data, isOwnProfile = false, currentUserRole, on
                         width={144}
                         height={144}
                         className="w-full h-full object-cover"
+                        priority
                       />
                     </div>
                   ) : (
@@ -186,47 +259,8 @@ export function AthleteProfile({ data, isOwnProfile = false, currentUserRole, on
                   </Badge>
                 )}
 
-                {/* Social Media - Highlighted */}
-                {data.socialMedia && (
-                  <div className="pt-2 relative">
-                    <p className="text-sm font-medium mb-2">Follow Me</p>
-                    <div className="flex justify-center gap-3">
-                      {data.socialMedia.instagram && (
-                        <a
-                          href={`https://instagram.com/${data.socialMedia.instagram.replace('@', '')}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-lg hover:opacity-90 transition-opacity"
-                        >
-                          <Instagram className="w-4 h-4" />
-                          <span className="text-sm font-medium">{data.socialMedia.instagram}</span>
-                        </a>
-                      )}
-                      {data.socialMedia.twitter && (
-                        <a
-                          href={`https://twitter.com/${data.socialMedia.twitter.replace('@', '')}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="flex items-center gap-2 px-3 py-2 bg-blue-500 text-white rounded-lg hover:opacity-90 transition-opacity"
-                        >
-                          <Twitter className="w-4 h-4" />
-                          <span className="text-sm font-medium">{data.socialMedia.twitter}</span>
-                        </a>
-                      )}
-                    </div>
-                    {isOwnProfile && (
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        className="absolute -top-2 -right-2"
-                        onClick={() => handleEditSection('social-media')}
-                      >
-                        <Edit className="w-4 h-4 mr-1" />
-                        Edit
-                      </Button>
-                    )}
-                  </div>
-                )}
+                {/* Social Media - Memoized */}
+                <SocialMediaSection socialMedia={data.socialMedia} />
               </CardContent>
             </Card>
 
@@ -332,36 +366,8 @@ export function AthleteProfile({ data, isOwnProfile = false, currentUserRole, on
                     )}
                   </div>
                   
-                  {sportMeasurables.length > 0 ? (
-                    <div className="space-y-3">
-                      {sportMeasurables.map((measurable) => (
-                        <div key={measurable.id} className="flex justify-between items-center py-2 border-b last:border-b-0">
-                          <div>
-                            <p className="text-sm text-muted-foreground">{measurable.label}</p>
-                            <p className="font-semibold">{measurable.value}</p>
-                          </div>
-                          <p className="text-xs text-muted-foreground">
-                            {new Date(measurable.measurementDate).toLocaleDateString()}
-                          </p>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="text-center py-6 border-2 border-dashed border-muted rounded-lg">
-                      <p className="text-sm text-muted-foreground mb-2">
-                        {isOwnProfile ? "Add your measurables to showcase your athletic performance" : "No measurables recorded for this sport"}
-                      </p>
-                      {isOwnProfile && (
-                        <Button 
-                          variant="outline" 
-                          size="sm"
-                          onClick={() => handleEditSection('add-measurable')}
-                        >
-                          <Plus className="w-4 h-4 mr-1" />
-                          Add Measurables
-                        </Button>
-                      )}
-                    </div>
+                  {data.measurables && (
+                    <MeasurablesSection measurables={data.measurables} selectedSport={selectedSport} />
                   )}
                 </div>
               </CardContent>

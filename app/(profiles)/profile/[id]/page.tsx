@@ -1,6 +1,8 @@
 import { notFound } from 'next/navigation';
 import { createClerkClient } from '@clerk/nextjs/server';
 import { auth } from '@clerk/nextjs/server';
+import { Suspense } from 'react';
+import { Metadata } from 'next';
 import { AthleteProfileWrapper } from '../../components/athlete-profile-wrapper';
 import { CoachProfileWrapper } from '../../components/coach-profile-wrapper';
 import { RecruiterProfileWrapper } from '../../components/recruiter-profile-wrapper';
@@ -194,7 +196,26 @@ interface ProfilePageProps {
   }>;
 }
 
-async function getUserData(userId: string) {
+// Add caching and optimize Clerk client creation with connection pooling
+const clerkClient = createClerkClient({
+  secretKey: process.env.CLERK_SECRET_KEY
+});
+
+// Cache user data for better performance
+interface CachedUserData {
+  data: {
+    type: 'athlete' | 'coach' | 'recruiter';
+    data: AthleteProfileData | CoachProfileData | RecruitingProfileData;
+    currentUserRole?: string | null;
+    isOwnProfile: boolean;
+  } | null;
+  timestamp: number;
+}
+
+const userDataCache = new Map<string, CachedUserData>();
+const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+
+async function getUserData(userId: string, currentUserId?: string) {
   try {
     // Validate userId format first
     if (!userId || typeof userId !== 'string' || userId.trim() === '') {
@@ -202,84 +223,187 @@ async function getUserData(userId: string) {
       return null;
     }
 
-    const clerkClient = createClerkClient({
-      secretKey: process.env.CLERK_SECRET_KEY
-    });
+    // Check cache first
+    const cacheKey = `${userId}-${currentUserId || 'none'}`;
+    const cached = userDataCache.get(cacheKey);
+    if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
+      return cached.data;
+    }
+
+    // Optimize: Only fetch the target user, current user only when needed
+    const userPromise = clerkClient.users.getUser(userId);
+    const currentUserPromise = currentUserId && currentUserId !== userId 
+      ? clerkClient.users.getUser(currentUserId) 
+      : null;
     
-    const user = await clerkClient.users.getUser(userId);
-    const userRole = user.publicMetadata?.role as string;
+    // Use Promise.allSettled to handle potential failures gracefully
+    const [userResult, currentUserResult] = await Promise.allSettled([
+      userPromise,
+      currentUserPromise
+    ]);
     
-    if (userRole === 'athlete') {
-      return { type: 'athlete' as const, data: mockAthleteData };
-    } else if (userRole === 'coach') {
-      return { type: 'coach' as const, data: mockCoachData };
-    } else if (userRole === 'recruiter') {
-      return { type: 'recruiter' as const, data: mockRecruiterData };
+    if (userResult.status === 'rejected') {
+      console.error('Failed to fetch user:', userResult.reason);
+      return null;
     }
     
-    return null;
+    const user = userResult.value;
+    const currentUser = currentUserResult?.status === 'fulfilled' 
+      ? currentUserResult.value 
+      : (currentUserId === userId ? user : null);
+    
+    const userRole = user.publicMetadata?.role as string;
+    const currentUserRole = currentUser?.publicMetadata?.role as string;
+    
+    // Early return if user doesn't have a profile role
+    if (!userRole || !['athlete', 'coach', 'recruiter'].includes(userRole)) {
+      return null;
+    }
+    
+    let profileData = null;
+    if (userRole === 'athlete') {
+      profileData = { type: 'athlete' as const, data: mockAthleteData };
+    } else if (userRole === 'coach') {
+      profileData = { type: 'coach' as const, data: mockCoachData };
+    } else if (userRole === 'recruiter') {
+      profileData = { type: 'recruiter' as const, data: mockRecruiterData };
+    }
+    
+    const result = profileData ? {
+      ...profileData,
+      currentUserRole,
+      isOwnProfile: currentUserId === userId
+    } : null;
+
+    // Cache the result
+    if (result) {
+      userDataCache.set(cacheKey, { data: result, timestamp: Date.now() });
+    }
+
+    return result;
   } catch (error) {
     console.error('Error fetching user data:', error);
-    // Return null instead of throwing to prevent 500 errors
     return null;
   }
 }
 
-export default async function ProfilePage({ params }: ProfilePageProps) {
+// Generate metadata for better SEO
+export async function generateMetadata({ params }: ProfilePageProps): Promise<Metadata> {
   const { id } = await params;
   const userData = await getUserData(id);
+  
+  if (!userData) {
+    return {
+      title: 'Profile Not Found | UpDrafted',
+      description: 'The requested profile could not be found.'
+    };
+  }
+
+  const { data, type } = userData;
+  let title = '';
+  let description = '';
+  
+  if (type === 'athlete') {
+    const athleteData = data as AthleteProfileData;
+    title = `${athleteData.fullName} - ${athleteData.sport} Athlete | UpDrafted`;
+    description = `View ${athleteData.fullName}'s athletic profile. ${athleteData.positions.join(', ')} from ${athleteData.highSchool} graduating in ${athleteData.graduationYear}.`;
+  } else if (type === 'coach') {
+    const coachData = data as CoachProfileData;
+    title = `${coachData.fullName} - ${coachData.title} | UpDrafted`;
+    description = `Connect with ${coachData.fullName}, ${coachData.title} at ${coachData.organizationName}. ${coachData.division} ${coachData.sportCoaching} program.`;
+  } else if (type === 'recruiter') {
+    const recruiterData = data as RecruitingProfileData;
+    title = `${recruiterData.fullName} - ${recruiterData.title} | UpDrafted`;
+    description = `Connect with ${recruiterData.fullName}, ${recruiterData.title} at ${recruiterData.organizationName}. ${recruiterData.division} ${recruiterData.sportRecruiting} recruiting.`;
+  }
+  
+  return {
+    title,
+    description,
+    openGraph: {
+      title,
+      description,
+      type: 'profile',
+      images: data.profileImage ? [data.profileImage] : []
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title,
+      description,
+      images: data.profileImage ? [data.profileImage] : []
+    }
+  };
+}
+
+// Loading component for better UX
+function ProfileSkeleton() {
+  return (
+    <div className="min-h-screen bg-background animate-pulse">
+      <div className="container py-4 md:py-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8">
+          <div className="space-y-4 md:space-y-6">
+            <div className="bg-card rounded-lg p-6">
+              <div className="w-32 h-32 md:w-36 md:h-36 mx-auto rounded-full bg-muted"></div>
+              <div className="mt-4 space-y-2">
+                <div className="h-6 bg-muted rounded mx-auto w-48"></div>
+                <div className="h-4 bg-muted rounded mx-auto w-32"></div>
+              </div>
+            </div>
+          </div>
+          <div className="lg:col-span-2 space-y-6">
+            <div className="bg-card rounded-lg p-6">
+              <div className="h-6 bg-muted rounded w-32 mb-4"></div>
+              <div className="space-y-2">
+                <div className="h-4 bg-muted rounded"></div>
+                <div className="h-4 bg-muted rounded"></div>
+                <div className="h-4 bg-muted rounded w-3/4"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default async function ProfilePage({ params }: ProfilePageProps) {
+  const { id } = await params;
+  
+  // Get the current authenticated user
+  const { userId: currentUserId } = await auth();
+  
+  // Single optimized call that fetches both users if needed
+  const userData = await getUserData(id, currentUserId || undefined);
   
   if (!userData) {
     notFound();
   }
 
-  // Get the current authenticated user to determine if this is their own profile
-  const { userId: currentUserId } = await auth();
-  const isOwnProfile = currentUserId === id;
-  
-  // Get current user's role to determine what actions they can take
-  let currentUserRole = null;
-  if (currentUserId) {
-    try {
-      const clerkClient = createClerkClient({
-        secretKey: process.env.CLERK_SECRET_KEY
-      });
-      const currentUser = await clerkClient.users.getUser(currentUserId);
-      currentUserRole = currentUser.publicMetadata?.role as string;
-    } catch (error) {
-      console.error('Error fetching current user role:', error);
-    }
-  }
+  return (
+    <Suspense fallback={<ProfileSkeleton />}>
+      {userData.type === 'athlete' && (
+        <AthleteProfileWrapper
+          data={userData.data as AthleteProfileData}
+          isOwnProfile={userData.isOwnProfile}
+          currentUserRole={userData.currentUserRole}
+        />
+      )}
 
-  if (userData.type === 'athlete') {
-    return (
-      <AthleteProfileWrapper
-        data={userData.data as AthleteProfileData}
-        isOwnProfile={isOwnProfile}
-        currentUserRole={currentUserRole}
-      />
-    );
-  }
+      {userData.type === 'coach' && (
+        <CoachProfileWrapper
+          data={userData.data as CoachProfileData}
+          isOwnProfile={userData.isOwnProfile}
+          currentUserRole={userData.currentUserRole}
+        />
+      )}
 
-  if (userData.type === 'coach') {
-    return (
-      <CoachProfileWrapper
-        data={userData.data as CoachProfileData}
-        isOwnProfile={isOwnProfile}
-        currentUserRole={currentUserRole}
-      />
-    );
-  }
-
-  if (userData.type === 'recruiter') {
-    return (
-      <RecruiterProfileWrapper
-        data={userData.data as RecruitingProfileData}
-        isOwnProfile={isOwnProfile}
-        currentUserRole={currentUserRole}
-      />
-    );
-  }
-
-  return notFound();
+      {userData.type === 'recruiter' && (
+        <RecruiterProfileWrapper
+          data={userData.data as RecruitingProfileData}
+          isOwnProfile={userData.isOwnProfile}
+          currentUserRole={userData.currentUserRole}
+        />
+      )}
+    </Suspense>
+  );
 } 

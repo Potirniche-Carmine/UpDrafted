@@ -7,6 +7,7 @@ import { Header } from "@/components/header";
 import { Footer } from "@/components/footer";
 import { Analytics } from "@vercel/analytics/next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
+import { QueryProvider } from '@/components/providers/query-provider'
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -23,25 +24,27 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={`${inter.className} flex flex-col min-h-screen bg-background text-foreground`}>
-        <ThemeProvider
-          attribute="class"
-          defaultTheme="system"
-          enableSystem
-          disableTransitionOnChange
-        >
-          <ClerkProviderWrapper
-            afterSignOutUrl="/"
-            appearanceVariables={{ colorPrimary: 'green' }} 
+        <QueryProvider>
+          <ThemeProvider
+            attribute="class"
+            defaultTheme="system"
+            enableSystem
+            disableTransitionOnChange
           >
-            <Header />
-            <main className="flex-grow container mx-auto max-w-screen-2xl px-4 sm:px-6 lg:px-8 py-8">
-              {children}
-              <Analytics />
-              <SpeedInsights />
-            </main>
-            <Footer />
-          </ClerkProviderWrapper>
-        </ThemeProvider>
+            <ClerkProviderWrapper
+              afterSignOutUrl="/"
+              appearanceVariables={{ colorPrimary: 'green' }} 
+            >
+              <Header />
+              <main className="flex-grow container mx-auto max-w-screen-2xl px-4 sm:px-6 lg:px-8 py-8">
+                {children}
+                <Analytics />
+                <SpeedInsights />
+              </main>
+              <Footer />
+            </ClerkProviderWrapper>
+          </ThemeProvider>
+        </QueryProvider>
       </body>
     </html>
   );
