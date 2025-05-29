@@ -21,6 +21,22 @@ export default function CommonFields({
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      // Validate file type
+      const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+      if (!allowedTypes.includes(file.type)) {
+        alert('Please select a valid image file (JPEG, PNG, or WebP). GIF files are not supported for profile pictures.');
+        e.target.value = ''; // Clear the input
+        return;
+      }
+
+      // Validate file size (5MB limit)
+      const maxSize = 5 * 1024 * 1024; // 5MB
+      if (file.size > maxSize) {
+        alert('File size is too large. Please select an image under 5MB.');
+        e.target.value = ''; // Clear the input
+        return;
+      }
+
       onInputChange('profileImage', file);
       
       // Create preview URL
@@ -93,7 +109,7 @@ export default function CommonFields({
                   <input
                     id="profileImage"
                     type="file"
-                    accept="image/*"
+                    accept="image/jpeg,image/jpg,image/png,image/webp"
                     onChange={handleFileChange}
                     className="sr-only"
                   />

@@ -1,0 +1,1 @@
+ALTER TABLE "verification_files" ADD COLUMN "r2_key" text;

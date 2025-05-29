@@ -23,6 +23,7 @@ import {
   Shield,
   CheckCircle,
 } from "lucide-react";
+import { useAuth } from "@clerk/nextjs";
 
 interface VerificationDialogProps {
   open: boolean;
@@ -37,14 +38,18 @@ interface VerificationFile {
   file?: File;
   url?: string;
   description?: string;
+  uploaded?: boolean;
+  uploading?: boolean;
 }
 
 export function VerificationDialog({ open, onOpenChange, role }: VerificationDialogProps) {
+  const { userId } = useAuth();
   const [files, setFiles] = useState<VerificationFile[]>([]);
   const [linkUrl, setLinkUrl] = useState("");
   const [linkDescription, setLinkDescription] = useState("");
   const [additionalInfo, setAdditionalInfo] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [verificationRequestId, setVerificationRequestId] = useState<number | null>(null);
 
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const uploadedFiles = Array.from(event.target.files || []);
@@ -56,6 +61,8 @@ export function VerificationDialog({ open, onOpenChange, role }: VerificationDia
         name: file.name,
         type: fileType,
         file,
+        uploaded: false,
+        uploading: false,
       };
       setFiles((prev) => [...prev, newFile]);
     });
@@ -70,6 +77,7 @@ export function VerificationDialog({ open, onOpenChange, role }: VerificationDia
       type: "link",
       url: linkUrl,
       description: linkDescription,
+      uploaded: true, // Links don't need uploading
     };
     
     setFiles((prev) => [...prev, newLink]);
@@ -81,21 +89,108 @@ export function VerificationDialog({ open, onOpenChange, role }: VerificationDia
     setFiles((prev) => prev.filter((file) => file.id !== id));
   };
 
+  const uploadSingleFile = async (file: VerificationFile): Promise<boolean> => {
+    if (!file.file || !verificationRequestId) return false;
+
+    setFiles((prev) => 
+      prev.map((f) => 
+        f.id === file.id ? { ...f, uploading: true } : f
+      )
+    );
+
+    try {
+      const formData = new FormData();
+      formData.append('file', file.file);
+      formData.append('verificationRequestId', verificationRequestId.toString());
+      if (file.description) {
+        formData.append('description', file.description);
+      }
+
+      const response = await fetch('/api/verification/upload', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        throw new Error('Upload failed');
+      }
+
+      setFiles((prev) => 
+        prev.map((f) => 
+          f.id === file.id ? { ...f, uploading: false, uploaded: true } : f
+        )
+      );
+
+      return true;
+    } catch (error) {
+      console.error('Error uploading file:', error);
+      setFiles((prev) => 
+        prev.map((f) => 
+          f.id === file.id ? { ...f, uploading: false, uploaded: false } : f
+        )
+      );
+      return false;
+    }
+  };
+
   const handleSubmit = async () => {
+    if (!userId) return;
+
     setIsSubmitting(true);
     
-    // TODO: Implement actual submission logic
-    // This would upload files and submit verification request
-    
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 2000));
-    
-    setIsSubmitting(false);
-    onOpenChange(false);
-    
-    // Reset form
-    setFiles([]);
-    setAdditionalInfo("");
+    try {
+      // First, create the verification request
+      const links = files
+        .filter(f => f.type === "link")
+        .map(f => ({
+          url: f.url!,
+          description: f.description,
+        }));
+
+      const submitResponse = await fetch('/api/verification/submit', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          role,
+          additionalInfo,
+          links,
+        }),
+      });
+
+      if (!submitResponse.ok) {
+        const error = await submitResponse.json();
+        throw new Error(error.error || 'Failed to submit verification request');
+      }
+
+      const { verificationRequest } = await submitResponse.json();
+      setVerificationRequestId(verificationRequest.id);
+
+      // Upload files if any
+      const filesToUpload = files.filter(f => f.file && !f.uploaded);
+      
+      if (filesToUpload.length > 0) {
+        // Upload files one by one
+        for (const file of filesToUpload) {
+          await uploadSingleFile(file);
+        }
+      }
+
+      // Success
+      onOpenChange(false);
+      
+      // Reset form
+      setFiles([]);
+      setAdditionalInfo("");
+      setVerificationRequestId(null);
+
+    } catch (error) {
+      console.error('Error submitting verification:', error);
+      // TODO: Show error message to user
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const getFileIcon = (type: string) => {
@@ -110,6 +205,8 @@ export function VerificationDialog({ open, onOpenChange, role }: VerificationDia
         return <FileText className="w-4 h-4" />;
     }
   };
+
+  const canSubmit = files.length > 0 && !isSubmitting;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -150,7 +247,7 @@ export function VerificationDialog({ open, onOpenChange, role }: VerificationDia
                 id="file-upload"
                 type="file"
                 multiple
-                accept=".pdf,.jpg,.jpeg,.png,.gif,image/*"
+                accept=".pdf,.jpg,.jpeg,.png,image/jpeg,image/jpg,image/png,image/webp"
                 onChange={handleFileUpload}
                 className="hidden"
                 capture="environment"
@@ -159,12 +256,13 @@ export function VerificationDialog({ open, onOpenChange, role }: VerificationDia
                 variant="outline"
                 onClick={() => document.getElementById("file-upload")?.click()}
                 className="w-full text-sm sm:text-base h-auto py-3 px-4"
+                disabled={isSubmitting}
               >
                 <Upload className="w-4 h-4 mr-2 flex-shrink-0" />
                 <span className="break-words">Choose Files (PDF, Images)</span>
               </Button>
               <p className="text-xs text-muted-foreground mt-1">
-                Take photos or upload existing files
+                Take photos or upload existing files (Max 10MB per file)
               </p>
             </div>
           </div>
@@ -179,6 +277,7 @@ export function VerificationDialog({ open, onOpenChange, role }: VerificationDia
                   value={linkUrl}
                   onChange={(e) => setLinkUrl(e.target.value)}
                   className="w-full min-w-0 text-sm sm:text-base"
+                  disabled={isSubmitting}
                 />
               </div>
               <div>
@@ -187,12 +286,13 @@ export function VerificationDialog({ open, onOpenChange, role }: VerificationDia
                   value={linkDescription}
                   onChange={(e) => setLinkDescription(e.target.value)}
                   className="w-full min-w-0 text-sm sm:text-base"
+                  disabled={isSubmitting}
                 />
               </div>
               <Button
                 variant="outline"
                 onClick={handleAddLink}
-                disabled={!linkUrl.trim()}
+                disabled={!linkUrl.trim() || isSubmitting}
                 size="sm"
                 className="text-sm"
               >
@@ -223,16 +323,26 @@ export function VerificationDialog({ open, onOpenChange, role }: VerificationDia
                             {file.description}
                           </p>
                         )}
+                        {file.uploading && (
+                          <p className="text-xs text-blue-600">Uploading...</p>
+                        )}
+                        {file.uploaded && file.type !== "link" && (
+                          <p className="text-xs text-green-600">Uploaded</p>
+                        )}
                       </div>
-                      <Badge variant="outline" className="text-xs flex-shrink-0">
-                        {file.type.toUpperCase()}
-                      </Badge>
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        <Badge variant="outline" className="text-xs">
+                          {file.type.toUpperCase()}
+                        </Badge>
+                        {file.uploaded && <CheckCircle className="w-4 h-4 text-green-600" />}
+                      </div>
                     </div>
                     <Button
                       variant="ghost"
                       size="sm"
                       onClick={() => handleRemoveFile(file.id)}
                       className="flex-shrink-0"
+                      disabled={isSubmitting || file.uploading}
                     >
                       <X className="w-4 h-4" />
                     </Button>
@@ -254,6 +364,7 @@ export function VerificationDialog({ open, onOpenChange, role }: VerificationDia
               onChange={(e) => setAdditionalInfo(e.target.value)}
               className="mt-2 w-full min-w-0 text-sm sm:text-base"
               rows={3}
+              disabled={isSubmitting}
             />
           </div>
 
@@ -275,12 +386,17 @@ export function VerificationDialog({ open, onOpenChange, role }: VerificationDia
         </div>
 
         <DialogFooter className="flex-col-reverse sm:flex-row gap-2 sm:gap-0">
-          <Button variant="outline" onClick={() => onOpenChange(false)} className="w-full sm:w-auto">
+          <Button 
+            variant="outline" 
+            onClick={() => onOpenChange(false)} 
+            className="w-full sm:w-auto"
+            disabled={isSubmitting}
+          >
             Cancel
           </Button>
           <Button
             onClick={handleSubmit}
-            disabled={files.length === 0 || isSubmitting}
+            disabled={!canSubmit}
             className="w-full sm:w-auto"
           >
             {isSubmitting ? "Submitting..." : "Submit for Verification"}

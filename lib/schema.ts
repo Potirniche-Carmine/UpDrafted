@@ -247,7 +247,8 @@ export const verificationFiles = pgTable('verification_files', {
   verificationRequestId: integer('verification_request_id').notNull().references(() => verificationRequests.id, { onDelete: 'cascade' }),
   fileName: text('file_name').notNull(),
   fileType: text('file_type').notNull(), // 'pdf', 'image', 'link'
-  fileUrl: text('file_url'), // For uploaded files
+  fileUrl: text('file_url'), // For uploaded files - public URL
+  r2Key: text('r2_key'), // For R2 storage key
   linkUrl: text('link_url'), // For web links
   description: text('description'),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
