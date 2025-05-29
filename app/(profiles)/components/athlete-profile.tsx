@@ -15,9 +15,10 @@ import {
   Award,
   Edit,
   Plus,
-  ShieldX,
+  ShieldX
 } from "lucide-react";
 import { ProfileHeader } from "./shared/profile-header";
+import { useRoleView } from '@/hooks/use-role-view';
 
 export interface Measurable {
   id: string;
@@ -80,7 +81,6 @@ export interface AthleteProfileData {
 interface AthleteProfileProps {
   data: AthleteProfileData;
   isOwnProfile?: boolean;
-  currentUserRole?: string | null;
   onConnect?: () => void;
   onShare?: () => void;
 }
@@ -159,14 +159,15 @@ const SocialMediaSection = memo(({ socialMedia }: { socialMedia?: { instagram?: 
 
 SocialMediaSection.displayName = "SocialMediaSection";
 
-export function AthleteProfile({ data, isOwnProfile = false, currentUserRole, onConnect, onShare }: AthleteProfileProps) {
+export function AthleteProfile({ data, isOwnProfile = false, onConnect, onShare }: AthleteProfileProps) {
   const [selectedSport, setSelectedSport] = useState(data.sport);
+  const { effectiveRole } = useRoleView();
   
-  // Memoize computed values
+  // Memoize computed values - use effectiveRole instead of currentUserRole for admin testing
   const allSports = useMemo(() => [data.sport, ...(data.secondarySports || [])], [data.sport, data.secondarySports]);
   const canDraft = useMemo(() => 
-    !isOwnProfile && (currentUserRole === 'coach' || currentUserRole === 'recruiter' || currentUserRole === 'admin'),
-    [isOwnProfile, currentUserRole]
+    !isOwnProfile && (effectiveRole === 'coach' || effectiveRole === 'recruiter'),
+    [isOwnProfile, effectiveRole]
   );
 
   const handleEditSection = (section: string) => {

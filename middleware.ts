@@ -6,8 +6,6 @@ const isPublicRoute = createRouteMatcher([
   '/for-recruiters', '/privacy-policy', '/terms-of-service', '/404', '/500', '/for-coaches'
 ]);
 
-const isAdminRoute = createRouteMatcher(['admin(.*)', '/admin']);
-
 export default clerkMiddleware(async (auth, req) => {
   const { pathname } = req.nextUrl;
   const authState = await auth(); 
@@ -22,11 +20,6 @@ export default clerkMiddleware(async (auth, req) => {
     await auth.protect();
   }
 
-  if (isAdminRoute(req) && authState.sessionClaims?.metadata?.role !== 'admin') {
-    const url = new URL('/', req.url);
-    return NextResponse.redirect(url);
-  }
-
   // Prevent users with completed roles from accessing onboarding (except admins)
   if (
     authState.userId &&
@@ -37,7 +30,7 @@ export default clerkMiddleware(async (auth, req) => {
     return NextResponse.redirect(url);
   }
   
-  // Redirect users without roles to onboarding
+  // Redirect users without roles to onboarding (admins can access everything)
   if (
     authState.userId && 
     !['admin', 'athlete', 'coach', 'recruiter'].includes(authState.sessionClaims?.metadata?.role as string) &&

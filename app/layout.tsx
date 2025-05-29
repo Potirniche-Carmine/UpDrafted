@@ -8,6 +8,7 @@ import { Footer } from "@/components/footer";
 import { Analytics } from "@vercel/analytics/next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { QueryProvider } from '@/components/providers/query-provider'
+import { RoleSwitcher } from '@/components/role-switcher'
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -42,6 +43,7 @@ export default function RootLayout({
                 <SpeedInsights />
               </main>
               <Footer />
+              <RoleSwitcher />
             </ClerkProviderWrapper>
           </ThemeProvider>
         </QueryProvider>

@@ -1,5 +1,8 @@
-import { auth } from '@clerk/nextjs/server'
-import { redirect } from 'next/navigation'
+"use client";
+
+import { useUser } from '@clerk/nextjs';
+import { useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -21,15 +24,17 @@ import {
   Target
 } from "lucide-react"
 import Link from "next/link"
+import { useRoleView } from '@/hooks/use-role-view'
+import { VerificationDialog } from '@/app/(profiles)/components/shared/verification-dialog'
 
 // Mock data - replace with real data from your database
 const mockDashboardData = {
   user: {
     name: "Alex Johnson",
-    role: "athlete", // "athlete", "coach", or "recruiter"
+    role: "athlete", // This will be overridden by useRoleView
     verified: true,
     email: "alex@example.com",
-    id: "user_123" // Add user ID for profile links
+    id: "user_123"
   },
   connectionRequests: 4,
   unreadMessages: 7,
@@ -70,7 +75,7 @@ const mockDashboardData = {
   ]
 }
 
-const getUserTypeContent = (role: string) => {
+const getUserTypeContent = (role: string, userId: string) => {
   switch (role) {
     case 'athlete':
       return {
@@ -79,7 +84,7 @@ const getUserTypeContent = (role: string) => {
         searchHref: "/search?type=coaches",
         primaryActions: [
           { label: "Find Coaches", href: "/search?type=coaches", icon: Search, description: "Discover college programs" },
-          { label: "Update Profile", href: `/profile/${mockDashboardData.user.id}`, icon: Edit3, description: "Keep profile current" },
+          { label: "Update Profile", href: `/profile/${userId}`, icon: Edit3, description: "Keep profile current" },
           { label: "My Connections", href: "/connections", icon: Users, description: "Manage your network" },
           { label: "Check Messages", href: "/messaging", icon: MessageSquare, description: "Connect with coaches" },
         ],
@@ -92,7 +97,7 @@ const getUserTypeContent = (role: string) => {
         searchHref: "/search?type=athletes",
         primaryActions: [
           { label: "Scout Athletes", href: "/search?type=athletes", icon: Search, description: "Find top prospects" },
-          { label: "Update Profile", href: `/profile/${mockDashboardData.user.id}`, icon: Edit3, description: "Keep profile current" },
+          { label: "Update Profile", href: `/profile/${userId}`, icon: Edit3, description: "Keep profile current" },
           { label: "View Notifications", href: "/notifications", icon: Bell, description: "Stay updated" },
           { label: "Send Messages", href: "/messaging", icon: MessageSquare, description: "Connect with prospects" },
         ],
@@ -101,11 +106,11 @@ const getUserTypeContent = (role: string) => {
     case 'recruiter':
       return {
         welcomeText: "Connect athletes with the right opportunities",
-        searchText: "Find Prospects",
+        searchText: "Find Athletes & Coaches",
         searchHref: "/search?type=athletes",
         primaryActions: [
           { label: "Search Database", href: "/search?type=athletes", icon: Search, description: "Find athletes & coaches" },
-          { label: "Update Profile", href: `/profile/${mockDashboardData.user.id}`, icon: Edit3, description: "Keep profile current" },
+          { label: "Update Profile", href: `/profile/${userId}`, icon: Edit3, description: "Keep profile current" },
           { label: "Manage Matches", href: "/recruiting/matches", icon: Target, description: "Track connections" },
           { label: "Send Messages", href: "/messaging", icon: MessageSquare, description: "Facilitate connections" },
         ],
@@ -118,7 +123,7 @@ const getUserTypeContent = (role: string) => {
         searchHref: "/search",
         primaryActions: [
           { label: "Search", href: "/search", icon: Search, description: "Find what you need" },
-          { label: "View Profile", href: `/profile/${mockDashboardData.user.id}`, icon: Eye, description: "Check your profile" },
+          { label: "View Profile", href: `/profile/${userId}`, icon: Eye, description: "Check your profile" },
           { label: "Messages", href: "/messaging", icon: MessageSquare, description: "Check messages" },
           { label: "Notifications", href: "/notifications", icon: Bell, description: "Stay updated" },
         ],
@@ -127,35 +132,86 @@ const getUserTypeContent = (role: string) => {
   }
 }
 
-export default async function DashboardPage() {
-  const { userId } = await auth()
+export default function DashboardPage() {
+  const { isSignedIn, user } = useUser();
+  const router = useRouter();
+  const { effectiveRole, isAdmin, isViewingAsOtherRole, isVerified } = useRoleView();
+  const [showVerificationDialog, setShowVerificationDialog] = useState(false);
   
-  if (!userId) {
-    redirect('/sign-in')
-  }
-
-  // Update the mock data to use the actual user ID
-  const updatedMockData = {
-    ...mockDashboardData,
-    user: {
-      ...mockDashboardData.user,
-      id: userId
+  useEffect(() => {
+    if (!isSignedIn) {
+      router.push('/sign-in');
     }
+  }, [isSignedIn, router]);
+
+  useEffect(() => {
+    console.log('Dialog state changed:', { showVerificationDialog, effectiveRole, isVerified });
+  }, [showVerificationDialog, effectiveRole, isVerified]);
+
+  if (!isSignedIn || !user) {
+    return <div>Loading...</div>;
   }
 
-  const userContent = getUserTypeContent(updatedMockData.user.role)
+  // Use effectiveRole instead of the hardcoded role
+  const userContent = getUserTypeContent(effectiveRole || 'athlete', user.id);
+
+  // Get user display name
+  const displayName = user.fullName || user.firstName || user.username || 'User';
+
+  // Update verification message based on effective role
+  const getVerificationMessage = (role: string) => {
+    switch (role) {
+      case 'athlete':
+        return 'coaches and recruiters';
+      case 'coach':
+        return 'athletes and recruiters';
+      case 'recruiter':
+        return 'coaches and athletes';
+      default:
+        return 'other users';
+    }
+  };
+
+  // Handle verification button click
+  const handleGetVerified = () => {
+    console.log('Get Verified clicked', { effectiveRole, showVerificationDialog });
+    if (effectiveRole === 'coach' || effectiveRole === 'recruiter') {
+      console.log('Opening verification dialog for', effectiveRole);
+      setShowVerificationDialog(true);
+    } else {
+      // For athletes, you might want to navigate to a different verification flow
+      console.log('Athlete verification flow not implemented yet - current role:', effectiveRole);
+      // For now, let's allow athletes to see the dialog too for testing
+      setShowVerificationDialog(true);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-background">
       <div className="container mx-auto py-8 px-4 md:px-6 space-y-8">
+        {/* Admin View Indicator */}
+        {isAdmin && isViewingAsOtherRole && (
+          <Alert className="border-blue-200 bg-blue-50/50 dark:border-blue-800 dark:bg-blue-950/20">
+            <Eye className="h-4 w-4 text-blue-600" />
+            <AlertDescription className="text-blue-700 dark:text-blue-200">
+              <div className="flex items-center justify-between">
+                <span>Admin Mode: You are viewing the dashboard as a <strong>{effectiveRole}</strong>. Use the role switcher to change perspectives.</span>
+                <Badge variant="outline" className="ml-2">
+                  {isVerified ? 'Verified' : 'Unverified'}
+                </Badge>
+              </div>
+            </AlertDescription>
+          </Alert>
+        )}
+
         {/* Welcome Header */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div className="min-w-0 flex-1">
-            <h1 className="text-3xl font-bold tracking-tight">Welcome back, {updatedMockData.user.name}!</h1>
+            <h1 className="text-3xl font-bold tracking-tight">Welcome back, {displayName}!</h1>
             <p className="text-muted-foreground">{userContent.welcomeText}</p>
           </div>
           <div className="flex flex-col sm:flex-row gap-3 flex-shrink-0">
-            <Link href={`/profile/${userId}`}>
+            <Link href={`/profile/${user.id}`}>
               <Button variant="outline" size="sm" className="w-full sm:w-auto">
                 <Eye className="h-4 w-4 mr-2" />
                 View My Profile
@@ -171,13 +227,18 @@ export default async function DashboardPage() {
         </div>
 
         {/* Verification Status */}
-        {!updatedMockData.user.verified && (
+        {!isVerified && (
           <Alert className="border-amber-200 bg-amber-50/50 dark:border-amber-800 dark:bg-amber-950/20">
             <ShieldX className="h-4 w-4 text-amber-600" />
             <AlertDescription className="text-amber-700 dark:text-amber-200">
-              <div className="flex items-center justify-between">
-                <span>Your account is not verified. Get verified to unlock all features and build trust with {updatedMockData.user.role === 'athlete' ? 'coaches and recruiters' : updatedMockData.user.role === 'coach' ? 'athletes and recruiters' : 'coaches and athletes'}.</span>
-                <Button variant="outline" size="sm" className="ml-4 border-amber-300 text-amber-700 hover:bg-amber-100 dark:border-amber-700 dark:text-amber-300 dark:hover:bg-amber-950">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <span>Your account is not verified. Get verified to unlock all features and build trust with {getVerificationMessage(effectiveRole || 'athlete')}.</span>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="border-amber-300 text-amber-700 hover:bg-amber-100 dark:border-amber-700 dark:text-amber-300 dark:hover:bg-amber-950 self-start sm:self-auto"
+                  onClick={handleGetVerified}
+                >
                   Get Verified
                 </Button>
               </div>
@@ -194,7 +255,7 @@ export default async function DashboardPage() {
                 <UserPlus className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{updatedMockData.connectionRequests}</div>
+                <div className="text-2xl font-bold">{mockDashboardData.connectionRequests}</div>
                 <p className="text-xs text-muted-foreground">Awaiting your response</p>
               </CardContent>
             </Card>
@@ -207,9 +268,9 @@ export default async function DashboardPage() {
                 <MessageSquare className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{updatedMockData.unreadMessages}</div>
+                <div className="text-2xl font-bold">{mockDashboardData.unreadMessages}</div>
                 <p className="text-xs text-muted-foreground">
-                  {updatedMockData.unreadMessages > 0 ? 'New messages waiting' : 'All caught up!'}
+                  {mockDashboardData.unreadMessages > 0 ? 'New messages waiting' : 'All caught up!'}
                 </p>
               </CardContent>
             </Card>
@@ -222,7 +283,7 @@ export default async function DashboardPage() {
                 <Bell className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{updatedMockData.notifications}</div>
+                <div className="text-2xl font-bold">{mockDashboardData.notifications}</div>
                 <p className="text-xs text-muted-foreground">Updates and alerts</p>
               </CardContent>
             </Card>
@@ -238,9 +299,9 @@ export default async function DashboardPage() {
                   <div className="flex items-center gap-2">
                     <Users className="h-5 w-5" />
                     Connection Requests
-                    {updatedMockData.connectionRequests > 0 && (
+                    {mockDashboardData.connectionRequests > 0 && (
                       <Badge variant="secondary">
-                        {updatedMockData.connectionRequests}
+                        {mockDashboardData.connectionRequests}
                       </Badge>
                     )}
                   </div>
@@ -253,8 +314,8 @@ export default async function DashboardPage() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                {updatedMockData.pendingConnections.length > 0 ? (
-                  updatedMockData.pendingConnections.slice(0, 4).map((connection, index) => (
+                {mockDashboardData.pendingConnections.length > 0 ? (
+                  mockDashboardData.pendingConnections.slice(0, 4).map((connection, index) => (
                     <div key={connection.id}>
                       <div className="flex items-center gap-3">
                         <Avatar className="h-10 w-10 flex-shrink-0">
@@ -279,7 +340,7 @@ export default async function DashboardPage() {
                           </Button>
                         </div>
                       </div>
-                      {index < updatedMockData.pendingConnections.slice(0, 4).length - 1 && (
+                      {index < mockDashboardData.pendingConnections.slice(0, 4).length - 1 && (
                         <Separator className="my-4" />
                       )}
                     </div>
@@ -329,6 +390,13 @@ export default async function DashboardPage() {
           </div>
         </div>
       </div>
+
+      {/* Verification Dialog */}
+      <VerificationDialog
+        open={showVerificationDialog}
+        onOpenChange={setShowVerificationDialog}
+        role={(effectiveRole === 'coach' || effectiveRole === 'recruiter') ? effectiveRole : 'coach'}
+      />
     </div>
   )
 } 

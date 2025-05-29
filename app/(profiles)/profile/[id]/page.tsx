@@ -385,7 +385,6 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
         <AthleteProfileWrapper
           data={userData.data as AthleteProfileData}
           isOwnProfile={userData.isOwnProfile}
-          currentUserRole={userData.currentUserRole}
         />
       )}
 
@@ -393,7 +392,6 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
         <CoachProfileWrapper
           data={userData.data as CoachProfileData}
           isOwnProfile={userData.isOwnProfile}
-          currentUserRole={userData.currentUserRole}
         />
       )}
 
@@ -401,7 +399,6 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
         <RecruiterProfileWrapper
           data={userData.data as RecruitingProfileData}
           isOwnProfile={userData.isOwnProfile}
-          currentUserRole={userData.currentUserRole}
         />
       )}
     </Suspense>
