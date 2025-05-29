@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { UserRole } from "./types";
+import { UserRole } from "../components/types";
 import RoleSelection from "../components/RoleSelection";
 import OnboardingForm from "../components/OnboardingForm";
 
