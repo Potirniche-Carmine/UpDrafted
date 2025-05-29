@@ -139,7 +139,6 @@ export default function OnboardingForm({ role, onBack }: OnboardingFormProps) {
         data.positions.length > 0 &&
         (data.gpa || data.satScore || data.actScore) &&
         data.intendedMajor &&
-        (data.instagramHandle || data.twitterHandle) &&
         data.personalStatement
       );
     } else {

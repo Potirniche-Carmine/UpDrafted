@@ -47,6 +47,8 @@ export function CoachProfile({ data, isOwnProfile = false, onShowInterest, onSha
         onReport={handleReportProfile}
         onShare={onShare}
         connectLabel="Connect with Coach"
+        profileName={data.fullName}
+        profileType="coach"
       />
 
       <div className="container py-4 md:py-8">

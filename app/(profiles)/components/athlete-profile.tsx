@@ -4,32 +4,20 @@ import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import Image from "next/image";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import {
   MapPin,
   Instagram,
   Twitter,
   ExternalLink,
-  Star,
   Users,
   Award,
-  ChevronLeft,
   Edit,
   Plus,
-  Flag,
-  Share2,
-  Copy,
-  Mail,
-  MessageCircle
+  ShieldX,
 } from "lucide-react";
+import { ProfileHeader } from "./shared/profile-header";
 
 export interface Measurable {
   id: string;
@@ -98,7 +86,6 @@ interface AthleteProfileProps {
 }
 
 export function AthleteProfile({ data, isOwnProfile = false, currentUserRole, onConnect, onShare }: AthleteProfileProps) {
-  const router = useRouter();
   const [selectedSport, setSelectedSport] = useState(data.sport);
   
   // Get all sports (primary + secondary)
@@ -110,10 +97,6 @@ export function AthleteProfile({ data, isOwnProfile = false, currentUserRole, on
   // Determine if current user can draft this athlete (coaches, recruiters, and admins)
   const canDraft = !isOwnProfile && (currentUserRole === 'coach' || currentUserRole === 'recruiter' || currentUserRole === 'admin');
 
-  const handleBackClick = () => {
-    router.push('/search');
-  };
-
   const handleEditSection = (section: string) => {
     console.log(`Edit ${section} clicked`);
     // TODO: Open edit modal for specific section
@@ -124,81 +107,18 @@ export function AthleteProfile({ data, isOwnProfile = false, currentUserRole, on
     // TODO: Open report modal or navigate to report page
   };
 
-  const handleShareAction = (method: string) => {
-    const profileUrl = window.location.href;
-    
-    switch (method) {
-      case 'copy':
-        navigator.clipboard.writeText(profileUrl);
-        // TODO: Add toast notification
-        console.log('Link copied to clipboard');
-        break;
-      case 'email':
-        const subject = `Check out ${data.fullName}'s athletic profile on UpDrafted`;
-        const body = `I wanted to share ${data.fullName}'s athletic profile with you:\n\n${profileUrl}\n\n${data.fullName} is a ${data.positions.join('/')} from ${data.highSchool} (Class of ${data.graduationYear}).`;
-        window.location.href = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-        break;
-      case 'chat':
-        // TODO: Open internal chat/messaging if implemented
-        console.log('Share via chat');
-        onShare?.();
-        break;
-      default:
-        onShare?.();
-    }
-  };
-
   return (
     <div className="min-h-screen bg-background">
       {/* Header Actions */}
-      <div className="border-b">
-        <div className="container flex items-center justify-between py-4">
-          <Button variant="ghost" size="sm" onClick={handleBackClick}>
-            <ChevronLeft className="w-4 h-4 mr-1" />
-            Back to Search
-          </Button>
-          {!isOwnProfile && (
-            <div className="flex gap-2">
-              <Button variant="outline" size="sm" onClick={handleReportProfile}>
-                <Flag className="w-4 h-4 mr-1" />
-                Report
-              </Button>
-              
-              {/* Share Button - Available to everyone */}
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="sm">
-                    <Share2 className="w-4 h-4 mr-1" />
-                    Share
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={() => handleShareAction('copy')}>
-                    <Copy className="w-4 h-4 mr-2" />
-                    Copy Link
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => handleShareAction('email')}>
-                    <Mail className="w-4 h-4 mr-2" />
-                    Send via Email
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => handleShareAction('chat')}>
-                    <MessageCircle className="w-4 h-4 mr-2" />
-                    Send over Chat
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-
-              {/* Draft Button - Only for coaches/recruiters */}
-              {canDraft && (
-                <Button size="sm" className="bg-blue-600 hover:bg-blue-700" onClick={onConnect}>
-                  <Star className="w-4 h-4 mr-1" />
-                  Draft
-                </Button>
-              )}
-            </div>
-          )}
-        </div>
-      </div>
+      <ProfileHeader
+        isOwnProfile={isOwnProfile}
+        onConnect={canDraft ? onConnect : undefined}
+        onReport={handleReportProfile}
+        onShare={onShare}
+        connectLabel="Draft"
+        profileName={data.fullName}
+        profileType="athlete"
+      />
 
       <div className="container py-4 md:py-8">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8">
@@ -254,10 +174,15 @@ export function AthleteProfile({ data, isOwnProfile = false, currentUserRole, on
                   )}
                 </div>
 
-                {data.maxPrepsVerified && (
+                {data.maxPrepsVerified ? (
                   <Badge className="bg-green-500 text-white">
                     <Award className="w-3 h-3 mr-1" />
                     Verified Athlete
+                  </Badge>
+                ) : (
+                  <Badge variant="outline" className="border-amber-300 text-amber-700 bg-amber-50 dark:border-amber-700 dark:text-amber-300 dark:bg-amber-950/20">
+                    <ShieldX className="w-3 h-3 mr-1" />
+                    Unverified Athlete
                   </Badge>
                 )}
 
@@ -520,7 +445,40 @@ export function AthleteProfile({ data, isOwnProfile = false, currentUserRole, on
                 </CardContent>
               </Card>
             )}
-
+            {/* MaxPreps Verification - Simplified */}
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle>Official Stats & Verification</CardTitle>
+                  {isOwnProfile && (
+                    <Button 
+                      size="sm" 
+                      variant="ghost"
+                      onClick={() => handleEditSection('maxpreps-verification')}
+                    >
+                      <Edit className="w-4 h-4 mr-1" />
+                      Edit
+                    </Button>
+                  )}
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="bg-gradient-to-r from-blue-50 to-green-50 dark:from-blue-950 dark:to-green-950 rounded-lg p-4 flex items-center justify-between">
+                  <div>
+                    <p className="font-medium">MaxPreps Profile</p>
+                    <p className="text-sm text-muted-foreground">
+                      Official stats, game logs, and team roster verification
+                    </p>
+                  </div>
+                  <Link href={data.maxPrepsUrl} target="_blank">
+                    <Button className="bg-blue-600 hover:bg-blue-700 text-white">
+                      <ExternalLink className="w-4 h-4 mr-1" />
+                      View Official Stats
+                    </Button>
+                  </Link>
+                </div>
+              </CardContent>
+            </Card>
             {/* Hudl Highlights */}
             {data.hudlUrl && (
               <Card>
@@ -578,41 +536,6 @@ export function AthleteProfile({ data, isOwnProfile = false, currentUserRole, on
               </Card>
             )}
             
-            {/* MaxPreps Verification - Simplified */}
-            <Card>
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <CardTitle>Official Stats & Verification</CardTitle>
-                  {isOwnProfile && (
-                    <Button 
-                      size="sm" 
-                      variant="ghost"
-                      onClick={() => handleEditSection('maxpreps-verification')}
-                    >
-                      <Edit className="w-4 h-4 mr-1" />
-                      Edit
-                    </Button>
-                  )}
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="bg-gradient-to-r from-blue-50 to-green-50 dark:from-blue-950 dark:to-green-950 rounded-lg p-4 flex items-center justify-between">
-                  <div>
-                    <p className="font-medium">MaxPreps Profile</p>
-                    <p className="text-sm text-muted-foreground">
-                      Official stats, game logs, and team roster verification
-                    </p>
-                  </div>
-                  <Link href={data.maxPrepsUrl} target="_blank">
-                    <Button className="bg-blue-600 hover:bg-blue-700 text-white">
-                      <ExternalLink className="w-4 h-4 mr-1" />
-                      View Official Stats
-                    </Button>
-                  </Link>
-                </div>
-              </CardContent>
-            </Card>
-
             {/* YouTube Videos */}
             {data.youtubeVideos.length > 0 && (
               <Card>

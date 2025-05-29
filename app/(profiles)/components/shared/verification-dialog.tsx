@@ -1,0 +1,292 @@
+"use client";
+
+import React, { useState } from "react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
+import {
+  Upload,
+  FileText,
+  Image as ImageIcon,
+  Link,
+  X,
+  Shield,
+  CheckCircle,
+} from "lucide-react";
+
+interface VerificationDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  role: "coach" | "recruiter";
+}
+
+interface VerificationFile {
+  id: string;
+  name: string;
+  type: "pdf" | "image" | "link";
+  file?: File;
+  url?: string;
+  description?: string;
+}
+
+export function VerificationDialog({ open, onOpenChange, role }: VerificationDialogProps) {
+  const [files, setFiles] = useState<VerificationFile[]>([]);
+  const [linkUrl, setLinkUrl] = useState("");
+  const [linkDescription, setLinkDescription] = useState("");
+  const [additionalInfo, setAdditionalInfo] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const uploadedFiles = Array.from(event.target.files || []);
+    
+    uploadedFiles.forEach((file) => {
+      const fileType = file.type.startsWith("image/") ? "image" : "pdf";
+      const newFile: VerificationFile = {
+        id: Math.random().toString(36).substr(2, 9),
+        name: file.name,
+        type: fileType,
+        file,
+      };
+      setFiles((prev) => [...prev, newFile]);
+    });
+  };
+
+  const handleAddLink = () => {
+    if (!linkUrl.trim()) return;
+    
+    const newLink: VerificationFile = {
+      id: Math.random().toString(36).substr(2, 9),
+      name: linkDescription || linkUrl,
+      type: "link",
+      url: linkUrl,
+      description: linkDescription,
+    };
+    
+    setFiles((prev) => [...prev, newLink]);
+    setLinkUrl("");
+    setLinkDescription("");
+  };
+
+  const handleRemoveFile = (id: string) => {
+    setFiles((prev) => prev.filter((file) => file.id !== id));
+  };
+
+  const handleSubmit = async () => {
+    setIsSubmitting(true);
+    
+    // TODO: Implement actual submission logic
+    // This would upload files and submit verification request
+    
+    // Simulate API call
+    await new Promise((resolve) => setTimeout(resolve, 2000));
+    
+    setIsSubmitting(false);
+    onOpenChange(false);
+    
+    // Reset form
+    setFiles([]);
+    setAdditionalInfo("");
+  };
+
+  const getFileIcon = (type: string) => {
+    switch (type) {
+      case "pdf":
+        return <FileText className="w-4 h-4" />;
+      case "image":
+        return <ImageIcon className="w-4 h-4" />;
+      case "link":
+        return <Link className="w-4 h-4" />;
+      default:
+        return <FileText className="w-4 h-4" />;
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-[95vw] w-full sm:max-w-2xl max-h-[90vh] overflow-y-auto mx-4 sm:mx-auto">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2 text-lg sm:text-xl">
+            <Shield className="w-5 h-5 text-blue-600 flex-shrink-0" />
+            <span className="break-words">Get Verified as a {role === "coach" ? "Coach" : "Recruiter"}</span>
+          </DialogTitle>
+          <DialogDescription className="text-sm sm:text-base">
+            Submit documentation to verify your credentials and build trust with athletes. 
+            This helps athletes know they&apos;re connecting with legitimate {role}es.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-4 sm:space-y-6">
+          {/* What to Submit Section */}
+          <div className="bg-blue-50 dark:bg-blue-950/20 rounded-lg p-3 sm:p-4">
+            <h4 className="font-medium text-blue-900 dark:text-blue-100 mb-2 text-sm sm:text-base">
+              What can you submit as proof?
+            </h4>
+            <ul className="text-xs sm:text-sm text-blue-800 dark:text-blue-200 space-y-1">
+              <li>• Official school/program roster listing you as staff</li>
+              <li>• Program website page showing your position</li>
+              <li>• Official business card or ID badge</li>
+              <li>• Letter of employment or contract (personal info can be redacted)</li>
+              <li>• LinkedIn profile or official bio page</li>
+            </ul>
+          </div>
+
+          {/* File Upload */}
+          <div>
+            <Label htmlFor="file-upload" className="text-sm sm:text-base font-medium">
+              Upload Documents or Images
+            </Label>
+            <div className="mt-2">
+              <input
+                id="file-upload"
+                type="file"
+                multiple
+                accept=".pdf,.jpg,.jpeg,.png,.gif,image/*"
+                onChange={handleFileUpload}
+                className="hidden"
+                capture="environment"
+              />
+              <Button
+                variant="outline"
+                onClick={() => document.getElementById("file-upload")?.click()}
+                className="w-full text-sm sm:text-base h-auto py-3 px-4"
+              >
+                <Upload className="w-4 h-4 mr-2 flex-shrink-0" />
+                <span className="break-words">Choose Files (PDF, Images)</span>
+              </Button>
+              <p className="text-xs text-muted-foreground mt-1">
+                Take photos or upload existing files
+              </p>
+            </div>
+          </div>
+
+          {/* Add Link */}
+          <div>
+            <Label className="text-sm sm:text-base font-medium">Add Website Links</Label>
+            <div className="mt-2 space-y-3">
+              <div>
+                <Input
+                  placeholder="https://example.com/staff-directory"
+                  value={linkUrl}
+                  onChange={(e) => setLinkUrl(e.target.value)}
+                  className="w-full min-w-0 text-sm sm:text-base"
+                />
+              </div>
+              <div>
+                <Input
+                  placeholder="Description (e.g., 'School staff directory page')"
+                  value={linkDescription}
+                  onChange={(e) => setLinkDescription(e.target.value)}
+                  className="w-full min-w-0 text-sm sm:text-base"
+                />
+              </div>
+              <Button
+                variant="outline"
+                onClick={handleAddLink}
+                disabled={!linkUrl.trim()}
+                size="sm"
+                className="text-sm"
+              >
+                <Link className="w-4 h-4 mr-2 flex-shrink-0" />
+                Add Link
+              </Button>
+            </div>
+          </div>
+
+          {/* Submitted Files */}
+          {files.length > 0 && (
+            <div>
+              <Label className="text-sm sm:text-base font-medium">Submitted Evidence</Label>
+              <div className="mt-2 space-y-2">
+                {files.map((file) => (
+                  <div
+                    key={file.id}
+                    className="flex items-center justify-between p-3 bg-muted rounded-lg gap-3"
+                  >
+                    <div className="flex items-center gap-3 min-w-0 flex-1">
+                      <div className="flex-shrink-0">
+                        {getFileIcon(file.type)}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-medium truncate">{file.name}</p>
+                        {file.description && (
+                          <p className="text-xs text-muted-foreground truncate">
+                            {file.description}
+                          </p>
+                        )}
+                      </div>
+                      <Badge variant="outline" className="text-xs flex-shrink-0">
+                        {file.type.toUpperCase()}
+                      </Badge>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleRemoveFile(file.id)}
+                      className="flex-shrink-0"
+                    >
+                      <X className="w-4 h-4" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Additional Information */}
+          <div>
+            <Label htmlFor="additional-info" className="text-sm sm:text-base font-medium">
+              Additional Information (Optional)
+            </Label>
+            <Textarea
+              id="additional-info"
+              placeholder="Any additional context or information that might help with verification..."
+              value={additionalInfo}
+              onChange={(e) => setAdditionalInfo(e.target.value)}
+              className="mt-2 w-full min-w-0 text-sm sm:text-base"
+              rows={3}
+            />
+          </div>
+
+          {/* Review Process Info */}
+          <div className="bg-green-50 dark:bg-green-950/20 rounded-lg p-3 sm:p-4">
+            <div className="flex items-start gap-3">
+              <CheckCircle className="w-5 h-5 text-green-600 mt-0.5 flex-shrink-0" />
+              <div className="text-sm min-w-0">
+                <p className="font-medium text-green-900 dark:text-green-100">
+                  Review Process
+                </p>
+                <p className="text-green-800 dark:text-green-200 mt-1">
+                  Our team will review your submission within 1-3 business days. 
+                  You&apos;ll receive an email notification once your verification is complete.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <DialogFooter className="flex-col-reverse sm:flex-row gap-2 sm:gap-0">
+          <Button variant="outline" onClick={() => onOpenChange(false)} className="w-full sm:w-auto">
+            Cancel
+          </Button>
+          <Button
+            onClick={handleSubmit}
+            disabled={files.length === 0 || isSubmitting}
+            className="w-full sm:w-auto"
+          >
+            {isSubmitting ? "Submitting..." : "Submit for Verification"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+} 

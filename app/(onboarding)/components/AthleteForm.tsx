@@ -263,7 +263,7 @@ export default function AthleteForm({ data, onInputChange }: AthleteFormProps) {
           className="h-11 bg-background"
         />
         <p className="text-sm text-muted-foreground">
-          Adding this helps verify your athletic status and can lead to verified athlete badge
+          Optional but highly recommended. If your MaxPreps profile name matches your profile name, you&apos;ll receive a verified athlete badge.
         </p>
       </div>
 
@@ -300,7 +300,7 @@ export default function AthleteForm({ data, onInputChange }: AthleteFormProps) {
           />
         </div>
       </div>
-      <p className="text-sm text-muted-foreground">* Provide at least one social media handle</p>
+      <p className="text-sm text-muted-foreground">We highly encourage adding at least one social media handle to help coaches learn more about you</p>
 
       <div className="space-y-3">
         <Label htmlFor="personalStatement" className="text-base font-medium">Personal Statement *</Label>

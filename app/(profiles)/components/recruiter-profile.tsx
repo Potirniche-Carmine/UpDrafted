@@ -47,6 +47,8 @@ export function RecruiterProfile({ data, isOwnProfile = false, onShowInterest, o
         onReport={handleReportProfile}
         onShare={onShare}
         connectLabel="Get Recruited"
+        profileName={data.fullName}
+        profileType="recruiter"
       />
 
       <div className="container py-4 md:py-8">
