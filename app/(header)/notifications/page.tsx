@@ -3,7 +3,8 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
-import { Bell, Eye, UserPlus, MessageCircle, CheckCheck, Trash2, Circle, Star } from 'lucide-react';
+import { Badge } from "@/components/ui/badge";
+import { Bell, Eye, UserPlus, MessageCircle, CheckCheck, Trash2, Circle, Star, Search } from 'lucide-react';
 import { useState, useMemo } from 'react';
 
 // Placeholder data types
@@ -43,13 +44,28 @@ type NotificationFilter = 'all' | 'unread';
 export default function NotificationsPage() {
   const [notifications, setNotifications] = useState<Notification[]>(placeholderNotifications);
   const [activeFilter, setActiveFilter] = useState<NotificationFilter>('all');
+  const [searchTerm, setSearchTerm] = useState('');
 
   const filteredNotifications = useMemo(() => {
-    if (activeFilter === 'unread') {
-      return notifications.filter(n => !n.isRead);
+    let filtered = notifications;
+    
+    // Apply search filter
+    if (searchTerm) {
+      filtered = filtered.filter(n => 
+        n.text.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (n.actorName && n.actorName.toLowerCase().includes(searchTerm.toLowerCase()))
+      );
     }
-    return notifications;
-  }, [notifications, activeFilter]);
+    
+    // Apply read/unread filter
+    if (activeFilter === 'unread') {
+      filtered = filtered.filter(n => !n.isRead);
+    }
+    
+    return filtered;
+  }, [notifications, activeFilter, searchTerm]);
+
+  const unreadCount = notifications.filter(n => !n.isRead).length;
 
   const markAsRead = (id: string) => {
     setNotifications(prev => prev.map(n => n.id === id ? { ...n, isRead: true } : n));
@@ -64,77 +80,185 @@ export default function NotificationsPage() {
   };
 
   return (
-    <div className="flex flex-col items-center min-h-screen">
-      <section className="w-full py-8 md:py-12 flex-grow">
-        <div className="container px-4 md:px-6 max-w-3xl mx-auto">
-          <div className="flex flex-col sm:flex-row justify-between items-center mb-6 gap-3">
-            <div className="flex space-x-2">
-                {(['all', 'unread'] as NotificationFilter[]).map(filter => (
-                     <Button
-                        key={filter}
-                        variant={activeFilter === filter ? 'default' : 'outline'}
-                        size="sm"
-                        onClick={() => setActiveFilter(filter)}
-                        className="capitalize"
-                    >
-                        {filter}
-                    </Button>
-                ))}
+    <div className="min-h-screen bg-background">
+      <div className="container mx-auto py-8 px-4 md:px-6 space-y-8">
+        {/* Header with green gradient matching connections page */}
+        <div className="bg-gradient-to-r from-green-50/30 via-emerald-50/20 to-teal-50/30 dark:from-green-950/10 dark:via-emerald-950/5 dark:to-teal-950/10 rounded-xl p-6 md:p-8 border border-border/30">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6">
+            <div>
+              <h1 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-green-600 via-emerald-600 to-teal-600 bg-clip-text text-transparent mb-2">
+                Notifications
+              </h1>
+              <p className="text-muted-foreground">
+                Stay updated with your network activity and important updates
+              </p>
             </div>
-            <div className="flex space-x-2">
-              <Button variant="outline" size="sm" onClick={markAllAsRead} disabled={notifications.every(n => n.isRead) || filteredNotifications.filter(n=>!n.isRead).length === 0}>
-                <CheckCheck className="h-4 w-4 mr-2" /> Mark all as read
-              </Button>
-              <Button variant="destructive" size="sm" onClick={deleteAllNotifications} disabled={notifications.length === 0}>
-                <Trash2 className="h-4 w-4 mr-2" /> Clear all
-              </Button>
+            <div className="flex items-center gap-2 mt-4 sm:mt-0">
+              {unreadCount > 0 && (
+                <Badge variant="secondary" className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
+                  {unreadCount} unread
+                </Badge>
+              )}
+              <Badge variant="outline" className="text-xs">
+                {notifications.length} total
+              </Badge>
             </div>
           </div>
+          
+          <div className="space-y-4">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+              <input
+                type="text"
+                placeholder="Search notifications..."
+                className="w-full pl-10 pr-4 py-3 border border-border/50 bg-background/80 backdrop-blur-sm text-foreground rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+            </div>
+            
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+              <div className="flex space-x-2">
+                {(['all', 'unread'] as NotificationFilter[]).map(filter => (
+                  <Button
+                    key={filter}
+                    variant={activeFilter === filter ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setActiveFilter(filter)}
+                    className={`transition-all duration-200 capitalize ${
+                      activeFilter === filter
+                        ? 'bg-green-600 hover:bg-green-700 text-white'
+                        : 'border-border/50 hover:border-green-200 dark:hover:border-green-800'
+                    }`}
+                  >
+                    {filter}
+                  </Button>
+                ))}
+              </div>
+              
+              <div className="flex space-x-2">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={markAllAsRead} 
+                  disabled={notifications.every(n => n.isRead) || filteredNotifications.filter(n=>!n.isRead).length === 0}
+                  className="border-green-200 hover:bg-green-50 dark:border-green-800 dark:hover:bg-green-950/20"
+                >
+                  <CheckCheck className="h-4 w-4 mr-2" /> Mark all as read
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={deleteAllNotifications} 
+                  disabled={notifications.length === 0}
+                  className="text-red-600 border-red-200 hover:bg-red-50 dark:text-red-400 dark:border-red-800 dark:hover:bg-red-950/20"
+                >
+                  <Trash2 className="h-4 w-4 mr-2" /> Clear all
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
 
+        {/* Notifications Content */}
+        <div className="max-w-4xl mx-auto">
           {filteredNotifications.length > 0 ? (
             <div className="space-y-3">
               {filteredNotifications.map(notification => (
                 <div
                   key={notification.id}
                   onClick={() => !notification.isRead && markAsRead(notification.id)}
-                  className={`p-4 rounded-lg border border-border/50 flex items-start space-x-3 transition-colors duration-200 cursor-pointer
-                    ${notification.isRead ? 'bg-card/70 dark:bg-card/50 hover:bg-card' : 'bg-primary/5 dark:bg-primary/10 hover:bg-primary/15 border-primary/30'}
-                  `}
+                  className={`group p-4 md:p-6 rounded-xl border transition-all duration-200 cursor-pointer hover:shadow-md ${
+                    notification.isRead 
+                      ? 'bg-card/70 dark:bg-card/50 hover:bg-card border-border/50 hover:border-green-200/50 dark:hover:border-green-800/50' 
+                      : 'bg-green-50/50 dark:bg-green-950/20 hover:bg-green-100/50 dark:hover:bg-green-950/30 border-green-200/60 dark:border-green-800/60'
+                  }`}
                 >
-                  {!notification.isRead && <Circle fill="currentColor" className="h-2.5 w-2.5 text-primary mt-1.5 flex-shrink-0" />}
-                  {notification.isRead && <div className="w-2.5 h-2.5 mt-1.5 flex-shrink-0"></div>}
-                  
-                  <div className="flex-shrink-0 mt-0.5">
-                    {notification.actorAvatar ? (
-                        <Image src={notification.actorAvatar} alt={notification.actorName || 'Notification icon'} width={32} height={32} className="rounded-full object-cover"/>
-                    ) : (
-                        getNotificationIcon(notification.type)
+                  <div className="flex items-start space-x-4">
+                    {!notification.isRead && (
+                      <Circle 
+                        fill="currentColor" 
+                        className="h-2.5 w-2.5 text-green-600 mt-2 flex-shrink-0" 
+                      />
                     )}
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-sm text-foreground">
-                      {notification.actorName && <span className="font-semibold">{notification.actorName}</span>} {notification.text}
-                    </p>
-                    <p className={`text-xs ${notification.isRead ? 'text-muted-foreground/80' : 'text-primary/90'}`}>{notification.timestamp}</p>
-                    {notification.link && (
-                      <Link href={notification.link} className="text-xs text-primary hover:underline mt-1 inline-block" onClick={(e) => e.stopPropagation()}>
-                        View Details
-                      </Link>
+                    {notification.isRead && (
+                      <div className="w-2.5 h-2.5 mt-2 flex-shrink-0"></div>
                     )}
+                    
+                    <div className="flex-shrink-0 mt-1">
+                      {notification.actorAvatar ? (
+                        <div className="relative">
+                          <Image 
+                            src={notification.actorAvatar} 
+                            alt={notification.actorName || 'Notification'} 
+                            width={48} 
+                            height={48} 
+                            className="rounded-full object-cover ring-2 ring-green-100 dark:ring-green-900 group-hover:ring-green-200 dark:group-hover:ring-green-800 transition-colors"
+                          />
+                        </div>
+                      ) : (
+                        <div className="w-12 h-12 rounded-full bg-green-100 dark:bg-green-900 flex items-center justify-center ring-2 ring-green-200 dark:ring-green-800">
+                          {getNotificationIcon(notification.type)}
+                        </div>
+                      )}
+                    </div>
+                    
+                    <div className="flex-1 min-w-0">
+                      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
+                        <div className="flex-1">
+                          <p className="text-sm md:text-base text-foreground leading-relaxed">
+                            {notification.actorName && (
+                              <span className="font-semibold text-green-700 dark:text-green-300">
+                                {notification.actorName}
+                              </span>
+                            )} {notification.text}
+                          </p>
+                          <p className={`text-xs mt-2 ${
+                            notification.isRead 
+                              ? 'text-muted-foreground' 
+                              : 'text-green-600 dark:text-green-400 font-medium'
+                          }`}>
+                            {notification.timestamp}
+                          </p>
+                        </div>
+                        
+                        <div className="flex-shrink-0">
+                          {notification.link && (
+                            <Link 
+                              href={notification.link} 
+                              className="inline-flex items-center text-sm text-green-600 hover:text-green-700 dark:text-green-400 dark:hover:text-green-300 hover:underline transition-colors" 
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              View Details →
+                            </Link>
+                          )}
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
               ))}
             </div>
           ) : (
-            <div className="text-center py-10">
-              <Bell className="h-16 w-16 text-muted-foreground/20 mx-auto mb-4" />
-              <p className="text-muted-foreground">
-                {activeFilter === 'unread' ? "No unread notifications." : "You're all caught up! No new notifications."}
+            <div className="text-center py-16">
+              <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-green-100 dark:bg-green-900 flex items-center justify-center">
+                <Bell className="h-10 w-10 text-green-600 dark:text-green-400" />
+              </div>
+              <h3 className="text-xl font-semibold text-foreground mb-2">
+                {activeFilter === 'unread' ? "No unread notifications" : "You're all caught up!"}
+              </h3>
+              <p className="text-muted-foreground max-w-md mx-auto">
+                {searchTerm 
+                  ? "No notifications match your search. Try adjusting your search terms."
+                  : activeFilter === 'unread' 
+                    ? "All your notifications have been read. New notifications will appear here when received."
+                    : "No new notifications. We'll notify you when there's something important to share."
+                }
               </p>
             </div>
           )}
         </div>
-      </section>
+      </div>
     </div>
   );
 }

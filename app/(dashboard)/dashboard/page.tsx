@@ -211,14 +211,14 @@ export default function DashboardPage() {
             <p className="text-muted-foreground">{userContent.welcomeText}</p>
           </div>
           <div className="flex flex-col sm:flex-row gap-3 flex-shrink-0">
-            <Link href={`/profile/${user.id}`}>
-              <Button variant="outline" size="sm" className="w-full sm:w-auto">
+            <Link href={`/profile/${user.id}`} className="flex-1">
+              <Button variant="outline" size="sm" className="w-full">
                 <Eye className="h-4 w-4 mr-2" />
                 View My Profile
               </Button>
             </Link>
-            <Link href={userContent.searchHref}>
-              <Button size="sm" className="w-full sm:w-auto">
+            <Link href={userContent.searchHref} className="flex-1">
+              <Button size="sm" className="w-full">
                 <Search className="h-4 w-4 mr-2" />
                 <span className="truncate">{userContent.searchText}</span>
               </Button>
@@ -248,7 +248,7 @@ export default function DashboardPage() {
 
         {/* Quick Stats */}
         <div className="grid gap-6 md:grid-cols-3">
-          <Link href="/connections">
+          <Link href="/connections?tab=requests">
             <Card className="cursor-pointer transition-all duration-200 hover:shadow-md hover:scale-[1.02] border-border hover:border-green-200 dark:hover:border-green-800">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Pending Connections</CardTitle>
@@ -305,7 +305,7 @@ export default function DashboardPage() {
                       </Badge>
                     )}
                   </div>
-                  <Link href="/connections">
+                  <Link href="/connections?tab=requests">
                     <Button variant="ghost" size="sm">
                       View All
                       <ArrowRight className="h-4 w-4 ml-1" />

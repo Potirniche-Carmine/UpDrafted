@@ -223,6 +223,18 @@ export const messages = pgTable('messages', {
   index('idx_messages_created_at').on(table.createdAt),
 ]);
 
+// Track which messages have been read by which users
+export const messageReads = pgTable('message_reads', {
+  id: serial('id').primaryKey(),
+  messageId: integer('message_id').notNull().references(() => messages.id, { onDelete: 'cascade' }),
+  userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  readAt: timestamp('read_at', { withTimezone: true }).defaultNow().notNull(),
+}, (table) => [
+  index('idx_message_reads_message_id').on(table.messageId),
+  index('idx_message_reads_user_id').on(table.userId),
+  unique('message_reads_message_user_unique').on(table.messageId, table.userId),
+]);
+
 // Verification Requests table
 export const verificationRequests = pgTable('verification_requests', {
   id: serial('id').primaryKey(),
@@ -375,13 +387,25 @@ export const conversationsRelations = relations(conversations, ({ one, many }) =
   messages: many(messages),
 }));
 
-export const messagesRelations = relations(messages, ({ one }) => ({
+export const messagesRelations = relations(messages, ({ one, many }) => ({
   conversation: one(conversations, {
     fields: [messages.conversationId],
     references: [conversations.id],
   }),
   sender: one(users, {
     fields: [messages.senderId],
+    references: [users.id],
+  }),
+  reads: many(messageReads),
+}));
+
+export const messageReadsRelations = relations(messageReads, ({ one }) => ({
+  message: one(messages, {
+    fields: [messageReads.messageId],
+    references: [messages.id],
+  }),
+  user: one(users, {
+    fields: [messageReads.userId],
     references: [users.id],
   }),
 }));
@@ -435,6 +459,8 @@ export type Conversation = typeof conversations.$inferSelect;
 export type NewConversation = typeof conversations.$inferInsert;
 export type Message = typeof messages.$inferSelect;
 export type NewMessage = typeof messages.$inferInsert;
+export type MessageRead = typeof messageReads.$inferSelect;
+export type NewMessageRead = typeof messageReads.$inferInsert;
 export type RecruitingNeeds = typeof recruitingNeeds.$inferSelect;
 export type NewRecruitingNeeds = typeof recruitingNeeds.$inferInsert;
 export type RecruitingProfileNeeds = typeof recruitingProfileNeeds.$inferSelect;
