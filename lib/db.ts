@@ -27,13 +27,3 @@ const pool = new Pool({
 export const db = drizzle(pool, { schema });
 
 export { pool };
-
-export async function query(text: string, params?: unknown[]) {
-  const client = await pool.connect();
-  try {
-    const result = await client.query(text, params);
-    return result;
-  } finally {
-    client.release();
-  }
-} 
