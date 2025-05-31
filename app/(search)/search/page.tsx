@@ -1,470 +1,442 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
+import { Search, Filter, User, Users, Target, MapPin, Calendar, School } from "lucide-react";
+import Image from "next/image";
+import Link from "next/link";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Search, Filter, MapPin, Users, Target, Award, Eye, MessageCircle, Heart } from "lucide-react";
-import Link from "next/link";
-import Image from "next/image";
+import { Card, CardContent } from "@/components/ui/card";
 
-// Mock data for demonstration
-const mockAthletes = [
+// Same interface and mock data as search-bar component
+interface SearchUser {
+  id: string;
+  name: string;
+  role: 'athlete' | 'coach' | 'recruiter';
+  sport: string;
+  profilePicture: string;
+  location: string;
+  verified?: boolean;
+  graduationYear?: number;
+  school?: string;
+}
+
+const mockUsers: SearchUser[] = [
   {
-    id: "1",
-    name: "Marcus Johnson",
-    sport: "Basketball",
-    position: "Point Guard",
-    graduationYear: 2025,
-    location: "Chicago, IL",
-    gpa: 3.8,
-    height: "6'2\"",
-    weight: "185 lbs",
-    profileImage: "/api/placeholder/80/80",
+    id: '1',
+    name: 'Marcus Johnson',
+    role: 'athlete',
+    sport: 'Basketball',
+    profilePicture: 'https://placehold.co/80x80/E0E0E0/B0B0B0?text=MJ',
+    location: 'Chicago, IL',
     verified: true,
-    stats: { ppg: 18.5, apg: 7.2, rpg: 4.8 }
+    graduationYear: 2025
   },
   {
-    id: "2",
-    name: "Sarah Williams",
-    sport: "Soccer",
-    position: "Forward",
-    graduationYear: 2024,
-    location: "Austin, TX",
-    gpa: 3.9,
-    height: "5'7\"",
-    weight: "140 lbs",
-    profileImage: "/api/placeholder/80/80",
+    id: '2', 
+    name: 'Sarah Williams',
+    role: 'coach',
+    sport: 'Soccer',
+    profilePicture: 'https://placehold.co/80x80/D1C4E9/7E57C2?text=SW',
+    location: 'Austin, TX',
     verified: true,
-    stats: { goals: 24, assists: 12, shots: 89 }
+    school: 'University of Texas'
   },
   {
-    id: "3",
-    name: "David Chen",
-    sport: "Swimming",
-    position: "Freestyle",
-    graduationYear: 2025,
-    location: "San Diego, CA",
-    gpa: 4.0,
-    height: "6'0\"",
-    weight: "170 lbs",
-    profileImage: "/api/placeholder/80/80",
-    verified: false,
-    stats: { "50m Free": "21.45s", "100m Free": "47.23s", "200m Free": "1:42.15" }
+    id: '3',
+    name: 'David Chen',
+    role: 'athlete',
+    sport: 'Swimming',
+    profilePicture: 'https://placehold.co/80x80/C8E6C9/66BB6A?text=DC',
+    location: 'San Diego, CA',
+    graduationYear: 2025
+  },
+  {
+    id: '4',
+    name: 'Emily Rodriguez',
+    role: 'recruiter',
+    sport: 'Track & Field',
+    profilePicture: 'https://placehold.co/80x80/FFCDD2/E57373?text=ER',
+    location: 'Durham, NC',
+    verified: true,
+    school: 'Duke University'
+  },
+  {
+    id: '5',
+    name: 'Michael Thompson',
+    role: 'athlete',
+    sport: 'Football',
+    profilePicture: 'https://placehold.co/80x80/F8BBD9/E91E63?text=MT',
+    location: 'Miami, FL',
+    graduationYear: 2024
+  },
+  {
+    id: '6',
+    name: 'Coach Lisa Brown',
+    role: 'coach',
+    sport: 'Tennis',
+    profilePicture: 'https://placehold.co/80x80/B39DDB/673AB7?text=LB',
+    location: 'Stanford, CA',
+    verified: true,
+    school: 'Stanford University'
+  },
+  {
+    id: '7',
+    name: 'Jordan Parker',
+    role: 'athlete',
+    sport: 'Volleyball',
+    profilePicture: 'https://placehold.co/80x80/81C784/4CAF50?text=JP',
+    location: 'Seattle, WA',
+    graduationYear: 2026
+  },
+  {
+    id: '8',
+    name: 'Alex Martinez',
+    role: 'recruiter',
+    sport: 'Baseball',
+    profilePicture: 'https://placehold.co/80x80/FFB74D/FF9800?text=AM',
+    location: 'Los Angeles, CA',
+    school: 'UCLA'
+  },
+  {
+    id: '9',
+    name: 'Samantha Davis',
+    role: 'athlete',
+    sport: 'Basketball',
+    profilePicture: 'https://placehold.co/80x80/FFE0B2/FF9800?text=SD',
+    location: 'New York, NY',
+    graduationYear: 2025
+  },
+  {
+    id: '10',
+    name: 'Coach Robert Wilson',
+    role: 'coach',
+    sport: 'Baseball',
+    profilePicture: 'https://placehold.co/80x80/C5E1A5/8BC34A?text=RW',
+    location: 'Boston, MA',
+    verified: true,
+    school: 'Harvard University'
+  },
+  {
+    id: '11',
+    name: 'Isabella Garcia',
+    role: 'athlete',
+    sport: 'Soccer',
+    profilePicture: 'https://placehold.co/80x80/F8BBD9/E91E63?text=IG',
+    location: 'Phoenix, AZ',
+    graduationYear: 2024
+  },
+  {
+    id: '12',
+    name: 'James Anderson',
+    role: 'recruiter',
+    sport: 'Swimming',
+    profilePicture: 'https://placehold.co/80x80/DCEDC8/8BC34A?text=JA',
+    location: 'Atlanta, GA',
+    school: 'Georgia Tech'
   }
 ];
 
-const mockPrograms = [
-  {
-    id: "1",
-    name: "University of Texas Basketball",
-    coach: "Coach Sarah Williams",
-    division: "NCAA Division I",
-    conference: "Big 12",
-    location: "Austin, TX",
-    sport: "Basketball",
-    logo: "/api/placeholder/60/60",
-    verified: true,
-    scholarshipsAvailable: 3,
-    recruitingYears: [2025, 2026]
-  },
-  {
-    id: "2",
-    name: "Duke University Soccer",
-    coach: "Coach Mike Rodriguez",
-    division: "NCAA Division I",
-    conference: "ACC",
-    location: "Durham, NC",
-    sport: "Soccer",
-    logo: "/api/placeholder/60/60",
-    verified: true,
-    scholarshipsAvailable: 2,
-    recruitingYears: [2024, 2025]
+const getRoleIcon = (role: SearchUser['role']) => {
+  switch (role) {
+    case 'athlete': return <User className="h-4 w-4" />;
+    case 'coach': return <Users className="h-4 w-4" />;
+    case 'recruiter': return <Target className="h-4 w-4" />;
   }
-];
+};
 
-const sports = ["Basketball", "Soccer", "Football", "Baseball", "Swimming", "Track & Field", "Tennis", "Golf"];
-const divisions = ["NCAA Division I", "NCAA Division II", "NCAA Division III", "NJCAA"];
-const graduationYears = [2024, 2025, 2026, 2027];
-const states = ["AL", "AK", "AZ", "AR", "CA", "CO", "CT", "DE", "FL", "GA", "HI", "ID", "IL", "IN", "IA", "KS", "KY", "LA", "ME", "MD", "MA", "MI", "MN", "MS", "MO", "MT", "NE", "NV", "NH", "NJ", "NM", "NY", "NC", "ND", "OH", "OK", "OR", "PA", "RI", "SC", "SD", "TN", "TX", "UT", "VT", "VA", "WA", "WV", "WI", "WY"];
+const getRoleBadgeColor = (role: SearchUser['role']) => {
+  switch (role) {
+    case 'athlete': return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200';
+    case 'coach': return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200';
+    case 'recruiter': return 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200';
+  }
+};
+
+const ITEMS_PER_PAGE = 12;
 
 export default function SearchPage() {
-  const [activeTab, setActiveTab] = useState<"athletes" | "programs">("athletes");
-  const [searchTerm, setSearchTerm] = useState("");
-  const [filters, setFilters] = useState({
-    sport: "all",
-    division: "all",
-    graduationYear: "all",
-    state: "all",
-    position: "",
-    minGPA: "",
-    verified: "all"
-  });
+  const searchParams = useSearchParams();
+  const initialQuery = searchParams.get('q') || '';
+  
+  const [searchTerm, setSearchTerm] = useState(initialQuery);
+  const [roleFilter, setRoleFilter] = useState<string>('all');
+  const [sportFilter, setSportFilter] = useState<string>('all');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [showFilters, setShowFilters] = useState(false);
 
-  const filteredAthletes = useMemo(() => {
-    return mockAthletes.filter(athlete => {
-      const matchesSearch = athlete.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                           athlete.sport.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                           athlete.position.toLowerCase().includes(searchTerm.toLowerCase());
-      
-      const matchesSport = filters.sport === "all" || athlete.sport === filters.sport;
-      const matchesYear = filters.graduationYear === "all" || athlete.graduationYear.toString() === filters.graduationYear;
-      const matchesState = filters.state === "all" || athlete.location.includes(filters.state);
-      const matchesPosition = !filters.position || athlete.position.toLowerCase().includes(filters.position.toLowerCase());
-      const matchesGPA = !filters.minGPA || athlete.gpa >= parseFloat(filters.minGPA);
-      const matchesVerified = filters.verified === "all" || (filters.verified === "true" ? athlete.verified : !athlete.verified);
+  // Update search term when URL changes
+  useEffect(() => {
+    setSearchTerm(initialQuery);
+  }, [initialQuery]);
 
-      return matchesSearch && matchesSport && matchesYear && matchesState && matchesPosition && matchesGPA && matchesVerified;
-    });
-  }, [searchTerm, filters]);
+  // Filter users based on search term and filters
+  const filteredUsers = useMemo(() => {
+    let results = mockUsers;
 
-  const filteredPrograms = useMemo(() => {
-    return mockPrograms.filter(program => {
-      const matchesSearch = program.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                           program.coach.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                           program.sport.toLowerCase().includes(searchTerm.toLowerCase());
-      
-      const matchesSport = filters.sport === "all" || program.sport === filters.sport;
-      const matchesDivision = filters.division === "all" || program.division === filters.division;
-      const matchesState = filters.state === "all" || program.location.includes(filters.state);
-      const matchesVerified = filters.verified === "all" || (filters.verified === "true" ? program.verified : !program.verified);
+    // Apply search term filter
+    if (searchTerm) {
+      const term = searchTerm.toLowerCase();
+      results = results.filter(user => 
+        user.name.toLowerCase().includes(term) ||
+        user.sport.toLowerCase().includes(term) ||
+        user.role.toLowerCase().includes(term) ||
+        user.location.toLowerCase().includes(term) ||
+        (user.school && user.school.toLowerCase().includes(term))
+      );
+    }
 
-      return matchesSearch && matchesSport && matchesDivision && matchesState && matchesVerified;
-    });
-  }, [searchTerm, filters]);
+    // Apply role filter
+    if (roleFilter !== 'all') {
+      results = results.filter(user => user.role === roleFilter);
+    }
+
+    // Apply sport filter
+    if (sportFilter !== 'all') {
+      results = results.filter(user => user.sport === sportFilter);
+    }
+
+    return results;
+  }, [searchTerm, roleFilter, sportFilter]);
+
+  // Pagination
+  const totalPages = Math.ceil(filteredUsers.length / ITEMS_PER_PAGE);
+  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+  const paginatedUsers = filteredUsers.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+
+  // Get unique sports for filter dropdown
+  const uniqueSports = useMemo(() => {
+    return Array.from(new Set(mockUsers.map(user => user.sport))).sort();
+  }, []);
+
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    setCurrentPage(1);
+  };
 
   const clearFilters = () => {
-    setFilters({
-      sport: "all",
-      division: "all",
-      graduationYear: "all",
-      state: "all",
-      position: "",
-      minGPA: "",
-      verified: "all"
-    });
-    setSearchTerm("");
+    setRoleFilter('all');
+    setSportFilter('all');
+    setCurrentPage(1);
   };
 
   return (
-    <div className="container mx-auto py-8 px-4">
+    <div className="container mx-auto px-4 py-8 max-w-6xl">
+      {/* Header */}
       <div className="mb-8">
-        <h1 className="text-3xl font-bold mb-2">Search Athletes & Programs</h1>
-        <p className="text-muted-foreground">
-          Discover talented student-athletes and college programs across all divisions
-        </p>
+        <h1 className="text-3xl font-bold text-foreground mb-2">Search Results</h1>
+        {searchTerm && (
+          <p className="text-muted-foreground">
+            Showing results for &ldquo;<span className="font-medium text-foreground">{searchTerm}</span>&rdquo;
+          </p>
+        )}
       </div>
 
       {/* Search Bar */}
-      <div className="mb-6">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            type="search"
-            placeholder="Search by name, sport, position, or school..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10 pr-4 py-3 text-lg"
-          />
-        </div>
-      </div>
-
-      {/* Tabs */}
-      <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as "athletes" | "programs")} className="mb-6">
-        <TabsList className="grid w-full grid-cols-2 max-w-md">
-          <TabsTrigger value="athletes" className="flex items-center gap-2">
-            <Users className="h-4 w-4" />
-            Athletes ({filteredAthletes.length})
-          </TabsTrigger>
-          <TabsTrigger value="programs" className="flex items-center gap-2">
-            <Target className="h-4 w-4" />
-            Programs ({filteredPrograms.length})
-          </TabsTrigger>
-        </TabsList>
-
-        {/* Filters */}
-        <Card className="mb-6">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Filter className="h-5 w-5" />
-              Filters
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
-              <div>
-                <label className="text-sm font-medium mb-2 block">Sport</label>
-                <Select value={filters.sport} onValueChange={(value) => setFilters(prev => ({ ...prev, sport: value }))}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="All Sports" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Sports</SelectItem>
-                    {sports.map(sport => (
-                      <SelectItem key={sport} value={sport}>{sport}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {activeTab === "athletes" && (
-                <div>
-                  <label className="text-sm font-medium mb-2 block">Graduation Year</label>
-                  <Select value={filters.graduationYear} onValueChange={(value) => setFilters(prev => ({ ...prev, graduationYear: value }))}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="All Years" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Years</SelectItem>
-                      {graduationYears.map(year => (
-                        <SelectItem key={year} value={year.toString()}>{year}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+      <Card className="mb-6">
+        <CardContent className="p-6">
+          <form onSubmit={handleSearch} className="space-y-4">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                type="search"
+                placeholder="Search athletes, coaches, recruiters..."
+                className="pl-10 h-12"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+            </div>
+            
+            {/* Filters Toggle */}
+            <div className="flex items-center justify-between">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setShowFilters(!showFilters)}
+                className="flex items-center gap-2"
+              >
+                <Filter className="h-4 w-4" />
+                Filters
+                {(roleFilter !== 'all' || sportFilter !== 'all') && (
+                  <Badge variant="secondary" className="ml-1">
+                    {[roleFilter !== 'all' ? 1 : 0, sportFilter !== 'all' ? 1 : 0].reduce((a, b) => a + b, 0)}
+                  </Badge>
+                )}
+              </Button>
+              
+              {(roleFilter !== 'all' || sportFilter !== 'all') && (
+                <Button type="button" variant="ghost" onClick={clearFilters}>
+                  Clear Filters
+                </Button>
               )}
-
-              {activeTab === "programs" && (
-                <div>
-                  <label className="text-sm font-medium mb-2 block">Division</label>
-                  <Select value={filters.division} onValueChange={(value) => setFilters(prev => ({ ...prev, division: value }))}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="All Divisions" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Divisions</SelectItem>
-                      {divisions.map(division => (
-                        <SelectItem key={division} value={division}>{division}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
-
-              <div>
-                <label className="text-sm font-medium mb-2 block">State</label>
-                <Select value={filters.state} onValueChange={(value) => setFilters(prev => ({ ...prev, state: value }))}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="All States" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All States</SelectItem>
-                    {states.map(state => (
-                      <SelectItem key={state} value={state}>{state}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div>
-                <label className="text-sm font-medium mb-2 block">Verified Only</label>
-                <Select value={filters.verified} onValueChange={(value) => setFilters(prev => ({ ...prev, verified: value }))}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="All Profiles" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Profiles</SelectItem>
-                    <SelectItem value="true">Verified Only</SelectItem>
-                    <SelectItem value="false">Unverified Only</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
             </div>
 
-            {activeTab === "athletes" && (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="text-sm font-medium mb-2 block">Position</label>
-                  <Input
-                    placeholder="e.g., Point Guard, Forward"
-                    value={filters.position}
-                    onChange={(e) => setFilters(prev => ({ ...prev, position: e.target.value }))}
-                  />
+            {/* Filters */}
+            {showFilters && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Role</label>
+                  <Select value={roleFilter} onValueChange={setRoleFilter}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="All roles" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All roles</SelectItem>
+                      <SelectItem value="athlete">Athletes</SelectItem>
+                      <SelectItem value="coach">Coaches</SelectItem>
+                      <SelectItem value="recruiter">Recruiters</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
-                <div>
-                  <label className="text-sm font-medium mb-2 block">Minimum GPA</label>
-                  <Input
-                    type="number"
-                    step="0.1"
-                    min="0"
-                    max="4.0"
-                    placeholder="e.g., 3.0"
-                    value={filters.minGPA}
-                    onChange={(e) => setFilters(prev => ({ ...prev, minGPA: e.target.value }))}
-                  />
+                
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Sport</label>
+                  <Select value={sportFilter} onValueChange={setSportFilter}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="All sports" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All sports</SelectItem>
+                      {uniqueSports.map((sport) => (
+                        <SelectItem key={sport} value={sport}>
+                          {sport}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
             )}
+          </form>
+        </CardContent>
+      </Card>
 
-            <div className="flex justify-end mt-4">
-              <Button variant="outline" onClick={clearFilters}>
-                Clear All Filters
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Results */}
-        <TabsContent value="athletes">
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {filteredAthletes.map(athlete => (
-              <Card key={athlete.id} className="hover:shadow-lg transition-shadow">
-                <CardContent className="p-6">
-                  <div className="flex items-start gap-4 mb-4">
-                    <div className="relative">
-                      <Image
-                        src={athlete.profileImage}
-                        alt={athlete.name}
-                        width={60}
-                        height={60}
-                        className="rounded-full object-cover"
-                      />
-                      {athlete.verified && (
-                        <div className="absolute -top-1 -right-1 bg-green-500 rounded-full p-1">
-                          <Award className="h-3 w-3 text-white" />
-                        </div>
-                      )}
-                    </div>
-                    <div className="flex-1">
-                      <h3 className="font-semibold text-lg">{athlete.name}</h3>
-                      <p className="text-muted-foreground">{athlete.position} • Class of {athlete.graduationYear}</p>
-                      <div className="flex items-center gap-1 text-sm text-muted-foreground mt-1">
-                        <MapPin className="h-3 w-3" />
-                        {athlete.location}
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <Badge variant="secondary">{athlete.sport}</Badge>
-                      <span className="text-sm font-medium">GPA: {athlete.gpa}</span>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-2 text-sm">
-                      <div>
-                        <span className="text-muted-foreground">Height:</span>
-                        <span className="ml-1 font-medium">{athlete.height}</span>
-                      </div>
-                      <div>
-                        <span className="text-muted-foreground">Weight:</span>
-                        <span className="ml-1 font-medium">{athlete.weight}</span>
-                      </div>
-                    </div>
-
-                    <div className="flex gap-2 pt-2">
-                      <Link href={`/profile/${athlete.id}`} className="flex-1">
-                        <Button variant="outline" size="sm" className="w-full">
-                          <Eye className="h-4 w-4 mr-2" />
-                          View Profile
-                        </Button>
-                      </Link>
-                      <Button size="sm" className="flex-1">
-                        <Heart className="h-4 w-4 mr-2" />
-                        Connect
-                      </Button>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-
-          {filteredAthletes.length === 0 && (
-            <div className="text-center py-12">
-              <Users className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
-              <h3 className="text-lg font-semibold mb-2">No athletes found</h3>
-              <p className="text-muted-foreground">Try adjusting your search criteria or filters</p>
-            </div>
+      {/* Results Count */}
+      <div className="flex items-center justify-between mb-6">
+        <p className="text-muted-foreground">
+          {filteredUsers.length} {filteredUsers.length === 1 ? 'result' : 'results'} found
+          {filteredUsers.length > ITEMS_PER_PAGE && (
+            <span> • Page {currentPage} of {totalPages}</span>
           )}
-        </TabsContent>
+        </p>
+      </div>
 
-        <TabsContent value="programs">
-          <div className="grid gap-6 md:grid-cols-2">
-            {filteredPrograms.map(program => (
-              <Card key={program.id} className="hover:shadow-lg transition-shadow">
+      {/* Results Grid */}
+      {paginatedUsers.length > 0 ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+          {paginatedUsers.map((user) => (
+            <Link key={user.id} href={`/profile/${user.id}`}>
+              <Card className="hover:shadow-lg transition-shadow duration-200 hover:border-green-200 dark:hover:border-green-800">
                 <CardContent className="p-6">
-                  <div className="flex items-start gap-4 mb-4">
-                    <div className="relative">
+                  <div className="flex items-start gap-4">
+                    <div className="relative flex-shrink-0">
                       <Image
-                        src={program.logo}
-                        alt={program.name}
+                        src={user.profilePicture}
+                        alt={user.name}
                         width={60}
                         height={60}
-                        className="rounded-lg object-cover"
+                        className="rounded-full object-cover ring-2 ring-green-100 dark:ring-green-900"
                       />
-                      {program.verified && (
-                        <div className="absolute -top-1 -right-1 bg-green-500 rounded-full p-1">
-                          <Award className="h-3 w-3 text-white" />
+                      {user.verified && (
+                        <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-green-500 rounded-full flex items-center justify-center">
+                          <div className="w-2.5 h-2.5 bg-white rounded-full"></div>
                         </div>
                       )}
                     </div>
-                    <div className="flex-1">
-                      <h3 className="font-semibold text-lg">{program.name}</h3>
-                      <p className="text-muted-foreground">{program.coach}</p>
-                      <div className="flex items-center gap-1 text-sm text-muted-foreground mt-1">
-                        <MapPin className="h-3 w-3" />
-                        {program.location}
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <Badge variant="secondary">{program.sport}</Badge>
-                      <Badge variant="outline">{program.division}</Badge>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-2 text-sm">
-                      <div>
-                        <span className="text-muted-foreground">Conference:</span>
-                        <span className="ml-1 font-medium">{program.conference}</span>
-                      </div>
-                      <div>
-                        <span className="text-muted-foreground">Scholarships:</span>
-                        <span className="ml-1 font-medium">{program.scholarshipsAvailable}</span>
-                      </div>
-                    </div>
-
-                    <div>
-                      <span className="text-sm text-muted-foreground">Recruiting: </span>
-                      {program.recruitingYears.map(year => (
-                        <Badge key={year} variant="outline" className="ml-1 text-xs">
-                          {year}
+                    
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-2">
+                        <h3 className="font-semibold text-foreground truncate">
+                          {user.name}
+                        </h3>
+                        <Badge className={`text-xs px-2 py-1 flex items-center gap-1 ${getRoleBadgeColor(user.role)}`}>
+                          {getRoleIcon(user.role)}
+                          {user.role}
                         </Badge>
-                      ))}
-                    </div>
-
-                    <div className="flex gap-2 pt-2">
-                      <Link href={`/profile/${program.id}`} className="flex-1">
-                        <Button variant="outline" size="sm" className="w-full">
-                          <Eye className="h-4 w-4 mr-2" />
-                          View Program
-                        </Button>
-                      </Link>
-                      <Button size="sm" className="flex-1">
-                        <MessageCircle className="h-4 w-4 mr-2" />
-                        Contact
-                      </Button>
+                      </div>
+                      
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-1 text-sm">
+                          <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                          <span className="font-medium text-green-600 dark:text-green-400">{user.sport}</span>
+                        </div>
+                        
+                        <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                          <MapPin className="h-3 w-3" />
+                          <span>{user.location}</span>
+                        </div>
+                        
+                        {user.graduationYear && (
+                          <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                            <Calendar className="h-3 w-3" />
+                            <span>Class of {user.graduationYear}</span>
+                          </div>
+                        )}
+                        
+                        {user.school && (
+                          <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                            <School className="h-3 w-3" />
+                            <span className="truncate">{user.school}</span>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </CardContent>
               </Card>
+            </Link>
+          ))}
+        </div>
+      ) : (
+        <div className="text-center py-16">
+          <Search className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
+          <h3 className="text-xl font-semibold text-foreground mb-2">No results found</h3>
+          <p className="text-muted-foreground mb-4">
+            Try adjusting your search terms or clearing filters
+          </p>
+          <Button onClick={clearFilters} variant="outline">
+            Clear Filters
+          </Button>
+        </div>
+      )}
+
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-center gap-2">
+          <Button
+            variant="outline"
+            onClick={() => setCurrentPage(currentPage - 1)}
+            disabled={currentPage === 1}
+          >
+            Previous
+          </Button>
+          
+          <div className="flex items-center gap-1">
+            {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+              <Button
+                key={page}
+                variant={currentPage === page ? "default" : "outline"}
+                size="sm"
+                onClick={() => setCurrentPage(page)}
+                className="w-10"
+              >
+                {page}
+              </Button>
             ))}
           </div>
-
-          {filteredPrograms.length === 0 && (
-            <div className="text-center py-12">
-              <Target className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
-              <h3 className="text-lg font-semibold mb-2">No programs found</h3>
-              <p className="text-muted-foreground">Try adjusting your search criteria or filters</p>
-            </div>
-          )}
-        </TabsContent>
-      </Tabs>
+          
+          <Button
+            variant="outline"
+            onClick={() => setCurrentPage(currentPage + 1)}
+            disabled={currentPage === totalPages}
+          >
+            Next
+          </Button>
+        </div>
+      )}
     </div>
   );
 } 

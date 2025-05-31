@@ -5,6 +5,7 @@ import { MessageSquare, Send, Search, PlusCircle, Paperclip, Smile, Users, Arrow
 import { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import { Badge } from "@/components/ui/badge";
 import Image from 'next/image';
+import Link from 'next/link';
 
 // Placeholder data types
 interface Conversation {
@@ -81,21 +82,25 @@ export default function MessagingPage() {
     
     setTimeout(() => {
       if (messagesContainerRef.current) {
+        const container = messagesContainerRef.current;
+        
         if (firstUnreadIndex !== -1) {
-          // Scroll to first unread message with smooth behavior
-          const messageElements = messagesContainerRef.current.querySelectorAll('[data-message-id]');
-          const unreadElement = messageElements[firstUnreadIndex];
+          // Scroll to first unread message within container only
+          const messageElements = container.querySelectorAll('[data-message-id]');
+          const unreadElement = messageElements[firstUnreadIndex] as HTMLElement;
           if (unreadElement) {
-            unreadElement.scrollIntoView({ 
-              behavior: 'smooth', 
-              block: 'center',
-              inline: 'nearest'
+            const relativeTop = unreadElement.offsetTop - container.offsetTop;
+            const scrollPosition = relativeTop - (container.clientHeight / 2) + (unreadElement.clientHeight / 2);
+            
+            container.scrollTo({
+              top: Math.max(0, scrollPosition),
+              behavior: 'smooth'
             });
           }
         } else {
-          // Scroll to bottom smoothly
-          messagesContainerRef.current.scrollTo({
-            top: messagesContainerRef.current.scrollHeight,
+          // Scroll to bottom smoothly within container
+          container.scrollTo({
+            top: container.scrollHeight,
             behavior: 'smooth'
           });
         }
@@ -466,7 +471,7 @@ export default function MessagingPage() {
                     >
                       <ArrowLeft size={18} />
                     </Button>
-                    <div className="relative">
+                    <Link href={`/profile/${activeConversation.id}`} className="relative cursor-pointer hover:opacity-80 transition-opacity">
                       <Image 
                         src={activeConversation.partnerAvatarUrl} 
                         alt={activeConversation.partnerName} 
@@ -477,9 +482,11 @@ export default function MessagingPage() {
                       {activeConversation.isOnline && (
                         <span className="absolute bottom-0 right-0 block h-3 w-3 rounded-full bg-green-500 ring-2 ring-card"></span>
                       )}
-                    </div>
+                    </Link>
                     <div>
-                      <h2 className="text-lg font-semibold text-foreground">{activeConversation.partnerName}</h2>
+                      <Link href={`/profile/${activeConversation.id}`} className="cursor-pointer hover:opacity-80 transition-opacity">
+                        <h2 className="text-lg font-semibold text-foreground">{activeConversation.partnerName}</h2>
+                      </Link>
                       {activeConversation.isOnline ? (
                         <p className="text-sm text-green-600 dark:text-green-400">Online now</p>
                       ) : (

@@ -1,6 +1,6 @@
 'use client';
 import React, { useState, useMemo, useEffect } from 'react';
-import { Users, Search, MessageSquare, User, MoreVertical, XCircle, ShieldAlert, UserCheck, UserCog, UsersRound, CheckCircle, X, Clock } from 'lucide-react';
+import { Users, Search, MessageSquare, User, MoreVertical, XCircle, ShieldAlert, UserCheck, UserCog, UsersRound, CheckCircle, X, Clock} from 'lucide-react';
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -104,63 +104,79 @@ const UserCard: React.FC<UserCardProps> = ({ user, onRemove }) => {
     setShowMenu(false);
   };
 
-  return (
-    <Card className="group transition-all duration-300 hover:shadow-lg hover:shadow-green-500/5 border-border/50 hover:border-green-200/50 dark:hover:border-green-800/50 h-full">
-      <CardContent className="p-4 md:p-6 flex flex-col h-full">
-        <div className="flex items-start space-x-4 mb-4">
-          <Link href={`/profile/${user.id}`} className="flex-shrink-0 cursor-pointer">
-            <Avatar className="w-16 h-16 md:w-20 md:h-20 ring-2 ring-green-100 dark:ring-green-900 group-hover:ring-green-200 dark:group-hover:ring-green-800 transition-colors hover:ring-green-300 dark:hover:ring-green-700">
-              <AvatarImage src={user.avatar} alt={user.name} />
-              <AvatarFallback className="text-sm font-medium">
-                {user.name.split(' ').map(n => n[0]).join('')}
-              </AvatarFallback>
-            </Avatar>
-          </Link>
-          <div className="flex-1 min-w-0">
-            <Link href={`/profile/${user.id}`} className="cursor-pointer block hover:opacity-80 transition-opacity">
-              <h3 className="text-lg md:text-xl font-semibold text-foreground leading-tight mb-1">{user.name}</h3>
-            </Link>
-            <p className="text-sm text-green-600 dark:text-green-400 font-medium mb-1">{user.sport}</p>
-            <Badge variant="outline" className="text-xs capitalize mb-2">
-              {user.type}
-            </Badge>
-          </div>
-          <div className="relative flex-shrink-0">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setShowMenu(!showMenu)}
-              className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground"
-            >
-              <MoreVertical size={16} />
-            </Button>
-            {showMenu && (
-              <div className="absolute right-0 mt-2 w-48 bg-card rounded-lg shadow-lg border border-border py-1 z-10">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={handleRemove}
-                  className="w-full justify-start text-destructive hover:text-destructive hover:bg-destructive/10 px-3 py-2 h-auto"
-                >
-                  <XCircle size={16} className="mr-2" />
-                  Remove Connection
-                </Button>
-              </div>
-            )}
-          </div>
-        </div>
+  const handleMenuClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setShowMenu(!showMenu);
+  };
 
-        <div className="flex-1 flex flex-col justify-end">
-          <div className="text-sm text-muted-foreground mb-4">
-            <span className="font-medium text-foreground">{user.mutualConnections}</span> Mutual Connections
+  const handleSendMessageClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    // Handle send message action
+  };
+
+  return (
+    <Link href={`/profile/${user.id}`} className="block h-full">
+      <Card className="group transition-all duration-300 hover:shadow-lg hover:shadow-green-500/5 border-border/50 hover:border-green-200/50 dark:hover:border-green-800/50 h-full cursor-pointer">
+        <CardContent className="p-4 md:p-6 flex flex-col h-full">
+          <div className="flex items-start space-x-4 mb-4">
+            <div className="flex-shrink-0">
+              <Avatar className="w-16 h-16 md:w-20 md:h-20 ring-2 ring-green-100 dark:ring-green-900 group-hover:ring-green-200 dark:group-hover:ring-green-800 transition-colors hover:ring-green-300 dark:hover:ring-green-700">
+                <AvatarImage src={user.avatar} alt={user.name} />
+                <AvatarFallback className="text-sm font-medium">
+                  {user.name.split(' ').map(n => n[0]).join('')}
+                </AvatarFallback>
+              </Avatar>
+            </div>
+            <div className="flex-1 min-w-0">
+              <h3 className="text-lg md:text-xl font-semibold text-foreground leading-tight mb-1">{user.name}</h3>
+              <p className="text-sm text-green-600 dark:text-green-400 font-medium mb-1">{user.sport}</p>
+              <Badge variant="outline" className="text-xs capitalize mb-2">
+                {user.type}
+              </Badge>
+            </div>
+            <div className="relative flex-shrink-0">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleMenuClick}
+                className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground"
+              >
+                <MoreVertical size={16} />
+              </Button>
+              {showMenu && (
+                <div className="absolute right-0 mt-2 w-48 bg-card rounded-lg shadow-lg border border-border py-1 z-10">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleRemove}
+                    className="w-full justify-start text-destructive hover:text-destructive hover:bg-destructive/10 px-3 py-2 h-auto"
+                  >
+                    <XCircle size={16} className="mr-2" />
+                    Remove Connection
+                  </Button>
+                </div>
+              )}
+            </div>
           </div>
-          <Button className="w-full h-10" size="sm">
-            <MessageSquare size={18} className="mr-2" />
-            Send Message
-          </Button>
-        </div>
-      </CardContent>
-    </Card>
+
+          <div className="flex-1 flex flex-col justify-end">
+            <div className="text-sm text-muted-foreground mb-4">
+              <span className="font-medium text-foreground">{user.mutualConnections}</span> Mutual Connections
+            </div>
+            <Button 
+              className="w-full h-10" 
+              size="sm"
+              onClick={handleSendMessageClick}
+            >
+              <MessageSquare size={18} className="mr-2" />
+              Send Message
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    </Link>
   );
 };
 
@@ -295,132 +311,142 @@ function App() {
   }, [requests, searchTerm, activeFilter]);
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="container mx-auto py-8 px-4 md:px-6 space-y-8">
-        {/* Header with more subtle gradient */}
-        <div className="bg-gradient-to-r from-green-50/30 via-emerald-50/20 to-teal-50/30 dark:from-green-950/10 dark:via-emerald-950/5 dark:to-teal-950/10 rounded-xl p-6 md:p-8 border border-border/30">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6">
-            <div>
-              <h1 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-green-600 via-emerald-600 to-teal-600 bg-clip-text text-transparent mb-2">
-                Your Network
-              </h1>
-              <p className="text-muted-foreground">
-                Connect with athletes, coaches, and recruiters in your sport
-              </p>
+    <div className="min-h-screen bg-background p-4 md:p-6">
+      <div className="max-w-7xl mx-auto h-[calc(100vh-2rem)] md:h-[calc(100vh-3rem)]">
+        {/* Unified connections panel */}
+        <div className="h-full flex flex-col border border-border/50 rounded-xl shadow-lg bg-card overflow-hidden">
+          
+          {/* Integrated Header */}
+          <div className="p-4 md:p-6 border-b border-border/50 bg-gradient-to-r from-green-50/20 to-emerald-50/20 dark:from-green-950/10 dark:to-emerald-950/10">
+            <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-6">
+              <div>
+                <h1 className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-green-600 via-emerald-600 to-teal-600 bg-clip-text text-transparent mb-2">
+                  Your Network
+                </h1>
+                <div className="flex items-center gap-2 mt-1">
+                  {requests.length > 0 && (
+                    <Badge variant="secondary" className="bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200 text-xs">
+                      {requests.length} pending
+                    </Badge>
+                  )}
+                  <Badge variant="outline" className="text-xs">
+                    {users.length} connections
+                  </Badge>
+                </div>
+              </div>
             </div>
-            <div className="flex items-center gap-2 mt-4 sm:mt-0">
-              {requests.length > 0 && (
-                <Badge variant="secondary" className="bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200">
-                  {requests.length} pending
-                </Badge>
-              )}
+            
+            <div className="space-y-4">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <input
+                  type="text"
+                  placeholder="Search connections and requests..."
+                  className="w-full pl-9 pr-4 py-2.5 text-sm border border-border/50 bg-background/80 backdrop-blur-sm text-foreground rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
+              </div>
+              <FilterButtons currentFilter={activeFilter} onFilterChange={setActiveFilter} />
             </div>
           </div>
-          
-          <div className="space-y-4">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-              <input
-                type="text"
-                placeholder="Search connections and requests..."
-                className="w-full pl-10 pr-4 py-3 border border-border/50 bg-background/80 backdrop-blur-sm text-foreground rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
-            </div>
-            <FilterButtons currentFilter={activeFilter} onFilterChange={setActiveFilter} />
+
+          {/* Content Area with Tabs */}
+          <div className="flex-grow overflow-hidden">
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="h-full flex flex-col">
+              <div className="border-b border-border/50 bg-card/50">
+                <TabsList className="grid w-full grid-cols-2 bg-transparent h-auto p-1">
+                  <TabsTrigger 
+                    value="connections" 
+                    className="flex items-center gap-2 data-[state=active]:bg-green-600 data-[state=active]:text-white h-10"
+                  >
+                    <Users size={16} />
+                    <span>Connections</span>
+                    <Badge variant="secondary" className="ml-1 text-xs">
+                      {users.length}
+                    </Badge>
+                  </TabsTrigger>
+                  <TabsTrigger 
+                    value="requests" 
+                    className="flex items-center gap-2 data-[state=active]:bg-amber-600 data-[state=active]:text-white h-10"
+                  >
+                    <Clock size={16} />
+                    <span>Requests</span>
+                    {requests.length > 0 && (
+                      <Badge variant="secondary" className="ml-1 bg-amber-100 text-amber-800 text-xs">
+                        {requests.length}
+                      </Badge>
+                    )}
+                  </TabsTrigger>
+                </TabsList>
+              </div>
+
+              <div className="flex-grow overflow-y-auto bg-gradient-to-b from-transparent to-green-50/5 dark:to-green-950/5">
+                <TabsContent value="connections" className="p-4 h-full m-0">
+                  {filteredUsers.length > 0 ? (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
+                      {filteredUsers.map(user => (
+                        <UserCard key={user.id} user={user} onRemove={handleRemoveUser} />
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="flex flex-col items-center justify-center h-full text-center p-8">
+                      <div className="w-20 h-20 rounded-full bg-green-100 dark:bg-green-900 flex items-center justify-center mb-6">
+                        <Users className="h-10 w-10 text-green-600 dark:text-green-400" />
+                      </div>
+                      <h3 className="text-xl font-semibold text-foreground mb-2">No connections found</h3>
+                      <p className="text-muted-foreground mb-4 max-w-md">
+                        {searchTerm || activeFilter !== 'all' 
+                          ? 'Try adjusting your search or filter.' 
+                          : 'Start building your network by connecting with athletes, coaches, and recruiters.'}
+                      </p>
+                      {!searchTerm && activeFilter === 'all' && (
+                        <Button className="mt-2">
+                          <Search size={16} className="mr-2" />
+                          Find People
+                        </Button>
+                      )}
+                    </div>
+                  )}
+                </TabsContent>
+
+                <TabsContent value="requests" className="p-4 h-full m-0">
+                  {filteredRequests.length > 0 ? (
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between mb-4">
+                        <h2 className="text-lg font-semibold">Pending Requests ({filteredRequests.length})</h2>
+                      </div>
+                      {filteredRequests.map((request, index) => (
+                        <div key={request.id}>
+                          <PendingRequestCard 
+                            request={request} 
+                            onAccept={handleAcceptRequest}
+                            onDecline={handleDeclineRequest}
+                          />
+                          {index < filteredRequests.length - 1 && (
+                            <Separator className="my-4" />
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="flex flex-col items-center justify-center h-full text-center p-8">
+                      <div className="w-20 h-20 rounded-full bg-amber-100 dark:bg-amber-900 flex items-center justify-center mb-6">
+                        <Clock className="h-10 w-10 text-amber-600 dark:text-amber-400" />
+                      </div>
+                      <h3 className="text-xl font-semibold text-foreground mb-2">No pending requests</h3>
+                      <p className="text-muted-foreground max-w-md">
+                        {searchTerm || activeFilter !== 'all' 
+                          ? 'No requests match your current search or filter.' 
+                          : 'New connection requests will appear here when received.'}
+                      </p>
+                    </div>
+                  )}
+                </TabsContent>
+              </div>
+            </Tabs>
           </div>
         </div>
-
-        {/* Tabs for Connections vs Requests */}
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-2 bg-muted/50">
-            <TabsTrigger 
-              value="connections" 
-              className="flex items-center gap-2 data-[state=active]:bg-green-600 data-[state=active]:text-white"
-            >
-              <Users size={16} />
-              <span>Connections</span>
-              <Badge variant="secondary" className="ml-1">
-                {users.length}
-              </Badge>
-            </TabsTrigger>
-            <TabsTrigger 
-              value="requests" 
-              className="flex items-center gap-2 data-[state=active]:bg-amber-600 data-[state=active]:text-white"
-            >
-              <Clock size={16} />
-              <span>Requests</span>
-              {requests.length > 0 && (
-                <Badge variant="secondary" className="ml-1 bg-amber-100 text-amber-800">
-                  {requests.length}
-                </Badge>
-              )}
-            </TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="connections" className="mt-6">
-            {filteredUsers.length > 0 ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
-                {filteredUsers.map(user => (
-                  <UserCard key={user.id} user={user} onRemove={handleRemoveUser} />
-                ))}
-              </div>
-            ) : (
-              <Card className="p-12">
-                <div className="text-center">
-                  <Users size={48} className="mx-auto text-muted-foreground/50 mb-4" />
-                  <h3 className="text-xl font-semibold text-foreground mb-2">No connections found</h3>
-                  <p className="text-muted-foreground mb-4">
-                    {searchTerm || activeFilter !== 'all' 
-                      ? 'Try adjusting your search or filter.' 
-                      : 'Start building your network by connecting with athletes, coaches, and recruiters.'}
-                  </p>
-                  {!searchTerm && activeFilter === 'all' && (
-                    <Button className="mt-2">
-                      <Search size={16} className="mr-2" />
-                      Find People
-                    </Button>
-                  )}
-                </div>
-              </Card>
-            )}
-          </TabsContent>
-
-          <TabsContent value="requests" className="mt-6">
-            {filteredRequests.length > 0 ? (
-              <div className="space-y-4">
-                <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-lg font-semibold">Pending Requests ({filteredRequests.length})</h2>
-                </div>
-                {filteredRequests.map((request, index) => (
-                  <div key={request.id}>
-                    <PendingRequestCard 
-                      request={request} 
-                      onAccept={handleAcceptRequest}
-                      onDecline={handleDeclineRequest}
-                    />
-                    {index < filteredRequests.length - 1 && (
-                      <Separator className="my-4" />
-                    )}
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <Card className="p-12">
-                <div className="text-center">
-                  <Clock size={48} className="mx-auto text-muted-foreground/50 mb-4" />
-                  <h3 className="text-xl font-semibold text-foreground mb-2">No pending requests</h3>
-                  <p className="text-muted-foreground">
-                    {searchTerm || activeFilter !== 'all' 
-                      ? 'No requests match your current search or filter.' 
-                      : 'New connection requests will appear here when received.'}
-                  </p>
-                </div>
-              </Card>
-            )}
-          </TabsContent>
-        </Tabs>
       </div>
     </div>
   );

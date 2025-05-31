@@ -93,10 +93,10 @@ const getUserTypeContent = (role: string, userId: string) => {
     case 'coach':
       return {
         welcomeText: "Discover and recruit talented athletes",
-        searchText: "Find Athletes",
+        searchText: "Discover Athletes",
         searchHref: "/search?type=athletes",
         primaryActions: [
-          { label: "Scout Athletes", href: "/search?type=athletes", icon: Search, description: "Find top prospects" },
+          { label: "Discover Athletes", href: "/search?type=athletes", icon: Search, description: "Find top prospects" },
           { label: "Update Profile", href: `/profile/${userId}`, icon: Edit3, description: "Keep profile current" },
           { label: "View Notifications", href: "/notifications", icon: Bell, description: "Stay updated" },
           { label: "Send Messages", href: "/messaging", icon: MessageSquare, description: "Connect with prospects" },
