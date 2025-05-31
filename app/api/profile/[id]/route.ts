@@ -138,9 +138,14 @@ function transformProfileData(profileData: Record<string, any>, profileType: str
       transformed.hudlEmbedUrl = undefined;
     }
   } else if (profileType === 'coach' || profileType === 'recruiter') {
+    // Transform profile image from R3 key to URL using proper R2 configuration
+    if (profileData.profileImageR3Key) {
+      transformed.profileImage = `${R2_PUBLIC_URL}/${profileData.profileImageR3Key}`;
+    }
+    
     // Transform organization logo from R3 key to URL using proper R2 configuration
-    if (profileData.organizationLogo) {
-      transformed.profileImage = `${R2_PUBLIC_URL}/${profileData.organizationLogo}`;
+    if (profileData.organizationLogoR3Key) {
+      transformed.organizationLogo = `${R2_PUBLIC_URL}/${profileData.organizationLogoR3Key}`;
     }
   }
 

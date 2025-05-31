@@ -16,6 +16,7 @@ export const R2_PUBLIC_URL = process.env.R2_PUBLIC_URL!;
 // Folders for different file types
 export const R2_FOLDERS = {
   PROFILE_PICTURES: 'profile-pictures',
+  ORGANIZATION_LOGOS: 'organization-logos',
   VERIFICATION_FILES: 'verification-files',
 } as const;
 
@@ -104,6 +105,31 @@ export async function uploadProfilePicture(
   );
   
   const fullKey = `${R2_FOLDERS.PROFILE_PICTURES}/${key}`;
+  
+  return {
+    key: fullKey,
+    url,
+  };
+}
+
+/**
+ * Upload an organization logo to R2
+ */
+export async function uploadOrganizationLogo(
+  file: File,
+  userId: string
+): Promise<{ key: string; url: string }> {
+  const buffer = await file.arrayBuffer();
+  const key = generateFileKey(file.name, `org-logo-${userId}`);
+  
+  const url = await uploadToR2(
+    new Uint8Array(buffer),
+    key,
+    file.type,
+    R2_FOLDERS.ORGANIZATION_LOGOS
+  );
+  
+  const fullKey = `${R2_FOLDERS.ORGANIZATION_LOGOS}/${key}`;
   
   return {
     key: fullKey,

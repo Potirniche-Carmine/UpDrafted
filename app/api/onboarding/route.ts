@@ -1,10 +1,11 @@
 import { auth, createClerkClient } from '@clerk/nextjs/server'
 import { NextRequest, NextResponse } from 'next/server'
 import { validateClerkHeaders } from '@/utils/clerk-security'
-import { uploadProfilePicture } from '@/lib/r2'
+import { uploadProfilePicture, uploadOrganizationLogo } from '@/lib/r2'
 import { onboardingOperations } from '@/lib/db-utils'
 import { convertFormDataToProfileData } from '@/types/onboarding'
 import { FormValidator } from '@/lib/form-validation'
+import { calculateAndSaveProfileCompletion } from '@/lib/profile-completion'
 
 const clerkClient = createClerkClient({
   secretKey: process.env.CLERK_SECRET_KEY
@@ -37,6 +38,7 @@ export async function POST(request: NextRequest) {
     const formData = await request.formData()
     const profileDataJson = formData.get('profileData') as string
     const profileImage = formData.get('profileImage') as File | null
+    const organizationLogo = formData.get('organizationLogo') as File | null
     const userIdFromForm = formData.get('userId') as string
     const email = formData.get('email') as string
     const role = formData.get('role') as 'athlete' | 'coach' | 'recruiter'
@@ -104,6 +106,8 @@ export async function POST(request: NextRequest) {
     try {
       let profileImageR3Key: string | undefined
       let profileImageUrl: string | null = null
+      let organizationLogoR3Key: string | undefined
+      let organizationLogoUrl: string | null = null
 
       if (profileImage) {
         try {
@@ -113,6 +117,18 @@ export async function POST(request: NextRequest) {
         } catch (uploadError) {
           console.error('Profile image upload failed:', uploadError)
           // Continue without profile image rather than failing the entire onboarding
+        }
+      }
+
+      // Handle organization logo upload for coaches and recruiters
+      if (organizationLogo && (role === 'coach' || role === 'recruiter')) {
+        try {
+          const { key, url } = await uploadOrganizationLogo(organizationLogo, userId)
+          organizationLogoUrl = url
+          organizationLogoR3Key = key
+        } catch (uploadError) {
+          console.error('Organization logo upload failed:', uploadError)
+          // Continue without organization logo rather than failing the entire onboarding
         }
       }
 
@@ -128,23 +144,49 @@ export async function POST(request: NextRequest) {
         )
         profileId = result.profile.id
         
+        // Calculate initial profile completion for athlete
+        try {
+          await calculateAndSaveProfileCompletion(userId, 'athlete', true);
+        } catch (completionError) {
+          console.error('Failed to calculate profile completion for athlete:', completionError);
+          // Don't fail the onboarding, just log the error
+        }
+        
       } else if (role === 'coach') {
         result = await onboardingOperations.createCoachOnboarding(
           userId, 
           email, 
           profileData, 
-          profileImageR3Key
+          profileImageR3Key,
+          organizationLogoR3Key
         )
         profileId = result.profile.id
+        
+        // Calculate initial profile completion for coach
+        try {
+          await calculateAndSaveProfileCompletion(userId, 'coach', true);
+        } catch (completionError) {
+          console.error('Failed to calculate profile completion for coach:', completionError);
+          // Don't fail the onboarding, just log the error
+        }
         
       } else if (role === 'recruiter') {
         result = await onboardingOperations.createRecruiterOnboarding(
           userId, 
           email, 
           profileData, 
-          profileImageR3Key
+          profileImageR3Key,
+          organizationLogoR3Key
         )
         profileId = result.profile.id
+        
+        // Calculate initial profile completion for recruiter
+        try {
+          await calculateAndSaveProfileCompletion(userId, 'recruiter', true);
+        } catch (completionError) {
+          console.error('Failed to calculate profile completion for recruiter:', completionError);
+          // Don't fail the onboarding, just log the error
+        }
       } else {
         throw new Error('Invalid role provided')
       }
@@ -161,7 +203,8 @@ export async function POST(request: NextRequest) {
           userId,
           role,
           profileId,
-          profileImageUrl
+          profileImageUrl,
+          organizationLogoUrl
         },
         { status: 200 }
       )

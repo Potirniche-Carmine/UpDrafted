@@ -18,6 +18,7 @@ import {
 import { CoachProfileData } from "../lib/base-profile-types";
 import { ProfileHeader } from "./shared/profile-header";
 import { ProfileCard } from "./shared/profile-card";
+import { OptimizedOrgLogo } from "./shared/optimized-org-logo";
 
 interface CoachProfileProps {
   data: CoachProfileData;
@@ -126,6 +127,20 @@ export function CoachProfile({ data, isOwnProfile = false, onShowInterest, onSha
                 </div>
               </CardHeader>
               <CardContent className="space-y-4">
+                {/* Organization Logo */}
+                {data.organizationLogo && (
+                  <div className="text-center">
+                    <p className="text-sm text-muted-foreground mb-3">Organization Logo</p>
+                    <div className="flex justify-center">
+                      <OptimizedOrgLogo
+                        src={data.organizationLogo}
+                        organizationName={data.organizationName}
+                        size="medium"
+                      />
+                    </div>
+                  </div>
+                )}
+
                 {data.programWebsite && (
                   <div>
                     <p className="text-sm text-muted-foreground mb-2">Program Website</p>
@@ -150,10 +165,10 @@ export function CoachProfile({ data, isOwnProfile = false, onShowInterest, onSha
                   </div>
                 )}
 
-                {!data.programWebsite && !data.schoolWebsite && isOwnProfile && (
+                {!data.programWebsite && !data.schoolWebsite && !data.organizationLogo && isOwnProfile && (
                   <div className="text-center py-4 border-2 border-dashed border-muted rounded-lg">
                     <p className="text-sm text-muted-foreground mb-2">
-                      Add program and school website links
+                      Add organization logo and website links
                     </p>
                     <Button
                       variant="outline"
@@ -161,7 +176,7 @@ export function CoachProfile({ data, isOwnProfile = false, onShowInterest, onSha
                       onClick={() => handleEditSection('program-links')}
                     >
                       <ExternalLink className="w-4 h-4 mr-1" />
-                      Add Links
+                      Add Links & Logo
                     </Button>
                   </div>
                 )}

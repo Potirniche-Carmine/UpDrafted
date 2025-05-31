@@ -1,7 +1,7 @@
 import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server'
 import { NextResponse } from 'next/server'
 
-// Simplified route matchers - combine related patterns
+// Public routes that don't require authentication at all
 const isPublicRoute = createRouteMatcher([
   '/', '/sign-in(.*)', '/sign-up(.*)', '/about', '/contact', '/for-athletes', 
   '/for-recruiters', '/privacy-policy', '/terms-of-service', '/404', '/500', '/for-coaches'
@@ -15,7 +15,7 @@ const isOnboardingApi = createRouteMatcher(['/api/onboarding']);
 
 // Protected routes that require auth + role
 const isProtectedDashboardRoute = createRouteMatcher([
-  '/dashboard(.*)', '/onboarding', '/profile(.*)'
+  '/dashboard(.*)', '/profile(.*)'
 ]);
 
 // Valid roles array for reuse
@@ -24,11 +24,6 @@ const VALID_ROLES = ['admin', 'athlete', 'coach', 'recruiter'];
 export default clerkMiddleware(async (auth, req) => {
   const { pathname } = req.nextUrl;
   
-  // Early return for public routes - no auth needed
-  if (isPublicRoute(req)) {
-    return NextResponse.next();
-  }
-
   try {
     const authState = await auth(); 
     const userRole = authState.sessionClaims?.metadata?.role as string;
@@ -54,24 +49,32 @@ export default clerkMiddleware(async (auth, req) => {
       return NextResponse.next();
     }
 
-    // Handle authenticated users on protected dashboard routes
-    if (authState.userId && isProtectedDashboardRoute(req)) {
-      // Redirect users without roles to onboarding (except if already there)
-      if (!isValidRole && pathname !== '/onboarding') {
-        return NextResponse.redirect(new URL('/onboarding', req.url));
+    // Handle authenticated users - check role status first
+    if (authState.userId) {
+      // Users without valid roles can ONLY access onboarding
+      if (!isValidRole) {
+        if (pathname !== '/onboarding') {
+          return NextResponse.redirect(new URL('/onboarding', req.url));
+        }
+        return NextResponse.next();
       }
       
-      // Redirect users with roles away from onboarding to dashboard
+      // Users with valid roles should be redirected away from onboarding
       if (isValidRole && pathname === '/onboarding' && userRole !== 'admin') {
+        return NextResponse.redirect(new URL('/dashboard', req.url));
+      }
+
+      // Redirect authenticated users with roles from landing page to dashboard
+      if (pathname === '/') {
         return NextResponse.redirect(new URL('/dashboard', req.url));
       }
 
       return NextResponse.next();
     }
 
-    // Redirect authenticated users from landing page to dashboard
-    if (authState.userId && pathname === '/') {
-      return NextResponse.redirect(new URL('/dashboard', req.url));
+    // For unauthenticated users, allow access to public routes
+    if (isPublicRoute(req)) {
+      return NextResponse.next();
     }
 
     // For all other protected routes, require authentication
@@ -80,8 +83,13 @@ export default clerkMiddleware(async (auth, req) => {
 
   } catch {
     // Handle auth errors gracefully
-    if (isProtectedDashboardRoute(req)) {
+    if (isProtectedDashboardRoute(req) || pathname === '/onboarding') {
       return NextResponse.next(); // Let client handle auth errors
+    }
+    
+    // Allow access to public routes on auth errors
+    if (isPublicRoute(req)) {
+      return NextResponse.next();
     }
     
     // For other routes, require auth

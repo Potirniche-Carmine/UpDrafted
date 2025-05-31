@@ -98,7 +98,8 @@ export const coachProfiles = pgTable('coach_profiles', {
   role: coachRoleEnum('role').notNull(),
   sportCoaching: text('sport_coaching').notNull(),
   organizationName: text('organization_name').notNull(),
-  organizationLogo: text('organization_logo'),
+  profileImageR3Key: text('profile_image_r3_key'),
+  organizationLogoR3Key: text('organization_logo_r3_key'),
   division: text('division').notNull(),
   conference: text('conference'),
   city: text('city').notNull(),
@@ -125,7 +126,8 @@ export const recruitingProfiles = pgTable('recruiting_profiles', {
   title: text('title').notNull(),
   sportRecruiting: text('sport_recruiting').notNull(),
   organizationName: text('organization_name').notNull(),
-  organizationLogo: text('organization_logo'),
+  profileImageR3Key: text('profile_image_r3_key'),
+  organizationLogoR3Key: text('organization_logo_r3_key'),
   division: text('division').notNull(),
   conference: text('conference'),
   city: text('city').notNull(),
@@ -287,6 +289,28 @@ export const reports = pgTable('reports', {
   index('idx_reports_reported_user_id').on(table.reportedUserId),
   index('idx_reports_status').on(table.status),
   index('idx_reports_submitted_at').on(table.submittedAt),
+]);
+
+export const profileCompletion = pgTable('profile_completion', {
+  id: serial('id').primaryKey(),
+  userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  userType: userRoleEnum('user_type').notNull(), // 'athlete', 'coach', 'recruiter'
+  overall: integer('overall').notNull(), // 0-100
+  basicCategory: integer('basic_category').notNull().default(0),
+  academicCategory: integer('academic_category').notNull().default(0),
+  athleticCategory: integer('athletic_category').notNull().default(0),
+  mediaCategory: integer('media_category').notNull().default(0),
+  socialCategory: integer('social_category').notNull().default(0),
+  missingFields: jsonb('missing_fields').notNull().default('[]'), // Array of missing field objects
+  nextSteps: jsonb('next_steps').notNull().default('[]'), // Array of top 3 next steps
+  lastCalculated: timestamp('last_calculated', { withTimezone: true }).defaultNow().notNull(),
+  profileLastUpdated: timestamp('profile_last_updated', { withTimezone: true }).defaultNow().notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+}, (table) => [
+  index('idx_profile_completion_user_id').on(table.userId),
+  index('idx_profile_completion_user_type').on(table.userType),
+  unique('profile_completion_user_type_unique').on(table.userId, table.userType),
 ]);
 
 export const usersRelations = relations(users, ({ one, many }) => ({

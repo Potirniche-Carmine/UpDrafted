@@ -34,6 +34,8 @@ export interface OnboardingFormData {
   title: string;
   sportCoaching: string;
   organizationName: string;
+  organizationLogo?: File | string;
+  organizationLogoPreview?: string;
   division: string;
   conference: string;
   programWebsite: string;

@@ -44,6 +44,8 @@ const initialData: OnboardingData = {
   title: "",
   sportCoaching: "",
   organizationName: "",
+  organizationLogo: undefined,
+  organizationLogoPreview: "",
   division: "",
   conference: "",
   programWebsite: "",
@@ -104,6 +106,11 @@ export default function OnboardingForm({ role, onBack }: OnboardingFormProps) {
       // Add profile image if provided
       if (data.profileImage instanceof File) {
         formData.append('profileImage', data.profileImage);
+      }
+      
+      // Add organization logo if provided (for coach/recruiter)
+      if (data.organizationLogo instanceof File && (data.role === 'coach' || data.role === 'recruiter')) {
+        formData.append('organizationLogo', data.organizationLogo);
       }
 
       const response = await fetch('/api/onboarding', {

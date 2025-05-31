@@ -6,6 +6,9 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Button } from "@/components/ui/button";
+import { Upload, X } from "lucide-react";
+import Image from "next/image";
 import { 
   DIVISIONS,
   US_STATES, 
@@ -161,6 +164,40 @@ export default function CoachRecruiterForm({ data, onInputChange }: CoachRecruit
     onInputChange(field, value);
   };
 
+  const handleOrganizationLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    
+    if (file) {
+      // Validate file type
+      const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+      if (!allowedTypes.includes(file.type)) {
+        alert('Please select a valid image file (JPEG, PNG, or WebP)');
+        return;
+      }
+
+      // Validate file size (5MB limit)
+      const maxSize = 5 * 1024 * 1024; // 5MB in bytes
+      if (file.size > maxSize) {
+        alert('File size must be less than 5MB');
+        return;
+      }
+
+      onInputChange('organizationLogo', file);
+      
+      // Create preview URL
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        onInputChange('organizationLogoPreview', reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const removeOrganizationLogo = () => {
+    onInputChange('organizationLogo', null);
+    onInputChange('organizationLogoPreview', '');
+  };
+
   return (
     <>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -194,6 +231,71 @@ export default function CoachRecruiterForm({ data, onInputChange }: CoachRecruit
           )}
           <p className="text-xs text-muted-foreground">{data.organizationName.length}/{FIELD_LIMITS.ORGANIZATION_NAME} characters</p>
         </div>
+      </div>
+
+      {/* Organization Logo Upload */}
+      <div className="space-y-4">
+        <Label className="text-base font-medium">Organization Logo</Label>
+        <div className="space-y-4">
+          {data.organizationLogoPreview ? (
+            <div className="relative w-24 h-20 mx-auto">
+              <Image
+                src={data.organizationLogoPreview}
+                alt="Organization logo preview"
+                width={96}
+                height={80}
+                className="rounded-lg object-contain border border-border/50"
+              />
+              <Button
+                type="button"
+                variant="destructive"
+                size="sm"
+                onClick={removeOrganizationLogo}
+                className="absolute -top-2 -right-2 w-6 h-6 rounded-full p-0"
+              >
+                <X className="w-4 h-4" />
+              </Button>
+            </div>
+          ) : (
+            <div className="border-2 border-dashed border-gray-300 rounded-lg p-4">
+              <div className="text-center">
+                <Upload className="mx-auto h-8 w-8 text-gray-400" />
+                <div className="mt-2">
+                  <label htmlFor="organizationLogo" className="cursor-pointer">
+                    <span className="mt-2 block text-sm font-medium text-gray-900">
+                      Upload organization logo
+                    </span>
+                    <span className="mt-1 block text-xs text-gray-500">
+                      Optional - Add your school or organization logo
+                    </span>
+                  </label>
+                  <input
+                    id="organizationLogo"
+                    type="file"
+                    accept="image/jpeg,image/jpg,image/png,image/webp"
+                    onChange={handleOrganizationLogoChange}
+                    className="sr-only"
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+          {!data.organizationLogoPreview && (
+            <div>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => document.getElementById('organizationLogo')?.click()}
+                className="w-full"
+              >
+                Choose Logo
+              </Button>
+            </div>
+          )}
+        </div>
+        <p className="text-xs text-muted-foreground">
+          Accepted formats: JPEG, PNG, WebP. Max size: 5MB.
+        </p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

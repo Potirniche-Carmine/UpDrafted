@@ -458,7 +458,7 @@ export const onboardingOperations = {
   },
 
   // Complete onboarding for coach
-  async createCoachOnboarding(userId: string, email: string, profileData: OnboardingProfileData, profileImageR3Key?: string) {
+  async createCoachOnboarding(userId: string, email: string, profileData: OnboardingProfileData, profileImageR3Key?: string, organizationLogoR3Key?: string) {
     // Create/update user
     const user = await userOperations.createOrUpdateUser(userId, {
       id: userId,
@@ -473,7 +473,8 @@ export const onboardingOperations = {
       role: 'coach',
       sportCoaching: profileData.sportCoaching!,
       organizationName: profileData.organizationName!,
-      organizationLogo: profileImageR3Key,
+      profileImageR3Key,
+      organizationLogoR3Key,
       division: profileData.division!,
       conference: profileData.conference || undefined,
       city: profileData.city,
@@ -500,7 +501,7 @@ export const onboardingOperations = {
   },
 
   // Complete onboarding for recruiter
-  async createRecruiterOnboarding(userId: string, email: string, profileData: OnboardingProfileData, profileImageR3Key?: string) {
+  async createRecruiterOnboarding(userId: string, email: string, profileData: OnboardingProfileData, profileImageR3Key?: string, organizationLogoR3Key?: string) {
     // Create/update user
     const user = await userOperations.createOrUpdateUser(userId, {
       id: userId,
@@ -514,7 +515,8 @@ export const onboardingOperations = {
       title: profileData.title!,
       sportRecruiting: profileData.sportCoaching!,
       organizationName: profileData.organizationName!,
-      organizationLogo: profileImageR3Key,
+      profileImageR3Key,
+      organizationLogoR3Key,
       division: profileData.division!,
       conference: profileData.conference || undefined,
       city: profileData.city,

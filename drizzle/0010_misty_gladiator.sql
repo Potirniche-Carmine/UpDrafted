@@ -1,0 +1,2 @@
+ALTER TABLE "profile_completion" DROP CONSTRAINT "profile_completion_user_id_unique";--> statement-breakpoint
+ALTER TABLE "profile_completion" ADD CONSTRAINT "profile_completion_user_type_unique" UNIQUE("user_id","user_type");

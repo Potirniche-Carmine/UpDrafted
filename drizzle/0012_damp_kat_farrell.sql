@@ -1,0 +1,2 @@
+ALTER TABLE "coach_profiles" RENAME COLUMN "organization_logo" TO "organization_logo_r3_key";--> statement-breakpoint
+ALTER TABLE "recruiting_profiles" RENAME COLUMN "organization_logo" TO "organization_logo_r3_key";

@@ -5,6 +5,7 @@ export interface BaseProfileData {
   profileImage?: string;
   title: string;
   organizationName: string;
+  organizationLogoR3Key?: string;
   organizationLogo?: string;
   division: string;
   conference?: string;
