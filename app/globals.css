@@ -118,6 +118,28 @@
   }
   body {
     @apply bg-background text-foreground;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    font-feature-settings: "kern" 1;
+    font-kerning: normal;
+  }
+  
+  /* Ensure proper font rendering for all text elements */
+  input, textarea, select, button {
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    /* Fix text cutoff issues in form inputs */
+    transform: translateZ(0);
+    backface-visibility: hidden;
+    perspective: 1000px;
+  }
+  
+  /* Additional fixes for input text rendering */
+  input:focus, textarea:focus {
+    transform: translateZ(0);
+    will-change: contents;
   }
 }
 
@@ -129,5 +151,14 @@
   
   .dark .bg-grid-pattern {
     background-image: radial-gradient(circle at 1px 1px, rgba(255,255,255,0.15) 1px, transparent 0);
+  }
+
+  /* Fix text cutoff issues in flex containers */
+  .flex {
+    min-width: 0;
+  }
+  
+  .flex > * {
+    min-width: 0;
   }
 }

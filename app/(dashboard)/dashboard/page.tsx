@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Separator } from "@/components/ui/separator"
+import { Progress } from "@/components/ui/progress"
 import { 
   Users, 
   MessageSquare, 
@@ -20,7 +21,8 @@ import {
   Edit3,
   Eye,
   ArrowRight,
-  Target
+  Target,
+  TrendingUp
 } from "lucide-react"
 import Link from "next/link"
 import { useRoleView } from '@/hooks/use-role-view'
@@ -73,6 +75,23 @@ const mockDashboardData = {
     },
   ]
 }
+
+// Mock data for profile completion - in real app, fetch from API
+const mockAthleteProfileCompletion = {
+  overall: 65,
+  categories: {
+    basic: 85,
+    academic: 60,
+    athletic: 45,
+    media: 30,
+    social: 80
+  },
+  nextSteps: [
+    { field: 'measurables', label: 'Athletic Measurables', weight: 8 },
+    { field: 'personalStatement', label: 'Personal Statement', weight: 10 },
+    { field: 'hudlUrl', label: 'Hudl Highlights', weight: 5 }
+  ]
+};
 
 const getUserTypeContent = (role: string, userId: string) => {
   switch (role) {
@@ -201,39 +220,106 @@ export default function DashboardPage() {
           </Alert>
         )}
 
-        {/* Welcome Header */}
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-          <div className="min-w-0 flex-1">
-            <h1 className="text-3xl font-bold tracking-tight">Welcome back, {displayName}!</h1>
-            <p className="text-muted-foreground">{userContent.welcomeText}</p>
+        {/* Welcome Section */}
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+          <div>
+            <h1 className="text-3xl font-bold">Welcome back, {displayName}!</h1>
+            <p className="text-muted-foreground mt-1">{userContent.welcomeText}</p>
           </div>
-          <div className="flex flex-col sm:flex-row gap-3 flex-shrink-0">
-            <Link href={`/profile/${user.id}`} className="flex-1">
-              <Button variant="outline" size="sm" className="w-full">
-                <Eye className="h-4 w-4 mr-2" />
-                View My Profile
-              </Button>
-            </Link>
-            <Link href={userContent.searchHref} className="flex-1">
-              <Button size="sm" className="w-full">
-                <Search className="h-4 w-4 mr-2" />
-                <span className="truncate">{userContent.searchText}</span>
+          
+          <div className="flex gap-3">
+            <Link href={userContent.searchHref}>
+              <Button size="lg" className="gap-2">
+                <Search className="w-4 h-4" />
+                {userContent.searchText}
               </Button>
             </Link>
           </div>
         </div>
 
-        {/* Verification Status */}
+        {/* Profile Completion Widget - Only for athletes */}
+        {effectiveRole === 'athlete' && (
+          <Card className="border-[#01ae79]/20 bg-gradient-to-r from-[#01ae79]/5 to-[#01ae79]/10 dark:border-[#01ae79]/30 dark:from-[#01ae79]/10 dark:to-[#01ae79]/20">
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-[#01ae79]/10 dark:bg-[#01ae79]/20 rounded-full">
+                    <TrendingUp className="w-5 h-5 text-[#01ae79]" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-lg">Profile Strength</CardTitle>
+                    <div className="flex items-center gap-2 mt-1">
+                      <Progress value={mockAthleteProfileCompletion.overall} className="w-32 h-2" />
+                      <span className="text-2xl font-bold text-[#01ae79]">{mockAthleteProfileCompletion.overall}%</span>
+                      <Badge variant={mockAthleteProfileCompletion.overall >= 70 ? "default" : "secondary"} className={mockAthleteProfileCompletion.overall >= 70 ? 'bg-[#01ae79] hover:bg-[#01ae79]/90 text-white' : ''}>
+                        {mockAthleteProfileCompletion.overall >= 85 ? 'Excellent' : 
+                         mockAthleteProfileCompletion.overall >= 70 ? 'Good' : 
+                         mockAthleteProfileCompletion.overall >= 50 ? 'Getting Started' : 'Needs Work'}
+                      </Badge>
+                    </div>
+                  </div>
+                </div>
+                <Button 
+                  variant="outline" 
+                  className="border-[#01ae79] text-[#01ae79] hover:bg-[#01ae79] hover:text-white"
+                  onClick={() => {
+                    if (user?.id) {
+                      window.location.href = `/profile/${user.id}`;
+                    }
+                  }}
+                >
+                  View Profile
+                  <ArrowRight className="w-4 h-4 ml-2" />
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {mockAthleteProfileCompletion.overall < 85 && (
+                  <>
+                    <p className="text-sm text-muted-foreground">
+                      {mockAthleteProfileCompletion.overall >= 70 
+                        ? "Great profile! Add a few more details to maximize your opportunities."
+                        : mockAthleteProfileCompletion.overall >= 50
+                        ? "You're on the right track! Complete more sections to stand out."
+                        : "Your profile needs more information to attract coaches."
+                      }
+                    </p>
+                    
+                    <div className="space-y-2">
+                      <h4 className="font-medium text-sm flex items-center gap-2">
+                        <Target className="w-4 h-4 text-[#01ae79]" />
+                        Quick wins to boost your profile:
+                      </h4>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+                        {mockAthleteProfileCompletion.nextSteps.map((step) => (
+                          <div key={step.field} className="bg-white/50 dark:bg-gray-900/50 rounded-lg p-3 border border-[#01ae79]/20">
+                            <div className="flex items-center justify-between">
+                              <span className="text-sm font-medium">{step.label}</span>
+                              <Badge variant="outline" className="text-xs border-[#01ae79]/30 text-[#01ae79]">+{step.weight}pts</Badge>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Verification Alert */}
         {!isVerified && (
-          <Alert className="border-amber-200 bg-amber-50/50 dark:border-amber-800 dark:bg-amber-950/20">
-            <ShieldX className="h-4 w-4 text-amber-600" />
-            <AlertDescription className="text-amber-700 dark:text-amber-200">
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <span>Your account is not verified. Get verified to unlock all features and build trust with {getVerificationMessage(effectiveRole || 'athlete')}.</span>
+          <Alert className="border-orange-200 bg-orange-50/50 dark:border-orange-800 dark:bg-orange-950/20">
+            <ShieldX className="h-4 w-4 text-orange-600" />
+            <AlertDescription className="text-orange-700 dark:text-orange-200">
+              <div className="flex items-center justify-between">
+                <span>Get verified to build trust with {getVerificationMessage(effectiveRole || 'athlete')} and unlock premium features.</span>
                 <Button 
                   variant="outline" 
                   size="sm" 
-                  className="border-amber-300 text-amber-700 hover:bg-amber-100 dark:border-amber-700 dark:text-amber-300 dark:hover:bg-amber-950 self-start sm:self-auto"
+                  className="ml-4 border-orange-300 text-orange-700 hover:bg-orange-100 dark:border-orange-700 dark:text-orange-200 dark:hover:bg-orange-900"
                   onClick={handleGetVerified}
                 >
                   Get Verified
@@ -243,157 +329,146 @@ export default function DashboardPage() {
           </Alert>
         )}
 
-        {/* Quick Stats */}
-        <div className="grid gap-6 md:grid-cols-3">
-          <Link href="/connections?tab=requests">
-            <Card className="cursor-pointer transition-all duration-200 hover:shadow-md hover:scale-[1.02] border-border hover:border-[#01ae79]/30 dark:hover:border-[#01ae79]/40">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Pending Connections</CardTitle>
-                <UserPlus className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{mockDashboardData.connectionRequests}</div>
-                <p className="text-xs text-muted-foreground">Awaiting your response</p>
-              </CardContent>
-            </Card>
-          </Link>
-
-          <Link href="/messaging">
-            <Card className="cursor-pointer transition-all duration-200 hover:shadow-md hover:scale-[1.02] border-border hover:border-[#01ae79]/30 dark:hover:border-[#01ae79]/40">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Unread Messages</CardTitle>
-                <MessageSquare className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{mockDashboardData.unreadMessages}</div>
+        {/* Quick Stats Grid */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
+          <Card>
+            <CardContent className="flex items-center p-4 md:p-6">
+              <UserPlus className="h-8 w-8 text-blue-500 mr-3" />
+              <div>
+                <p className="text-2xl font-bold">{mockDashboardData.connectionRequests}</p>
+                <p className="text-xs text-muted-foreground">Connection Requests</p>
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardContent className="flex items-center p-4 md:p-6">
+              <MessageSquare className="h-8 w-8 text-green-500 mr-3" />
+              <div>
+                <p className="text-2xl font-bold">{mockDashboardData.unreadMessages}</p>
+                <p className="text-xs text-muted-foreground">Unread Messages</p>
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardContent className="flex items-center p-4 md:p-6">
+              <Bell className="h-8 w-8 text-yellow-500 mr-3" />
+              <div>
+                <p className="text-2xl font-bold">{mockDashboardData.notifications}</p>
+                <p className="text-xs text-muted-foreground">Notifications</p>
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardContent className="flex items-center p-4 md:p-6">
+              <Users className="h-8 w-8 text-purple-500 mr-3" />
+              <div>
+                <p className="text-2xl font-bold">42</p>
                 <p className="text-xs text-muted-foreground">
-                  {mockDashboardData.unreadMessages > 0 ? 'New messages waiting' : 'All caught up!'}
+                  {effectiveRole === 'athlete' ? 'Profile Views' : 'Connections'}
                 </p>
-              </CardContent>
-            </Card>
-          </Link>
-
-          <Link href="/notifications">
-            <Card className="cursor-pointer transition-all duration-200 hover:shadow-md hover:scale-[1.02] border-border hover:border-[#01ae79]/30 dark:hover:border-[#01ae79]/40">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Notifications</CardTitle>
-                <Bell className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{mockDashboardData.notifications}</div>
-                <p className="text-xs text-muted-foreground">Updates and alerts</p>
-              </CardContent>
-            </Card>
-          </Link>
+              </div>
+            </CardContent>
+          </Card>
         </div>
 
-        <div className="flex flex-col lg:grid lg:gap-6 lg:grid-cols-3 space-y-6 lg:space-y-0">
-          {/* Pending Connections */}
+        {/* Main Content Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8">
+          {/* Quick Actions */}
           <div className="lg:col-span-2">
             <Card>
               <CardHeader>
-                <CardTitle className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-                  <div className="flex items-center gap-2">
-                    <Users className="h-5 w-5" />
-                    Connection Requests
-                    {mockDashboardData.connectionRequests > 0 && (
-                      <Badge variant="secondary">
-                        {mockDashboardData.connectionRequests}
-                      </Badge>
-                    )}
-                  </div>
-                  <Link href="/connections?tab=requests">
-                    <Button variant="ghost" size="sm">
-                      View All
-                      <ArrowRight className="h-4 w-4 ml-1" />
-                    </Button>
-                  </Link>
-                </CardTitle>
+                <CardTitle>Quick Actions</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4">
-                {mockDashboardData.pendingConnections.length > 0 ? (
-                  mockDashboardData.pendingConnections.slice(0, 4).map((connection, index) => (
-                    <div key={connection.id}>
-                      <div className="flex items-center gap-3">
-                        <Avatar className="h-10 w-10 flex-shrink-0">
-                          <AvatarImage src={connection.avatar} alt={connection.name} />
-                          <AvatarFallback>{connection.name.split(' ').map(n => n[0]).join('')}</AvatarFallback>
-                        </Avatar>
-                        <div className="flex-grow min-w-0">
-                          <p className="text-sm font-medium truncate">{connection.name}</p>
-                          <p className="text-xs text-muted-foreground truncate">
-                            {connection.title} • {connection.organization}
-                          </p>
-                          <p className="text-xs text-muted-foreground">{connection.requestedAt}</p>
-                        </div>
-                        <div className="flex flex-col sm:flex-row gap-2">
-                          <Button size="sm" className="h-8 text-xs bg-[#01ae79] hover:bg-[#01ae79]/90 text-white">
-                            <CheckCircle className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
-                            Accept
-                          </Button>
-                          <Button size="sm" variant="outline" className="h-8 text-xs">
-                            <X className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
-                            Decline
-                          </Button>
-                        </div>
-                      </div>
-                      {index < mockDashboardData.pendingConnections.slice(0, 4).length - 1 && (
-                        <Separator className="my-4" />
-                      )}
-                    </div>
-                  ))
-                ) : (
-                  <div className="text-center py-8 text-muted-foreground">
-                    <Users className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                    <p className="text-sm">No pending connection requests</p>
-                    <p className="text-xs">New requests will appear here</p>
-                  </div>
-                )}
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {userContent.primaryActions.map((action) => {
+                    const IconComponent = action.icon;
+                    return (
+                      <Link key={action.label} href={action.href}>
+                        <Card className="hover:shadow-md transition-shadow cursor-pointer border-2 hover:border-primary/20">
+                          <CardContent className="flex items-center p-4">
+                            <IconComponent className="h-8 w-8 text-primary mr-4" />
+                            <div>
+                              <h3 className="font-semibold">{action.label}</h3>
+                              <p className="text-sm text-muted-foreground">{action.description}</p>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      </Link>
+                    );
+                  })}
+                </div>
               </CardContent>
             </Card>
           </div>
 
-          {/* Quick Actions */}
+          {/* Recent Activity / Connection Requests */}
           <div>
             <Card>
               <CardHeader>
-                <CardTitle className="text-xl">Quick Actions</CardTitle>
+                <CardTitle className="flex items-center justify-between">
+                  Recent Connection Requests
+                  <Badge variant="secondary">{mockDashboardData.pendingConnections.length}</Badge>
+                </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                {/* Primary Actions - Bigger with descriptions */}
-                <div className="space-y-3">
-                  {userContent.primaryActions.map((action, index) => (
-                    <Link key={index} href={action.href}>
-                      <Button 
-                        className={`w-full h-auto p-5 justify-start transition-all duration-200 hover:scale-[1.02] ${
-                          index % 2 === 0 
-                            ? 'bg-[#01ae79]/10 border-[#01ae79]/30 text-[#01ae79] hover:bg-[#01ae79]/20 hover:border-[#01ae79]/40 dark:bg-[#01ae79]/20 dark:border-[#01ae79]/40 dark:text-[#01ae79] dark:hover:bg-[#01ae79]/30 dark:hover:border-[#01ae79]/50'
-                            : 'bg-[#01ae79]/5 border-[#01ae79]/20 text-[#01ae79] hover:bg-[#01ae79]/10 hover:border-[#01ae79]/30 dark:bg-[#01ae79]/10 dark:border-[#01ae79]/30 dark:text-[#01ae79] dark:hover:bg-[#01ae79]/20 dark:hover:border-[#01ae79]/40'
-                        }`}
-                      >
-                        <div className="flex items-start gap-3">
-                          <action.icon className="h-5 w-5 mt-0.5 flex-shrink-0" />
-                          <div className="text-left min-w-0 flex-1">
-                            <div className="font-medium">{action.label}</div>
-                            <div className="text-xs opacity-75 mt-0.5 leading-relaxed">{action.description}</div>
-                          </div>
-                        </div>
+                {mockDashboardData.pendingConnections.slice(0, 3).map((connection) => (
+                  <div key={connection.id} className="flex items-center space-x-3">
+                    <Avatar className="h-8 w-8">
+                      <AvatarImage src={connection.avatar} />
+                      <AvatarFallback>{connection.name.split(' ').map(n => n[0]).join('')}</AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1 space-y-1">
+                      <p className="text-sm font-medium leading-none">{connection.name}</p>
+                      <p className="text-xs text-muted-foreground">{connection.title}</p>
+                      <p className="text-xs text-muted-foreground">{connection.organization}</p>
+                    </div>
+                    <div className="flex gap-1">
+                      <Button size="sm" variant="default" className="h-7 w-7 p-0">
+                        <CheckCircle className="h-3 w-3" />
+                      </Button>
+                      <Button size="sm" variant="outline" className="h-7 w-7 p-0">
+                        <X className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+                
+                {mockDashboardData.pendingConnections.length > 3 && (
+                  <div className="text-center pt-2">
+                    <Link href="/connections">
+                      <Button variant="outline" size="sm">
+                        View All Requests
+                        <ArrowRight className="ml-2 h-3 w-3" />
                       </Button>
                     </Link>
-                  ))}
+                  </div>
+                )}
+                
+                <Separator />
+                
+                <div className="text-center">
+                  <Link href="/connections">
+                    <Button variant="outline" className="w-full">
+                      Manage All Connections
+                    </Button>
+                  </Link>
                 </div>
               </CardContent>
             </Card>
           </div>
         </div>
-      </div>
 
-      {/* Verification Dialog */}
-      <VerificationDialog
-        open={showVerificationDialog}
-        onOpenChange={setShowVerificationDialog}
-        role={(effectiveRole === 'coach' || effectiveRole === 'recruiter') ? effectiveRole : 'coach'}
-      />
+        {/* Verification Dialog */}
+        <VerificationDialog 
+          open={showVerificationDialog}
+          onOpenChange={setShowVerificationDialog}
+          role={(effectiveRole === 'coach' || effectiveRole === 'recruiter') ? effectiveRole : 'coach'}
+        />
+      </div>
     </div>
-  )
+  );
 } 

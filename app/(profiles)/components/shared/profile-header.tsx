@@ -107,7 +107,7 @@ export function ProfileHeader({
                 
                 <Button 
                   size="sm" 
-                  className="bg-blue-600 hover:bg-blue-700"
+                  className="bg-[#01ae79] hover:bg-[#01ae79]/90 text-white"
                   onClick={onConnect}
                 >
                   <Star className="w-4 h-4 mr-1" />
@@ -160,7 +160,7 @@ export function ProfileHeader({
               <div className="flex justify-center">
                 <Button 
                   size="sm" 
-                  className="bg-blue-600 hover:bg-blue-700 w-full"
+                  className="bg-[#01ae79] hover:bg-[#01ae79]/90 text-white w-full"
                   onClick={onConnect}
                 >
                   <Star className="w-4 h-4 mr-1" />

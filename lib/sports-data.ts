@@ -237,4 +237,111 @@ export function getPositionsForSport(sport: string): string[] {
 
 export function getSportsList(): string[] {
   return SPORTS_DATA.map(sport => sport.sport);
+}
+
+export const PERFORMANCE_MEASURABLES: { [key: string]: string[] } = {
+  'Football': [
+    '40 Yard Dash', 'Bench Press', 'Squat', 'Vertical Jump', 'Broad Jump',
+    '20 Yard Shuttle', '3-Cone Drill', 'Standing Long Jump', 'Pro Agility',
+    'Hand Size', 'Arm Length', 'Wing Span'
+  ],
+  'Basketball (M)': [
+    'Vertical Jump', 'Lane Agility', 'Three Quarter Sprint', 'Standing Reach',
+    'Points Per Game', 'Rebounds Per Game', 'Assists Per Game', 'Field Goal %',
+    'Free Throw %', '3-Point %', 'Steals Per Game', 'Blocks Per Game'
+  ],
+  'Basketball (F)': [
+    'Vertical Jump', 'Lane Agility', 'Three Quarter Sprint', 'Standing Reach',
+    'Points Per Game', 'Rebounds Per Game', 'Assists Per Game', 'Field Goal %',
+    'Free Throw %', '3-Point %', 'Steals Per Game', 'Blocks Per Game'
+  ],
+  'Baseball': [
+    '60 Yard Dash', 'Exit Velocity', 'Pop Time (C)', 'Throwing Velocity',
+    'Batting Average', 'On Base %', 'Slugging %', 'Home Runs', 'RBIs',
+    'ERA', 'WHIP', 'Strikeouts', 'Wins', 'Saves'
+  ],
+  'Softball': [
+    '60 Yard Dash', 'Exit Velocity', 'Pop Time (C)', 'Throwing Velocity',
+    'Batting Average', 'On Base %', 'Slugging %', 'Home Runs', 'RBIs',
+    'ERA', 'WHIP', 'Strikeouts', 'Wins', 'Saves'
+  ],
+  'Soccer (M)': [
+    'Sprint Speed (40m)', 'Agility T-Test', 'Cooper Test (12 min)', 'Juggling',
+    'Goals Per Season', 'Assists Per Season', 'Pass Accuracy %', 'Shots on Goal',
+    'Minutes Played', 'Yellow Cards', 'Red Cards'
+  ],
+  'Soccer (F)': [
+    'Sprint Speed (40m)', 'Agility T-Test', 'Cooper Test (12 min)', 'Juggling',
+    'Goals Per Season', 'Assists Per Season', 'Pass Accuracy %', 'Shots on Goal',
+    'Minutes Played', 'Yellow Cards', 'Red Cards'
+  ],
+  'Track and Field': [
+    '100m Dash', '200m Dash', '400m Dash', '800m Run', '1500m Run', '3000m Run',
+    '5000m Run', '10000m Run', '110m Hurdles', '400m Hurdles', 'High Jump',
+    'Pole Vault', 'Long Jump', 'Triple Jump', 'Shot Put', 'Discus', 'Hammer', 'Javelin'
+  ],
+  'Cross Country': [
+    '5K Time', '10K Time', 'Mile Time', '3200m Time', 'Half Marathon Time',
+    'Marathon Time', 'VO2 Max'
+  ],
+  'Swimming': [
+    '50m Freestyle', '100m Freestyle', '200m Freestyle', '400m Freestyle', '800m Freestyle',
+    '1500m Freestyle', '50m Backstroke', '100m Backstroke', '200m Backstroke',
+    '50m Breaststroke', '100m Breaststroke', '200m Breaststroke', '50m Butterfly',
+    '100m Butterfly', '200m Butterfly', '200m IM', '400m IM'
+  ],
+  'Tennis': [
+    'Serve Speed', 'First Serve %', 'Win %', 'UTR Rating', 'Tournament Wins',
+    'Sets Won', 'Games Won', 'Aces Per Match', 'Double Faults Per Match'
+  ],
+  'Golf': [
+    'Handicap Index', 'Scoring Average', 'Driving Distance', 'Driving Accuracy %',
+    'Greens in Regulation %', 'Putting Average', 'Sand Save %', 'Tournament Wins',
+    'Top 10 Finishes', 'Lowest Round'
+  ],
+  'Volleyball': [
+    'Vertical Jump', 'Approach Jump', 'Block Jump', 'Kills Per Set', 'Attack %',
+    'Blocks Per Set', 'Digs Per Set', 'Aces Per Set', 'Passing %', 'Serve Receive %'
+  ],
+  'Wrestling': [
+    'Takedowns Per Match', 'Takedown Defense %', 'Escape %', 'Reversal Rate',
+    'Pin %', 'Tech Fall %', 'Win %', 'Dual Meet Record', 'Tournament Wins'
+  ],
+  'Lacrosse (M)': [
+    'Shot Speed', 'Goals Per Game', 'Assists Per Game', 'Saves %', 'Face-off %',
+    'Ground Balls Per Game', 'Turnovers Per Game', 'Clear %', 'Man-up %'
+  ],
+  'Lacrosse (F)': [
+    'Shot Speed', 'Goals Per Game', 'Assists Per Game', 'Saves %', 'Draw Controls',
+    'Ground Balls Per Game', 'Turnovers Per Game', 'Free Position %'
+  ],
+  'Hockey': [
+    'Skating Speed', 'Shot Speed', 'Goals Per Game', 'Assists Per Game', 'Points Per Game',
+    'Plus/Minus', 'Penalty Minutes', 'Face-off %', 'Save %', 'Goals Against Average'
+  ],
+  'Field Hockey': [
+    'Sprint Speed', 'Goals Per Game', 'Assists Per Game', 'Saves %', 'Penalty Corners',
+    'Green Cards', 'Yellow Cards', 'Red Cards'
+  ],
+  'Gymnastics': [
+    'Vault Score', 'Uneven Bars Score', 'Balance Beam Score', 'Floor Exercise Score',
+    'All Around Score', 'Pommel Horse Score', 'Still Rings Score', 'Parallel Bars Score',
+    'High Bar Score'
+  ],
+  'Water Polo': [
+    'Swimming Speed (50m)', 'Goals Per Game', 'Assists Per Game', 'Steals Per Game',
+    'Saves %', 'Ejections Drawn', 'Field Block %', 'Sprint Speed'
+  ],
+  'Rowing': [
+    '2000m Erg Time', '6000m Erg Time', 'Max Watts', 'Split Time', '500m Split',
+    'Stroke Rate', 'Distance Per Stroke'
+  ],
+  'Fencing': [
+    'Touches Per Bout', 'Win %', 'Tournament Ranking', 'Reaction Time',
+    'Bout Duration Average', 'Rating Points'
+  ]
+};
+
+export function getMeasurablesForSport(sport: string): string[] {
+  return PERFORMANCE_MEASURABLES[sport] || ['Speed', 'Strength', 'Agility', 'Endurance'];
 } 

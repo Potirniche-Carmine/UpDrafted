@@ -47,7 +47,7 @@ export function ProfileCard({
               <div className="w-32 h-32 md:w-36 md:h-36 mx-auto rounded-full overflow-hidden bg-muted">
                 <Image
                   src={data.profileImage}
-                  alt={data.fullName}
+                  alt={data.fullName || "Profile picture"}
                   width={144}
                   height={144}
                   className="w-full h-full object-cover"
@@ -113,7 +113,7 @@ export function ProfileCard({
                     <Button
                       onClick={handleGetVerified}
                       size="sm"
-                      className="bg-blue-600 hover:bg-blue-700 text-white"
+                      className="bg-[#01ae79] hover:bg-[#01ae79]/90 text-white"
                     >
                       <Shield className="w-4 h-4 mr-2" />
                       Get Verified

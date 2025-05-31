@@ -245,7 +245,7 @@ function SearchBar() {
                   <div className="relative flex-shrink-0">
                     <Image
                       src={user.profilePicture}
-                      alt={user.name}
+                      alt={user.name || "Profile picture"}
                       width={32}
                       height={32}
                       className="rounded-full object-cover ring-2 ring-[#01ae79]/20 dark:ring-[#01ae79]/30"

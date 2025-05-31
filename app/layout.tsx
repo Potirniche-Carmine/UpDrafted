@@ -10,7 +10,12 @@ import { SpeedInsights } from "@vercel/speed-insights/next";
 import { QueryProvider } from '@/components/providers/query-provider'
 import { RoleSwitcher } from '@/components/role-switcher'
 
-const inter = Inter({ subsets: ["latin"] });
+const inter = Inter({ 
+  subsets: ["latin"],
+  display: "swap",
+  preload: true,
+  fallback: ["system-ui", "arial", "sans-serif"]
+});
 
 export const metadata: Metadata = {
   title: "UpDrafted - College Athletic Recruitment",
