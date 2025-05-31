@@ -1,7 +1,6 @@
 "use client";
 
 import { useUser } from '@clerk/nextjs';
-import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -133,20 +132,18 @@ const getUserTypeContent = (role: string, userId: string) => {
 }
 
 export default function DashboardPage() {
-  const { isSignedIn, user } = useUser();
-  const router = useRouter();
+  const { isSignedIn, user, isLoaded } = useUser();
   const { effectiveRole, isAdmin, isViewingAsOtherRole, isVerified } = useRoleView();
   const [showVerificationDialog, setShowVerificationDialog] = useState(false);
   
   useEffect(() => {
-    if (!isSignedIn) {
-      router.push('/sign-in');
-    }
-  }, [isSignedIn, router]);
-
-  useEffect(() => {
     console.log('Dialog state changed:', { showVerificationDialog, effectiveRole, isVerified });
   }, [showVerificationDialog, effectiveRole, isVerified]);
+
+  // Show loading while auth state is being determined
+  if (!isLoaded) {
+    return <div>Loading...</div>;
+  }
 
   if (!isSignedIn || !user) {
     return <div>Loading...</div>;

@@ -1,5 +1,5 @@
 'use client';
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, Suspense } from 'react';
 import { Users, Search, MessageSquare, User, MoreVertical, XCircle, ShieldAlert, UserCheck, UserCog, UsersRound, CheckCircle, X, Clock} from 'lucide-react';
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -452,4 +452,10 @@ function App() {
   );
 }
 
-export default App;
+export default function ConnectionsPage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <App />
+    </Suspense>
+  );
+}

@@ -9,6 +9,7 @@ import CommonFields from "./CommonFields";
 import AthleteForm from "./AthleteForm";
 import CoachRecruiterForm from "./CoachRecruiterForm";
 import TermsAndConditions from "./TermsAndConditions";
+import { LoadingScreen } from "./LoadingScreen";
 
 interface OnboardingFormProps {
   role: UserRole;
@@ -118,8 +119,8 @@ export default function OnboardingForm({ role, onBack }: OnboardingFormProps) {
         // Force reload the user to get updated metadata
         await user.reload();
         
-        // Small delay to ensure metadata is propagated
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        // Add artificial delay to ensure smooth role propagation and better UX
+        await new Promise(resolve => setTimeout(resolve, 3000));
         
         // Hard refresh to ensure middleware picks up the new role
         window.location.href = '/dashboard';
@@ -130,7 +131,6 @@ export default function OnboardingForm({ role, onBack }: OnboardingFormProps) {
     } catch (error) {
       console.error('Error during onboarding:', error);
       alert(`Something went wrong: ${error instanceof Error ? error.message : 'Please try again.'}`);
-    } finally {
       setIsLoading(false);
     }
   };
@@ -172,6 +172,11 @@ export default function OnboardingForm({ role, onBack }: OnboardingFormProps) {
       );
     }
   };
+
+  // Show loading screen when submitting
+  if (isLoading) {
+    return <LoadingScreen role={role} />;
+  }
 
   return (
     <div className="min-h-screen bg-background p-4">
@@ -228,7 +233,7 @@ export default function OnboardingForm({ role, onBack }: OnboardingFormProps) {
                 disabled={!canSubmit() || isLoading}
                 className="flex-1 h-11"
               >
-                {isLoading ? 'Creating Profile...' : 'Complete Setup'}
+                Complete Setup
               </Button>
             </div>
           </CardContent>

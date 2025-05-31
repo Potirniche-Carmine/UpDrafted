@@ -299,8 +299,12 @@ export function Header() {
   const router = useRouter();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  // Determine home URL based on authentication status
-  const homeUrl = isSignedIn ? '/dashboard' : '/';
+  // Check if user has completed onboarding (has a role)
+  const userRole = user?.publicMetadata?.role as string;
+  const hasCompletedOnboarding = userRole && ['athlete', 'coach', 'recruiter', 'admin'].includes(userRole);
+
+  // Determine home URL based on authentication status and onboarding completion
+  const homeUrl = isSignedIn && hasCompletedOnboarding ? '/dashboard' : '/';
 
   const navItems: NavItem[] = [
     { key: "discover", href: "/discover", label: "Discover", icon: <Search className="h-5 w-5" />, requiresAuth: true },
@@ -309,7 +313,8 @@ export function Header() {
     { key: "notifications", href: "/notifications", label: "Notifications", icon: <Bell className="h-5 w-5" />, requiresAuth: true }
   ];
 
-  const navItemsToDisplay = isSignedIn ? navItems : [];
+  // Only show navigation if user is signed in AND has completed onboarding
+  const navItemsToDisplay = isSignedIn && hasCompletedOnboarding ? navItems : [];
 
   const userButtonAppearance = {
     elements: {
@@ -340,12 +345,12 @@ export function Header() {
           />
         </Link>
         
-        {/* Desktop Search Bar - Only show when signed in */}
-        <SignedIn>
+        {/* Desktop Search Bar - Only show when signed in and onboarded */}
+        {isSignedIn && hasCompletedOnboarding && (
           <div className="hidden md:flex flex-1 justify-center px-6 max-w-md">
             <SearchBar />
           </div>
-        </SignedIn>
+        )}
 
         {/* Desktop Navigation */}
         <nav className="hidden md:flex items-center space-x-2"> 
@@ -372,27 +377,31 @@ export function Header() {
                 appearance={userButtonAppearance}
               >
                 <UserButton.MenuItems>
-                  <UserButton.Action
-                    label="View Profile" 
-                    labelIcon={<Users className="mr-2 h-4 w-4" />}
-                    onClick={handleViewProfile}
-                  >
-                    <div className="flex items-center">
-                      <Users className="mr-2 h-4 w-4" /> 
-                      <span>View Profile</span>
-                    </div>
-                  </UserButton.Action>
+                  {hasCompletedOnboarding && (
+                    <UserButton.Action
+                      label="View Profile" 
+                      labelIcon={<Users className="mr-2 h-4 w-4" />}
+                      onClick={handleViewProfile}
+                    >
+                      <div className="flex items-center">
+                        <Users className="mr-2 h-4 w-4" /> 
+                        <span>View Profile</span>
+                      </div>
+                    </UserButton.Action>
+                  )}
                 </UserButton.MenuItems>
               </UserButton>
-              <div
-                className="absolute -bottom-[2px] -right-[2px] w-[13px] h-[13px] 
-                           bg-[#01ae79]/10 dark:bg-[#01ae79]/20 
-                           rounded-full flex items-center justify-center 
-                           pointer-events-none 
-                           border-2 border-background shadow-sm"
-              >
-                <ChevronDown className="h-2.5 w-2.5 text-[#01ae79]" />
-              </div>
+              {hasCompletedOnboarding && (
+                <div
+                  className="absolute -bottom-[2px] -right-[2px] w-[13px] h-[13px] 
+                             bg-[#01ae79]/10 dark:bg-[#01ae79]/20 
+                             rounded-full flex items-center justify-center 
+                             pointer-events-none 
+                             border-2 border-background shadow-sm"
+                >
+                  <ChevronDown className="h-2.5 w-2.5 text-[#01ae79]" />
+                </div>
+              )}
             </div>
           </SignedIn>
           
@@ -416,60 +425,62 @@ export function Header() {
           <ThemeToggle />
           
           <SignedIn>
-            <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
-              <SheetTrigger asChild>
-                <Button variant="ghost" size="sm" className="h-9 w-9 p-0">
-                  <Menu className="h-5 w-5" />
-                  <span className="sr-only">Toggle menu</span>
-                </Button>
-              </SheetTrigger>
-              <SheetContent side="right" className="w-[300px] sm:w-[400px]">
-                <SheetHeader>
-                  <SheetTitle className="text-left">Menu</SheetTitle>
-                  <SheetDescription className="text-left">
-                    Navigate to different sections of UpDrafted
-                  </SheetDescription>
-                </SheetHeader>
-                
-                <div className="mt-6 space-y-4">
-                  {/* Mobile Search */}
-                  <div className="pb-4 border-b border-border">
-                    <div className="px-1">
-                      <SearchBar />
+            {hasCompletedOnboarding && (
+              <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
+                <SheetTrigger asChild>
+                  <Button variant="ghost" size="sm" className="h-9 w-9 p-0">
+                    <Menu className="h-5 w-5" />
+                    <span className="sr-only">Toggle menu</span>
+                  </Button>
+                </SheetTrigger>
+                <SheetContent side="right" className="w-[300px] sm:w-[400px]">
+                  <SheetHeader>
+                    <SheetTitle className="text-left">Menu</SheetTitle>
+                    <SheetDescription className="text-left">
+                      Navigate to different sections of UpDrafted
+                    </SheetDescription>
+                  </SheetHeader>
+                  
+                  <div className="mt-6 space-y-4">
+                    {/* Mobile Search */}
+                    <div className="pb-4 border-b border-border">
+                      <div className="px-1">
+                        <SearchBar />
+                      </div>
+                    </div>
+                    
+                    {/* Mobile Navigation Links */}
+                    <div className="space-y-2">
+                      {navItemsToDisplay.map((item) => (
+                        <Link
+                          key={item.key}
+                          href={item.href}
+                          onClick={() => setMobileMenuOpen(false)}
+                          className="flex items-center space-x-3 rounded-lg px-3 py-3 text-sm font-medium transition-colors hover:bg-[#01ae79]/5 dark:hover:bg-[#01ae79]/10 hover:text-[#01ae79]"
+                        >
+                          {item.icon}
+                          <span>{item.label}</span>
+                        </Link>
+                      ))}
+                    </div>
+                    
+                    {/* User Profile Link */}
+                    <div className="pt-4 border-t border-border">
+                      <button
+                        onClick={() => {
+                          handleViewProfile();
+                          setMobileMenuOpen(false);
+                        }}
+                        className="flex items-center space-x-3 rounded-lg px-3 py-3 text-sm font-medium transition-colors hover:bg-[#01ae79]/5 dark:hover:bg-[#01ae79]/10 hover:text-[#01ae79] w-full text-left"
+                      >
+                        <Users className="h-5 w-5" />
+                        <span>View Profile</span>
+                      </button>
                     </div>
                   </div>
-                  
-                  {/* Mobile Navigation Links */}
-                  <div className="space-y-2">
-                    {navItemsToDisplay.map((item) => (
-                      <Link
-                        key={item.key}
-                        href={item.href}
-                        onClick={() => setMobileMenuOpen(false)}
-                        className="flex items-center space-x-3 rounded-lg px-3 py-3 text-sm font-medium transition-colors hover:bg-[#01ae79]/5 dark:hover:bg-[#01ae79]/10 hover:text-[#01ae79]"
-                      >
-                        {item.icon}
-                        <span>{item.label}</span>
-                      </Link>
-                    ))}
-                  </div>
-                  
-                  {/* User Profile Link */}
-                  <div className="pt-4 border-t border-border">
-                    <button
-                      onClick={() => {
-                        handleViewProfile();
-                        setMobileMenuOpen(false);
-                      }}
-                      className="flex items-center space-x-3 rounded-lg px-3 py-3 text-sm font-medium transition-colors hover:bg-[#01ae79]/5 dark:hover:bg-[#01ae79]/10 hover:text-[#01ae79] w-full text-left"
-                    >
-                      <Users className="h-5 w-5" />
-                      <span>View Profile</span>
-                    </button>
-                  </div>
-                </div>
-              </SheetContent>
-            </Sheet>
+                </SheetContent>
+              </Sheet>
+            )}
             
             <UserButton
               appearance={userButtonAppearance}
