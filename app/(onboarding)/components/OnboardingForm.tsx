@@ -18,6 +18,8 @@ interface OnboardingFormProps {
 const initialData: OnboardingData = {
   role: null,
   fullName: "",
+  profileImage: undefined,
+  profileImagePreview: "",
   sport: "",
   secondarySports: [],
   graduationYear: null,
@@ -67,7 +69,7 @@ export default function OnboardingForm({ role, onBack }: OnboardingFormProps) {
   }, []);
 
   const handleInputChange = (field: keyof OnboardingData, value: string | number | string[] | number[] | File | null | boolean) => {
-    setData({ ...data, [field]: value });
+    setData((prevData) => ({ ...prevData, [field]: value }));
   };
 
   const handleSubmit = async () => {

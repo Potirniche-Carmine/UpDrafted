@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAnyRole } from '@/utils/roles';
-import { validateClerkHeaders, logSecurityValidation } from '@/utils/clerk-security';
+import { validateClerkHeaders } from '@/utils/clerk-security';
 import { uploadProfilePicture } from '@/lib/r2';
 import { db } from '@/lib/db';
 import { athleteProfiles, coachProfiles, recruitingProfiles } from '@/lib/schema';
@@ -10,7 +10,6 @@ export async function POST(request: NextRequest) {
   try {
     // Validate required Clerk headers
     const validation = validateClerkHeaders(request);
-    logSecurityValidation(validation, '/api/common/upload-image');
 
     if (!validation.isValid) {
       return NextResponse.json(

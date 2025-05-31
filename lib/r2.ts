@@ -37,10 +37,16 @@ export async function uploadToR2(
     ContentType: contentType,
   });
 
-  await r2Client.send(command);
-  
-  // Return the public URL
-  return `${R2_PUBLIC_URL}/${fullKey}`;
+  try {
+    await r2Client.send(command);
+    
+    // Return the public URL
+    const publicUrl = `${R2_PUBLIC_URL}/${fullKey}`;
+    
+    return publicUrl;
+  } catch (error) {
+    throw error;
+  }
 }
 
 /**
@@ -97,8 +103,10 @@ export async function uploadProfilePicture(
     R2_FOLDERS.PROFILE_PICTURES
   );
   
+  const fullKey = `${R2_FOLDERS.PROFILE_PICTURES}/${key}`;
+  
   return {
-    key: `${R2_FOLDERS.PROFILE_PICTURES}/${key}`,
+    key: fullKey,
     url,
   };
 }

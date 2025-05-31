@@ -19,7 +19,7 @@ export const SPORTS_DATA: SportPosition[] = [
   },
   // Basketball (Men's)
   {
-    sport: 'Basketball',
+    sport: 'Basketball (M)',
     gender: 'male',
     positions: [
       'Point Guard', 'Shooting Guard', 'Small Forward', 'Power Forward', 'Center'
@@ -27,7 +27,7 @@ export const SPORTS_DATA: SportPosition[] = [
   },
   // Basketball (Women's)
   {
-    sport: "Women's Basketball",
+    sport: 'Basketball (F)',
     gender: 'female',
     positions: [
       'Point Guard', 'Shooting Guard', 'Small Forward', 'Power Forward', 'Center'
@@ -55,7 +55,7 @@ export const SPORTS_DATA: SportPosition[] = [
   },
   // Soccer (Men's)
   {
-    sport: 'Soccer',
+    sport: 'Soccer (M)',
     gender: 'male',
     positions: [
       'Goalkeeper', 'Center Back', 'Left Back', 'Right Back', 'Sweeper',
@@ -66,7 +66,7 @@ export const SPORTS_DATA: SportPosition[] = [
   },
   // Soccer (Women's)
   {
-    sport: "Women's Soccer",
+    sport: 'Soccer (F)',
     gender: 'female',
     positions: [
       'Goalkeeper', 'Center Back', 'Left Back', 'Right Back', 'Sweeper',
@@ -133,7 +133,7 @@ export const SPORTS_DATA: SportPosition[] = [
   },
   // Lacrosse (Men's)
   {
-    sport: 'Lacrosse',
+    sport: 'Lacrosse (M)',
     gender: 'male',
     positions: [
       'Goalkeeper', 'Defender', 'Long Stick Midfielder', 'Midfielder',
@@ -142,7 +142,7 @@ export const SPORTS_DATA: SportPosition[] = [
   },
   // Lacrosse (Women's)
   {
-    sport: "Women's Lacrosse",
+    sport: 'Lacrosse (F)',
     gender: 'female',
     positions: [
       'Goalkeeper', 'Defender', 'Midfielder', 'Attacker'

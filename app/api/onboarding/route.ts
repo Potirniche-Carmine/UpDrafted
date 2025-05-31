@@ -1,9 +1,10 @@
 import { auth, createClerkClient } from '@clerk/nextjs/server'
 import { NextRequest, NextResponse } from 'next/server'
-import { validateClerkHeaders, logSecurityValidation } from '@/utils/clerk-security'
+import { validateClerkHeaders } from '@/utils/clerk-security'
 import { uploadProfilePicture } from '@/lib/r2'
 import { onboardingOperations } from '@/lib/db-utils'
 import { convertFormDataToProfileData } from '@/types/onboarding'
+import { FormValidator } from '@/lib/form-validation'
 
 const clerkClient = createClerkClient({
   secretKey: process.env.CLERK_SECRET_KEY
@@ -11,10 +12,7 @@ const clerkClient = createClerkClient({
 
 export async function POST(request: NextRequest) {
   try {
-    // Validate required Clerk headers
     const validation = validateClerkHeaders(request)
-    logSecurityValidation(validation, '/api/onboarding')
-
     if (!validation.isValid) {
       return NextResponse.json(
         { 
@@ -77,6 +75,30 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Server-side validation using FormValidator
+    let validationErrors
+    if (role === 'athlete') {
+      validationErrors = FormValidator.validateAthleteForm(rawProfileData)
+    } else {
+      validationErrors = FormValidator.validateCoachRecruiterForm(rawProfileData)
+    }
+
+    // Check if there are validation errors
+    if (Object.keys(validationErrors).length > 0) {
+      return NextResponse.json(
+        { 
+          error: 'Validation failed',
+          validationErrors 
+        },
+        { status: 400 }
+      )
+    }
+
+    // Clean weight input for athletes (remove "lbs" if present)
+    if (role === 'athlete' && rawProfileData.weight) {
+      rawProfileData.weight = FormValidator.cleanWeightInput(rawProfileData.weight)
+    }
+
     const profileData = convertFormDataToProfileData(rawProfileData)
 
     try {
@@ -84,9 +106,14 @@ export async function POST(request: NextRequest) {
       let profileImageUrl: string | null = null
 
       if (profileImage) {
-        const { key, url } = await uploadProfilePicture(profileImage, userId)
-        profileImageUrl = url
-        profileImageR3Key = key
+        try {
+          const { key, url } = await uploadProfilePicture(profileImage, userId)
+          profileImageUrl = url
+          profileImageR3Key = key
+        } catch (uploadError) {
+          console.error('Profile image upload failed:', uploadError)
+          // Continue without profile image rather than failing the entire onboarding
+        }
       }
 
       let result
@@ -140,7 +167,7 @@ export async function POST(request: NextRequest) {
       )
 
     } catch (dbError) {
-      console.error('Debug: Database/Clerk operation failed:', dbError)
+      console.error('Database/Clerk operation failed:', dbError)
       return NextResponse.json(
         { error: 'Failed to create profile. Please try again.' },
         { status: 500 }
@@ -148,7 +175,7 @@ export async function POST(request: NextRequest) {
     }
 
   } catch (error) {
-    console.error('Debug: General error in onboarding API:', error)
+    console.error('General error in onboarding API:', error)
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

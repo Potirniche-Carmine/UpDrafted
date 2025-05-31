@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireRole } from '@/utils/roles';
-import { validateClerkHeaders, logSecurityValidation } from '@/utils/clerk-security';
+import { validateClerkHeaders } from '@/utils/clerk-security';
 import { recruitingOperations } from '@/lib/db-utils';
 
 export async function GET() {
@@ -39,7 +39,6 @@ export async function PUT(request: NextRequest) {
   try {
     // Validate required Clerk headers
     const validation = validateClerkHeaders(request);
-    logSecurityValidation(validation, '/api/recruiters/profile');
 
     if (!validation.isValid) {
       return NextResponse.json(
