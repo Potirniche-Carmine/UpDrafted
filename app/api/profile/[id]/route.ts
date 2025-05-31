@@ -9,6 +9,25 @@ interface ProfilePageParams {
   }>;
 }
 
+// Cache configuration - different cache times based on data sensitivity
+const CACHE_CONFIG = {
+  // Public profile data can be cached longer
+  PUBLIC_PROFILE_CACHE_SECONDS: 300, // 5 minutes
+  // Own profile data cached shorter for freshness
+  OWN_PROFILE_CACHE_SECONDS: 60, // 1 minute
+  // Admin views get fresh data
+  ADMIN_CACHE_SECONDS: 30, // 30 seconds
+};
+
+// Helper function to set cache headers
+function setCacheHeaders(response: NextResponse, cacheSeconds: number) {
+  // Set Cache-Control header for both browser and CDN caching
+  response.headers.set('Cache-Control', `public, max-age=${cacheSeconds}, s-maxage=${cacheSeconds}, stale-while-revalidate=60`);
+  // Add ETag for better cache validation
+  response.headers.set('Vary', 'Authorization');
+  return response;
+}
+
 // Helper function to sanitize profile data based on viewing permissions
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function sanitizeProfileData(profileData: Record<string, any>, profileType: string | null, isOwnProfile: boolean, isAdmin: boolean): Record<string, any> | null {
@@ -245,7 +264,7 @@ export async function GET(
     const transformedProfile = transformProfileData(sanitizedProfile, profileType);
 
     // Return profile data with ownership information
-    return NextResponse.json({
+    const response = NextResponse.json({
       success: true,
       profile: transformedProfile,
       profileType,
@@ -254,6 +273,15 @@ export async function GET(
       canEdit: isOwnProfile || isAdmin,
       currentUserRole,
     });
+
+    // Set cache headers based on user role
+    if (isOwnProfile || isAdmin) {
+      setCacheHeaders(response, CACHE_CONFIG.OWN_PROFILE_CACHE_SECONDS);
+    } else {
+      setCacheHeaders(response, CACHE_CONFIG.PUBLIC_PROFILE_CACHE_SECONDS);
+    }
+
+    return response;
 
   } catch (error) {
     console.error('Error fetching profile:', error);

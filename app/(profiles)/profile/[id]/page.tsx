@@ -1,7 +1,7 @@
 "use client";
 
 import { notFound } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useUser, useAuth } from '@clerk/nextjs';
 import { Suspense } from 'react';
 import { AthleteProfileWrapper } from '../../components/athlete-profile-wrapper';
@@ -9,6 +9,10 @@ import { CoachProfileWrapper } from '../../components/coach-profile-wrapper';
 import { RecruiterProfileWrapper } from '../../components/recruiter-profile-wrapper';
 import type { AthleteProfileData } from '../../components/athlete-profile';
 import type { CoachProfileData, RecruitingProfileData } from '../../lib/base-profile-types';
+
+// Client-side cache to prevent redundant API calls
+const profileCache = new Map<string, { data: ProfileApiResponse; timestamp: number; }>();
+const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes cache
 
 interface ProfilePageProps {
   params: Promise<{
@@ -64,68 +68,111 @@ function ProfileContent({ profileId }: { profileId: string }) {
   const [profileData, setProfileData] = useState<ProfileApiResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
 
-  useEffect(() => {
-    async function fetchProfile() {
-      if (!isSignedIn || !isLoaded) return;
+  const fetchProfile = useCallback(async () => {
+    if (!isSignedIn || !isLoaded) return;
 
-      try {
-        setLoading(true);
-        setError(null);
-
-        // Get the session token for authentication
-        const token = await getToken();
-        
-        if (!token) {
-          throw new Error('No authentication token available');
-        }
-
-        console.log('Making profile request with token:', token ? 'Token present' : 'No token');
-
-        const response = await fetch(`/api/profile/${profileId}`, {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`,
-            'Accept': 'application/json',
-          },
-        });
-
-        if (!response.ok) {
-          if (response.status === 404) {
-            notFound();
-            return;
-          }
-          
-          // Try to get error details from response
-          let errorMessage = `Failed to fetch profile: ${response.status}`;
-          try {
-            const errorData = await response.json();
-            if (errorData.error) {
-              errorMessage = errorData.error;
-              if (errorData.details) {
-                errorMessage += ` - ${errorData.details}`;
-              }
-            }
-          } catch {
-            // If we can't parse the error response, use the default message
-          }
-          
-          throw new Error(errorMessage);
-        }
-
-        const data: ProfileApiResponse = await response.json();
-        setProfileData(data);
-      } catch (err) {
-        console.error('Error fetching profile:', err);
-        setError(err instanceof Error ? err.message : 'Failed to load profile');
-      } finally {
-        setLoading(false);
-      }
+    // Cancel any existing request
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
     }
 
-    fetchProfile();
+    // Check cache first
+    const cacheKey = `profile-${profileId}`;
+    const cached = profileCache.get(cacheKey);
+    
+    if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
+      setProfileData(cached.data);
+      setLoading(false);
+      return;
+    }
+
+    try {
+      setLoading(true);
+      setError(null);
+
+      // Create new AbortController for this request
+      const abortController = new AbortController();
+      abortControllerRef.current = abortController;
+
+      // Get the session token for authentication
+      const token = await getToken();
+      
+      if (!token) {
+        throw new Error('No authentication token available');
+      }
+
+      console.log('Making profile request with token:', token ? 'Token present' : 'No token');
+
+      const response = await fetch(`/api/profile/${profileId}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+          'Accept': 'application/json',
+        },
+        signal: abortController.signal, // Add abort signal
+      });
+
+      if (!response.ok) {
+        if (response.status === 404) {
+          notFound();
+          return;
+        }
+        
+        // Try to get error details from response
+        let errorMessage = `Failed to fetch profile: ${response.status}`;
+        try {
+          const errorData = await response.json();
+          if (errorData.error) {
+            errorMessage = errorData.error;
+            if (errorData.details) {
+              errorMessage += ` - ${errorData.details}`;
+            }
+          }
+        } catch {
+          // If we can't parse the error response, use the default message
+        }
+        
+        throw new Error(errorMessage);
+      }
+
+      const data: ProfileApiResponse = await response.json();
+      
+      // Cache the response
+      profileCache.set(cacheKey, { data, timestamp: Date.now() });
+      
+      // Clean up old cache entries (simple cleanup)
+      if (profileCache.size > 50) { // Limit cache size
+        const oldestKey = Array.from(profileCache.keys())[0];
+        profileCache.delete(oldestKey);
+      }
+      
+      setProfileData(data);
+    } catch (err) {
+      // Don't set error if request was aborted
+      if (err instanceof Error && err.name === 'AbortError') {
+        return;
+      }
+      
+      console.error('Error fetching profile:', err);
+      setError(err instanceof Error ? err.message : 'Failed to load profile');
+    } finally {
+      setLoading(false);
+    }
   }, [profileId, isSignedIn, isLoaded, getToken]);
+
+  useEffect(() => {
+    fetchProfile();
+    
+    // Cleanup function to abort request if component unmounts
+    return () => {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+    };
+  }, [fetchProfile]);
 
   if (!isLoaded || loading) {
     return <ProfileSkeleton />;
