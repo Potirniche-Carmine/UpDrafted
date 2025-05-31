@@ -43,6 +43,13 @@
       "when": 1748641443991,
       "tag": "0005_flippant_scarecrow",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1748714180493,
+      "tag": "0006_next_arachne",
+      "breakpoints": true
     }
   ]
 }

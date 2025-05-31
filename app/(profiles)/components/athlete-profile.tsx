@@ -47,7 +47,7 @@ export interface AthleteProfileData {
   positions: string[];
 
   // Verification
-  maxPrepsUrl: string;
+  maxPrepsUrl?: string;
   maxPrepsVerified: boolean;
 
   // Media
@@ -367,8 +367,35 @@ export function AthleteProfile({ data, isOwnProfile = false, onConnect, onShare 
                     )}
                   </div>
                   
-                  {data.measurables && (
+                  {data.measurables && data.measurables.filter(m => m.sport === selectedSport).length > 0 ? (
                     <MeasurablesSection measurables={data.measurables} selectedSport={selectedSport} />
+                  ) : (
+                    <div className="bg-muted/50 rounded-lg p-4">
+                      <div className="text-center">
+                        <p className="text-sm text-muted-foreground mb-2">
+                          No {selectedSport} measurables added yet
+                        </p>
+                        {isOwnProfile ? (
+                          <>
+                            <p className="text-xs text-muted-foreground mb-3">
+                              Add your performance metrics to showcase your athletic abilities
+                            </p>
+                            <Button 
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleEditSection('add-first-measurable')}
+                            >
+                              <Plus className="w-4 h-4 mr-1" />
+                              Add First Measurable
+                            </Button>
+                          </>
+                        ) : (
+                          <p className="text-xs text-muted-foreground">
+                            Performance data will be displayed here when available
+                          </p>
+                        )}
+                      </div>
+                    </div>
                   )}
                 </div>
               </CardContent>
@@ -395,7 +422,12 @@ export function AthleteProfile({ data, isOwnProfile = false, onConnect, onShare 
                 {data.gpa && (
                   <div>
                     <p className="text-sm text-muted-foreground">GPA</p>
-                    <p className="font-semibold">{data.gpa.toFixed(2)}</p>
+                    <p className="font-semibold">
+                      {(() => {
+                        const gpaNum = parseFloat(data.gpa.toString());
+                        return isNaN(gpaNum) ? data.gpa : gpaNum.toFixed(2);
+                      })()}
+                    </p>
                   </div>
                 )}
 
@@ -470,24 +502,45 @@ export function AthleteProfile({ data, isOwnProfile = false, onConnect, onShare 
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="bg-gradient-to-r from-blue-50 to-green-50 dark:from-blue-950 dark:to-green-950 rounded-lg p-4 flex items-center justify-between">
-                  <div>
-                    <p className="font-medium">MaxPreps Profile</p>
-                    <p className="text-sm text-muted-foreground">
-                      Official stats, game logs, and team roster verification
-                    </p>
+                {data.maxPrepsUrl ? (
+                  <div className="bg-gradient-to-r from-blue-50 to-green-50 dark:from-blue-950 dark:to-green-950 rounded-lg p-4 flex items-center justify-between">
+                    <div>
+                      <p className="font-medium">MaxPreps Profile</p>
+                      <p className="text-sm text-muted-foreground">
+                        Official stats, game logs, and team roster verification
+                      </p>
+                    </div>
+                    <Link href={data.maxPrepsUrl} target="_blank">
+                      <Button className="bg-blue-600 hover:bg-blue-700 text-white">
+                        <ExternalLink className="w-4 h-4 mr-1" />
+                        View Official Stats
+                      </Button>
+                    </Link>
                   </div>
-                  <Link href={data.maxPrepsUrl} target="_blank">
-                    <Button className="bg-blue-600 hover:bg-blue-700 text-white">
-                      <ExternalLink className="w-4 h-4 mr-1" />
-                      View Official Stats
-                    </Button>
-                  </Link>
-                </div>
+                ) : (
+                  <div className="bg-muted/50 rounded-lg p-4">
+                    <div className="text-center">
+                      <p className="font-medium text-muted-foreground mb-2">MaxPreps Profile Not Added</p>
+                      <p className="text-sm text-muted-foreground mb-4">
+                        Add your MaxPreps profile to showcase official stats and verification
+                      </p>
+                      {isOwnProfile && (
+                        <Button 
+                          variant="outline"
+                          onClick={() => handleEditSection('add-maxpreps')}
+                        >
+                          <Plus className="w-4 h-4 mr-2" />
+                          Add MaxPreps URL
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                )}
               </CardContent>
             </Card>
-            {/* Hudl Highlights */}
-            {data.hudlUrl && (
+            
+            {/* Hudl Highlights - Only show if URL exists or if it's own profile */}
+            {(data.hudlUrl || isOwnProfile) && (
               <Card>
                 <CardHeader>
                   <div className="flex items-center justify-between">
@@ -505,46 +558,66 @@ export function AthleteProfile({ data, isOwnProfile = false, onConnect, onShare 
                   </div>
                 </CardHeader>
                 <CardContent>
-                  {data.hudlEmbedUrl ? (
-                    <div className="space-y-4">
-                      <div className="relative aspect-video bg-black rounded-lg overflow-hidden">
-                        <iframe
-                          src={data.hudlEmbedUrl}
-                          className="absolute inset-0 w-full h-full"
-                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                          allowFullScreen
-                        />
+                  {data.hudlUrl ? (
+                    data.hudlEmbedUrl ? (
+                      <div className="space-y-4">
+                        <div className="relative aspect-video bg-black rounded-lg overflow-hidden">
+                          <iframe
+                            src={data.hudlEmbedUrl}
+                            className="absolute inset-0 w-full h-full"
+                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                            allowFullScreen
+                          />
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <p className="text-sm text-muted-foreground">Game film and highlight reels</p>
+                          <Link href={data.hudlUrl} target="_blank">
+                            <Button variant="outline" size="sm">
+                              <ExternalLink className="w-4 h-4 mr-1" />
+                              View Full Hudl
+                            </Button>
+                          </Link>
+                        </div>
                       </div>
-                      <div className="flex justify-between items-center">
-                        <p className="text-sm text-muted-foreground">Game film and highlight reels</p>
+                    ) : (
+                      <div className="bg-muted rounded-lg p-4 flex items-center justify-between">
+                        <div>
+                          <p className="font-medium">Hudl Profile</p>
+                          <p className="text-sm text-muted-foreground">Game film and highlight reels</p>
+                        </div>
                         <Link href={data.hudlUrl} target="_blank">
                           <Button variant="outline" size="sm">
                             <ExternalLink className="w-4 h-4 mr-1" />
-                            View Full Hudl
+                            View Hudl
                           </Button>
                         </Link>
                       </div>
-                    </div>
+                    )
                   ) : (
-                    <div className="bg-muted rounded-lg p-4 flex items-center justify-between">
-                      <div>
-                        <p className="font-medium">Hudl Profile</p>
-                        <p className="text-sm text-muted-foreground">Game film and highlight reels</p>
+                    <div className="bg-muted/50 rounded-lg p-4">
+                      <div className="text-center">
+                        <p className="font-medium text-muted-foreground mb-2">Hudl Profile Not Added</p>
+                        <p className="text-sm text-muted-foreground mb-4">
+                          Add your Hudl profile to showcase game film and highlight reels
+                        </p>
+                        {isOwnProfile && (
+                          <Button 
+                            variant="outline"
+                            onClick={() => handleEditSection('add-hudl')}
+                          >
+                            <Plus className="w-4 h-4 mr-2" />
+                            Add Hudl URL
+                          </Button>
+                        )}
                       </div>
-                      <Link href={data.hudlUrl} target="_blank">
-                        <Button variant="outline" size="sm">
-                          <ExternalLink className="w-4 h-4 mr-1" />
-                          View Hudl
-                        </Button>
-                      </Link>
                     </div>
                   )}
                 </CardContent>
               </Card>
             )}
             
-            {/* YouTube Videos */}
-            {data.youtubeVideos.length > 0 && (
+            {/* YouTube Videos - Only show if videos exist or if it's own profile */}
+            {((data.youtubeVideos && data.youtubeVideos.length > 0) || isOwnProfile) && (
               <Card>
                 <CardHeader>
                   <div className="flex items-center justify-between">
@@ -560,43 +633,65 @@ export function AthleteProfile({ data, isOwnProfile = false, onConnect, onShare 
                             <Plus className="w-4 h-4 mr-1" />
                             Add Video
                           </Button>
-                          <Button 
-                            size="sm" 
-                            variant="ghost"
-                            onClick={() => handleEditSection('youtube-videos')}
-                          >
-                            <Edit className="w-4 h-4 mr-1" />
-                            Edit
-                          </Button>
+                          {data.youtubeVideos && data.youtubeVideos.length > 0 && (
+                            <Button 
+                              size="sm" 
+                              variant="ghost"
+                              onClick={() => handleEditSection('youtube-videos')}
+                            >
+                              <Edit className="w-4 h-4 mr-1" />
+                              Edit
+                            </Button>
+                          )}
                         </>
                       )}
                     </div>
                   </div>
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-6">
-                    {data.youtubeVideos.map((video, index) => (
-                      <div key={index} className="space-y-2">
-                        <div className="flex justify-between items-center">
-                          <h4 className="font-medium">{video.title}</h4>
-                          <Link href={video.url} target="_blank">
-                            <Button variant="outline" size="sm">
-                              <ExternalLink className="w-4 h-4 mr-1" />
-                              YouTube
-                            </Button>
-                          </Link>
+                  {data.youtubeVideos && data.youtubeVideos.length > 0 ? (
+                    <div className="space-y-6">
+                      {data.youtubeVideos.map((video, index) => (
+                        <div key={index} className="space-y-2">
+                          <div className="flex justify-between items-center">
+                            <h4 className="font-medium">{video.title}</h4>
+                            <Link href={video.url} target="_blank">
+                              <Button variant="outline" size="sm">
+                                <ExternalLink className="w-4 h-4 mr-1" />
+                                YouTube
+                              </Button>
+                            </Link>
+                          </div>
+                          <div className="relative aspect-video bg-black rounded-lg overflow-hidden">
+                            <iframe
+                              src={video.embedUrl}
+                              className="absolute inset-0 w-full h-full"
+                              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                              allowFullScreen
+                            />
+                          </div>
                         </div>
-                        <div className="relative aspect-video bg-black rounded-lg overflow-hidden">
-                          <iframe
-                            src={video.embedUrl}
-                            className="absolute inset-0 w-full h-full"
-                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                            allowFullScreen
-                          />
-                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="bg-muted/50 rounded-lg p-4">
+                      <div className="text-center">
+                        <p className="font-medium text-muted-foreground mb-2">No Video Highlights Added</p>
+                        <p className="text-sm text-muted-foreground mb-4">
+                          Add YouTube videos to showcase your best performances and skills
+                        </p>
+                        {isOwnProfile && (
+                          <Button 
+                            variant="outline"
+                            onClick={() => handleEditSection('add-video')}
+                          >
+                            <Plus className="w-4 h-4 mr-2" />
+                            Add First Video
+                          </Button>
+                        )}
                       </div>
-                    ))}
-                  </div>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             )}

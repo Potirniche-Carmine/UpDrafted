@@ -12,7 +12,8 @@ import {
   Edit,
   Star,
   Search,
-  Users
+  Users,
+  Plus
 } from "lucide-react";
 import { RecruitingProfileData } from "../lib/base-profile-types";
 import { ProfileHeader } from "./shared/profile-header";
@@ -265,7 +266,7 @@ export function RecruiterProfile({ data, isOwnProfile = false, onShowInterest, o
             )}
 
             {/* Video Showcase */}
-            {data.showcaseVideoEmbedUrl && (
+            {data.showcaseVideoEmbedUrl ? (
               <Card>
                 <CardHeader>
                   <div className="flex items-center justify-between">
@@ -294,6 +295,44 @@ export function RecruiterProfile({ data, isOwnProfile = false, onShowInterest, o
                   {data.showcaseVideoTitle && (
                     <p className="mt-2 text-sm text-muted-foreground">{data.showcaseVideoTitle}</p>
                   )}
+                </CardContent>
+              </Card>
+            ) : isOwnProfile && (
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <CardTitle>Program Showcase</CardTitle>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => handleEditSection('video-showcase')}
+                    >
+                      <Edit className="w-4 h-4 mr-1" />
+                      Edit
+                    </Button>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="bg-muted/50 rounded-lg p-8">
+                    <div className="text-center">
+                      <div className="w-16 h-16 mx-auto bg-muted rounded-full flex items-center justify-center mb-4">
+                        <div className="w-6 h-6 bg-muted-foreground/30 rounded-full flex items-center justify-center">
+                          <div className="w-0 h-0 border-l-2 border-l-muted-foreground/60 border-y-1 border-y-transparent ml-0.5"></div>
+                        </div>
+                      </div>
+                      <p className="font-medium text-muted-foreground mb-2">No Program Showcase Video</p>
+                      <p className="text-sm text-muted-foreground mb-4">
+                        Add a video to showcase your program, recruitment process, and opportunities
+                      </p>
+                      <Button 
+                        variant="outline"
+                        onClick={() => handleEditSection('add-video-showcase')}
+                      >
+                        <Plus className="w-4 h-4 mr-2" />
+                        Add Program Video
+                      </Button>
+                    </div>
+                  </div>
                 </CardContent>
               </Card>
             )}

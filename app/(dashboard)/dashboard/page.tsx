@@ -79,10 +79,10 @@ const getUserTypeContent = (role: string, userId: string) => {
     case 'athlete':
       return {
         welcomeText: "Continue your recruiting journey",
-        searchText: "Find Coaches & Recruiters",
-        searchHref: "/search?type=coaches",
+        searchText: "Discover Schools & Coaches",
+        searchHref: "/discover",
         primaryActions: [
-          { label: "Find Coaches", href: "/search?type=coaches", icon: Search, description: "Discover college programs" },
+          { label: "Discover Schools", href: "/discover", icon: Search, description: "Find your perfect college match" },
           { label: "Update Profile", href: `/profile/${userId}`, icon: Edit3, description: "Keep profile current" },
           { label: "My Connections", href: "/connections", icon: Users, description: "Manage your network" },
           { label: "Check Messages", href: "/messaging", icon: MessageSquare, description: "Connect with coaches" },
@@ -93,9 +93,9 @@ const getUserTypeContent = (role: string, userId: string) => {
       return {
         welcomeText: "Discover and recruit talented athletes",
         searchText: "Discover Athletes",
-        searchHref: "/search?type=athletes",
+        searchHref: "/discover",
         primaryActions: [
-          { label: "Discover Athletes", href: "/search?type=athletes", icon: Search, description: "Find top prospects" },
+          { label: "Discover Athletes", href: "/discover", icon: Search, description: "Find top prospects" },
           { label: "Update Profile", href: `/profile/${userId}`, icon: Edit3, description: "Keep profile current" },
           { label: "View Notifications", href: "/notifications", icon: Bell, description: "Stay updated" },
           { label: "Send Messages", href: "/messaging", icon: MessageSquare, description: "Connect with prospects" },
@@ -105,10 +105,10 @@ const getUserTypeContent = (role: string, userId: string) => {
     case 'recruiter':
       return {
         welcomeText: "Connect athletes with the right opportunities",
-        searchText: "Find Athletes & Coaches",
-        searchHref: "/search?type=athletes",
+        searchText: "Discover Athletes",
+        searchHref: "/discover",
         primaryActions: [
-          { label: "Search Database", href: "/search?type=athletes", icon: Search, description: "Find athletes & coaches" },
+          { label: "Discover Athletes", href: "/discover", icon: Search, description: "Find athletes & coaches" },
           { label: "Update Profile", href: `/profile/${userId}`, icon: Edit3, description: "Keep profile current" },
           { label: "Manage Matches", href: "/recruiting/matches", icon: Target, description: "Track connections" },
           { label: "Send Messages", href: "/messaging", icon: MessageSquare, description: "Facilitate connections" },
@@ -118,10 +118,10 @@ const getUserTypeContent = (role: string, userId: string) => {
     default:
       return {
         welcomeText: "Welcome to your dashboard",
-        searchText: "Search",
-        searchHref: "/search",
+        searchText: "Discover",
+        searchHref: "/discover",
         primaryActions: [
-          { label: "Search", href: "/search", icon: Search, description: "Find what you need" },
+          { label: "Discover", href: "/discover", icon: Search, description: "Find what you need" },
           { label: "View Profile", href: `/profile/${userId}`, icon: Eye, description: "Check your profile" },
           { label: "Messages", href: "/messaging", icon: MessageSquare, description: "Check messages" },
           { label: "Notifications", href: "/notifications", icon: Bell, description: "Stay updated" },

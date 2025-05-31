@@ -52,7 +52,7 @@ export const athleteProfiles = pgTable('athlete_profiles', {
   actScore: integer('act_score'),
   intendedMajor: text('intended_major'),
   gender: text('gender'),
-  maxprepsUrl: text('maxpreps_url').notNull(),
+  maxprepsUrl: text('maxpreps_url'),
   isVerified: boolean('is_verified').default(false),
   hudlUrl: text('hudl_url'),
   hudlEmbedUrl: text('hudl_embed_url'),

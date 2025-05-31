@@ -13,6 +13,7 @@ const isAthleteApi = createRouteMatcher(['/api/athletes/(.*)']);
 const isCoachApi = createRouteMatcher(['/api/coaches/(.*)']);
 const isRecruiterApi = createRouteMatcher(['/api/recruiters/(.*)']);
 const isCommonApi = createRouteMatcher(['/api/common/(.*)', '/api/upload-image']);
+const isProfileApi = createRouteMatcher(['/api/profile/(.*)']);
 
 // Protected routes that should never redirect to sign-in if user is authenticated
 const isProtectedDashboardRoute = createRouteMatcher([
@@ -39,6 +40,14 @@ export default clerkMiddleware(async (auth, req) => {
 
       // Common APIs accessible to all roles
       if (isCommonApi(req)) {
+        if (!['admin', 'athlete', 'coach', 'recruiter'].includes(userRole)) {
+          return NextResponse.json({ error: 'Forbidden - Valid role required' }, { status: 403 });
+        }
+        return NextResponse.next();
+      }
+
+      // Profile APIs accessible to all authenticated users with valid roles
+      if (isProfileApi(req)) {
         if (!['admin', 'athlete', 'coach', 'recruiter'].includes(userRole)) {
           return NextResponse.json({ error: 'Forbidden - Valid role required' }, { status: 403 });
         }

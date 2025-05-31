@@ -1,0 +1,1 @@
+ALTER TABLE "athlete_profiles" ALTER COLUMN "maxpreps_url" DROP NOT NULL;
