@@ -18,7 +18,7 @@ const nextConfig: NextConfig = {
       },
       {
         protocol: 'https',
-        hostname: `${process.env.R2_ACCOUNT_ID}.r2.cloudflarestorage.com`,
+        hostname: 'pub-19c0754937db426497ca014f0e2a297c.r2.dev',
         port: '',
         pathname: '/**',
       }

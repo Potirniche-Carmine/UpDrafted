@@ -1,6 +1,6 @@
 {
-  "id": "aeb8852f-dd1f-46de-8ac8-74d7fb9082b3",
-  "prevId": "ba7a33c5-587d-4d34-8f6a-1585f1386794",
+  "id": "75749479-993f-48f8-8690-a575b4c76de3",
+  "prevId": "3f31fbfb-d5c9-4ba5-885b-e6bceb5a8d72",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -477,6 +477,13 @@
           "primaryKey": false,
           "notNull": true
         },
+        "sort_order": {
+          "name": "sort_order",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
         "created_at": {
           "name": "created_at",
           "type": "timestamp with time zone",
@@ -485,7 +492,38 @@
           "default": "now()"
         }
       },
-      "indexes": {},
+      "indexes": {
+        "idx_athlete_videos_athlete_id": {
+          "name": "idx_athlete_videos_athlete_id",
+          "columns": [
+            {
+              "expression": "athlete_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "idx_athlete_videos_sort_order": {
+          "name": "idx_athlete_videos_sort_order",
+          "columns": [
+            {
+              "expression": "sort_order",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
       "foreignKeys": {
         "athlete_videos_athlete_id_athlete_profiles_id_fk": {
           "name": "athlete_videos_athlete_id_athlete_profiles_id_fk",

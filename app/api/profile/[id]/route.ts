@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAnyRole } from '@/utils/roles';
 import { userOperations, athleteOperations, coachOperations, recruitingOperations } from '@/lib/db-utils';
+import { R2_PUBLIC_URL } from '@/lib/r2';
 
 interface ProfilePageParams {
   params: Promise<{
@@ -50,13 +51,20 @@ function transformProfileData(profileData: Record<string, any>, profileType: str
   const transformed = { ...profileData };
 
   if (profileType === 'athlete') {
+    // Transform profile image from R3 key to URL using proper R2 configuration
+    if (profileData.profileImageR3Key) {
+      transformed.profileImage = `${R2_PUBLIC_URL}/${profileData.profileImageR3Key}`;
+    }
+
     // Map database videos to youtubeVideos for component compatibility
     if (profileData.videos) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       transformed.youtubeVideos = profileData.videos.map((video: any) => ({
+        id: video.id,
         title: video.title,
         url: video.youtubeUrl,
-        embedUrl: video.embedUrl
+        embedUrl: video.embedUrl,
+        sortOrder: video.sortOrder
       }));
       delete transformed.videos;
     } else {
@@ -110,6 +118,11 @@ function transformProfileData(profileData: Record<string, any>, profileType: str
     if (!transformed.hudlEmbedUrl || transformed.hudlEmbedUrl.trim() === '') {
       transformed.hudlEmbedUrl = undefined;
     }
+  } else if (profileType === 'coach' || profileType === 'recruiter') {
+    // Transform organization logo from R3 key to URL using proper R2 configuration
+    if (profileData.organizationLogo) {
+      transformed.profileImage = `${R2_PUBLIC_URL}/${profileData.organizationLogo}`;
+    }
   }
 
   return transformed;
@@ -122,7 +135,6 @@ export async function GET(
   try {
     // Validate required Clerk headers for client-side requests
     const authHeader = request.headers.get('authorization');
-    const acceptHeader = request.headers.get('accept');
     
     // For client-side requests, we only strictly require authorization
     if (!authHeader) {
@@ -144,16 +156,6 @@ export async function GET(
         },
         { status: 401 }
       );
-    }
-
-    // Log for monitoring (optional headers)
-    const missingOptional = [];
-    if (!acceptHeader) missingOptional.push('accept');
-    if (!request.headers.get('host')) missingOptional.push('host');
-    if (!request.headers.get('origin')) missingOptional.push('origin');
-    
-    if (missingOptional.length > 0) {
-      console.warn('Optional headers missing for profile API:', missingOptional);
     }
 
     // Require any authenticated role

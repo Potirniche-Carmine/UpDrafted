@@ -11,11 +11,8 @@ import {
   Instagram,
   Twitter,
   ExternalLink,
-  Users,
-  Award,
   Edit,
-  Plus,
-  ShieldX
+  Plus
 } from "lucide-react";
 import { ProfileHeader } from "./shared/profile-header";
 import { useRoleView } from '@/hooks/use-role-view';
@@ -53,10 +50,12 @@ export interface AthleteProfileData {
   // Media
   hudlUrl?: string;
   hudlEmbedUrl?: string;
-  youtubeVideos: {
+  youtubeVideos?: {
+    id?: string;
     title: string;
     url: string;
     embedUrl: string;
+    sortOrder?: number;
   }[];
 
   // Social Media (highlighted)
@@ -72,7 +71,7 @@ export interface AthleteProfileData {
   personalStatement?: string;
 
   // Additional Info
-  achievements: string[];
+  achievements?: string[];
 
   // Measurables
   measurables?: Measurable[];
@@ -199,150 +198,105 @@ export function AthleteProfile({ data, isOwnProfile = false, onConnect, onShare 
           <div className="space-y-4 md:space-y-6">
             {/* Profile Card */}
             <Card>
-              <CardContent className="text-center space-y-4">
-                <div className="relative group">
-                  {data.profileImage ? (
-                    <div className="w-32 h-32 md:w-36 md:h-36 mx-auto rounded-full overflow-hidden bg-muted">
+              <CardContent className="p-4 md:p-6">
+                <div className="text-center">
+                  <div className="relative w-24 h-24 md:w-32 md:h-32 mx-auto mb-4">
+                    {data.profileImage ? (
                       <Image
                         src={data.profileImage}
                         alt={data.fullName}
-                        width={144}
-                        height={144}
-                        className="w-full h-full object-cover"
-                        priority
+                        fill
+                        className="rounded-full object-cover"
                       />
+                    ) : (
+                      <div className="w-full h-full bg-muted rounded-full flex items-center justify-center">
+                        <span className="text-lg md:text-xl font-semibold text-muted-foreground">
+                          {data.fullName.split(' ').map(n => n[0]).join('')}
+                        </span>
+                      </div>
+                    )}
+                    {isOwnProfile && (
+                      <Button
+                        size="sm"
+                        className="absolute -bottom-2 -right-2 rounded-full p-2 h-8 w-8"
+                        onClick={() => handleEditSection('profile-image')}
+                      >
+                        <Edit className="w-3 h-3" />
+                      </Button>
+                    )}
+                  </div>
+
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-center gap-2">
+                      <h1 className="text-lg md:text-xl font-bold">{data.fullName}</h1>
+                      {isOwnProfile && (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="p-1 h-6 w-6"
+                          onClick={() => handleEditSection('basic-info')}
+                        >
+                          <Edit className="w-3 h-3" />
+                        </Button>
+                      )}
                     </div>
-                  ) : (
-                    <div className="w-32 h-32 md:w-36 md:h-36 mx-auto rounded-full bg-muted flex items-center justify-center">
-                      <Users className="w-12 h-12 md:w-16 md:h-16 text-muted-foreground" />
+
+                    <div className="flex flex-wrap justify-center gap-2 mb-3">
+                      <Badge className="bg-blue-100 text-blue-800 text-xs">
+                        {data.sport}
+                      </Badge>
+                      {data.secondarySports?.map(sport => (
+                        <Badge key={sport} variant="outline" className="text-xs">
+                          {sport}
+                        </Badge>
+                      ))}
                     </div>
-                  )}
-                  {isOwnProfile && (
-                    <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50 rounded-full opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer" onClick={() => handleEditSection('profile-picture')}>
-                      <Edit className="w-8 h-8 text-white" />
+
+                    <div className="text-sm text-muted-foreground space-y-1">
+                      <div className="flex items-center justify-center gap-1">
+                        <MapPin className="w-3 h-3" />
+                        <span>{data.city}, {data.state}</span>
+                      </div>
+                      <p>{data.highSchool}</p>
+                      <p>Class of {data.graduationYear}</p>
                     </div>
-                  )}
+
+                    <div className="flex flex-wrap justify-center gap-1 text-xs text-muted-foreground">
+                      {data.positions.map(position => (
+                        <span key={position} className="px-2 py-1 bg-muted rounded">
+                          {position}
+                        </span>
+                      ))}
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4 pt-2 text-sm">
+                      <div>
+                        <p className="text-muted-foreground">Height</p>
+                        <p className="font-semibold">{data.height}</p>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground">Weight</p>
+                        <p className="font-semibold">{data.weight}</p>
+                      </div>
+                    </div>
+                  </div>
                 </div>
 
-                <div className="relative">
-                  <h1 className="text-xl md:text-2xl font-bold">{data.fullName}</h1>
-                  <div className="flex items-center justify-center gap-2 text-muted-foreground text-sm md:text-base">
-                    <span>{data.positions.join(" / ")}</span>
-                    <span>•</span>
-                    <span>Class of {data.graduationYear}</span>
-                  </div>
-                  <div className="flex items-center justify-center gap-1 text-sm text-muted-foreground mt-1">
-                    <MapPin className="w-4 h-4" />
-                    <span>{data.city}, {data.state}</span>
-                  </div>
-                  {isOwnProfile && (
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      className="absolute -top-2 -right-2"
-                      onClick={() => handleEditSection('basic-info')}
-                    >
-                      <Edit className="w-4 h-4 mr-1" />
-                      Edit
-                    </Button>
-                  )}
-                </div>
-
-                {data.maxPrepsVerified ? (
-                  <Badge className="bg-green-500 text-white">
-                    <Award className="w-3 h-3 mr-1" />
-                    Verified Athlete
-                  </Badge>
-                ) : (
-                  <Badge variant="outline" className="border-amber-300 text-amber-700 bg-amber-50 dark:border-amber-700 dark:text-amber-300 dark:bg-amber-950/20">
-                    <ShieldX className="w-3 h-3 mr-1" />
-                    Unverified Athlete
-                  </Badge>
-                )}
-
-                {/* Social Media - Memoized */}
+                {/* Social Media Links */}
                 <SocialMediaSection socialMedia={data.socialMedia} />
-              </CardContent>
-            </Card>
 
-            {/* Athletic Profile */}
-            <Card>
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-base md:text-lg">Athletic Profile</CardTitle>
-                  {isOwnProfile && (
-                    <Button 
-                      size="sm" 
-                      variant="ghost"
-                      onClick={() => handleEditSection('athletic-profile')}
-                    >
-                      <Edit className="w-4 h-4 mr-1" />
-                      Edit
-                    </Button>
-                  )}
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <p className="text-sm text-muted-foreground">Height</p>
-                    <p className="font-semibold">{data.height}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Weight</p>
-                    <p className="font-semibold">{data.weight}</p>
-                  </div>
-                </div>
-
-                <div>
-                  <p className="text-sm text-muted-foreground">Primary Sport</p>
-                  <p className="font-semibold">{data.sport}</p>
-                </div>
-
-                {data.secondarySports && data.secondarySports.length > 0 && (
-                  <div>
-                    <p className="text-sm text-muted-foreground">Secondary Sports</p>
-                    <p className="font-semibold">{data.secondarySports.join(", ")}</p>
-                  </div>
-                )}
-
-                <div>
-                  <p className="text-sm text-muted-foreground">High School</p>
-                  <p className="font-semibold">{data.highSchool}</p>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Sports & Measurables Combined */}
-            <Card>
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-base md:text-lg">Sports & Measurables</CardTitle>
-                  {isOwnProfile && (
-                    <Button 
-                      size="sm" 
-                      variant="ghost"
-                      onClick={() => handleEditSection('measurables')}
-                    >
-                      <Edit className="w-4 h-4 mr-1" />
-                      Edit
-                    </Button>
-                  )}
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {/* Sports Selection */}
+                {/* Sport Selector */}
                 {allSports.length > 1 && (
-                  <div>
-                    <p className="text-sm text-muted-foreground mb-2">Select Sport</p>
-                    <div className="flex flex-wrap gap-2">
-                      {allSports.map((sport) => (
+                  <div className="pt-4 mt-4 border-t">
+                    <p className="text-sm font-medium mb-2">View Stats For:</p>
+                    <div className="flex flex-wrap gap-1">
+                      {allSports.map(sport => (
                         <Button
                           key={sport}
-                          variant={selectedSport === sport ? "default" : "outline"}
                           size="sm"
+                          variant={selectedSport === sport ? "default" : "outline"}
+                          className="text-xs h-7"
                           onClick={() => setSelectedSport(sport)}
-                          className="text-xs"
                         >
                           {sport}
                         </Button>
@@ -352,7 +306,7 @@ export function AthleteProfile({ data, isOwnProfile = false, onConnect, onShare 
                 )}
 
                 {/* Measurables */}
-                <div>
+                <div className="pt-4 mt-4 border-t">
                   <div className="flex items-center justify-between mb-3">
                     <p className="text-sm font-medium">{selectedSport} Measurables</p>
                     {isOwnProfile && (
@@ -455,6 +409,24 @@ export function AthleteProfile({ data, isOwnProfile = false, onConnect, onShare 
                   </div>
                 )}
 
+                {!data.gpa && !data.satScore && !data.actScore && !data.intendedMajor && isOwnProfile && (
+                  <div className="bg-muted/50 rounded-lg p-4">
+                    <div className="text-center">
+                      <p className="text-sm text-muted-foreground mb-2">Academic info not added</p>
+                      <p className="text-xs text-muted-foreground mb-3">
+                        Add your GPA, test scores, and intended major
+                      </p>
+                      <Button 
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleEditSection('add-academic-info')}
+                      >
+                        <Plus className="w-4 h-4 mr-1" />
+                        Add Academic Info
+                      </Button>
+                    </div>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </div>
@@ -462,7 +434,7 @@ export function AthleteProfile({ data, isOwnProfile = false, onConnect, onShare 
           {/* Main Content */}
           <div className="lg:col-span-2 space-y-6 md:space-y-8">
             {/* Personal Statement */}
-            {data.personalStatement && (
+            {data.personalStatement ? (
               <Card>
                 <CardHeader>
                   <div className="flex items-center justify-between">
@@ -483,7 +455,41 @@ export function AthleteProfile({ data, isOwnProfile = false, onConnect, onShare 
                   <p className="text-muted-foreground leading-relaxed">{data.personalStatement}</p>
                 </CardContent>
               </Card>
+            ) : isOwnProfile && (
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <CardTitle>About {data.fullName.split(' ')[0]}</CardTitle>
+                    <Button 
+                      size="sm" 
+                      variant="ghost"
+                      onClick={() => handleEditSection('personal-statement')}
+                    >
+                      <Edit className="w-4 h-4 mr-1" />
+                      Edit
+                    </Button>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="bg-muted/50 rounded-lg p-6">
+                    <div className="text-center">
+                      <p className="font-medium text-muted-foreground mb-2">No Personal Statement Added</p>
+                      <p className="text-sm text-muted-foreground mb-4">
+                        Tell coaches and recruiters about yourself, your goals, and what makes you unique
+                      </p>
+                      <Button 
+                        variant="outline"
+                        onClick={() => handleEditSection('add-personal-statement')}
+                      >
+                        <Plus className="w-4 h-4 mr-2" />
+                        Add Personal Statement
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
             )}
+
             {/* MaxPreps Verification - Simplified */}
             <Card>
               <CardHeader>
@@ -616,7 +622,7 @@ export function AthleteProfile({ data, isOwnProfile = false, onConnect, onShare 
               </Card>
             )}
             
-            {/* YouTube Videos - Only show if videos exist or if it's own profile */}
+            {/* YouTube Videos - Max 2 videos, only show if videos exist or if it's own profile */}
             {((data.youtubeVideos && data.youtubeVideos.length > 0) || isOwnProfile) && (
               <Card>
                 <CardHeader>
@@ -625,14 +631,16 @@ export function AthleteProfile({ data, isOwnProfile = false, onConnect, onShare 
                     <div className="flex gap-2">
                       {isOwnProfile && (
                         <>
-                          <Button 
-                            size="sm" 
-                            variant="outline"
-                            onClick={() => handleEditSection('add-video')}
-                          >
-                            <Plus className="w-4 h-4 mr-1" />
-                            Add Video
-                          </Button>
+                          {(!data.youtubeVideos || data.youtubeVideos.length < 2) && (
+                            <Button 
+                              size="sm" 
+                              variant="outline"
+                              onClick={() => handleEditSection('add-video')}
+                            >
+                              <Plus className="w-4 h-4 mr-1" />
+                              Add Video
+                            </Button>
+                          )}
                           {data.youtubeVideos && data.youtubeVideos.length > 0 && (
                             <Button 
                               size="sm" 
@@ -651,8 +659,8 @@ export function AthleteProfile({ data, isOwnProfile = false, onConnect, onShare 
                 <CardContent>
                   {data.youtubeVideos && data.youtubeVideos.length > 0 ? (
                     <div className="space-y-6">
-                      {data.youtubeVideos.map((video, index) => (
-                        <div key={index} className="space-y-2">
+                      {data.youtubeVideos.slice(0, 2).map((video, index) => (
+                        <div key={video.id || index} className="space-y-2">
                           <div className="flex justify-between items-center">
                             <h4 className="font-medium">{video.title}</h4>
                             <Link href={video.url} target="_blank">
@@ -672,13 +680,18 @@ export function AthleteProfile({ data, isOwnProfile = false, onConnect, onShare 
                           </div>
                         </div>
                       ))}
+                      {data.youtubeVideos.length >= 2 && isOwnProfile && (
+                        <div className="text-center text-sm text-muted-foreground">
+                          Maximum of 2 videos allowed. Edit to replace existing videos.
+                        </div>
+                      )}
                     </div>
                   ) : (
                     <div className="bg-muted/50 rounded-lg p-4">
                       <div className="text-center">
                         <p className="font-medium text-muted-foreground mb-2">No Video Highlights Added</p>
                         <p className="text-sm text-muted-foreground mb-4">
-                          Add YouTube videos to showcase your best performances and skills
+                          Add YouTube videos to showcase your best performances and skills (max 2 videos)
                         </p>
                         {isOwnProfile && (
                           <Button 

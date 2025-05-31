@@ -84,8 +84,12 @@ export const athleteVideos = pgTable('athlete_videos', {
   title: text('title').notNull(),
   youtubeUrl: text('youtube_url').notNull(),
   embedUrl: text('embed_url').notNull(),
+  sortOrder: integer('sort_order').notNull().default(0),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
-});
+}, (table) => [
+  index('idx_athlete_videos_athlete_id').on(table.athleteId),
+  index('idx_athlete_videos_sort_order').on(table.sortOrder),
+]);
 
 export const coachProfiles = pgTable('coach_profiles', {
   id: serial('id').primaryKey(),
@@ -115,7 +119,6 @@ export const coachProfiles = pgTable('coach_profiles', {
   unique('coach_profiles_user_id_unique').on(table.userId),
 ]);
 
-// Separate recruiting profiles table for future flexibility
 export const recruitingProfiles = pgTable('recruiting_profiles', {
   id: serial('id').primaryKey(),
   userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
@@ -195,7 +198,6 @@ export const activityLog = pgTable('activity_log', {
   index('idx_activity_log_created_at').on(table.createdAt),
 ]);
 
-// Simplified chat feature tables
 export const conversations = pgTable('conversations', {
   id: serial('id').primaryKey(),
   athleteId: integer('athlete_id').notNull().references(() => athleteProfiles.id, { onDelete: 'cascade' }),
@@ -214,8 +216,8 @@ export const messages = pgTable('messages', {
   conversationId: integer('conversation_id').notNull().references(() => conversations.id, { onDelete: 'cascade' }),
   senderId: text('sender_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
   content: text('content').notNull(),
-  messageType: text('message_type').default('text').notNull(), // 'text', 'image', 'file'
-  attachmentUrl: text('attachment_url'), // For files/images
+  messageType: text('message_type').default('text').notNull(),
+  attachmentUrl: text('attachment_url'),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
 }, (table) => [
   index('idx_messages_conversation_id').on(table.conversationId),
@@ -223,7 +225,6 @@ export const messages = pgTable('messages', {
   index('idx_messages_created_at').on(table.createdAt),
 ]);
 
-// Track which messages have been read by which users
 export const messageReads = pgTable('message_reads', {
   id: serial('id').primaryKey(),
   messageId: integer('message_id').notNull().references(() => messages.id, { onDelete: 'cascade' }),
@@ -235,11 +236,10 @@ export const messageReads = pgTable('message_reads', {
   unique('message_reads_message_user_unique').on(table.messageId, table.userId),
 ]);
 
-// Verification Requests table
 export const verificationRequests = pgTable('verification_requests', {
   id: serial('id').primaryKey(),
   userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
-  role: userRoleEnum('role').notNull(), // coach or recruiter
+  role: userRoleEnum('role').notNull(),
   status: verificationRequestStatusEnum('status').default('pending').notNull(),
   submittedAt: timestamp('submitted_at', { withTimezone: true }).defaultNow().notNull(),
   reviewedAt: timestamp('reviewed_at', { withTimezone: true }),
@@ -258,17 +258,16 @@ export const verificationFiles = pgTable('verification_files', {
   id: serial('id').primaryKey(),
   verificationRequestId: integer('verification_request_id').notNull().references(() => verificationRequests.id, { onDelete: 'cascade' }),
   fileName: text('file_name').notNull(),
-  fileType: text('file_type').notNull(), // 'pdf', 'image', 'link'
-  fileUrl: text('file_url'), // For uploaded files - public URL
-  r2Key: text('r2_key'), // For R2 storage key
-  linkUrl: text('link_url'), // For web links
+  fileType: text('file_type').notNull(),
+  fileUrl: text('file_url'),
+  r2Key: text('r2_key'),
+  linkUrl: text('link_url'),
   description: text('description'),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
 }, (table) => [
   index('idx_verification_files_verification_request_id').on(table.verificationRequestId),
 ]);
 
-// Reports table
 export const reports = pgTable('reports', {
   id: serial('id').primaryKey(),
   reporterId: text('reporter_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
@@ -290,7 +289,6 @@ export const reports = pgTable('reports', {
   index('idx_reports_submitted_at').on(table.submittedAt),
 ]);
 
-// Relations
 export const usersRelations = relations(users, ({ one, many }) => ({
   athleteProfile: one(athleteProfiles, {
     fields: [users.id],
@@ -444,7 +442,6 @@ export const reportsRelations = relations(reports, ({ one }) => ({
   }),
 }));
 
-// Export types for use in your application
 export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
 export type AthleteProfile = typeof athleteProfiles.$inferSelect;

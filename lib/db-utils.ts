@@ -445,13 +445,13 @@ export const onboardingOperations = {
       gpa: profileData.gpa,
       satScore: profileData.satScore,
       actScore: profileData.actScore,
-      intendedMajor: profileData.intendedMajor!,
-      gender: profileData.gender!,
-      maxprepsUrl: profileData.maxprepsUrl || '',
-      hudlUrl: profileData.hudlUrl || '',
-      instagramHandle: profileData.instagramHandle || '',
-      twitterHandle: profileData.twitterHandle || '',
-      personalStatement: profileData.personalStatement || ''
+      intendedMajor: profileData.intendedMajor || undefined,
+      gender: profileData.gender || undefined,
+      maxprepsUrl: profileData.maxprepsUrl || undefined,
+      hudlUrl: profileData.hudlUrl || undefined,
+      instagramHandle: profileData.instagramHandle || undefined,
+      twitterHandle: profileData.twitterHandle || undefined,
+      personalStatement: profileData.personalStatement || undefined
     });
 
     return { user, profile: athleteProfile };
@@ -475,13 +475,13 @@ export const onboardingOperations = {
       organizationName: profileData.organizationName!,
       organizationLogo: profileImageR3Key,
       division: profileData.division!,
-      conference: profileData.conference || '',
+      conference: profileData.conference || undefined,
       city: profileData.city,
       state: profileData.state,
-      programWebsite: profileData.programWebsite || '',
-      schoolWebsite: profileData.schoolWebsite || '',
-      instagramHandle: profileData.orgInstagramHandle || '',
-      twitterHandle: profileData.orgTwitterHandle || ''
+      programWebsite: profileData.programWebsite || undefined,
+      schoolWebsite: profileData.schoolWebsite || undefined,
+      instagramHandle: profileData.orgInstagramHandle || undefined,
+      twitterHandle: profileData.orgTwitterHandle || undefined
     });
 
     // Create recruiting needs if provided
@@ -491,8 +491,8 @@ export const onboardingOperations = {
         coachId: coachProfile.id,
         graduationYears: profileData.recruitingGraduationYears,
         positions: profileData.recruitingPositions,
-        scholarshipsAvailable: profileData.scholarshipsAvailable || null,
-        recruitingPhilosophy: profileData.recruitingPhilosophy || ''
+        scholarshipsAvailable: profileData.scholarshipsAvailable || undefined,
+        recruitingPhilosophy: profileData.recruitingPhilosophy || undefined
       });
     }
 
@@ -516,14 +516,14 @@ export const onboardingOperations = {
       organizationName: profileData.organizationName!,
       organizationLogo: profileImageR3Key,
       division: profileData.division!,
-      conference: profileData.conference || '',
+      conference: profileData.conference || undefined,
       city: profileData.city,
       state: profileData.state,
-      programWebsite: profileData.programWebsite || '',
-      schoolWebsite: profileData.schoolWebsite || '',
-      instagramHandle: profileData.orgInstagramHandle || '',
-      twitterHandle: profileData.orgTwitterHandle || '',
-      recruitingPhilosophy: profileData.recruitingPhilosophy || ''
+      programWebsite: profileData.programWebsite || undefined,
+      schoolWebsite: profileData.schoolWebsite || undefined,
+      instagramHandle: profileData.orgInstagramHandle || undefined,
+      twitterHandle: profileData.orgTwitterHandle || undefined,
+      recruitingPhilosophy: profileData.recruitingPhilosophy || undefined
     });
 
     // Create recruiting profile needs if provided
@@ -533,8 +533,8 @@ export const onboardingOperations = {
         recruitingProfileId: recruiterProfile.id,
         graduationYears: profileData.recruitingGraduationYears,
         positions: profileData.recruitingPositions,
-        scholarshipsAvailable: profileData.scholarshipsAvailable || null,
-        recruitingPhilosophy: profileData.whatLookingFor || ''
+        scholarshipsAvailable: profileData.scholarshipsAvailable || undefined,
+        recruitingPhilosophy: profileData.whatLookingFor || undefined
       });
     }
 
