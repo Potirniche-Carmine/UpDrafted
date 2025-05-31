@@ -25,7 +25,7 @@ export function Footer() {
   ];
 
   return (
-    <footer className="w-full bg-gradient-to-br from-slate-50/50 to-emerald-50/30 dark:from-slate-950/50 dark:to-emerald-950/20 border-t border-border/40">
+    <footer className="w-full bg-gradient-to-br from-slate-50/50 to-[#01ae79]/5 dark:from-slate-950/50 dark:to-[#01ae79]/10 border-t border-border/40">
       <div className="container mx-auto max-w-screen-xl px-4 sm:px-6 lg:px-8 py-12 md:py-16">
         {/* Main footer content */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8 lg:gap-12 mb-8">
@@ -54,7 +54,7 @@ export function Footer() {
                     href={social.href} 
                     target="_blank" 
                     rel="noopener noreferrer"
-                    className="flex items-center justify-center w-10 h-10 rounded-lg bg-white/60 dark:bg-gray-800/60 text-muted-foreground hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/50 transition-all duration-200 shadow-sm hover:shadow-md border border-border/50"
+                    className="flex items-center justify-center w-10 h-10 rounded-lg bg-white/60 dark:bg-gray-800/60 text-muted-foreground hover:text-[#01ae79] dark:hover:text-[#01ae79] hover:bg-[#01ae79]/5 dark:hover:bg-[#01ae79]/10 transition-all duration-200 shadow-sm hover:shadow-md border border-border/50"
                     title={social.label}
                   >
                     {social.icon}
@@ -73,7 +73,7 @@ export function Footer() {
                 <li key={link.label}>
                   <Link 
                     href={link.href} 
-                    className="text-muted-foreground hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors duration-200 text-sm font-medium"
+                    className="text-muted-foreground hover:text-[#01ae79] transition-colors duration-200 text-sm font-medium"
                   >
                     {link.label}
                   </Link>
@@ -90,7 +90,7 @@ export function Footer() {
                 <li key={link.label}>
                   <Link 
                     href={link.href} 
-                    className="text-muted-foreground hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors duration-200 text-sm font-medium"
+                    className="text-muted-foreground hover:text-[#01ae79] transition-colors duration-200 text-sm font-medium"
                   >
                     {link.label}
                   </Link>

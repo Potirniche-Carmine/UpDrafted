@@ -225,14 +225,14 @@ function SearchBar() {
       <Input
         type="search"
         placeholder="Search athletes, coaches..."
-        className="w-full rounded-lg bg-background/50 pl-10 pr-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500/50 focus:border-green-500/50 border-green-200/50 dark:border-green-800/50"
+        className="w-full rounded-lg bg-background/50 pl-10 pr-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#01ae79]/50 focus:border-[#01ae79]/50 border-[#01ae79]/20 dark:border-[#01ae79]/30"
         value={searchTerm}
         onChange={(e) => setSearchTerm(e.target.value)}
       />
       
       {/* Search Results Dropdown */}
       {isOpen && (
-        <div className="absolute top-full left-0 right-0 mt-2 bg-card border border-green-200/50 dark:border-green-800/50 rounded-lg shadow-lg z-50 max-h-80 overflow-y-auto">
+        <div className="absolute top-full left-0 right-0 mt-2 bg-card border border-[#01ae79]/20 dark:border-[#01ae79]/30 rounded-lg shadow-lg z-50 max-h-80 overflow-y-auto">
           <div className="p-2">
             {filteredUsers.map((user) => (
               <Link 
@@ -241,17 +241,17 @@ function SearchBar() {
                 onClick={handleUserClick}
                 className="block"
               >
-                <div className="flex items-center gap-3 p-3 rounded-lg hover:bg-green-50/50 dark:hover:bg-green-950/20 transition-colors cursor-pointer border border-transparent hover:border-green-200/50 dark:hover:border-green-800/50">
+                <div className="flex items-center gap-3 p-3 rounded-lg hover:bg-[#01ae79]/5 dark:hover:bg-[#01ae79]/10 transition-colors cursor-pointer border border-transparent hover:border-[#01ae79]/20 dark:hover:border-[#01ae79]/30">
                   <div className="relative flex-shrink-0">
                     <Image
                       src={user.profilePicture}
                       alt={user.name}
                       width={32}
                       height={32}
-                      className="rounded-full object-cover ring-2 ring-green-100 dark:ring-green-900"
+                      className="rounded-full object-cover ring-2 ring-[#01ae79]/20 dark:ring-[#01ae79]/30"
                     />
                     {user.verified && (
-                      <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-green-500 rounded-full flex items-center justify-center">
+                      <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-[#01ae79] rounded-full flex items-center justify-center">
                         <div className="w-1.5 h-1.5 bg-white rounded-full"></div>
                       </div>
                     )}
@@ -269,7 +269,7 @@ function SearchBar() {
                     </div>
                     
                     <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                      <span className="font-medium text-green-600 dark:text-green-400">{user.sport}</span>
+                      <span className="font-medium text-[#01ae79]">{user.sport}</span>
                       <span>•</span>
                       <span className="truncate">{user.location}</span>
                     </div>
@@ -282,7 +282,7 @@ function SearchBar() {
             <div className="pt-2 border-t border-border/30">
               <button 
                 onClick={handleViewAll}
-                className="block w-full p-3 text-center text-sm text-green-600 hover:text-green-700 dark:text-green-400 dark:hover:text-green-300 font-medium hover:bg-green-50/50 dark:hover:bg-green-950/20 rounded-lg transition-colors"
+                className="block w-full p-3 text-center text-sm text-[#01ae79] hover:text-[#01ae79]/80 font-medium hover:bg-[#01ae79]/5 dark:hover:bg-[#01ae79]/10 rounded-lg transition-colors"
               >
                 View all results for &ldquo;{searchTerm}&rdquo;
               </button>
@@ -313,8 +313,8 @@ export function Header() {
 
   const userButtonAppearance = {
     elements: {
-      userButtonAvatarBox: "w-9 h-9 ring-2 ring-green-100 dark:ring-green-900", 
-      userButtonPopoverActionButton: "text-primary hover:bg-green-50 dark:hover:bg-green-950/20 hover:text-green-600 rounded-md",
+      userButtonAvatarBox: "w-9 h-9 ring-2 ring-[#01ae79]/20 dark:ring-[#01ae79]/30", 
+      userButtonPopoverActionButton: "text-primary hover:bg-[#01ae79]/5 dark:hover:bg-[#01ae79]/10 hover:text-[#01ae79] rounded-md",
       userButtonPopoverActionButton__signOut: "text-destructive hover:!bg-destructive/20 hover:!text-destructive-foreground rounded-md",
     },
   };
@@ -326,7 +326,7 @@ export function Header() {
   };
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-green-200/30 dark:border-green-800/30 bg-white/95 dark:bg-gray-950/95 backdrop-blur supports-[backdrop-filter]:bg-white/80 dark:supports-[backdrop-filter]:bg-gray-950/80">
+    <header className="sticky top-0 z-50 w-full border-b border-[#01ae79]/20 dark:border-[#01ae79]/30 bg-white/95 dark:bg-gray-950/95 backdrop-blur supports-[backdrop-filter]:bg-white/80 dark:supports-[backdrop-filter]:bg-gray-950/80">
       <div className="container mx-auto flex h-16 max-w-screen-2xl items-center justify-between px-4 sm:px-6 lg:px-8">
         {/* Logo */}
         <Link href={homeUrl} className="flex items-center space-x-2 flex-shrink-0">
@@ -353,7 +353,7 @@ export function Header() {
             <Link
               key={item.key}
               href={item.href}
-              className="transition-colors flex items-center px-3 py-2 group rounded-lg text-muted-foreground hover:text-green-600 dark:hover:text-green-400 hover:bg-green-50/50 dark:hover:bg-green-950/20"
+              className="transition-colors flex items-center px-3 py-2 group rounded-lg text-muted-foreground hover:text-[#01ae79] hover:bg-[#01ae79]/5 dark:hover:bg-[#01ae79]/10"
               title={item.label}
             >
               {item.icon}
@@ -386,25 +386,25 @@ export function Header() {
               </UserButton>
               <div
                 className="absolute -bottom-[2px] -right-[2px] w-[13px] h-[13px] 
-                           bg-green-100 dark:bg-green-900 
+                           bg-[#01ae79]/10 dark:bg-[#01ae79]/20 
                            rounded-full flex items-center justify-center 
                            pointer-events-none 
                            border-2 border-background shadow-sm"
               >
-                <ChevronDown className="h-2.5 w-2.5 text-green-700 dark:text-green-200" />
+                <ChevronDown className="h-2.5 w-2.5 text-[#01ae79]" />
               </div>
             </div>
           </SignedIn>
           
           <SignedOut>
             <SignInButton mode="modal">
-              <Button variant="default" size="sm" className="flex items-center space-x-2 ml-2 bg-green-600 hover:bg-green-700 text-white">
+              <Button variant="default" size="sm" className="flex items-center space-x-2 ml-2 bg-[#01ae79] hover:bg-[#01ae79]/90 text-white">
                 <LogIn className="h-4 w-4" />
                 <span>Sign In</span>
               </Button>
             </SignInButton>
             <SignUpButton mode="modal">
-              <Button variant="outline" size="sm" className="ml-2 border-green-200 hover:bg-green-50 dark:border-green-800 dark:hover:bg-green-950/20">
+              <Button variant="outline" size="sm" className="ml-2 border-[#01ae79]/30 hover:bg-[#01ae79]/5 dark:border-[#01ae79]/30 dark:hover:bg-[#01ae79]/10 text-[#01ae79] hover:text-[#01ae79]">
                 Sign Up
               </Button>
             </SignUpButton>
@@ -446,7 +446,7 @@ export function Header() {
                         key={item.key}
                         href={item.href}
                         onClick={() => setMobileMenuOpen(false)}
-                        className="flex items-center space-x-3 rounded-lg px-3 py-3 text-sm font-medium transition-colors hover:bg-green-50 dark:hover:bg-green-950/20 hover:text-green-600 dark:hover:text-green-400"
+                        className="flex items-center space-x-3 rounded-lg px-3 py-3 text-sm font-medium transition-colors hover:bg-[#01ae79]/5 dark:hover:bg-[#01ae79]/10 hover:text-[#01ae79]"
                       >
                         {item.icon}
                         <span>{item.label}</span>
@@ -461,7 +461,7 @@ export function Header() {
                         handleViewProfile();
                         setMobileMenuOpen(false);
                       }}
-                      className="flex items-center space-x-3 rounded-lg px-3 py-3 text-sm font-medium transition-colors hover:bg-green-50 dark:hover:bg-green-950/20 hover:text-green-600 dark:hover:text-green-400 w-full text-left"
+                      className="flex items-center space-x-3 rounded-lg px-3 py-3 text-sm font-medium transition-colors hover:bg-[#01ae79]/5 dark:hover:bg-[#01ae79]/10 hover:text-[#01ae79] w-full text-left"
                     >
                       <Users className="h-5 w-5" />
                       <span>View Profile</span>
@@ -478,7 +478,7 @@ export function Header() {
           
           <SignedOut>
             <SignInButton mode="modal">
-              <Button variant="default" size="sm" className="bg-green-600 hover:bg-green-700 text-white">
+              <Button variant="default" size="sm" className="bg-[#01ae79] hover:bg-[#01ae79]/90 text-white">
                 <LogIn className="h-4 w-4" />
               </Button>
             </SignInButton>

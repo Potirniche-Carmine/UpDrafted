@@ -502,7 +502,7 @@ export default function SearchPage() {
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="mb-6">
-          <h1 className="text-2xl md:text-4xl font-bold bg-gradient-to-r from-green-600 via-emerald-600 to-teal-600 bg-clip-text text-transparent mb-2">
+          <h1 className="text-2xl md:text-4xl font-bold bg-gradient-to-r from-[#01ae79] via-[#01ae79] to-[#01ae79] bg-clip-text text-transparent mb-2">
             Discovery
           </h1>
           <p className="text-muted-foreground text-sm md:text-lg">
@@ -519,19 +519,19 @@ export default function SearchPage() {
               placeholder="Search by name, school, or position..."
               value={nameFilter}
               onChange={(e) => setNameFilter(e.target.value)}
-              className="w-full pl-9 pr-4 py-3 text-sm border border-border/50 bg-background/80 backdrop-blur-sm text-foreground rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all"
+              className="w-full pl-9 pr-4 py-3 text-sm border border-border/50 bg-background/80 backdrop-blur-sm text-foreground rounded-lg focus:outline-none focus:ring-2 focus:ring-[#01ae79] focus:border-[#01ae79] transition-all"
             />
           </div>
         </div>
 
         {/* Tabs - Restored shadcn implementation */}
         <Tabs value={activeTab} onValueChange={handleTabChange} className="mb-6">
-          <TabsList className={`grid w-full max-w-lg bg-green-50/50 dark:bg-green-950/20 p-1 rounded-xl`} style={{ gridTemplateColumns: `repeat(${availableTabs.length}, 1fr)` }}>
+          <TabsList className={`grid w-full max-w-lg bg-[#01ae79]/5 dark:bg-[#01ae79]/10 p-1 rounded-xl`} style={{ gridTemplateColumns: `repeat(${availableTabs.length}, 1fr)` }}>
             {availableTabs.map(tab => (
               <TabsTrigger 
                 key={tab.value} 
                 value={tab.value} 
-                className="flex items-center gap-1 md:gap-2 text-xs md:text-sm data-[state=active]:bg-green-600 data-[state=active]:text-white cursor-pointer hover:bg-green-100 dark:hover:bg-green-950/30 transition-colors"
+                className="flex items-center gap-1 md:gap-2 text-xs md:text-sm data-[state=active]:bg-[#01ae79] data-[state=active]:text-white cursor-pointer hover:bg-[#01ae79]/10 dark:hover:bg-[#01ae79]/20 transition-colors"
               >
                 {tab.icon}
                 <span className="hidden sm:inline">{tab.label}</span>
@@ -549,13 +549,13 @@ export default function SearchPage() {
                 Filters
               </h3>
               <div className="flex gap-2">
-                <Button variant="outline" size="sm" onClick={clearFilters} className="text-xs md:text-sm text-green-600 border-green-200 hover:bg-green-50 dark:border-green-800 dark:hover:bg-green-950/20">
+                <Button variant="outline" size="sm" onClick={clearFilters} className="text-xs md:text-sm text-[#01ae79] border-[#01ae79]/30 hover:bg-[#01ae79]/5 dark:border-[#01ae79]/40 dark:hover:bg-[#01ae79]/10">
                   Clear
                 </Button>
                 <Button 
                   onClick={handleSearch} 
                   size="sm"
-                  className="text-xs md:text-sm bg-green-600 hover:bg-green-700 text-white"
+                  className="text-xs md:text-sm bg-[#01ae79] hover:bg-[#01ae79]/90 text-white"
                 >
                   <Search className="h-3 w-3 md:h-4 md:w-4 mr-1" />
                   Discover
@@ -637,8 +637,8 @@ export default function SearchPage() {
           <TabsContent value={activeTab} className="mt-0">
             {!hasSearched ? (
               <div className="text-center py-12 md:py-16">
-                <div className="w-16 h-16 md:w-24 md:h-24 rounded-full bg-green-100 dark:bg-green-900 flex items-center justify-center mx-auto mb-4 md:mb-6">
-                  <Search className="h-8 w-8 md:h-12 md:w-12 text-green-600 dark:text-green-400" />
+                <div className="w-16 h-16 md:w-24 md:h-24 rounded-full bg-[#01ae79]/10 dark:bg-[#01ae79]/20 flex items-center justify-center mx-auto mb-4 md:mb-6">
+                  <Search className="h-8 w-8 md:h-12 md:w-12 text-[#01ae79] dark:text-[#01ae79]" />
                 </div>
                 <h3 className="text-lg md:text-xl font-semibold text-foreground mb-2">
                   Ready to discover amazing talent?
@@ -658,7 +658,7 @@ export default function SearchPage() {
                     href={`/profile/${user.id}`}
                     className="group block"
                   >
-                    <div className="flex flex-col p-4 rounded-lg border border-border/50 bg-card/50 backdrop-blur-sm hover:shadow-md hover:border-green-200/50 dark:hover:border-green-800/50 transition-all duration-200 hover:bg-card/80 cursor-pointer">
+                    <div className="flex flex-col p-4 rounded-lg border border-border/50 bg-card/50 backdrop-blur-sm hover:shadow-md hover:border-[#01ae79]/30 dark:hover:border-[#01ae79]/40 transition-all duration-200 hover:bg-card/80 cursor-pointer">
                       {/* User Header */}
                       <div className="flex items-center gap-3 mb-3">
                         <div className="relative flex-shrink-0">
@@ -667,10 +667,10 @@ export default function SearchPage() {
                             alt={user.name}
                             width={48}
                             height={48}
-                            className="rounded-full object-cover ring-2 ring-green-100 dark:ring-green-900 group-hover:ring-green-200 dark:group-hover:ring-green-800 transition-colors"
+                            className="rounded-full object-cover ring-2 ring-[#01ae79]/20 dark:ring-[#01ae79]/30 group-hover:ring-[#01ae79]/40 dark:group-hover:ring-[#01ae79]/50 transition-colors"
                           />
                           {user.verified && (
-                            <div className="absolute -top-1 -right-1 bg-green-500 rounded-full p-0.5">
+                            <div className="absolute -top-1 -right-1 bg-[#01ae79] rounded-full p-0.5">
                               <Award className="h-2.5 w-2.5 text-white" />
                             </div>
                           )}
@@ -687,7 +687,7 @@ export default function SearchPage() {
                       {/* User Details */}
                       <div className="space-y-2 flex-grow">
                         <div className="flex items-center gap-1">
-                          <span className="font-medium text-green-600 dark:text-green-400 text-sm">{user.sport}</span>
+                          <span className="font-medium text-[#01ae79] dark:text-[#01ae79] text-sm">{user.sport}</span>
                           {user.role === 'athlete' && (
                             <>
                               <span className="text-muted-foreground text-xs">•</span>
@@ -724,7 +724,7 @@ export default function SearchPage() {
                         {user.isConnected ? (
                           <Button 
                             size="sm" 
-                            className="w-full h-8 text-xs bg-green-600 hover:bg-green-700 text-white"
+                            className="w-full h-8 text-xs bg-[#01ae79] hover:bg-[#01ae79]/90 text-white"
                             onClick={(e) => {
                               e.preventDefault();
                               e.stopPropagation();
@@ -737,7 +737,7 @@ export default function SearchPage() {
                         ) : (
                           <Button 
                             size="sm" 
-                            className="w-full h-8 text-xs bg-green-600 hover:bg-green-700 text-white"
+                            className="w-full h-8 text-xs bg-[#01ae79] hover:bg-[#01ae79]/90 text-white"
                             onClick={(e) => {
                               e.preventDefault();
                               e.stopPropagation();
@@ -755,11 +755,11 @@ export default function SearchPage() {
               </div>
             ) : (
               <div className="text-center py-12 md:py-16">
-                <div className="w-16 h-16 md:w-24 md:h-24 rounded-full bg-green-100 dark:bg-green-900 flex items-center justify-center mx-auto mb-4 md:mb-6">
-                  {activeTab === 'athletes' ? <User className="h-8 w-8 md:h-12 md:w-12 text-green-600 dark:text-green-400" /> :
-                   activeTab === 'coaches' ? <Users className="h-8 w-8 md:h-12 md:w-12 text-green-600 dark:text-green-400" /> :
-                   activeTab === 'recruiters' ? <Target className="h-8 w-8 md:h-12 md:w-12 text-green-600 dark:text-green-400" /> :
-                   <Users className="h-8 w-8 md:h-12 md:w-12 text-green-600 dark:text-green-400" />}
+                <div className="w-16 h-16 md:w-24 md:h-24 rounded-full bg-[#01ae79]/10 dark:bg-[#01ae79]/20 flex items-center justify-center mx-auto mb-4 md:mb-6">
+                  {activeTab === 'athletes' ? <User className="h-8 w-8 md:h-12 md:w-12 text-[#01ae79] dark:text-[#01ae79]" /> :
+                   activeTab === 'coaches' ? <Users className="h-8 w-8 md:h-12 md:w-12 text-[#01ae79] dark:text-[#01ae79]" /> :
+                   activeTab === 'recruiters' ? <Target className="h-8 w-8 md:h-12 md:w-12 text-[#01ae79] dark:text-[#01ae79]" /> :
+                   <Users className="h-8 w-8 md:h-12 md:w-12 text-[#01ae79] dark:text-[#01ae79]" />}
                 </div>
                 <h3 className="text-lg md:text-xl font-semibold text-foreground mb-2">
                   No {activeTab === 'all' ? 'results' : activeTab} found
@@ -770,7 +770,7 @@ export default function SearchPage() {
                 <Button 
                   variant="outline" 
                   onClick={clearFilters}
-                  className="mt-4 border-green-200 hover:bg-green-50 dark:border-green-800 dark:hover:bg-green-950/20"
+                  className="mt-4 border-[#01ae79]/30 hover:bg-[#01ae79]/5 dark:border-[#01ae79]/40 dark:hover:bg-[#01ae79]/10"
                 >
                   Clear All Filters & Start Over
                 </Button>

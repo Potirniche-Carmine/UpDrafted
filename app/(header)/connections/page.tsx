@@ -118,11 +118,11 @@ const UserCard: React.FC<UserCardProps> = ({ user, onRemove }) => {
 
   return (
     <Link href={`/profile/${user.id}`} className="block h-full">
-      <Card className="group transition-all duration-300 hover:shadow-lg hover:shadow-green-500/5 border-border/50 hover:border-green-200/50 dark:hover:border-green-800/50 h-full cursor-pointer">
+      <Card className="group transition-all duration-300 hover:shadow-lg hover:shadow-[#01ae79]/5 border-border/50 hover:border-[#01ae79]/20 dark:hover:border-[#01ae79]/30 h-full cursor-pointer">
         <CardContent className="p-4 md:p-6 flex flex-col h-full">
           <div className="flex items-start space-x-4 mb-4">
             <div className="flex-shrink-0">
-              <Avatar className="w-16 h-16 md:w-20 md:h-20 ring-2 ring-green-100 dark:ring-green-900 group-hover:ring-green-200 dark:group-hover:ring-green-800 transition-colors hover:ring-green-300 dark:hover:ring-green-700">
+              <Avatar className="w-16 h-16 md:w-20 md:h-20 ring-2 ring-[#01ae79]/20 dark:ring-[#01ae79]/30 group-hover:ring-[#01ae79]/30 dark:group-hover:ring-[#01ae79]/40 transition-colors hover:ring-[#01ae79]/40 dark:hover:ring-[#01ae79]/50">
                 <AvatarImage src={user.avatar} alt={user.name} />
                 <AvatarFallback className="text-sm font-medium">
                   {user.name.split(' ').map(n => n[0]).join('')}
@@ -131,7 +131,7 @@ const UserCard: React.FC<UserCardProps> = ({ user, onRemove }) => {
             </div>
             <div className="flex-1 min-w-0">
               <h3 className="text-lg md:text-xl font-semibold text-foreground leading-tight mb-1">{user.name}</h3>
-              <p className="text-sm text-green-600 dark:text-green-400 font-medium mb-1">{user.sport}</p>
+              <p className="text-sm text-[#01ae79] font-medium mb-1">{user.sport}</p>
               <Badge variant="outline" className="text-xs capitalize mb-2">
                 {user.type}
               </Badge>
@@ -166,7 +166,7 @@ const UserCard: React.FC<UserCardProps> = ({ user, onRemove }) => {
               <span className="font-medium text-foreground">{user.mutualConnections}</span> Mutual Connections
             </div>
             <Button 
-              className="w-full h-10" 
+              className="w-full h-10 bg-[#01ae79] hover:bg-[#01ae79]/90 text-white" 
               size="sm"
               onClick={handleSendMessageClick}
             >
@@ -317,10 +317,10 @@ function App() {
         <div className="h-full flex flex-col border border-border/50 rounded-xl shadow-lg bg-card overflow-hidden">
           
           {/* Integrated Header */}
-          <div className="p-4 md:p-6 border-b border-border/50 bg-gradient-to-r from-green-50/20 to-emerald-50/20 dark:from-green-950/10 dark:to-emerald-950/10">
+          <div className="p-4 md:p-6 border-b border-border/50 bg-gradient-to-r from-[#01ae79]/5 to-[#01ae79]/10 dark:from-[#01ae79]/2 dark:to-[#01ae79]/10">
             <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-6">
               <div>
-                <h1 className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-green-600 via-emerald-600 to-teal-600 bg-clip-text text-transparent mb-2">
+                <h1 className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-[#01ae79] via-[#01ae79]/90 to-[#01ae79]/80 bg-clip-text text-transparent mb-2">
                   Your Network
                 </h1>
                 <div className="flex items-center gap-2 mt-1">
@@ -342,7 +342,7 @@ function App() {
                 <input
                   type="text"
                   placeholder="Search connections and requests..."
-                  className="w-full pl-9 pr-4 py-2.5 text-sm border border-border/50 bg-background/80 backdrop-blur-sm text-foreground rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all"
+                  className="w-full pl-9 pr-4 py-2.5 text-sm border border-border/50 bg-background/80 backdrop-blur-sm text-foreground rounded-lg focus:outline-none focus:ring-2 focus:ring-[#01ae79] focus:border-[#01ae79] transition-all"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                 />
@@ -358,7 +358,7 @@ function App() {
                 <TabsList className="grid w-full grid-cols-2 bg-transparent h-auto p-1">
                   <TabsTrigger 
                     value="connections" 
-                    className="flex items-center gap-2 data-[state=active]:bg-green-600 data-[state=active]:text-white h-10"
+                    className="flex items-center gap-2 data-[state=active]:bg-[#01ae79] data-[state=active]:text-white h-10"
                   >
                     <Users size={16} />
                     <span>Connections</span>
@@ -381,7 +381,7 @@ function App() {
                 </TabsList>
               </div>
 
-              <div className="flex-grow overflow-y-auto bg-gradient-to-b from-transparent to-green-50/5 dark:to-green-950/5">
+              <div className="flex-grow overflow-y-auto bg-gradient-to-b from-transparent to-[#01ae79]/5 dark:to-[#01ae79]/10">
                 <TabsContent value="connections" className="p-4 h-full m-0">
                   {filteredUsers.length > 0 ? (
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
@@ -391,8 +391,8 @@ function App() {
                     </div>
                   ) : (
                     <div className="flex flex-col items-center justify-center h-full text-center p-8">
-                      <div className="w-20 h-20 rounded-full bg-green-100 dark:bg-green-900 flex items-center justify-center mb-6">
-                        <Users className="h-10 w-10 text-green-600 dark:text-green-400" />
+                      <div className="w-20 h-20 rounded-full bg-[#01ae79]/10 dark:bg-[#01ae79]/20 flex items-center justify-center mb-6">
+                        <Users className="h-10 w-10 text-[#01ae79]" />
                       </div>
                       <h3 className="text-xl font-semibold text-foreground mb-2">No connections found</h3>
                       <p className="text-muted-foreground mb-4 max-w-md">
@@ -401,7 +401,7 @@ function App() {
                           : 'Start building your network by connecting with athletes, coaches, and recruiters.'}
                       </p>
                       {!searchTerm && activeFilter === 'all' && (
-                        <Button className="mt-2">
+                        <Button className="mt-2 bg-[#01ae79] hover:bg-[#01ae79]/90 text-white">
                           <Search size={16} className="mr-2" />
                           Find People
                         </Button>

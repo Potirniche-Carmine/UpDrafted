@@ -249,7 +249,7 @@ export default function DashboardPage() {
         {/* Quick Stats */}
         <div className="grid gap-6 md:grid-cols-3">
           <Link href="/connections?tab=requests">
-            <Card className="cursor-pointer transition-all duration-200 hover:shadow-md hover:scale-[1.02] border-border hover:border-green-200 dark:hover:border-green-800">
+            <Card className="cursor-pointer transition-all duration-200 hover:shadow-md hover:scale-[1.02] border-border hover:border-[#01ae79]/30 dark:hover:border-[#01ae79]/40">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Pending Connections</CardTitle>
                 <UserPlus className="h-4 w-4 text-muted-foreground" />
@@ -262,7 +262,7 @@ export default function DashboardPage() {
           </Link>
 
           <Link href="/messaging">
-            <Card className="cursor-pointer transition-all duration-200 hover:shadow-md hover:scale-[1.02] border-border hover:border-green-200 dark:hover:border-green-800">
+            <Card className="cursor-pointer transition-all duration-200 hover:shadow-md hover:scale-[1.02] border-border hover:border-[#01ae79]/30 dark:hover:border-[#01ae79]/40">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Unread Messages</CardTitle>
                 <MessageSquare className="h-4 w-4 text-muted-foreground" />
@@ -277,7 +277,7 @@ export default function DashboardPage() {
           </Link>
 
           <Link href="/notifications">
-            <Card className="cursor-pointer transition-all duration-200 hover:shadow-md hover:scale-[1.02] border-border hover:border-green-200 dark:hover:border-green-800">
+            <Card className="cursor-pointer transition-all duration-200 hover:shadow-md hover:scale-[1.02] border-border hover:border-[#01ae79]/30 dark:hover:border-[#01ae79]/40">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Notifications</CardTitle>
                 <Bell className="h-4 w-4 text-muted-foreground" />
@@ -330,7 +330,7 @@ export default function DashboardPage() {
                           <p className="text-xs text-muted-foreground">{connection.requestedAt}</p>
                         </div>
                         <div className="flex flex-col sm:flex-row gap-2">
-                          <Button size="sm" className="h-8 text-xs">
+                          <Button size="sm" className="h-8 text-xs bg-[#01ae79] hover:bg-[#01ae79]/90 text-white">
                             <CheckCircle className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
                             Accept
                           </Button>
@@ -370,8 +370,8 @@ export default function DashboardPage() {
                       <Button 
                         className={`w-full h-auto p-5 justify-start transition-all duration-200 hover:scale-[1.02] ${
                           index % 2 === 0 
-                            ? 'bg-green-100 border-green-300 text-green-800 hover:bg-green-200 hover:border-green-400 dark:bg-green-900/60 dark:border-green-700 dark:text-green-100 dark:hover:bg-green-800/70 dark:hover:border-green-600'
-                            : 'bg-green-50 border-green-200 text-green-700 hover:bg-green-100 hover:border-green-300 dark:bg-green-950/20 dark:border-green-800/40 dark:text-green-300 dark:hover:bg-green-900/30 dark:hover:border-green-700/60'
+                            ? 'bg-[#01ae79]/10 border-[#01ae79]/30 text-[#01ae79] hover:bg-[#01ae79]/20 hover:border-[#01ae79]/40 dark:bg-[#01ae79]/20 dark:border-[#01ae79]/40 dark:text-[#01ae79] dark:hover:bg-[#01ae79]/30 dark:hover:border-[#01ae79]/50'
+                            : 'bg-[#01ae79]/5 border-[#01ae79]/20 text-[#01ae79] hover:bg-[#01ae79]/10 hover:border-[#01ae79]/30 dark:bg-[#01ae79]/10 dark:border-[#01ae79]/30 dark:text-[#01ae79] dark:hover:bg-[#01ae79]/20 dark:hover:border-[#01ae79]/40'
                         }`}
                       >
                         <div className="flex items-start gap-3">

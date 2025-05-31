@@ -283,7 +283,7 @@ export default function MessagingPage() {
     const parts = text.split(regex);
     return parts.map((part, index) => 
       regex.test(part) ? (
-        <span key={index} className="bg-green-200 dark:bg-green-800 text-green-900 dark:text-green-100 px-1 rounded">
+        <span key={index} className="bg-[#01ae79]/20 dark:bg-[#01ae79]/80 text-[#01ae79] dark:text-[#01ae79] px-1 rounded">
           {part}
         </span>
       ) : part
@@ -297,18 +297,18 @@ export default function MessagingPage() {
         <div className="h-full flex border border-border/50 rounded-xl shadow-lg bg-card overflow-hidden">
           
           {/* Sidebar - Conversations/Search Results */}
-          <div className={`${selectedConversationId ? 'hidden md:flex' : 'flex'} w-full md:w-80 lg:w-96 border-r border-border/50 flex-col bg-gradient-to-b from-green-50/20 to-emerald-50/20 dark:from-green-950/10 dark:to-emerald-950/10`}>
+          <div className={`${selectedConversationId ? 'hidden md:flex' : 'flex'} w-full md:w-80 lg:w-96 border-r border-border/50 flex-col bg-gradient-to-b from-[#01ae79]/20 to-[#01ae79]/20 dark:from-[#01ae79]/10 dark:to-[#01ae79]/10`}>
             
             {/* Sidebar Header with integrated search */}
             <div className="p-4 border-b border-border/50 bg-card/50 backdrop-blur-sm space-y-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <h1 className="text-2xl font-bold bg-gradient-to-r from-green-600 via-emerald-600 to-teal-600 bg-clip-text text-transparent">
+                  <h1 className="text-2xl font-bold bg-gradient-to-r from-[#01ae79] via-[#01ae79] to-[#01ae79] bg-clip-text text-transparent">
                     Messages
                   </h1>
                   <div className="flex items-center gap-2 mt-1">
                     {unreadCount > 0 && (
-                      <Badge variant="secondary" className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 text-xs">
+                      <Badge variant="secondary" className="bg-[#01ae79]/10 text-[#01ae79] dark:bg-[#01ae79]/20 dark:text-[#01ae79] text-xs">
                         {unreadCount} unread
                       </Badge>
                     )}
@@ -317,7 +317,7 @@ export default function MessagingPage() {
                     </Badge>
                   </div>
                 </div>
-                <Button variant="outline" size="sm" className="border-green-200 hover:border-green-300 hover:bg-green-50 dark:border-green-800 dark:hover:border-green-700 dark:hover:bg-green-950/20">
+                <Button variant="outline" size="sm" className="border-[#01ae79]/30 hover:border-[#01ae79]/50 hover:bg-[#01ae79]/5 dark:border-[#01ae79]/40 dark:hover:border-[#01ae79]/60 dark:hover:bg-[#01ae79]/10">
                   <PlusCircle className="h-4 w-4 mr-2"/> New
                 </Button>
               </div>
@@ -327,7 +327,7 @@ export default function MessagingPage() {
                 <input
                   type="text"
                   placeholder="Search conversations and messages..."
-                  className="w-full pl-9 pr-4 py-2.5 text-sm border border-border/50 bg-background/80 backdrop-blur-sm text-foreground rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all"
+                  className="w-full pl-9 pr-4 py-2.5 text-sm border border-border/50 bg-background/80 backdrop-blur-sm text-foreground rounded-lg focus:outline-none focus:ring-2 focus:ring-[#01ae79] focus:border-[#01ae79] transition-all"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                 />
@@ -350,7 +350,7 @@ export default function MessagingPage() {
                       <div
                         key={`${result.conversation.id}-${result.type}-${index}`}
                         onClick={() => handleSearchResultClick(result)}
-                        className="p-3 rounded-lg cursor-pointer hover:bg-green-100/50 dark:hover:bg-green-950/20 transition-colors border border-transparent hover:border-green-200/50 dark:hover:border-green-800/50"
+                        className="p-3 rounded-lg cursor-pointer hover:bg-[#01ae79]/5 dark:hover:bg-[#01ae79]/10 transition-colors border border-transparent hover:border-[#01ae79]/20 dark:hover:border-[#01ae79]/30"
                       >
                         <div className="flex items-start space-x-3">
                           <Image 
@@ -358,7 +358,7 @@ export default function MessagingPage() {
                             alt={result.conversation.partnerName} 
                             width={40} 
                             height={40} 
-                            className="rounded-full object-cover ring-2 ring-green-100 dark:ring-green-900 flex-shrink-0" 
+                            className="rounded-full object-cover ring-2 ring-[#01ae79]/20 dark:ring-[#01ae79]/30 flex-shrink-0" 
                           />
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center justify-between mb-1">
@@ -382,7 +382,7 @@ export default function MessagingPage() {
                               )}
                             </p>
                             {result.message && (
-                              <p className="text-xs text-green-600 dark:text-green-400 mt-1">
+                              <p className="text-xs text-[#01ae79] dark:text-[#01ae79] mt-1">
                                 {result.message.timestamp}
                               </p>
                             )}
@@ -408,8 +408,8 @@ export default function MessagingPage() {
                         onClick={() => setSelectedConversationId(convo.id)}
                         className={`p-4 rounded-lg cursor-pointer transition-all duration-200 ${
                           selectedConversationId === convo.id
-                            ? 'bg-green-100 dark:bg-green-950/30 border border-green-300 dark:border-green-700 shadow-sm'
-                            : 'hover:bg-green-50/50 dark:hover:bg-green-950/10 border border-transparent hover:border-green-200/50 dark:hover:border-green-800/50'
+                            ? 'bg-[#01ae79]/10 dark:bg-[#01ae79]/20 border border-[#01ae79]/30 dark:border-[#01ae79]/40 shadow-sm'
+                            : 'hover:bg-[#01ae79]/5 dark:hover:bg-[#01ae79]/10 border border-transparent hover:border-[#01ae79]/20 dark:hover:border-[#01ae79]/30'
                         }`}
                       >
                         <div className="flex items-center space-x-3">
@@ -419,15 +419,15 @@ export default function MessagingPage() {
                               alt={convo.partnerName} 
                               width={48} 
                               height={48} 
-                              className="rounded-full object-cover ring-2 ring-green-100 dark:ring-green-900" 
+                              className="rounded-full object-cover ring-2 ring-[#01ae79]/20 dark:ring-[#01ae79]/30" 
                             />
-                            {convo.isOnline && <span className="absolute bottom-0 right-0 block h-3 w-3 rounded-full bg-green-500 ring-2 ring-card"></span>}
+                            {convo.isOnline && <span className="absolute bottom-0 right-0 block h-3 w-3 rounded-full bg-[#01ae79] ring-2 ring-card"></span>}
                           </div>
                           <div className="flex-1 min-w-0">
                             <div className="flex justify-between items-center mb-1">
                               <h3 className={`text-sm font-semibold truncate ${
                                 selectedConversationId === convo.id 
-                                  ? 'text-green-700 dark:text-green-300' 
+                                  ? 'text-[#01ae79] dark:text-[#01ae79]' 
                                   : 'text-foreground'
                               }`}>
                                 {convo.partnerName}
@@ -437,7 +437,7 @@ export default function MessagingPage() {
                             <div className="flex justify-between items-center">
                               <p className="text-xs text-muted-foreground truncate">{convo.lastMessage}</p>
                               {convo.unreadCount > 0 && (
-                                <span className="ml-2 bg-green-600 text-white text-xs font-bold px-2 py-1 rounded-full flex-shrink-0">{convo.unreadCount}</span>
+                                <span className="ml-2 bg-[#01ae79] text-white text-xs font-bold px-2 py-1 rounded-full flex-shrink-0">{convo.unreadCount}</span>
                               )}
                             </div>
                           </div>
@@ -457,7 +457,7 @@ export default function MessagingPage() {
           </div>
 
           {/* Main Chat Area */}
-          <div className={`${selectedConversationId ? 'flex' : 'hidden md:flex'} flex-1 flex-col bg-gradient-to-b from-background to-green-50/10 dark:to-green-950/5`}>
+          <div className={`${selectedConversationId ? 'flex' : 'hidden md:flex'} flex-1 flex-col bg-gradient-to-b from-background to-[#01ae79]/10 dark:to-[#01ae79]/5`}>
             {activeConversation ? (
               <>
                 {/* Simplified Chat Header */}
@@ -467,7 +467,7 @@ export default function MessagingPage() {
                       variant="ghost"
                       size="sm"
                       onClick={() => setSelectedConversationId(null)}
-                      className="md:hidden mr-2 hover:bg-green-100 dark:hover:bg-green-950/20"
+                      className="md:hidden mr-2 hover:bg-[#01ae79]/10 dark:hover:bg-[#01ae79]/20"
                     >
                       <ArrowLeft size={18} />
                     </Button>
@@ -477,10 +477,10 @@ export default function MessagingPage() {
                         alt={activeConversation.partnerName} 
                         width={48} 
                         height={48} 
-                        className="rounded-full object-cover ring-2 ring-green-100 dark:ring-green-900" 
+                        className="rounded-full object-cover ring-2 ring-[#01ae79]/20 dark:ring-[#01ae79]/30" 
                       />
                       {activeConversation.isOnline && (
-                        <span className="absolute bottom-0 right-0 block h-3 w-3 rounded-full bg-green-500 ring-2 ring-card"></span>
+                        <span className="absolute bottom-0 right-0 block h-3 w-3 rounded-full bg-[#01ae79] ring-2 ring-card"></span>
                       )}
                     </Link>
                     <div>
@@ -488,7 +488,7 @@ export default function MessagingPage() {
                         <h2 className="text-lg font-semibold text-foreground">{activeConversation.partnerName}</h2>
                       </Link>
                       {activeConversation.isOnline ? (
-                        <p className="text-sm text-green-600 dark:text-green-400">Online now</p>
+                        <p className="text-sm text-[#01ae79] dark:text-[#01ae79]">Online now</p>
                       ) : (
                         <p className="text-sm text-muted-foreground">Last seen {activeConversation.timestamp}</p>
                       )}
@@ -499,7 +499,7 @@ export default function MessagingPage() {
                 {/* Messages Area */}
                 <div 
                   ref={messagesContainerRef}
-                  className="flex-grow p-4 space-y-4 overflow-y-auto bg-gradient-to-b from-transparent to-green-50/5 dark:to-green-950/5"
+                  className="flex-grow p-4 space-y-4 overflow-y-auto bg-gradient-to-b from-transparent to-[#01ae79]/5 dark:to-[#01ae79]/5"
                 >
                   {activeMessages.map((msg) => (
                     <div 
@@ -509,20 +509,20 @@ export default function MessagingPage() {
                     >
                       <div className={`max-w-[75%] md:max-w-[70%] p-3 rounded-2xl shadow-sm relative ${
                         msg.sender === 'me' 
-                          ? 'bg-green-600 text-white rounded-br-md' 
+                          ? 'bg-[#01ae79] text-white rounded-br-md' 
                           : `bg-card border text-foreground rounded-bl-md ${
                               !msg.isRead && msg.sender === 'partner' 
-                                ? 'border-green-300 dark:border-green-700 bg-green-50/30 dark:bg-green-950/20' 
+                                ? 'border-[#01ae79]/30 dark:border-[#01ae79]/40 bg-[#01ae79]/5 dark:bg-[#01ae79]/10' 
                                 : 'border-border/40'
                             }`
                       }`}>
                         {!msg.isRead && msg.sender === 'partner' && (
-                          <div className="absolute -left-2 top-1/2 transform -translate-y-1/2 w-2 h-2 bg-green-500 rounded-full transition-opacity duration-300"></div>
+                          <div className="absolute -left-2 top-1/2 transform -translate-y-1/2 w-2 h-2 bg-[#01ae79] rounded-full transition-opacity duration-300"></div>
                         )}
                         <p className="text-sm leading-relaxed">{msg.text}</p>
                         <p className={`text-xs mt-2 ${
                           msg.sender === 'me' 
-                            ? 'text-green-100 text-right' 
+                            ? 'text-[#01ae79]/20 text-right' 
                             : 'text-muted-foreground text-left'
                         }`}>
                           {msg.timestamp}
@@ -535,7 +535,7 @@ export default function MessagingPage() {
                 {/* Message Input */}
                 <form onSubmit={handleSendMessage} className="p-4 border-t border-border/50 bg-card/80 backdrop-blur-sm">
                   <div className="flex items-center space-x-3">
-                    <Button variant="ghost" size="icon" type="button" className="hidden sm:flex text-muted-foreground hover:text-green-600 hover:bg-green-100 dark:hover:bg-green-950/20">
+                    <Button variant="ghost" size="icon" type="button" className="hidden sm:flex text-muted-foreground hover:text-[#01ae79] hover:bg-[#01ae79]/10 dark:hover:bg-[#01ae79]/20">
                       <Paperclip className="h-5 w-5"/>
                     </Button>
                     <div className="flex-1 relative">
@@ -544,13 +544,13 @@ export default function MessagingPage() {
                         value={newMessage}
                         onChange={(e) => setNewMessage(e.target.value)}
                         placeholder="Type a message..."
-                        className="w-full px-4 py-3 pr-12 text-sm rounded-full border border-border/50 bg-background/70 focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none transition-all"
+                        className="w-full px-4 py-3 pr-12 text-sm rounded-full border border-border/50 bg-background/70 focus:ring-2 focus:ring-[#01ae79] focus:border-[#01ae79] outline-none transition-all"
                       />
                       <Button 
                         variant="ghost" 
                         size="icon" 
                         type="button" 
-                        className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8 text-muted-foreground hover:text-green-600 hover:bg-green-100 dark:hover:bg-green-950/20"
+                        className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8 text-muted-foreground hover:text-[#01ae79] hover:bg-[#01ae79]/10 dark:hover:bg-[#01ae79]/20"
                       >
                         <Smile className="h-4 w-4"/>
                       </Button>
@@ -559,7 +559,7 @@ export default function MessagingPage() {
                       type="submit" 
                       size="icon" 
                       disabled={!newMessage.trim()}
-                      className="bg-green-600 hover:bg-green-700 text-white h-12 w-12 rounded-full shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="bg-[#01ae79] hover:bg-[#01ae79]/90 text-white h-12 w-12 rounded-full shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       <Send className="h-5 w-5" />
                     </Button>
@@ -568,14 +568,14 @@ export default function MessagingPage() {
               </>
             ) : (
               <div className="flex-grow flex flex-col items-center justify-center text-center p-8">
-                <div className="w-24 h-24 rounded-full bg-green-100 dark:bg-green-900 flex items-center justify-center mb-6">
-                  <MessageSquare className="h-12 w-12 text-green-600 dark:text-green-400" />
+                <div className="w-24 h-24 rounded-full bg-[#01ae79]/10 dark:bg-[#01ae79]/20 flex items-center justify-center mb-6">
+                  <MessageSquare className="h-12 w-12 text-[#01ae79] dark:text-[#01ae79]" />
                 </div>
                 <h3 className="text-2xl font-semibold text-foreground mb-2">Select a conversation</h3>
                 <p className="text-muted-foreground mb-6 max-w-md">
                   Choose a conversation from the sidebar to start messaging, or search for specific conversations and messages.
                 </p>
-                <Button variant="outline" className="border-green-200 hover:bg-green-50 dark:border-green-800 dark:hover:bg-green-950/20">
+                <Button variant="outline" className="border-[#01ae79]/30 hover:bg-[#01ae79]/5 dark:border-[#01ae79]/40 dark:hover:bg-[#01ae79]/10">
                   <PlusCircle className="h-4 w-4 mr-2" />
                   Start New Conversation
                 </Button>
