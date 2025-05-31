@@ -5,13 +5,18 @@ import {
   athleteProfiles, 
   coachProfiles,
   recruitingProfiles,
+  recruitingNeeds,
+  recruitingProfileNeeds,
   connections,
   activityLog,
   type NewUser,
   type NewAthleteProfile,
   type NewCoachProfile,
-  type NewRecruitingProfile
+  type NewRecruitingProfile,
+  type NewRecruitingNeeds,
+  type NewRecruitingProfileNeeds
 } from './schema';
+import { OnboardingProfileData } from '@/types/onboarding';
 
 // User operations
 export const userOperations = {
@@ -42,6 +47,19 @@ export const userOperations = {
       .where(eq(users.id, userId))
       .returning();
     return user;
+  },
+
+  // Create or update user (for onboarding)
+  async createOrUpdateUser(userId: string, userData: NewUser) {
+    const existingUser = await db.select().from(users).where(eq(users.id, userId)).limit(1);
+    
+    if (existingUser.length === 0) {
+      // Create new user
+      return await this.createUser(userData);
+    } else {
+      // Update existing user
+      return await this.updateUser(userId, userData);
+    }
   },
 
   // Get users by role
@@ -270,6 +288,55 @@ export const recruitingOperations = {
   }
 };
 
+// Recruiting needs operations
+export const recruitingNeedsOperations = {
+  // Create recruiting needs for coach
+  async createRecruitingNeeds(needsData: NewRecruitingNeeds) {
+    const [needs] = await db.insert(recruitingNeeds).values(needsData).returning();
+    return needs;
+  },
+
+  // Update recruiting needs for coach
+  async updateRecruitingNeeds(coachId: number, needsData: Partial<NewRecruitingNeeds>) {
+    const [needs] = await db
+      .update(recruitingNeeds)
+      .set({ ...needsData, updatedAt: new Date() })
+      .where(eq(recruitingNeeds.coachId, coachId))
+      .returning();
+    return needs;
+  },
+
+  // Get recruiting needs for coach
+  async getRecruitingNeedsByCoachId(coachId: number) {
+    return await db.query.recruitingNeeds.findFirst({
+      where: eq(recruitingNeeds.coachId, coachId)
+    });
+  },
+
+  // Create recruiting profile needs for recruiter
+  async createRecruitingProfileNeeds(needsData: NewRecruitingProfileNeeds) {
+    const [needs] = await db.insert(recruitingProfileNeeds).values(needsData).returning();
+    return needs;
+  },
+
+  // Update recruiting profile needs for recruiter
+  async updateRecruitingProfileNeeds(recruitingProfileId: number, needsData: Partial<NewRecruitingProfileNeeds>) {
+    const [needs] = await db
+      .update(recruitingProfileNeeds)
+      .set({ ...needsData, updatedAt: new Date() })
+      .where(eq(recruitingProfileNeeds.recruitingProfileId, recruitingProfileId))
+      .returning();
+    return needs;
+  },
+
+  // Get recruiting profile needs for recruiter
+  async getRecruitingProfileNeedsByProfileId(recruitingProfileId: number) {
+    return await db.query.recruitingProfileNeeds.findFirst({
+      where: eq(recruitingProfileNeeds.recruitingProfileId, recruitingProfileId)
+    });
+  }
+};
+
 // Connection operations
 export const connectionOperations = {
   // Create connection between athlete and coach
@@ -347,5 +414,130 @@ export const activityOperations = {
       limit,
       orderBy: [desc(activityLog.createdAt)]
     });
+  }
+};
+
+// Onboarding operations - High-level functions for the onboarding process
+export const onboardingOperations = {
+  // Complete onboarding for athlete
+  async createAthleteOnboarding(userId: string, email: string, profileData: OnboardingProfileData, profileImageR3Key?: string) {
+    // Create/update user
+    const user = await userOperations.createOrUpdateUser(userId, {
+      id: userId,
+      email,
+      role: 'athlete'
+    });
+
+    // Create athlete profile
+    const athleteProfile = await athleteOperations.createAthleteProfile({
+      userId,
+      fullName: profileData.fullName,
+      profileImageR3Key,
+      sport: profileData.sport!,
+      secondarySports: profileData.secondarySports || [],
+      graduationYear: profileData.graduationYear!,
+      highSchool: profileData.highSchool!,
+      city: profileData.city,
+      state: profileData.state,
+      height: profileData.height!,
+      weight: profileData.weight!,
+      positions: profileData.positions!,
+      gpa: profileData.gpa,
+      satScore: profileData.satScore,
+      actScore: profileData.actScore,
+      intendedMajor: profileData.intendedMajor!,
+      gender: profileData.gender!,
+      maxprepsUrl: profileData.maxprepsUrl || '',
+      hudlUrl: profileData.hudlUrl || '',
+      instagramHandle: profileData.instagramHandle || '',
+      twitterHandle: profileData.twitterHandle || '',
+      personalStatement: profileData.personalStatement || ''
+    });
+
+    return { user, profile: athleteProfile };
+  },
+
+  // Complete onboarding for coach
+  async createCoachOnboarding(userId: string, email: string, profileData: OnboardingProfileData, profileImageR3Key?: string) {
+    // Create/update user
+    const user = await userOperations.createOrUpdateUser(userId, {
+      id: userId,
+      email,
+      role: 'coach'
+    });
+
+    // Create coach profile
+    const coachProfile = await coachOperations.createCoachProfile({
+      userId,
+      title: profileData.title!,
+      role: 'coach',
+      sportCoaching: profileData.sportCoaching!,
+      organizationName: profileData.organizationName!,
+      organizationLogo: profileImageR3Key,
+      division: profileData.division!,
+      conference: profileData.conference || '',
+      city: profileData.city,
+      state: profileData.state,
+      programWebsite: profileData.programWebsite || '',
+      schoolWebsite: profileData.schoolWebsite || '',
+      instagramHandle: profileData.orgInstagramHandle || '',
+      twitterHandle: profileData.orgTwitterHandle || ''
+    });
+
+    // Create recruiting needs if provided
+    let recruitingNeeds = null;
+    if (profileData.recruitingGraduationYears && profileData.recruitingPositions) {
+      recruitingNeeds = await recruitingNeedsOperations.createRecruitingNeeds({
+        coachId: coachProfile.id,
+        graduationYears: profileData.recruitingGraduationYears,
+        positions: profileData.recruitingPositions,
+        scholarshipsAvailable: profileData.scholarshipsAvailable || null,
+        recruitingPhilosophy: profileData.recruitingPhilosophy || ''
+      });
+    }
+
+    return { user, profile: coachProfile, recruitingNeeds };
+  },
+
+  // Complete onboarding for recruiter
+  async createRecruiterOnboarding(userId: string, email: string, profileData: OnboardingProfileData, profileImageR3Key?: string) {
+    // Create/update user
+    const user = await userOperations.createOrUpdateUser(userId, {
+      id: userId,
+      email,
+      role: 'recruiter'
+    });
+
+    // Create recruiter profile
+    const recruiterProfile = await recruitingOperations.createRecruitingProfile({
+      userId,
+      title: profileData.title!,
+      sportRecruiting: profileData.sportCoaching!,
+      organizationName: profileData.organizationName!,
+      organizationLogo: profileImageR3Key,
+      division: profileData.division!,
+      conference: profileData.conference || '',
+      city: profileData.city,
+      state: profileData.state,
+      programWebsite: profileData.programWebsite || '',
+      schoolWebsite: profileData.schoolWebsite || '',
+      instagramHandle: profileData.orgInstagramHandle || '',
+      twitterHandle: profileData.orgTwitterHandle || '',
+      recruitingPhilosophy: profileData.recruitingPhilosophy || ''
+    });
+
+    // Create recruiting profile needs if provided
+    let recruitingProfileNeeds = null;
+    if (profileData.recruitingGraduationYears && profileData.recruitingPositions) {
+      recruitingProfileNeeds = await recruitingNeedsOperations.createRecruitingProfileNeeds({
+        recruitingProfileId: recruiterProfile.id,
+        graduationYears: profileData.recruitingGraduationYears,
+        positions: profileData.recruitingPositions,
+        scholarshipsAvailable: profileData.scholarshipsAvailable || null,
+        recruitingPhilosophy: profileData.whatLookingFor || ''
+      });
+    }
+
+    return { user, profile: recruiterProfile, recruitingProfileNeeds };
   }
 }; 

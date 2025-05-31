@@ -2,10 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { useUser, useAuth } from "@clerk/nextjs";
-import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { createSecureHeaders } from "@/utils/clerk-security";
 import { OnboardingData, UserRole } from "../components/types";
 import CommonFields from "./CommonFields";
 import AthleteForm from "./AthleteForm";
@@ -61,7 +59,6 @@ const initialData: OnboardingData = {
 export default function OnboardingForm({ role, onBack }: OnboardingFormProps) {
   const { user } = useUser();
   const { getToken } = useAuth();
-  const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
   const [data, setData] = useState<OnboardingData>({ ...initialData, role });
 
@@ -94,20 +91,36 @@ export default function OnboardingForm({ role, onBack }: OnboardingFormProps) {
         height // Add combined height for athletes
       };
 
+      // Create FormData to handle file upload and other data
+      const formData = new FormData();
+      formData.append('userId', user.id);
+      formData.append('email', user.emailAddresses[0].emailAddress);
+      formData.append('role', data.role);
+      formData.append('profileData', JSON.stringify(profileData));
+      
+      // Add profile image if provided
+      if (data.profileImage instanceof File) {
+        formData.append('profileImage', data.profileImage);
+      }
+
       const response = await fetch('/api/onboarding', {
         method: 'POST',
-        headers: createSecureHeaders(token),
-        body: JSON.stringify({
-          userId: user.id,
-          email: user.emailAddresses[0].emailAddress,
-          role: data.role,
-          profileData
-        }),
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Accept': 'application/json',
+        },
+        body: formData,
       });
 
       if (response.ok) {
-        router.push('/dashboard');
-        router.refresh();
+        // Force reload the user to get updated metadata
+        await user.reload();
+        
+        // Small delay to ensure metadata is propagated
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        // Hard refresh to ensure middleware picks up the new role
+        window.location.href = '/dashboard';
       } else {
         const errorData = await response.json();
         throw new Error(errorData.error || 'Failed to create profile');

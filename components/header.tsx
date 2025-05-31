@@ -295,7 +295,7 @@ function SearchBar() {
 }
 
 export function Header() {
-  const { isSignedIn, user } = useUser();
+  const {isSignedIn, user } = useUser();
   const router = useRouter();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
