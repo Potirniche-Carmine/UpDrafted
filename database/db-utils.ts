@@ -3,6 +3,7 @@ import { db } from './db';
 import { 
   users, 
   athleteProfiles, 
+  athleteMeasurables,
   coachProfiles,
   recruitingProfiles,
   recruitingNeeds,
@@ -11,6 +12,7 @@ import {
   activityLog,
   type NewUser,
   type NewAthleteProfile,
+  type NewAthleteMeasurable,
   type NewCoachProfile,
   type NewRecruitingProfile,
   type NewRecruitingNeeds,
@@ -146,6 +148,46 @@ export const athleteOperations = {
       offset,
       orderBy: [desc(athleteProfiles.createdAt)]
     });
+  },
+
+  // Create athlete measurable
+  async createAthleteMeasurable(measurableData: NewAthleteMeasurable) {
+    const [measurable] = await db.insert(athleteMeasurables).values(measurableData).returning();
+    return measurable;
+  },
+
+  // Update athlete measurable
+  async updateAthleteMeasurable(measurableId: number, measurableData: Partial<NewAthleteMeasurable>) {
+    const [measurable] = await db
+      .update(athleteMeasurables)
+      .set({ ...measurableData })
+      .where(eq(athleteMeasurables.id, measurableId))
+      .returning();
+    return measurable;
+  },
+
+  // Get athlete measurable
+  async getAthleteMeasurable(measurableId: number) {
+    return await db.query.athleteMeasurables.findFirst({
+      where: eq(athleteMeasurables.id, measurableId)
+    });
+  },
+
+  // Delete athlete measurable
+  async deleteAthleteMeasurable(measurableId: number) {
+    await db.delete(athleteMeasurables).where(eq(athleteMeasurables.id, measurableId));
+  },
+
+  // Replace all measurables for an athlete (useful for profile updates)
+  async replaceAthleteMeasurables(athleteId: number, measurablesData: NewAthleteMeasurable[]) {
+    // Delete existing measurables for this athlete
+    await db.delete(athleteMeasurables).where(eq(athleteMeasurables.athleteId, athleteId));
+    
+    // Insert new measurables if any
+    if (measurablesData.length > 0) {
+      return await db.insert(athleteMeasurables).values(measurablesData).returning();
+    }
+    return [];
   }
 };
 

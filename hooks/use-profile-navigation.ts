@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useUser } from '@clerk/nextjs';
-import { navigationStateManager } from '../app/(profiles)/profile/[id]/page';
+import { navigationStateManager } from '../app/(profiles)/lib/navigation-state';
 
 interface UseProfileNavigationReturn {
   navigateToProfile: (userId?: string) => Promise<void>;

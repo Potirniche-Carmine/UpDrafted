@@ -5,7 +5,6 @@ import { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Separator } from "@/components/ui/separator"
 import { 
@@ -16,7 +15,6 @@ import {
   UserPlus, 
   CheckCircle,
   X,
-  ShieldX,
   Eye,
   ArrowRight,
   Target
@@ -25,6 +23,8 @@ import Link from "next/link"
 import { useRoleView } from '@/hooks/use-role-view'
 import { VerificationDialog } from '@/app/(profiles)/components/shared/verification-dialog'
 import { useProfileNavigation } from '@/hooks/use-profile-navigation'
+import { DashboardHeader } from '../components/dashboard-header'
+import { VerificationAlert } from '../components/verification-alert'
 
 // TypeScript interfaces for actions
 interface ActionWithHref {
@@ -191,90 +191,36 @@ export default function DashboardPage() {
   // Get user display name
   const displayName = user.fullName || user.firstName || user.username || 'User';
 
-  // Update verification message based on effective role
-  const getVerificationMessage = (role: string) => {
-    switch (role) {
-      case 'athlete':
-        return 'coaches and recruiters';
-      case 'coach':
-        return 'athletes and recruiters';
-      case 'recruiter':
-        return 'coaches and athletes';
-      default:
-        return 'other users';
-    }
-  };
-
   // Handle verification button click
   const handleGetVerified = () => {
     console.log('Get Verified clicked', { effectiveRole, showVerificationDialog });
-    if (effectiveRole === 'coach' || effectiveRole === 'recruiter') {
-      console.log('Opening verification dialog for', effectiveRole);
-      setShowVerificationDialog(true);
-    } else {
-      // For athletes, you might want to navigate to a different verification flow
-      console.log('Athlete verification flow not implemented yet - current role:', effectiveRole);
-      // For now, let's allow athletes to see the dialog too for testing
-      setShowVerificationDialog(true);
-    }
+    // Show verification dialog for all roles (coaches, recruiters, and athletes)
+    setShowVerificationDialog(true);
   };
 
   return (
     <div className="min-h-screen bg-background">
       <div className="container mx-auto py-6 px-4 md:px-6 space-y-6">
-        {/* Admin View Indicator */}
-        {isAdmin && isViewingAsOtherRole && (
-          <Alert className="border-blue-200 bg-blue-50/50 dark:border-blue-800 dark:bg-blue-950/20">
-            <Eye className="h-4 w-4 text-blue-600" />
-            <AlertDescription className="text-blue-700 dark:text-blue-200">
-              <div className="flex items-center justify-between">
-                <span>Admin Mode: You are viewing the dashboard as a <strong>{effectiveRole}</strong>. Use the role switcher to change perspectives.</span>
-                <Badge variant="outline" className="ml-2">
-                  {isVerified ? 'Verified' : 'Unverified'}
-                </Badge>
-              </div>
-            </AlertDescription>
-          </Alert>
-        )}
-
         {/* Header Section */}
-        <div className="space-y-4">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-            <div>
-              <h1 className="text-2xl md:text-3xl font-bold text-foreground">Welcome back, {displayName}!</h1>
-              <p className="text-muted-foreground text-sm md:text-base">{userContent.welcomeText}</p>
-            </div>
-            
-            <div className="flex gap-3">
-              <Link href={userContent.searchHref}>
-                <Button className="bg-[#01ae79] hover:bg-[#01ae79]/90 text-white gap-2">
-                  <Search className="w-4 h-4" />
-                  {userContent.searchText}
-                </Button>
-              </Link>
-            </div>
-          </div>
+        <DashboardHeader
+          displayName={displayName}
+          welcomeText={userContent.welcomeText}
+          searchText={userContent.searchText}
+          searchHref={userContent.searchHref}
+          isAdmin={isAdmin}
+          isViewingAsOtherRole={isViewingAsOtherRole}
+          effectiveRole={effectiveRole || 'athlete'}
+          isVerified={isVerified}
+        />
 
-          {/* Verification Alert */}
-          {!isVerified && (
-            <Alert className="border-orange-200 bg-orange-50/50 dark:border-orange-800 dark:bg-orange-950/20">
-              <ShieldX className="h-4 w-4 text-orange-600" />
-              <AlertDescription className="text-orange-700 dark:text-orange-200">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                  <span>Get verified to build trust with {getVerificationMessage(effectiveRole || 'athlete')} and unlock premium features.</span>
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    className="border-orange-300 text-orange-700 hover:bg-orange-100 dark:border-orange-700 dark:text-orange-200 dark:hover:bg-orange-900 self-start sm:self-auto"
-                    onClick={handleGetVerified}
-                  >
-                    Get Verified
-                  </Button>
-                </div>
-              </AlertDescription>
-            </Alert>
-          )}
-        </div>
+        {/* Verification Alert */}
+        <VerificationAlert
+          isVerified={isVerified}
+          effectiveRole={effectiveRole || 'athlete'}
+          onGetVerified={handleGetVerified}
+          onViewProfile={handleViewProfile}
+          profileNavigating={profileNavigating}
+        />
 
         {/* Quick Stats Grid */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -446,7 +392,7 @@ export default function DashboardPage() {
         <VerificationDialog 
           open={showVerificationDialog}
           onOpenChange={setShowVerificationDialog}
-          role={(effectiveRole === 'coach' || effectiveRole === 'recruiter') ? effectiveRole : 'coach'}
+          role={effectiveRole as "coach" | "recruiter" | "athlete"}
         />
       </div>
     </div>

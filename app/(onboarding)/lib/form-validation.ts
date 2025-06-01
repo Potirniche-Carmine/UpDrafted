@@ -149,6 +149,54 @@ export class FormValidator {
     return { isValid: true };
   }
 
+  // Enhanced MaxPreps URL validation with name matching
+  static validateMaxPrepsURL(url: string, profileName: string, required = false): ValidationResult {
+    if (required && !url.trim()) {
+      return { isValid: false, error: 'MaxPreps URL is required' };
+    }
+    
+    if (!url) return { isValid: true };
+    
+    if (url.length > FIELD_LIMITS.URL) {
+      return { isValid: false, error: `URL must be ${FIELD_LIMITS.URL} characters or less` };
+    }
+    
+    // Basic MaxPreps URL pattern
+    const maxprepsPattern = /^https?:\/\/(www\.)?maxpreps\.com\/.+/i;
+    if (!maxprepsPattern.test(url)) {
+      return { isValid: false, error: 'Please enter a valid MaxPreps URL (e.g., https://www.maxpreps.com/...)' };
+    }
+    
+    // Extract athlete name from URL path
+    // Expected format: /athletes/first-last/ or /athletes/first-lastname/
+    const athletePattern = /\/athletes\/([^\/]+)/i;
+    const match = url.match(athletePattern);
+    
+    if (!match) {
+      return { isValid: false, error: 'MaxPreps URL must include an athlete profile path (/athletes/name)' };
+    }
+    
+    const urlName = match[1];
+    if (profileName) {
+      // Convert profile name to expected URL format (first-last)
+      const expectedUrlName = profileName.toLowerCase()
+        .replace(/\s+/g, '-')
+        .replace(/[^a-z0-9\-]/g, '');
+      
+      // Clean up the URL name for comparison
+      const cleanUrlName = urlName.toLowerCase().replace(/[^a-z0-9\-]/g, '');
+      
+      if (cleanUrlName !== expectedUrlName) {
+        return { 
+          isValid: false, 
+          error: `Your MaxPreps URL name "${urlName}" doesn't match your profile name "${profileName}". The URL should contain "${expectedUrlName}".` 
+        };
+      }
+    }
+    
+    return { isValid: true };
+  }
+
   // URL validation
   static validateURL(value: string, type: 'maxpreps' | 'hudl' | 'general' = 'general', required = false): ValidationResult {
     if (required && !value.trim()) {
@@ -254,7 +302,7 @@ export class FormValidator {
 
     // URLs validation
     if (data.maxprepsUrl) {
-      const maxprepsResult = this.validateURL(data.maxprepsUrl, 'maxpreps');
+      const maxprepsResult = this.validateMaxPrepsURL(data.maxprepsUrl, data.fullName);
       if (!maxprepsResult.isValid) errors.maxprepsUrl = maxprepsResult.error!;
     }
 

@@ -28,7 +28,7 @@ import { useAuth } from "@clerk/nextjs";
 interface VerificationDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  role: "coach" | "recruiter";
+  role: "coach" | "recruiter" | "athlete";
 }
 
 interface VerificationFile {
@@ -208,17 +208,66 @@ export function VerificationDialog({ open, onOpenChange, role }: VerificationDia
 
   const canSubmit = files.length > 0 && !isSubmitting;
 
+  // Get role-specific content
+  const getRoleContent = () => {
+    switch (role) {
+      case "athlete":
+        return {
+          title: "Get Verified as an Athlete",
+          description: "Submit documentation to verify your athletic participation and build trust with coaches and recruiters.",
+          proofList: [
+            "• College/club team roster listing you as a player",
+            "• Team website page showing you as a member",
+            "• Official team ID or membership card",
+            "• Game/tournament stats sheets with your name",
+            "• Photos from official games or team events",
+            "• Letter from coach or team coordinator",
+            "• Intramural league registration or standings",
+            "• Club sports registration documents"
+          ],
+          helpText: "This verification is for athletes playing club sports, intramurals, or college teams without MaxPreps profiles.",
+        };
+      case "coach":
+        return {
+          title: "Get Verified as a Coach",
+          description: "Submit documentation to verify your credentials and build trust with athletes.",
+          proofList: [
+            "• Official school/program roster listing you as staff",
+            "• Program website page showing your position",
+            "• Official business card or ID badge",
+            "• Letter of employment or contract (personal info can be redacted)",
+            "• LinkedIn profile or official bio page"
+          ],
+          helpText: "This helps athletes know they're connecting with legitimate coaches.",
+        };
+      case "recruiter":
+        return {
+          title: "Get Verified as a Recruiter",
+          description: "Submit documentation to verify your credentials and build trust with athletes.",
+          proofList: [
+            "• Official school/program roster listing you as staff",
+            "• Program website page showing your position",
+            "• Official business card or ID badge",
+            "• Letter of employment or contract (personal info can be redacted)",
+            "• LinkedIn profile or official bio page"
+          ],
+          helpText: "This helps athletes know they're connecting with legitimate recruiters.",
+        };
+    }
+  };
+
+  const roleContent = getRoleContent();
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-[95vw] w-full sm:max-w-2xl max-h-[90vh] overflow-y-auto mx-4 sm:mx-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-lg sm:text-xl">
             <Shield className="w-5 h-5 text-blue-600 flex-shrink-0" />
-            <span className="break-words">Get Verified as a {role === "coach" ? "Coach" : "Recruiter"}</span>
+            <span className="break-words">{roleContent.title}</span>
           </DialogTitle>
           <DialogDescription className="text-sm sm:text-base">
-            Submit documentation to verify your credentials and build trust with athletes. 
-            This helps athletes know they&apos;re connecting with legitimate {role}es.
+            {roleContent.description}
           </DialogDescription>
         </DialogHeader>
 
@@ -229,12 +278,17 @@ export function VerificationDialog({ open, onOpenChange, role }: VerificationDia
               What can you submit as proof?
             </h4>
             <ul className="text-xs sm:text-sm text-blue-800 dark:text-blue-200 space-y-1">
-              <li>• Official school/program roster listing you as staff</li>
-              <li>• Program website page showing your position</li>
-              <li>• Official business card or ID badge</li>
-              <li>• Letter of employment or contract (personal info can be redacted)</li>
-              <li>• LinkedIn profile or official bio page</li>
+              {roleContent.proofList.map((item, index) => (
+                <li key={index}>{item}</li>
+              ))}
             </ul>
+            {role === "athlete" && (
+              <div className="mt-3 p-2 bg-blue-100 dark:bg-blue-900/30 rounded border border-blue-200 dark:border-blue-800">
+                <p className="text-xs sm:text-sm text-blue-700 dark:text-blue-200 font-medium">
+                  💡 {roleContent.helpText}
+                </p>
+              </div>
+            )}
           </div>
 
           {/* File Upload */}
@@ -273,7 +327,7 @@ export function VerificationDialog({ open, onOpenChange, role }: VerificationDia
             <div className="mt-2 space-y-3">
               <div>
                 <Input
-                  placeholder="https://example.com/staff-directory"
+                  placeholder={role === "athlete" ? "https://example.com/team-roster" : "https://example.com/staff-directory"}
                   value={linkUrl}
                   onChange={(e) => setLinkUrl(e.target.value)}
                   className="w-full min-w-0 text-sm sm:text-base"
@@ -282,7 +336,7 @@ export function VerificationDialog({ open, onOpenChange, role }: VerificationDia
               </div>
               <div>
                 <Input
-                  placeholder="Description (e.g., 'School staff directory page')"
+                  placeholder={role === "athlete" ? "Description (e.g., 'College basketball roster page')" : "Description (e.g., 'School staff directory page')"}
                   value={linkDescription}
                   onChange={(e) => setLinkDescription(e.target.value)}
                   className="w-full min-w-0 text-sm sm:text-base"
@@ -359,7 +413,10 @@ export function VerificationDialog({ open, onOpenChange, role }: VerificationDia
             </Label>
             <Textarea
               id="additional-info"
-              placeholder="Any additional context or information that might help with verification..."
+              placeholder={role === "athlete" 
+                ? "Tell us about your athletic background, what sports you play, at what level, etc..."
+                : "Any additional context or information that might help with verification..."
+              }
               value={additionalInfo}
               onChange={(e) => setAdditionalInfo(e.target.value)}
               className="mt-2 w-full min-w-0 text-sm sm:text-base"

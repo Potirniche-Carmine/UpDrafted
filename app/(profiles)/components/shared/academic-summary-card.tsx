@@ -8,7 +8,6 @@ import {
   Plus, 
   Edit,
   BookOpen,
-  Award,
   Target
 } from "lucide-react";
 
@@ -17,6 +16,7 @@ interface AcademicSummaryCardProps {
   satScore?: number;
   actScore?: number;
   intendedMajor?: string;
+  educationLevel?: string;
   isOwnProfile: boolean;
   onEditSection: (section: string) => void;
 }
@@ -33,6 +33,7 @@ export function AcademicSummaryCard({
   satScore, 
   actScore, 
   intendedMajor, 
+  educationLevel, 
   isOwnProfile, 
   onEditSection 
 }: AcademicSummaryCardProps) {
@@ -63,7 +64,7 @@ export function AcademicSummaryCard({
               <BookOpen className="w-8 h-8 text-amber-600 mx-auto mb-2" />
               <h4 className="font-medium mb-2">Add Your Academic Stats</h4>
               <p className="text-sm text-muted-foreground mb-3">
-                Strong academics can set you apart. Add your GPA, test scores, and intended major.
+                Showcase your academic achievements to help coaches evaluate your profile.
               </p>
               <Button 
                 size="sm"
@@ -146,9 +147,15 @@ export function AcademicSummaryCard({
                 <div className="flex items-center justify-center gap-1 mb-2">
                   <Target className="w-4 h-4 text-muted-foreground" />
                   <span className="text-xs text-muted-foreground">
-                    {intendedMajor.includes(',') || intendedMajor.includes(' and ') || intendedMajor.includes('/') 
-                      ? 'Intended Majors' 
-                      : 'Intended Major'}
+                    {educationLevel === 'high_school' ? 
+                      (intendedMajor.includes(',') || intendedMajor.includes(' and ') || intendedMajor.includes('/') 
+                        ? 'Intended Majors' 
+                        : 'Intended Major')
+                      : 
+                      (intendedMajor.includes(',') || intendedMajor.includes(' and ') || intendedMajor.includes('/') 
+                        ? 'Majors' 
+                        : 'Major')
+                    }
                   </span>
                 </div>
                 <div className="font-medium text-sm leading-relaxed max-w-sm mx-auto break-words">
@@ -157,22 +164,6 @@ export function AcademicSummaryCard({
               </div>
             )}
           </div>
-
-          {/* Add missing info prompt */}
-          {isOwnProfile && (!gpa || (!satScore && !actScore) || !intendedMajor) && (
-            <div className="pt-2 border-t border-muted/50">
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Award className="w-4 h-4" />
-                <span>
-                  Add {[
-                    !gpa && 'GPA',
-                    !satScore && !actScore && 'test scores',
-                    !intendedMajor && 'intended major'
-                  ].filter(Boolean).join(', ')} to strengthen your profile
-                </span>
-              </div>
-            </div>
-          )}
         </div>
       </CardContent>
     </Card>
