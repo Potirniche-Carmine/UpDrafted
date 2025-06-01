@@ -21,6 +21,7 @@ export const initiatedByEnum = pgEnum('initiated_by', ['athlete', 'coach']);
 export const genderEnum = pgEnum('gender', ['male', 'female', 'coed']);
 export const reportStatusEnum = pgEnum('report_status', ['pending', 'under_review', 'resolved', 'dismissed']);
 export const verificationRequestStatusEnum = pgEnum('verification_request_status', ['pending', 'approved', 'rejected', 'under_review']);
+export const educationLevelEnum = pgEnum('education_level', ['high_school', 'undergraduate', 'graduate', 'associate']);
 
 export const users = pgTable('users', {
   id: text('id').primaryKey(),
@@ -41,6 +42,7 @@ export const athleteProfiles = pgTable('athlete_profiles', {
   sport: text('sport').notNull(),
   secondarySports: text('secondary_sports').array(),
   graduationYear: integer('graduation_year').notNull(),
+  educationLevel: educationLevelEnum('education_level').notNull().default('high_school'),
   highSchool: text('high_school').notNull(),
   city: text('city').notNull(),
   state: text('state').notNull(),
@@ -65,6 +67,7 @@ export const athleteProfiles = pgTable('athlete_profiles', {
   index('idx_athlete_profiles_user_id').on(table.userId),
   index('idx_athlete_profiles_sport').on(table.sport),
   index('idx_athlete_profiles_graduation_year').on(table.graduationYear),
+  index('idx_athlete_profiles_education_level').on(table.educationLevel),
   unique('athlete_profiles_user_id_unique').on(table.userId),
 ]);
 

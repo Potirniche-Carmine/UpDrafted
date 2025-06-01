@@ -5,7 +5,7 @@ import { uploadProfilePicture, uploadOrganizationLogo } from '@/database/r2'
 import { onboardingOperations } from '@/database/db-utils'
 import { convertFormDataToProfileData } from '@/app/(onboarding)/lib/onboarding'
 import { FormValidator } from '@/app/(onboarding)/lib/form-validation'
-import { calculateAndSaveProfileCompletion } from '@/lib/profile-completion'
+import { calculateAndSaveProfileCompletion } from '@/app/(profiles)/lib/profile-completion-server'
 
 const clerkClient = createClerkClient({
   secretKey: process.env.CLERK_SECRET_KEY

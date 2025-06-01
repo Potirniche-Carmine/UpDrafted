@@ -436,6 +436,7 @@ export const onboardingOperations = {
       sport: profileData.sport!,
       secondarySports: profileData.secondarySports || [],
       graduationYear: profileData.graduationYear!,
+      educationLevel: profileData.educationLevel || 'high_school',
       highSchool: profileData.highSchool!,
       city: profileData.city,
       state: profileData.state,

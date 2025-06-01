@@ -35,8 +35,9 @@ export function validateClerkHeaders(request: NextRequest): {
     xForwardedProto: request.headers.get('x-forwarded-proto') || request.headers.get('cloudfront-forwarded-proto'),
   }
 
-  const criticalHeaders = ['authorization', 'accept', 'host', 'origin', 'userAgent']
-  const optionalHeaders = ['referer', 'secFetchDest', 'xForwardedHost', 'xForwardedProto']
+  // Critical headers - origin is now optional for same-origin requests
+  const criticalHeaders = ['authorization', 'accept', 'host']
+  const optionalHeaders = ['origin', 'referer', 'secFetchDest', 'xForwardedHost', 'xForwardedProto', 'userAgent']
 
   const missingCritical = criticalHeaders.filter(key => 
     !headers[key as keyof ClerkSecurityHeaders]
@@ -92,14 +93,11 @@ export function logSecurityValidation(
   validation: ReturnType<typeof validateClerkHeaders>,
   endpoint: string
 ): void {
-  if (!validation.isValid) {
+  // Only log actual errors in production, not missing optional headers
+  if (!validation.isValid && process.env.NODE_ENV === 'production') {
     console.error(`Security validation failed for ${endpoint}:`, {
       missingHeaders: validation.missingHeaders,
-      warnings: validation.warnings
     })
-  } else if (validation.warnings.length > 0) {
-    console.warn(`Security warnings for ${endpoint}:`, validation.warnings)
-  } else {
-    console.log(`Security validation passed for ${endpoint}`)
   }
+  // Remove all other logging to keep console clean
 } 

@@ -28,7 +28,7 @@ import { ProfileCompletionBanner } from "./shared/profile-completion-banner";
 import { AthleticHighlightsSection } from "./shared/athletic-highlights-section";
 import { AcademicSummaryCard } from "./shared/academic-summary-card";
 import { useRoleView } from '@/hooks/use-role-view';
-import { calculateAthleteProfileCompletion } from '@/lib/profile-completion';
+import { calculateAthleteProfileCompletion } from '@/app/(profiles)/lib/profile-completion';
 import { getSportsList, US_STATES, GRADUATION_YEARS, getPositionsForSport } from '@/lib/sports-data';
 
 // Import form validation

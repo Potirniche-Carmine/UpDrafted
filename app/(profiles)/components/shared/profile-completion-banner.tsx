@@ -7,7 +7,7 @@ import {
   TrendingUp,
   CheckCircle
 } from "lucide-react";
-import { ProfileCompletion, getProfileStrengthLabel } from '@/lib/profile-completion';
+import { ProfileCompletion, getProfileStrengthLabel } from '@/app/(profiles)/lib/profile-completion';
 
 interface ProfileCompletionBannerProps {
   completion: ProfileCompletion;

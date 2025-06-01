@@ -35,7 +35,7 @@ export default function RoleSelection({ onRoleSelect }: RoleSelectionProps) {
             </CardHeader>
             <CardContent>
               <p className="text-center text-muted-foreground mb-4">
-                I&apos;m a high school athlete looking to get recruited for college sports.
+                I&apos;m a student-athlete looking to get recruited for college sports.
               </p>
               <div className="space-y-2">
                 <Badge variant="outline" className="w-full justify-center">Profile Creation</Badge>
@@ -81,12 +81,12 @@ export default function RoleSelection({ onRoleSelect }: RoleSelectionProps) {
             </CardHeader>
             <CardContent>
               <p className="text-center text-muted-foreground mb-4">
-                I&apos;m a recruiting coordinator working across multiple sports programs.
+                I&apos;m a recruiting coordinator looking to find the best athletes for my program.
               </p>
               <div className="space-y-2">
-                <Badge variant="outline" className="w-full justify-center">Multi-Sport Access</Badge>
+                <Badge variant="outline" className="w-full justify-center">Profile Showcase</Badge>
                 <Badge variant="outline" className="w-full justify-center">Athlete Discovery</Badge>
-                <Badge variant="outline" className="w-full justify-center">Program Coordination</Badge>
+                <Badge variant="outline" className="w-full justify-center">Recruitment Tools</Badge>
               </div>
             </CardContent>
           </Card>

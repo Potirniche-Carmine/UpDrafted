@@ -16,11 +16,50 @@ import {
 } from "@/lib/sports-data";
 import { FormValidator, FIELD_LIMITS } from "@/app/(onboarding)/lib/form-validation";
 import { OnboardingData } from "../lib/types";
+import { EducationLevel } from "../lib/onboarding";
 
 interface AthleteFormProps {
   data: OnboardingData;
   onInputChange: (field: keyof OnboardingData, value: string | number | string[] | number[] | File | null | boolean) => void;
 }
+
+const EDUCATION_LEVEL_OPTIONS = [
+  { value: 'high_school', label: 'High School' },
+  { value: 'associate', label: 'Community College (Associate)' },
+  { value: 'undergraduate', label: 'Undergraduate' },
+  { value: 'graduate', label: 'Graduate School' },
+];
+
+const getSchoolLabel = (educationLevel: EducationLevel) => {
+  switch (educationLevel) {
+    case 'high_school':
+      return 'High School';
+    case 'associate':
+      return 'Community College';
+    case 'undergraduate':
+    case 'graduate':
+      return 'College/University';
+    default:
+      return 'School';
+  }
+};
+
+const getMajorLabel = (educationLevel: EducationLevel) => {
+  switch (educationLevel) {
+    case 'high_school':
+      return 'Intended Major';
+    case 'associate':
+    case 'undergraduate':
+    case 'graduate':
+      return 'Current Major';
+    default:
+      return 'Major';
+  }
+};
+
+const shouldShowStandardizedTests = (educationLevel: EducationLevel) => {
+  return educationLevel === 'high_school';
+};
 
 export default function AthleteForm({ data, onInputChange }: AthleteFormProps) {
   const [validationErrors, setValidationErrors] = useState<{[key: string]: string}>({});
@@ -49,7 +88,7 @@ export default function AthleteForm({ data, onInputChange }: AthleteFormProps) {
         }
         break;
       case 'highSchool':
-        const hsResult = FormValidator.validateText(value as string, 'High school', FIELD_LIMITS.HIGH_SCHOOL, true);
+        const hsResult = FormValidator.validateText(value as string, getSchoolLabel(data.educationLevel), FIELD_LIMITS.HIGH_SCHOOL, true);
         if (hsResult.isValid) {
           delete newErrors.highSchool;
         } else {
@@ -65,7 +104,7 @@ export default function AthleteForm({ data, onInputChange }: AthleteFormProps) {
         }
         break;
       case 'intendedMajor':
-        const majorResult = FormValidator.validateText(value as string, 'Intended major', FIELD_LIMITS.INTENDED_MAJOR, true);
+        const majorResult = FormValidator.validateText(value as string, getMajorLabel(data.educationLevel), FIELD_LIMITS.INTENDED_MAJOR, true);
         if (majorResult.isValid) {
           delete newErrors.intendedMajor;
         } else {
@@ -172,11 +211,12 @@ export default function AthleteForm({ data, onInputChange }: AthleteFormProps) {
   };
 
   return (
-    <>
+    <div className="space-y-8">
+      {/* Primary Sport Selection */}
       <div className="space-y-3">
         <Label htmlFor="sport" className="text-base font-medium">Primary Sport *</Label>
         <Select value={data.sport} onValueChange={(value) => onInputChange('sport', value)}>
-          <SelectTrigger className="h-11 bg-background w-full" style={{ height: '2.75rem' }}>
+          <SelectTrigger className="h-11 bg-background">
             <SelectValue placeholder="Select your primary sport" />
           </SelectTrigger>
           <SelectContent>
@@ -186,6 +226,26 @@ export default function AthleteForm({ data, onInputChange }: AthleteFormProps) {
           </SelectContent>
         </Select>
       </div>
+
+      {/* Education Level Selection - New */}
+      {data.sport && (
+        <div className="space-y-3">
+          <Label htmlFor="educationLevel" className="text-base font-medium">Education Level *</Label>
+          <Select value={data.educationLevel} onValueChange={(value) => onInputChange('educationLevel', value as EducationLevel)}>
+            <SelectTrigger className="h-11 bg-background">
+              <SelectValue placeholder="Select your education level" />
+            </SelectTrigger>
+            <SelectContent>
+              {EDUCATION_LEVEL_OPTIONS.map(option => (
+                <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <p className="text-xs text-muted-foreground">
+            This helps us customize your profile and match you with appropriate opportunities.
+          </p>
+        </div>
+      )}
 
       {/* Secondary Sports */}
       <div className="space-y-3">
@@ -242,12 +302,13 @@ export default function AthleteForm({ data, onInputChange }: AthleteFormProps) {
         </div>
       )}
 
+      {/* School and Location Information */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="space-y-3">
-          <Label htmlFor="highSchool" className="text-base font-medium">High School *</Label>
+          <Label htmlFor="highSchool" className="text-base font-medium">{getSchoolLabel(data.educationLevel)} *</Label>
           <Input
             id="highSchool"
-            placeholder="Your high school name"
+            placeholder={`Your ${getSchoolLabel(data.educationLevel).toLowerCase()} name`}
             value={data.highSchool}
             onChange={(e) => validateAndUpdateField('highSchool', e.target.value)}
             className={`h-11 bg-background ${validationErrors.highSchool ? 'border-red-500' : ''}`}
@@ -259,7 +320,7 @@ export default function AthleteForm({ data, onInputChange }: AthleteFormProps) {
           <p className="text-xs text-muted-foreground">{data.highSchool.length}/{FIELD_LIMITS.HIGH_SCHOOL} characters</p>
         </div>
         <div className="space-y-3">
-          <Label htmlFor="intendedMajor" className="text-base font-medium">Intended Major *</Label>
+          <Label htmlFor="intendedMajor" className="text-base font-medium">{getMajorLabel(data.educationLevel)} *</Label>
           <Input
             id="intendedMajor"
             placeholder="e.g., Business Administration"
@@ -361,7 +422,8 @@ export default function AthleteForm({ data, onInputChange }: AthleteFormProps) {
         <div></div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+      {/* Academic Information with conditional SAT/ACT */}
+      <div className={`grid grid-cols-1 md:grid-cols-${shouldShowStandardizedTests(data.educationLevel) ? '4' : '2'} gap-6`}>
         <div className="space-y-3">
           <Label htmlFor="graduationYear" className="text-base font-medium">Graduation Year *</Label>
           <Select value={data.graduationYear?.toString() || ''} onValueChange={(value) => onInputChange('graduationYear', parseInt(value))}>
@@ -374,6 +436,11 @@ export default function AthleteForm({ data, onInputChange }: AthleteFormProps) {
               ))}
             </SelectContent>
           </Select>
+          {data.educationLevel !== 'high_school' && (
+            <p className="text-xs text-muted-foreground">
+              Expected {data.educationLevel === 'graduate' ? 'graduation' : 'completion'} year
+            </p>
+          )}
         </div>
         <div className="space-y-3">
           <Label htmlFor="gpa" className="text-base font-medium">GPA</Label>
@@ -393,42 +460,54 @@ export default function AthleteForm({ data, onInputChange }: AthleteFormProps) {
           )}
           <p className="text-xs text-muted-foreground">Max 5.0</p>
         </div>
-        <div className="space-y-3">
-          <Label htmlFor="satScore" className="text-base font-medium">SAT Score</Label>
-          <Input
-            id="satScore"
-            type="number"
-            min="400"
-            max="1600"
-            placeholder="1320"
-            value={data.satScore || ''}
-            onChange={(e) => validateAndUpdateField('satScore', e.target.value ? parseInt(e.target.value) : null)}
-            className={`h-11 bg-background ${validationErrors.satScore ? 'border-red-500' : ''}`}
-          />
-          {validationErrors.satScore && (
-            <p className="text-sm text-red-500">{validationErrors.satScore}</p>
-          )}
-          <p className="text-xs text-muted-foreground">400-1600</p>
-        </div>
-        <div className="space-y-3">
-          <Label htmlFor="actScore" className="text-base font-medium">ACT Score</Label>
-          <Input
-            id="actScore"
-            type="number"
-            min="1"
-            max="36"
-            placeholder="28"
-            value={data.actScore || ''}
-            onChange={(e) => validateAndUpdateField('actScore', e.target.value ? parseInt(e.target.value) : null)}
-            className={`h-11 bg-background ${validationErrors.actScore ? 'border-red-500' : ''}`}
-          />
-          {validationErrors.actScore && (
-            <p className="text-sm text-red-500">{validationErrors.actScore}</p>
-          )}
-          <p className="text-xs text-muted-foreground">1-36</p>
-        </div>
+        
+        {/* SAT and ACT scores - only show for high school students */}
+        {shouldShowStandardizedTests(data.educationLevel) && (
+          <>
+            <div className="space-y-3">
+              <Label htmlFor="satScore" className="text-base font-medium">SAT Score</Label>
+              <Input
+                id="satScore"
+                type="number"
+                min="400"
+                max="1600"
+                placeholder="1320"
+                value={data.satScore || ''}
+                onChange={(e) => validateAndUpdateField('satScore', e.target.value ? parseInt(e.target.value) : null)}
+                className={`h-11 bg-background ${validationErrors.satScore ? 'border-red-500' : ''}`}
+              />
+              {validationErrors.satScore && (
+                <p className="text-sm text-red-500">{validationErrors.satScore}</p>
+              )}
+              <p className="text-xs text-muted-foreground">400-1600</p>
+            </div>
+            <div className="space-y-3">
+              <Label htmlFor="actScore" className="text-base font-medium">ACT Score</Label>
+              <Input
+                id="actScore"
+                type="number"
+                min="1"
+                max="36"
+                placeholder="28"
+                value={data.actScore || ''}
+                onChange={(e) => validateAndUpdateField('actScore', e.target.value ? parseInt(e.target.value) : null)}
+                className={`h-11 bg-background ${validationErrors.actScore ? 'border-red-500' : ''}`}
+              />
+              {validationErrors.actScore && (
+                <p className="text-sm text-red-500">{validationErrors.actScore}</p>
+              )}
+              <p className="text-xs text-muted-foreground">1-36</p>
+            </div>
+          </>
+        )}
       </div>
-      <p className="text-sm text-muted-foreground">* Provide at least one: GPA, SAT, or ACT score</p>
+      
+      {/* Updated requirement text based on education level */}
+      {shouldShowStandardizedTests(data.educationLevel) ? (
+        <p className="text-sm text-muted-foreground">* Provide at least one: GPA, SAT, or ACT score</p>
+      ) : (
+        <p className="text-sm text-muted-foreground">* GPA recommended for college students</p>
+      )}
 
       <div className="space-y-3">
         <Label htmlFor="maxprepsUrl" className="text-base font-medium">MaxPreps Profile URL</Label>
@@ -511,6 +590,6 @@ export default function AthleteForm({ data, onInputChange }: AthleteFormProps) {
         )}
         <p className="text-xs text-muted-foreground">{data.personalStatement.length}/{FIELD_LIMITS.PERSONAL_STATEMENT} characters</p>
       </div>
-    </>
+    </div>
   );
 } 

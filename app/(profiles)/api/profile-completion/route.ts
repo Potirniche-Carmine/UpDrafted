@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
 import { validateClerkHeaders, logSecurityValidation } from '@/utils/clerk-security';
-import { getProfileCompletion, calculateAndSaveProfileCompletion } from '@/lib/profile-completion';
+import { getProfileCompletion, calculateAndSaveProfileCompletion } from '@/app/(profiles)/lib/profile-completion-server';
 
 export async function GET(request: NextRequest) {
   try {

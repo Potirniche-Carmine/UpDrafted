@@ -24,6 +24,7 @@ const initialData: OnboardingData = {
   sport: "",
   secondarySports: [],
   graduationYear: null,
+  educationLevel: "high_school",
   highSchool: "",
   city: "",
   state: "",
@@ -149,9 +150,10 @@ export default function OnboardingForm({ role, onBack }: OnboardingFormProps) {
     if (data.role === 'athlete' && !data.ageConfirmation) return false;
     
     if (data.role === 'athlete') {
-      return !!(
+      const baseRequirements = !!(
         data.sport && 
         data.graduationYear && 
+        data.educationLevel &&
         data.highSchool && 
         data.city && 
         data.state && 
@@ -159,10 +161,21 @@ export default function OnboardingForm({ role, onBack }: OnboardingFormProps) {
         data.heightInches &&
         data.weight && 
         data.positions.length > 0 &&
-        (data.gpa || data.satScore || data.actScore) &&
         data.intendedMajor &&
         data.personalStatement
       );
+
+      // Academic requirements depend on education level
+      let academicRequirements = false;
+      if (data.educationLevel === 'high_school') {
+        // High school students need at least one: GPA, SAT, or ACT
+        academicRequirements = !!(data.gpa || data.satScore || data.actScore);
+      } else {
+        // College students just need to have completed the form (GPA is recommended but not required)
+        academicRequirements = true;
+      }
+
+      return baseRequirements && academicRequirements;
     } else {
       return !!(
         data.title && 

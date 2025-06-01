@@ -27,8 +27,8 @@ import {
 import Link from "next/link"
 import { useRoleView } from '@/hooks/use-role-view'
 import { VerificationDialog } from '@/app/(profiles)/components/shared/verification-dialog'
-import { useProfileCompletion } from '@/hooks/use-profile-completion'
-import { type ProfileCompletion } from '@/lib/profile-completion'
+import { useProfileCompletion } from '@/app/(profiles)/lib/use-profile-completion'
+import { type ProfileCompletion } from '@/app/(profiles)/lib/profile-completion'
 
 // Mock data - replace with real data from your database
 const mockDashboardData = {
@@ -77,28 +77,6 @@ const mockDashboardData = {
     },
   ]
 }
-
-// Fallback profile completion data
-const fallbackProfileCompletion = {
-  overall: 65,
-  categories: {
-    basic: 85,
-    academic: 60,
-    athletic: 45,
-    media: 30,
-    social: 80
-  },
-  missingFields: [
-    { field: 'measurables', label: 'Athletic Measurables', weight: 8, category: 'athletic' as const },
-    { field: 'personalStatement', label: 'Personal Statement', weight: 10, category: 'athletic' as const },
-    { field: 'hudlUrl', label: 'Hudl Highlights', weight: 5, category: 'media' as const }
-  ],
-  nextSteps: [
-    { field: 'measurables', label: 'Athletic Measurables', weight: 8, category: 'athletic' as const },
-    { field: 'personalStatement', label: 'Personal Statement', weight: 10, category: 'athletic' as const },
-    { field: 'hudlUrl', label: 'Hudl Highlights', weight: 5, category: 'media' as const }
-  ]
-};
 
 // Mobile-friendly ProfileCompletionBanner component
 const MobileProfileCompletionBanner = ({ completion }: { completion: ProfileCompletion }) => {
@@ -227,8 +205,13 @@ export default function DashboardPage() {
   const { effectiveRole, isAdmin, isViewingAsOtherRole, isVerified } = useRoleView();
   const [showVerificationDialog, setShowVerificationDialog] = useState(false);
   
+  // Scroll to top when dashboard loads (after onboarding)
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, []);
+  
   // Fetch profile completion data using the reusable hook
-  const { completion, loading: completionLoading } = useProfileCompletion(
+  const { completion, loading: completionLoading, invalidateCache, refresh } = useProfileCompletion(
     user?.id, 
     effectiveRole as 'athlete' | 'coach' | 'recruiter' | null
   );
@@ -236,6 +219,13 @@ export default function DashboardPage() {
   useEffect(() => {
     console.log('Dialog state changed:', { showVerificationDialog, effectiveRole, isVerified });
   }, [showVerificationDialog, effectiveRole, isVerified]);
+
+  // Test function to simulate profile update (for testing cache invalidation)
+  const handleTestCacheInvalidation = () => {
+    console.log('Invalidating profile completion cache...');
+    invalidateCache();
+    refresh(); // Force a refresh to see the updated data
+  };
 
   // Show loading while auth state is being determined
   if (!isLoaded) {
@@ -252,8 +242,8 @@ export default function DashboardPage() {
   // Get user display name
   const displayName = user.fullName || user.firstName || user.username || 'User';
 
-  // Use real completion data or fallback
-  const profileCompletion = completion || fallbackProfileCompletion;
+  // Only use real completion data, don't fall back to fake data
+  const profileCompletion = completion;
 
   // Update verification message based on effective role
   const getVerificationMessage = (role: string) => {
@@ -316,25 +306,40 @@ export default function DashboardPage() {
                   {userContent.searchText}
                 </Button>
               </Link>
+              
+              {/* Debug button for testing cache invalidation - only in development */}
+              {process.env.NODE_ENV === 'development' && effectiveRole === 'athlete' && (
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={handleTestCacheInvalidation}
+                  className="text-xs"
+                >
+                  🔄 Test Cache
+                </Button>
+              )}
             </div>
           </div>
 
-          {/* Profile Completion Widget - Only for athletes */}
-          {effectiveRole === 'athlete' && !completionLoading && (
+          {/* Profile Completion Widget - Only for athletes and only when we have real data */}
+          {effectiveRole === 'athlete' && !completionLoading && profileCompletion && (
             <MobileProfileCompletionBanner completion={profileCompletion} />
           )}
 
-          {/* Loading state for profile completion */}
+          {/* Loading state for profile completion - Only show for athletes */}
           {effectiveRole === 'athlete' && completionLoading && (
             <Card className="border-[#01ae79]/20 bg-gradient-to-r from-[#01ae79]/5 to-[#01ae79]/10 dark:border-[#01ae79]/30 dark:from-[#01ae79]/10 dark:to-[#01ae79]/20">
               <CardContent className="p-4">
                 <div className="flex items-center gap-3">
                   <div className="p-2 bg-[#01ae79]/10 dark:bg-[#01ae79]/20 rounded-full flex-shrink-0">
-                    <TrendingUp className="w-5 h-5 text-[#01ae79]" />
+                    <TrendingUp className="w-5 h-5 text-[#01ae79] animate-pulse" />
                   </div>
                   <div className="flex-1">
                     <h3 className="font-semibold">Profile Strength</h3>
-                    <p className="text-sm text-muted-foreground">Loading...</p>
+                    <p className="text-sm text-muted-foreground">Calculating your profile completion...</p>
+                  </div>
+                  <div className="flex-shrink-0">
+                    <div className="w-12 h-6 bg-muted rounded animate-pulse"></div>
                   </div>
                 </div>
               </CardContent>

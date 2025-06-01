@@ -1,4 +1,5 @@
 export type UserRole = "athlete" | "coach" | "recruiter";
+export type EducationLevel = 'high_school' | 'undergraduate' | 'graduate' | 'associate';
 
 // Interface for the onboarding form data (what the frontend sends)
 export interface OnboardingFormData {
@@ -12,6 +13,7 @@ export interface OnboardingFormData {
   sport: string;
   secondarySports: string[];
   graduationYear: number | null;
+  educationLevel: EducationLevel;
   highSchool: string;
   city: string;
   state: string;
@@ -63,6 +65,7 @@ export interface OnboardingProfileData {
   sport?: string;
   secondarySports?: string[];
   graduationYear?: number;
+  educationLevel?: EducationLevel;
   highSchool?: string;
   city: string;
   state: string;
@@ -106,6 +109,7 @@ export function convertFormDataToProfileData(formData: OnboardingFormData): Onbo
     sport: formData.sport,
     secondarySports: formData.secondarySports,
     graduationYear: formData.graduationYear || undefined,
+    educationLevel: formData.educationLevel,
     highSchool: formData.highSchool.trim(),
     city: formData.city.trim(),
     state: formData.state,
