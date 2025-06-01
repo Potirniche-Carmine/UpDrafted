@@ -1,10 +1,10 @@
 import { auth, createClerkClient } from '@clerk/nextjs/server'
 import { NextRequest, NextResponse } from 'next/server'
 import { validateClerkHeaders } from '@/utils/clerk-security'
-import { uploadProfilePicture, uploadOrganizationLogo } from '@/lib/r2'
-import { onboardingOperations } from '@/lib/db-utils'
-import { convertFormDataToProfileData } from '@/types/onboarding'
-import { FormValidator } from '@/lib/form-validation'
+import { uploadProfilePicture, uploadOrganizationLogo } from '@/database/r2'
+import { onboardingOperations } from '@/database/db-utils'
+import { convertFormDataToProfileData } from '@/app/(onboarding)/lib/onboarding'
+import { FormValidator } from '@/app/(onboarding)/lib/form-validation'
 import { calculateAndSaveProfileCompletion } from '@/lib/profile-completion'
 
 const clerkClient = createClerkClient({

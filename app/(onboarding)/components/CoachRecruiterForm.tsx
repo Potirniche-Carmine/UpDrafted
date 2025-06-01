@@ -16,8 +16,8 @@ import {
   getPositionsForSport, 
   getSportsList 
 } from "@/lib/sports-data";
-import { FormValidator, FIELD_LIMITS } from "@/lib/form-validation";
-import { OnboardingData } from "../components/types";
+import { FormValidator, FIELD_LIMITS } from "@/app/(onboarding)/lib/form-validation";
+import { OnboardingData } from "../lib/types";
 
 interface CoachRecruiterFormProps {
   data: OnboardingData;

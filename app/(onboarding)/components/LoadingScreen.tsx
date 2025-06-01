@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Loader2, CheckCircle, User, Shield, Sparkles } from "lucide-react";
-import { UserRole } from "./types";
+import { UserRole } from "../lib/types";
 
 interface LoadingScreenProps {
   role: UserRole;

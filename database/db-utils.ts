@@ -16,7 +16,7 @@ import {
   type NewRecruitingNeeds,
   type NewRecruitingProfileNeeds
 } from './schema';
-import { OnboardingProfileData } from '@/types/onboarding';
+import { OnboardingProfileData } from '@/app/(onboarding)/lib/onboarding';
 
 // User operations
 export const userOperations = {

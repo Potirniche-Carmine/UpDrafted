@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAnyRole } from '@/utils/roles';
-import { userOperations, athleteOperations, coachOperations, recruitingOperations } from '@/lib/db-utils';
-import { R2_PUBLIC_URL } from '@/lib/r2';
+import { userOperations, athleteOperations, coachOperations, recruitingOperations } from '@/database/db-utils';
+import { R2_PUBLIC_URL } from '@/database/r2';
 
 interface ProfilePageParams {
   params: Promise<{

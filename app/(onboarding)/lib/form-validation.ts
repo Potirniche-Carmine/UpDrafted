@@ -1,4 +1,4 @@
-import { OnboardingFormData } from '@/types/onboarding';
+import { OnboardingFormData } from '@/app/(onboarding)/lib/onboarding';
 
 export interface ValidationResult {
   isValid: boolean;

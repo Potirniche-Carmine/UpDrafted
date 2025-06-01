@@ -6,8 +6,8 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Upload, X } from "lucide-react";
 import Image from "next/image";
-import { FormValidator, FIELD_LIMITS } from "@/lib/form-validation";
-import { OnboardingData } from "../components/types";
+import { FormValidator, FIELD_LIMITS } from "@/app/(onboarding)/lib/form-validation";
+import { OnboardingData } from "../lib/types";
 
 interface CommonFieldsProps {
   fullName: string;

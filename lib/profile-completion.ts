@@ -1,6 +1,6 @@
 import { AthleteProfileData } from '@/app/(profiles)/components/athlete-profile';
-import { db } from '@/lib/db';
-import { profileCompletion, athleteProfiles, coachProfiles, recruitingProfiles } from '@/lib/schema';
+import { db } from '../database/db';
+import { profileCompletion, athleteProfiles, coachProfiles, recruitingProfiles } from '@/database/schema';
 import { eq, and } from 'drizzle-orm';
 
 export interface ProfileCompletionItem {

@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useUser, useAuth } from "@clerk/nextjs";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { OnboardingData, UserRole } from "../components/types";
+import { OnboardingData, UserRole } from "../lib/types";
 import CommonFields from "./CommonFields";
 import AthleteForm from "./AthleteForm";
 import CoachRecruiterForm from "./CoachRecruiterForm";
