@@ -8,7 +8,6 @@ import { Badge } from "@/components/ui/badge"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Separator } from "@/components/ui/separator"
-import { Progress } from "@/components/ui/progress"
 import { 
   Users, 
   MessageSquare, 
@@ -18,17 +17,33 @@ import {
   CheckCircle,
   X,
   ShieldX,
-  Edit3,
   Eye,
   ArrowRight,
-  Target,
-  TrendingUp
+  Target
 } from "lucide-react"
 import Link from "next/link"
 import { useRoleView } from '@/hooks/use-role-view'
 import { VerificationDialog } from '@/app/(profiles)/components/shared/verification-dialog'
-import { useProfileCompletion } from '@/app/(profiles)/lib/use-profile-completion'
-import { type ProfileCompletion } from '@/app/(profiles)/lib/profile-completion'
+import { useProfileNavigation } from '@/hooks/use-profile-navigation'
+
+// TypeScript interfaces for actions
+interface ActionWithHref {
+  label: string;
+  href: string;
+  icon: React.ComponentType<{ className?: string }>;
+  description: string;
+  onClick?: never;
+}
+
+interface ActionWithOnClick {
+  label: string;
+  onClick: () => void;
+  icon: React.ComponentType<{ className?: string }>;
+  description: string;
+  href?: never;
+}
+
+type DashboardAction = ActionWithHref | ActionWithOnClick;
 
 // Mock data - replace with real data from your database
 const mockDashboardData = {
@@ -78,72 +93,13 @@ const mockDashboardData = {
   ]
 }
 
-// Mobile-friendly ProfileCompletionBanner component
-const MobileProfileCompletionBanner = ({ completion }: { completion: ProfileCompletion }) => {
-  const getProfileStrengthLabel = (percentage: number) => {
-    if (percentage >= 85) {
-      return { description: 'Your profile is comprehensive and attractive to coaches!' };
-    } else if (percentage >= 70) {
-      return { description: 'Good profile! Add a few more details to maximize your opportunities.' };
-    } else if (percentage >= 50) {
-      return { description: 'You\'re on the right track! Complete more sections to stand out.' };
-    } else {
-      return { description: 'Your profile needs more information to attract coaches.' };
-    }
-  };
-
-  const strengthInfo = getProfileStrengthLabel(completion.overall);
-
-  if (completion.overall >= 90) {
-    return (
-      <Card className="border-green-200 bg-green-50/50 dark:border-green-800 dark:bg-green-950/20">
-        <CardContent className="p-4">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-green-100 dark:bg-green-900 rounded-full flex-shrink-0">
-              <CheckCircle className="w-5 h-5 text-green-600" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <h3 className="font-semibold text-green-800 dark:text-green-200">Profile Complete!</h3>
-              <p className="text-sm text-green-700 dark:text-green-300">
-                Your profile is comprehensive and ready to attract coaches.
-              </p>
-            </div>
-            <div className="flex-shrink-0">
-              <span className="text-xl md:text-2xl font-bold text-green-600">{completion.overall}%</span>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  return (
-    <Card className="border-[#01ae79]/20 bg-gradient-to-r from-[#01ae79]/5 to-[#01ae79]/10 dark:border-[#01ae79]/30 dark:from-[#01ae79]/10 dark:to-[#01ae79]/20">
-      <CardContent className="p-4">
-        <div className="space-y-3">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-[#01ae79]/10 dark:bg-[#01ae79]/20 rounded-full flex-shrink-0">
-              <TrendingUp className="w-5 h-5 text-[#01ae79]" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <h3 className="font-semibold">Profile Strength</h3>
-              <p className="text-sm text-muted-foreground hidden sm:block">{strengthInfo.description}</p>
-            </div>
-            <div className="flex-shrink-0">
-              <span className="text-xl md:text-2xl font-bold text-[#01ae79]">{completion.overall}%</span>
-            </div>
-          </div>
-          <div className="space-y-2">
-            <Progress value={completion.overall} className="w-full h-2" />
-            <p className="text-sm text-muted-foreground block sm:hidden">{strengthInfo.description}</p>
-          </div>
-        </div>
-      </CardContent>
-    </Card>
-  );
-};
-
-const getUserTypeContent = (role: string, userId: string) => {
+const getUserTypeContent = (role: string, userId: string, handleViewProfile: () => void, profileNavigating: boolean = false): {
+  welcomeText: string;
+  searchText: string;
+  searchHref: string;
+  primaryActions: DashboardAction[];
+  secondaryActions: DashboardAction[];
+} => {
   switch (role) {
     case 'athlete':
       return {
@@ -152,7 +108,7 @@ const getUserTypeContent = (role: string, userId: string) => {
         searchHref: "/discover",
         primaryActions: [
           { label: "Discover Schools", href: "/discover", icon: Search, description: "Find your perfect college match" },
-          { label: "Update Profile", href: `/profile/${userId}`, icon: Edit3, description: "Keep profile current" },
+          { label: profileNavigating ? "Loading..." : "View Profile", onClick: handleViewProfile, icon: Eye, description: "Check your current profile" },
           { label: "My Connections", href: "/connections", icon: Users, description: "Manage your network" },
           { label: "Check Messages", href: "/messaging", icon: MessageSquare, description: "Connect with coaches" },
         ],
@@ -165,7 +121,7 @@ const getUserTypeContent = (role: string, userId: string) => {
         searchHref: "/discover",
         primaryActions: [
           { label: "Discover Athletes", href: "/discover", icon: Search, description: "Find top prospects" },
-          { label: "Update Profile", href: `/profile/${userId}`, icon: Edit3, description: "Keep profile current" },
+          { label: profileNavigating ? "Loading..." : "View Profile", onClick: handleViewProfile, icon: Eye, description: "Check your current profile" },
           { label: "View Notifications", href: "/notifications", icon: Bell, description: "Stay updated" },
           { label: "Send Messages", href: "/messaging", icon: MessageSquare, description: "Connect with prospects" },
         ],
@@ -178,7 +134,7 @@ const getUserTypeContent = (role: string, userId: string) => {
         searchHref: "/discover",
         primaryActions: [
           { label: "Discover Athletes", href: "/discover", icon: Search, description: "Find athletes & coaches" },
-          { label: "Update Profile", href: `/profile/${userId}`, icon: Edit3, description: "Keep profile current" },
+          { label: profileNavigating ? "Loading..." : "View Profile", onClick: handleViewProfile, icon: Eye, description: "Check your current profile" },
           { label: "Manage Matches", href: "/recruiting/matches", icon: Target, description: "Track connections" },
           { label: "Send Messages", href: "/messaging", icon: MessageSquare, description: "Facilitate connections" },
         ],
@@ -191,7 +147,7 @@ const getUserTypeContent = (role: string, userId: string) => {
         searchHref: "/discover",
         primaryActions: [
           { label: "Discover", href: "/discover", icon: Search, description: "Find what you need" },
-          { label: "View Profile", href: `/profile/${userId}`, icon: Eye, description: "Check your profile" },
+          { label: profileNavigating ? "Loading..." : "View Profile", onClick: handleViewProfile, icon: Eye, description: "Check your profile" },
           { label: "Messages", href: "/messaging", icon: MessageSquare, description: "Check messages" },
           { label: "Notifications", href: "/notifications", icon: Bell, description: "Stay updated" },
         ],
@@ -204,27 +160,20 @@ export default function DashboardPage() {
   const { isSignedIn, user, isLoaded } = useUser();
   const { effectiveRole, isAdmin, isViewingAsOtherRole, isVerified } = useRoleView();
   const [showVerificationDialog, setShowVerificationDialog] = useState(false);
+  const { navigateToProfile, isNavigating: profileNavigating } = useProfileNavigation();
   
   // Scroll to top when dashboard loads (after onboarding)
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, []);
   
-  // Fetch profile completion data using the reusable hook
-  const { completion, loading: completionLoading, invalidateCache, refresh } = useProfileCompletion(
-    user?.id, 
-    effectiveRole as 'athlete' | 'coach' | 'recruiter' | null
-  );
-  
   useEffect(() => {
     console.log('Dialog state changed:', { showVerificationDialog, effectiveRole, isVerified });
   }, [showVerificationDialog, effectiveRole, isVerified]);
 
-  // Test function to simulate profile update (for testing cache invalidation)
-  const handleTestCacheInvalidation = () => {
-    console.log('Invalidating profile completion cache...');
-    invalidateCache();
-    refresh(); // Force a refresh to see the updated data
+  // Handle profile navigation with proper prefetching
+  const handleViewProfile = async () => {
+    await navigateToProfile();
   };
 
   // Show loading while auth state is being determined
@@ -237,13 +186,10 @@ export default function DashboardPage() {
   }
 
   // Use effectiveRole instead of the hardcoded role
-  const userContent = getUserTypeContent(effectiveRole || 'athlete', user.id);
+  const userContent = getUserTypeContent(effectiveRole || 'athlete', user.id, handleViewProfile, profileNavigating);
 
   // Get user display name
   const displayName = user.fullName || user.firstName || user.username || 'User';
-
-  // Only use real completion data, don't fall back to fake data
-  const profileCompletion = completion;
 
   // Update verification message based on effective role
   const getVerificationMessage = (role: string) => {
@@ -306,45 +252,8 @@ export default function DashboardPage() {
                   {userContent.searchText}
                 </Button>
               </Link>
-              
-              {/* Debug button for testing cache invalidation - only in development */}
-              {process.env.NODE_ENV === 'development' && effectiveRole === 'athlete' && (
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  onClick={handleTestCacheInvalidation}
-                  className="text-xs"
-                >
-                  🔄 Test Cache
-                </Button>
-              )}
             </div>
           </div>
-
-          {/* Profile Completion Widget - Only for athletes and only when we have real data */}
-          {effectiveRole === 'athlete' && !completionLoading && profileCompletion && (
-            <MobileProfileCompletionBanner completion={profileCompletion} />
-          )}
-
-          {/* Loading state for profile completion - Only show for athletes */}
-          {effectiveRole === 'athlete' && completionLoading && (
-            <Card className="border-[#01ae79]/20 bg-gradient-to-r from-[#01ae79]/5 to-[#01ae79]/10 dark:border-[#01ae79]/30 dark:from-[#01ae79]/10 dark:to-[#01ae79]/20">
-              <CardContent className="p-4">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-[#01ae79]/10 dark:bg-[#01ae79]/20 rounded-full flex-shrink-0">
-                    <TrendingUp className="w-5 h-5 text-[#01ae79] animate-pulse" />
-                  </div>
-                  <div className="flex-1">
-                    <h3 className="font-semibold">Profile Strength</h3>
-                    <p className="text-sm text-muted-foreground">Calculating your profile completion...</p>
-                  </div>
-                  <div className="flex-shrink-0">
-                    <div className="w-12 h-6 bg-muted rounded animate-pulse"></div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          )}
 
           {/* Verification Alert */}
           {!isVerified && (
@@ -424,8 +333,37 @@ export default function DashboardPage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {userContent.primaryActions.map((action) => {
                     const IconComponent = action.icon;
+                    
+                    // Handle both href and onClick actions
+                    if (action.onClick) {
+                      const isViewProfileAction = action.label.includes("View Profile") || action.label.includes("Loading");
+                      const shouldDisable = isViewProfileAction && profileNavigating;
+                      
+                      return (
+                        <Card 
+                          key={action.label} 
+                          className={`group transition-all duration-300 border-border/50 ${
+                            shouldDisable 
+                              ? 'opacity-50 cursor-not-allowed' 
+                              : 'hover:shadow-lg hover:shadow-[#01ae79]/5 hover:border-[#01ae79]/20 dark:hover:border-[#01ae79]/30 cursor-pointer'
+                          }`} 
+                          onClick={shouldDisable ? undefined : action.onClick}
+                        >
+                          <CardContent className="flex items-center p-4 md:p-6">
+                            <IconComponent className={`h-6 w-6 md:h-8 md:w-8 text-[#01ae79] mr-4 flex-shrink-0 transition-colors ${
+                              shouldDisable ? '' : 'group-hover:text-[#01ae79]/80'
+                            } ${profileNavigating && isViewProfileAction ? 'animate-pulse' : ''}`} />
+                            <div className="min-w-0">
+                              <h3 className="font-semibold text-foreground mb-1">{action.label}</h3>
+                              <p className="text-sm text-muted-foreground">{action.description}</p>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      );
+                    }
+                    
                     return (
-                      <Link key={action.label} href={action.href}>
+                      <Link key={action.label} href={action.href || '#'}>
                         <Card className="group transition-all duration-300 hover:shadow-lg hover:shadow-[#01ae79]/5 border-border/50 hover:border-[#01ae79]/20 dark:hover:border-[#01ae79]/30 cursor-pointer">
                           <CardContent className="flex items-center p-4 md:p-6">
                             <IconComponent className="h-6 w-6 md:h-8 md:w-8 text-[#01ae79] mr-4 flex-shrink-0 transition-colors group-hover:text-[#01ae79]/80" />

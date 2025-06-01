@@ -24,11 +24,9 @@ import {
   X
 } from "lucide-react";
 import { ProfileHeader } from "./shared/profile-header";
-import { ProfileCompletionBanner } from "./shared/profile-completion-banner";
 import { AthleticHighlightsSection } from "./shared/athletic-highlights-section";
 import { AcademicSummaryCard } from "./shared/academic-summary-card";
 import { useRoleView } from '@/hooks/use-role-view';
-import { calculateAthleteProfileCompletion } from '@/app/(profiles)/lib/profile-completion';
 import { getSportsList, US_STATES, GRADUATION_YEARS, getPositionsForSport } from '@/lib/sports-data';
 
 // Import form validation
@@ -224,12 +222,6 @@ export function AthleteProfile({ data, isOwnProfile = false, onConnect, onShare 
   const [editData, setEditData] = useState<Record<string, string | number | string[]>>({});
   const [validationErrors, setValidationErrors] = useState<{[key: string]: string}>({});
   const { effectiveRole } = useRoleView();
-  
-  // Calculate profile completion
-  const profileCompletion = useMemo(() => 
-    calculateAthleteProfileCompletion(data), 
-    [data]
-  );
   
   // Memoize computed values - use effectiveRole instead of currentUserRole for admin testing
   const allSports = useMemo(() => [data.sport, ...(data.secondarySports || [])], [data.sport, data.secondarySports]);
@@ -1027,16 +1019,6 @@ export function AthleteProfile({ data, isOwnProfile = false, onConnect, onShare 
       {renderEditDialog()}
 
       <div className="container py-4 md:py-8">
-        {/* Profile Completion Banner - Only for own profile */}
-        {isOwnProfile && (
-          <div className="mb-6">
-            <ProfileCompletionBanner 
-              completion={profileCompletion}
-              isOwnProfile={isOwnProfile}
-            />
-          </div>
-        )}
-
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8">
           {/* Sidebar - Basic Info */}
           <div className="space-y-4 md:space-y-6">

@@ -7,7 +7,6 @@ import { Badge } from "@/components/ui/badge";
 import { Users, MessageSquare, Bell, LogIn, ChevronDown, Search, Menu, Sun, Moon } from "lucide-react";
 import { useTheme } from "next-themes";
 import Image from "next/image";
-import { useRouter } from "next/navigation";
 import { useState, useMemo, useRef, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import {
@@ -24,6 +23,7 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
+import { useProfileNavigation } from '@/hooks/use-profile-navigation';
 
 // Mock user data for search - same as in search-bar.tsx
 interface SearchUser {
@@ -174,7 +174,6 @@ function SearchBar() {
   const [searchTerm, setSearchTerm] = useState('');
   const [isOpen, setIsOpen] = useState(false);
   const searchRef = useRef<HTMLDivElement>(null);
-  const router = useRouter();
 
   // Filter users based on search term (min 2 characters for header)
   const filteredUsers = useMemo(() => {
@@ -214,9 +213,7 @@ function SearchBar() {
   };
 
   const handleViewAll = () => {
-    router.push(`/search?q=${encodeURIComponent(searchTerm)}`);
-    setSearchTerm('');
-    setIsOpen(false);
+    // This function is no longer used in the new version
   };
 
   return (
@@ -296,8 +293,8 @@ function SearchBar() {
 
 export function Header() {
   const {isSignedIn, user } = useUser();
-  const router = useRouter();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const { navigateToProfile, isNavigating: profileNavigating } = useProfileNavigation();
 
   // Check if user has completed onboarding (has a role)
   const userRole = user?.publicMetadata?.role as string;
@@ -324,10 +321,8 @@ export function Header() {
     },
   };
 
-  const handleViewProfile = () => {
-    if (user?.id) {
-      router.push(`/profile/${user.id}`);
-    }
+  const handleViewProfile = async () => {
+    await navigateToProfile();
   };
 
   return (
@@ -383,13 +378,13 @@ export function Header() {
                 <UserButton.MenuItems>
                   {hasCompletedOnboarding && (
                     <UserButton.Action
-                      label="View Profile" 
+                      label={profileNavigating ? "Loading..." : "View Profile"}
                       labelIcon={<Users className="mr-2 h-4 w-4" />}
-                      onClick={handleViewProfile}
+                      onClick={profileNavigating ? () => {} : handleViewProfile}
                     >
                       <div className="flex items-center">
                         <Users className="mr-2 h-4 w-4" /> 
-                        <span>View Profile</span>
+                        <span>{profileNavigating ? "Loading..." : "View Profile"}</span>
                       </div>
                     </UserButton.Action>
                   )}
@@ -475,10 +470,11 @@ export function Header() {
                           handleViewProfile();
                           setMobileMenuOpen(false);
                         }}
-                        className="flex items-center space-x-3 rounded-lg px-3 py-3 text-sm font-medium transition-colors hover:bg-[#01ae79]/5 dark:hover:bg-[#01ae79]/10 hover:text-[#01ae79] w-full text-left"
+                        disabled={profileNavigating}
+                        className="flex items-center space-x-3 rounded-lg px-3 py-3 text-sm font-medium transition-colors hover:bg-[#01ae79]/5 dark:hover:bg-[#01ae79]/10 hover:text-[#01ae79] w-full text-left disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         <Users className="h-5 w-5" />
-                        <span>View Profile</span>
+                        <span>{profileNavigating ? "Loading..." : "View Profile"}</span>
                       </button>
                     </div>
                   </div>

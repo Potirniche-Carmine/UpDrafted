@@ -19,6 +19,11 @@ export function LoadingScreen({ role }: LoadingScreenProps) {
   const [currentStep, setCurrentStep] = useState(0);
   const [completedSteps, setCompletedSteps] = useState<number[]>([]);
 
+  // Scroll to top when component mounts
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
+
   useEffect(() => {
     const stepInterval = setInterval(() => {
       setCurrentStep((prev) => {

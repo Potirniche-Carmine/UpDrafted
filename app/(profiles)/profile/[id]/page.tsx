@@ -10,9 +10,106 @@ import { RecruiterProfileWrapper } from '../../components/recruiter-profile-wrap
 import type { AthleteProfileData } from '../../components/athlete-profile';
 import type { CoachProfileData, RecruitingProfileData } from '../../lib/base-profile-types';
 
-// Client-side cache to prevent redundant API calls
-const profileCache = new Map<string, { data: ProfileApiResponse; timestamp: number; }>();
-const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes cache
+// Global cache that persists across component mounts/unmounts
+const globalProfileCache = new Map<string, { 
+  data: ProfileApiResponse; 
+  timestamp: number; 
+  lastAccessed: number;
+}>();
+
+const CACHE_DURATION = 10 * 60 * 1000; // 10 minutes
+const MAX_CACHE_SIZE = 100;
+
+// Global navigation state - simple and reliable
+class NavigationStateManager {
+  private static instance: NavigationStateManager;
+  private navigationSource: 'direct' | 'internal' | 'refresh' = 'direct';
+  private lastSetTime: number = 0;
+  
+  static getInstance(): NavigationStateManager {
+    if (!NavigationStateManager.instance) {
+      NavigationStateManager.instance = new NavigationStateManager();
+    }
+    return NavigationStateManager.instance;
+  }
+  
+  setNavigationSource(source: 'direct' | 'internal' | 'refresh') {
+    this.navigationSource = source;
+    this.lastSetTime = Date.now();
+  }
+  
+  getNavigationSource(): 'direct' | 'internal' | 'refresh' {
+    const source = this.navigationSource;
+    const timeSinceSet = Date.now() - this.lastSetTime;
+    
+    // Only reset to 'direct' after a reasonable delay to allow for React lifecycle
+    // and only if it's not a refresh
+    if (source !== 'refresh' && timeSinceSet > 2000) { // 2 seconds
+      this.navigationSource = 'direct';
+      return source; // Return the original source for this read
+    }
+    
+    return source;
+  }
+  
+  // Force reset (for cleanup)
+  reset() {
+    this.navigationSource = 'direct';
+    this.lastSetTime = 0;
+  }
+}
+
+// Export the singleton instance for use in navigation hook
+export const navigationStateManager = NavigationStateManager.getInstance();
+
+// Detect if this is a page refresh at module load time
+// But don't override if we recently set it to 'internal'
+if (typeof window !== 'undefined') {
+  // Small delay to allow any internal navigation to be set first
+  setTimeout(() => {
+    const navigationType = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming;
+    if (navigationType && navigationType.type === 'reload') {
+      navigationStateManager.setNavigationSource('refresh');
+    }
+  }, 100);
+}
+
+// Cache management utilities
+const getCachedProfile = (profileId: string) => {
+  const cacheKey = `profile-${profileId}`;
+  const cached = globalProfileCache.get(cacheKey);
+  
+  if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
+    // Update last accessed time for LRU cleanup
+    cached.lastAccessed = Date.now();
+    globalProfileCache.set(cacheKey, cached);
+    return cached.data;
+  }
+  
+  return null;
+};
+
+const setCachedProfile = (profileId: string, data: ProfileApiResponse) => {
+  const cacheKey = `profile-${profileId}`;
+  const now = Date.now();
+  
+  globalProfileCache.set(cacheKey, {
+    data,
+    timestamp: now,
+    lastAccessed: now
+  });
+  
+  // Clean up old cache entries using LRU strategy
+  if (globalProfileCache.size > MAX_CACHE_SIZE) {
+    const entries = Array.from(globalProfileCache.entries());
+    const sortedByAccess = entries.sort((a, b) => a[1].lastAccessed - b[1].lastAccessed);
+    
+    // Remove oldest 20 entries
+    for (let i = 0; i < 20; i++) {
+      globalProfileCache.delete(sortedByAccess[i][0]);
+    }
+  }
+};
 
 interface ProfilePageProps {
   params: Promise<{
@@ -31,11 +128,25 @@ interface ProfileApiResponse {
   currentUserRole: string;
 }
 
-// Loading component for better UX
+// Enhanced loading component for better UX
 function ProfileSkeleton() {
   return (
-    <div className="min-h-screen bg-background animate-pulse">
-      <div className="container py-4 md:py-8">
+    <div className="min-h-screen bg-background">
+      {/* Header Skeleton */}
+      <div className="border-b bg-card/50 animate-pulse">
+        <div className="container py-4">
+          <div className="flex items-center justify-between">
+            <div className="h-8 bg-muted rounded w-32"></div>
+            <div className="flex gap-2">
+              <div className="h-8 w-16 bg-muted rounded"></div>
+              <div className="h-8 w-16 bg-muted rounded"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Profile Content Skeleton */}
+      <div className="container py-4 md:py-8 animate-pulse">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8">
           <div className="space-y-4 md:space-y-6">
             <div className="bg-card rounded-lg p-6">
@@ -43,6 +154,14 @@ function ProfileSkeleton() {
               <div className="mt-4 space-y-2">
                 <div className="h-6 bg-muted rounded mx-auto w-48"></div>
                 <div className="h-4 bg-muted rounded mx-auto w-32"></div>
+                <div className="h-4 bg-muted rounded mx-auto w-40"></div>
+              </div>
+            </div>
+            <div className="bg-card rounded-lg p-6 space-y-3">
+              <div className="h-5 bg-muted rounded w-24"></div>
+              <div className="space-y-2">
+                <div className="h-4 bg-muted rounded"></div>
+                <div className="h-4 bg-muted rounded w-3/4"></div>
               </div>
             </div>
           </div>
@@ -53,6 +172,13 @@ function ProfileSkeleton() {
                 <div className="h-4 bg-muted rounded"></div>
                 <div className="h-4 bg-muted rounded"></div>
                 <div className="h-4 bg-muted rounded w-3/4"></div>
+              </div>
+            </div>
+            <div className="bg-card rounded-lg p-6">
+              <div className="h-6 bg-muted rounded w-40 mb-4"></div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="h-20 bg-muted rounded"></div>
+                <div className="h-20 bg-muted rounded"></div>
               </div>
             </div>
           </div>
@@ -69,23 +195,35 @@ function ProfileContent({ profileId }: { profileId: string }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
+  const retryTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  const fetchProfile = useCallback(async () => {
-    if (!isSignedIn || !isLoaded) return;
+  const fetchProfile = useCallback(async (retryCount = 0, forceFresh = false) => {
+    // Don't make requests until auth is fully loaded
+    if (!isLoaded) return;
+    
+    // If not signed in after auth is loaded, redirect or show error
+    if (!isSignedIn) {
+      setError('You must be signed in to view profiles');
+      setLoading(false);
+      return;
+    }
 
-    // Cancel any existing request
+    // Cancel any existing request and retry timeout
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
     }
+    if (retryTimeoutRef.current) {
+      clearTimeout(retryTimeoutRef.current);
+    }
 
-    // Check cache first
-    const cacheKey = `profile-${profileId}`;
-    const cached = profileCache.get(cacheKey);
-    
-    if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
-      setProfileData(cached.data);
-      setLoading(false);
-      return;
+    // Check global cache first (unless we're forcing a fresh fetch)
+    if (!forceFresh) {
+      const cachedData = getCachedProfile(profileId);
+      if (cachedData) {
+        setProfileData(cachedData);
+        setLoading(false);
+        return;
+      }
     }
 
     try {
@@ -96,14 +234,19 @@ function ProfileContent({ profileId }: { profileId: string }) {
       const abortController = new AbortController();
       abortControllerRef.current = abortController;
 
-      // Get the session token for authentication
-      const token = await getToken();
+      // Wait for auth to be fully ready, with progressive delays
+      let token = await getToken();
+      
+      // If no token on first try, wait progressively longer and try again
+      if (!token && retryCount < 5) {
+        const delay = Math.min(500 * Math.pow(2, retryCount), 3000); // Exponential backoff, max 3s
+        await new Promise(resolve => setTimeout(resolve, delay));
+        token = await getToken();
+      }
       
       if (!token) {
-        throw new Error('No authentication token available');
+        throw new Error('No authentication token available after multiple attempts');
       }
-
-      console.log('Making profile request with token:', token ? 'Token present' : 'No token');
 
       const response = await fetch(`/api/profile/${profileId}`, {
         method: 'GET',
@@ -111,13 +254,35 @@ function ProfileContent({ profileId }: { profileId: string }) {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`,
           'Accept': 'application/json',
+          // Add cache control headers to force fresh fetch when needed
+          ...(forceFresh && { 
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+            'Pragma': 'no-cache',
+            'Expires': '0'
+          })
         },
-        signal: abortController.signal, // Add abort signal
+        signal: abortController.signal,
       });
 
       if (!response.ok) {
         if (response.status === 404) {
+          // For 404s, if this is the first attempt and we have no cached data, try once more with delay
+          if (retryCount === 0) {
+            retryTimeoutRef.current = setTimeout(() => {
+              fetchProfile(retryCount + 1, true);
+            }, 1000);
+            return;
+          }
           notFound();
+          return;
+        }
+        
+        // If unauthorized and this is an early attempt, try again
+        if (response.status === 401 && retryCount < 3) {
+          const delay = 1000 * (retryCount + 1); // Progressive delay
+          retryTimeoutRef.current = setTimeout(() => {
+            fetchProfile(retryCount + 1, forceFresh);
+          }, delay);
           return;
         }
         
@@ -140,14 +305,8 @@ function ProfileContent({ profileId }: { profileId: string }) {
 
       const data: ProfileApiResponse = await response.json();
       
-      // Cache the response
-      profileCache.set(cacheKey, { data, timestamp: Date.now() });
-      
-      // Clean up old cache entries (simple cleanup)
-      if (profileCache.size > 50) { // Limit cache size
-        const oldestKey = Array.from(profileCache.keys())[0];
-        profileCache.delete(oldestKey);
-      }
+      // Cache the response in global cache
+      setCachedProfile(profileId, data);
       
       setProfileData(data);
     } catch (err) {
@@ -164,16 +323,53 @@ function ProfileContent({ profileId }: { profileId: string }) {
   }, [profileId, isSignedIn, isLoaded, getToken]);
 
   useEffect(() => {
-    fetchProfile();
+    // Only fetch when auth is loaded
+    if (isLoaded) {
+      // Get navigation source from the global state manager
+      const navigationSource = navigationStateManager.getNavigationSource();
+      
+      // Determine if we should use cache or force fresh based on navigation source
+      const shouldForceFresh = navigationSource === 'refresh' || navigationSource === 'direct';
+      
+      // Small delay to allow for better auth context stability, but only if forcing fresh
+      const delay = shouldForceFresh ? 100 : 0;
+      
+      const timer = setTimeout(() => {
+        fetchProfile(0, shouldForceFresh);
+      }, delay);
+      
+      return () => clearTimeout(timer);
+    }
     
     // Cleanup function to abort request if component unmounts
     return () => {
       if (abortControllerRef.current) {
         abortControllerRef.current.abort();
       }
+      if (retryTimeoutRef.current) {
+        clearTimeout(retryTimeoutRef.current);
+      }
     };
-  }, [fetchProfile]);
+  }, [fetchProfile, isLoaded]);
 
+  // Cleanup navigation state on unmount to prevent leaking between page navigations
+  useEffect(() => {
+    return () => {
+      // Set a timeout to reset after component unmounts
+      setTimeout(() => {
+        navigationStateManager.reset();
+      }, 1000);
+    };
+  }, []);
+
+  // Clear profile data when profileId changes
+  useEffect(() => {
+    setProfileData(null);
+    setError(null);
+    setLoading(true);
+  }, [profileId]);
+
+  // Show loading until auth is loaded or while fetching
   if (!isLoaded || loading) {
     return <ProfileSkeleton />;
   }
@@ -181,9 +377,15 @@ function ProfileContent({ profileId }: { profileId: string }) {
   if (error) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-center">
+        <div className="text-center p-6">
           <h1 className="text-2xl font-bold text-destructive mb-2">Error Loading Profile</h1>
-          <p className="text-muted-foreground">{error}</p>
+          <p className="text-muted-foreground mb-4">{error}</p>
+          <button 
+            onClick={() => fetchProfile(0, true)}
+            className="px-4 py-2 bg-primary text-primary-foreground rounded hover:bg-primary/90 transition-colors"
+          >
+            Try Again
+          </button>
         </div>
       </div>
     );
@@ -222,16 +424,24 @@ function ProfileContent({ profileId }: { profileId: string }) {
 
 export default function ProfilePage({ params }: ProfilePageProps) {
   const [profileId, setProfileId] = useState<string | null>(null);
+  const [paramsReady, setParamsReady] = useState(false);
 
   useEffect(() => {
     async function getParams() {
-      const resolvedParams = await params;
-      setProfileId(resolvedParams.id);
+      try {
+        const resolvedParams = await params;
+        setProfileId(resolvedParams.id);
+        setParamsReady(true);
+      } catch (error) {
+        console.error('Error resolving params:', error);
+        setParamsReady(true); // Set to true even on error to prevent infinite loading
+      }
     }
     getParams();
   }, [params]);
 
-  if (!profileId) {
+  // Show loading until params are resolved
+  if (!paramsReady || !profileId) {
     return <ProfileSkeleton />;
   }
 

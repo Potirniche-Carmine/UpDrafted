@@ -5,7 +5,6 @@ import { uploadProfilePicture, uploadOrganizationLogo } from '@/database/r2'
 import { onboardingOperations } from '@/database/db-utils'
 import { convertFormDataToProfileData } from '@/app/(onboarding)/lib/onboarding'
 import { FormValidator } from '@/app/(onboarding)/lib/form-validation'
-import { calculateAndSaveProfileCompletion } from '@/app/(profiles)/lib/profile-completion-server'
 
 const clerkClient = createClerkClient({
   secretKey: process.env.CLERK_SECRET_KEY
@@ -144,14 +143,6 @@ export async function POST(request: NextRequest) {
         )
         profileId = result.profile.id
         
-        // Calculate initial profile completion for athlete
-        try {
-          await calculateAndSaveProfileCompletion(userId, 'athlete', true);
-        } catch (completionError) {
-          console.error('Failed to calculate profile completion for athlete:', completionError);
-          // Don't fail the onboarding, just log the error
-        }
-        
       } else if (role === 'coach') {
         result = await onboardingOperations.createCoachOnboarding(
           userId, 
@@ -162,14 +153,6 @@ export async function POST(request: NextRequest) {
         )
         profileId = result.profile.id
         
-        // Calculate initial profile completion for coach
-        try {
-          await calculateAndSaveProfileCompletion(userId, 'coach', true);
-        } catch (completionError) {
-          console.error('Failed to calculate profile completion for coach:', completionError);
-          // Don't fail the onboarding, just log the error
-        }
-        
       } else if (role === 'recruiter') {
         result = await onboardingOperations.createRecruiterOnboarding(
           userId, 
@@ -179,14 +162,6 @@ export async function POST(request: NextRequest) {
           organizationLogoR3Key
         )
         profileId = result.profile.id
-        
-        // Calculate initial profile completion for recruiter
-        try {
-          await calculateAndSaveProfileCompletion(userId, 'recruiter', true);
-        } catch (completionError) {
-          console.error('Failed to calculate profile completion for recruiter:', completionError);
-          // Don't fail the onboarding, just log the error
-        }
       } else {
         throw new Error('Invalid role provided')
       }
