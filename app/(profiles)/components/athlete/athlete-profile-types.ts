@@ -18,7 +18,7 @@ export interface AthleteProfileData {
   secondarySports?: string[];
   graduationYear: number;
   educationLevel: EducationLevel;
-  highSchool: string;
+  organizationName: string;
   city: string;
   state: string;
   gpa?: number | string;

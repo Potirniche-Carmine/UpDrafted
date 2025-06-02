@@ -43,7 +43,7 @@ export const athleteProfiles = pgTable('athlete_profiles', {
   secondarySports: text('secondary_sports').array(),
   graduationYear: integer('graduation_year').notNull(),
   educationLevel: educationLevelEnum('education_level').notNull().default('high_school'),
-  highSchool: text('high_school').notNull(),
+  organizationName: text('organization_name').notNull(),
   city: text('city').notNull(),
   state: text('state').notNull(),
   height: text('height').notNull(),
@@ -97,6 +97,7 @@ export const athleteVideos = pgTable('athlete_videos', {
 export const coachProfiles = pgTable('coach_profiles', {
   id: serial('id').primaryKey(),
   userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  fullName: text('full_name').notNull(),
   title: text('title').notNull(),
   role: coachRoleEnum('role').notNull(),
   sportCoaching: text('sport_coaching').notNull(),
@@ -126,6 +127,7 @@ export const coachProfiles = pgTable('coach_profiles', {
 export const recruitingProfiles = pgTable('recruiting_profiles', {
   id: serial('id').primaryKey(),
   userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  fullName: text('full_name').notNull(),
   title: text('title').notNull(),
   sportRecruiting: text('sport_recruiting').notNull(),
   organizationName: text('organization_name').notNull(),

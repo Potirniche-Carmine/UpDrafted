@@ -87,12 +87,12 @@ export default function AthleteForm({ data, onInputChange }: AthleteFormProps) {
           newErrors.fullName = nameResult.error!;
         }
         break;
-      case 'highSchool':
-        const hsResult = FormValidator.validateText(value as string, getSchoolLabel(data.educationLevel), FIELD_LIMITS.HIGH_SCHOOL, true);
-        if (hsResult.isValid) {
-          delete newErrors.highSchool;
+      case 'organizationName':
+        const orgResult = FormValidator.validateText(value as string, getSchoolLabel(data.educationLevel), FIELD_LIMITS.ORGANIZATION_NAME, true);
+        if (orgResult.isValid) {
+          delete newErrors.organizationName;
         } else {
-          newErrors.highSchool = hsResult.error!;
+          newErrors.organizationName = orgResult.error!;
         }
         break;
       case 'city':
@@ -305,19 +305,19 @@ export default function AthleteForm({ data, onInputChange }: AthleteFormProps) {
       {/* School and Location Information */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="space-y-3">
-          <Label htmlFor="highSchool" className="text-base font-medium">{getSchoolLabel(data.educationLevel)} *</Label>
+          <Label htmlFor="organizationName" className="text-base font-medium">{getSchoolLabel(data.educationLevel)} *</Label>
           <Input
-            id="highSchool"
+            id="organizationName"
             placeholder={`Your ${getSchoolLabel(data.educationLevel).toLowerCase()} name`}
-            value={data.highSchool}
-            onChange={(e) => validateAndUpdateField('highSchool', e.target.value)}
-            className={`h-11 bg-background ${validationErrors.highSchool ? 'border-red-500' : ''}`}
-            maxLength={FIELD_LIMITS.HIGH_SCHOOL}
+            value={data.organizationName}
+            onChange={(e) => validateAndUpdateField('organizationName', e.target.value)}
+            className={`h-11 bg-background ${validationErrors.organizationName ? 'border-red-500' : ''}`}
+            maxLength={FIELD_LIMITS.ORGANIZATION_NAME}
           />
-          {validationErrors.highSchool && (
-            <p className="text-sm text-red-500">{validationErrors.highSchool}</p>
+          {validationErrors.organizationName && (
+            <p className="text-sm text-red-500">{validationErrors.organizationName}</p>
           )}
-          <p className="text-xs text-muted-foreground">{data.highSchool.length}/{FIELD_LIMITS.HIGH_SCHOOL} characters</p>
+          <p className="text-xs text-muted-foreground">{data.organizationName.length}/{FIELD_LIMITS.ORGANIZATION_NAME} characters</p>
         </div>
         <div className="space-y-3">
           <Label htmlFor="intendedMajor" className="text-base font-medium">{getMajorLabel(data.educationLevel)} *</Label>

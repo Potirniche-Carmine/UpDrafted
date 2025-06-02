@@ -26,7 +26,7 @@ const initialData: OnboardingData = {
   secondarySports: [],
   graduationYear: null,
   educationLevel: "high_school",
-  highSchool: "",
+  organizationName: "",
   city: "",
   state: "",
   heightFeet: "",
@@ -45,7 +45,6 @@ const initialData: OnboardingData = {
   personalStatement: "",
   title: "",
   sportCoaching: "",
-  organizationName: "",
   organizationLogo: undefined,
   organizationLogoPreview: "",
   division: "",
@@ -156,7 +155,7 @@ export default function OnboardingForm({ role, onBack }: OnboardingFormProps) {
         data.sport && 
         data.graduationYear && 
         data.educationLevel &&
-        data.highSchool && 
+        data.organizationName && 
         data.city && 
         data.state && 
         data.heightFeet && 

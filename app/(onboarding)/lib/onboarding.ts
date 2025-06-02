@@ -14,7 +14,7 @@ export interface OnboardingFormData {
   secondarySports: string[];
   graduationYear: number | null;
   educationLevel: EducationLevel;
-  highSchool: string;
+  organizationName: string;
   city: string;
   state: string;
   heightFeet: string;
@@ -35,7 +35,6 @@ export interface OnboardingFormData {
   // Coach/Recruiter fields
   title: string;
   sportCoaching: string;
-  organizationName: string;
   organizationLogo?: File | string;
   organizationLogoPreview?: string;
   division: string;
@@ -66,7 +65,7 @@ export interface OnboardingProfileData {
   secondarySports?: string[];
   graduationYear?: number;
   educationLevel?: EducationLevel;
-  highSchool?: string;
+  organizationName?: string;
   city: string;
   state: string;
   height?: string; // Combined from heightFeet and heightInches
@@ -86,7 +85,6 @@ export interface OnboardingProfileData {
   // Coach/Recruiter specific
   title?: string;
   sportCoaching?: string;
-  organizationName?: string;
   division?: string;
   conference?: string;
   programWebsite?: string;
@@ -110,7 +108,7 @@ export function convertFormDataToProfileData(formData: OnboardingFormData): Onbo
     secondarySports: formData.secondarySports,
     graduationYear: formData.graduationYear || undefined,
     educationLevel: formData.educationLevel,
-    highSchool: formData.highSchool.trim(),
+    organizationName: formData.organizationName.trim(),
     city: formData.city.trim(),
     state: formData.state,
     height: formData.heightFeet && formData.heightInches 
@@ -130,7 +128,6 @@ export function convertFormDataToProfileData(formData: OnboardingFormData): Onbo
     personalStatement: formData.personalStatement.trim(),
     title: formData.title.trim(),
     sportCoaching: formData.sportCoaching,
-    organizationName: formData.organizationName.trim(),
     division: formData.division,
     conference: formData.conference.trim(),
     programWebsite: formData.programWebsite.trim(),

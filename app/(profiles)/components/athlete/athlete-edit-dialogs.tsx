@@ -17,7 +17,7 @@ import Image from "next/image";
 // Import field validation
 const FIELD_LIMITS = {
   FULL_NAME: 50,
-  HIGH_SCHOOL: 50,
+  ORGANIZATION_NAME: 50,
   CITY: 50,
   INTENDED_MAJOR: 50,
   PERSONAL_STATEMENT: 400,
@@ -79,7 +79,7 @@ export interface AthleteProfileData {
   secondarySports?: string[];
   graduationYear: number;
   educationLevel: EducationLevel;
-  highSchool: string;
+  organizationName: string;
   city: string;
   state: string;
   gpa?: number | string;
@@ -158,7 +158,7 @@ export function AthleteEditDialogs({
           educationLevel: profileData.educationLevel,
           city: profileData.city,
           state: profileData.state,
-          highSchool: profileData.highSchool,
+          organizationName: profileData.organizationName,
           graduationYear: profileData.graduationYear,
           heightFeet: heightParts ? heightParts[1] : '',
           heightInches: heightParts ? heightParts[2] : '',
@@ -421,7 +421,7 @@ export function AthleteEditDialogs({
         if (editData.secondarySports !== undefined) updates.secondarySports = editData.secondarySports as string[];
         if (editData.graduationYear !== undefined) updates.graduationYear = editData.graduationYear as number;
         if (editData.educationLevel !== undefined) updates.educationLevel = editData.educationLevel as EducationLevel;
-        if (editData.highSchool !== undefined) updates.highSchool = editData.highSchool as string;
+        if (editData.organizationName !== undefined) updates.organizationName = editData.organizationName as string;
         if (editData.city !== undefined) updates.city = editData.city as string;
         if (editData.state !== undefined) updates.state = editData.state as string;
         if (editData.positions !== undefined) updates.positions = editData.positions as string[];
@@ -697,13 +697,13 @@ export function AthleteEditDialogs({
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="edit-highSchool">High School *</Label>
+                <Label htmlFor="edit-organizationName">Organization Name *</Label>
                 <Input
-                  id="edit-highSchool"
-                  value={editData.highSchool || ''}
-                  onChange={(e) => handleFieldChange('highSchool', e.target.value)}
+                  id="edit-organizationName"
+                  value={editData.organizationName || ''}
+                  onChange={(e) => handleFieldChange('organizationName', e.target.value)}
                   className="h-12"
-                  maxLength={FIELD_LIMITS.HIGH_SCHOOL}
+                  maxLength={FIELD_LIMITS.ORGANIZATION_NAME}
                 />
               </div>
 

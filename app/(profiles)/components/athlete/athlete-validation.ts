@@ -1,7 +1,7 @@
 // Field limits and validation constants
 export const FIELD_LIMITS = {
   FULL_NAME: 50,
-  HIGH_SCHOOL: 50,
+  ORGANIZATION_NAME: 50,
   CITY: 50,
   INTENDED_MAJOR: 50,
   PERSONAL_STATEMENT: 400,

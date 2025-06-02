@@ -521,7 +521,7 @@ export function AthleteProfile({
                         <MapPin className="w-3 h-3 flex-shrink-0" />
                         <span className="text-center break-words whitespace-normal">{profileData.city}, {profileData.state}</span>
                       </div>
-                      <p className="text-center break-words">{profileData.highSchool}</p>
+                      <p className="text-center break-words">{profileData.organizationName}</p>
                       <p className="text-center">Class of {profileData.graduationYear}</p>
                       
                       {/* Education Level Badge */}

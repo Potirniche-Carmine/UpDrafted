@@ -12,7 +12,6 @@ export interface ValidationErrors {
 // Character limits for various fields
 export const FIELD_LIMITS = {
   FULL_NAME: 50,
-  HIGH_SCHOOL: 50,
   ORGANIZATION_NAME: 50,
   CITY: 50,
   INTENDED_MAJOR: 50,
@@ -274,9 +273,9 @@ export class FormValidator {
     const nameResult = this.validateName(data.fullName, true);
     if (!nameResult.isValid) errors.fullName = nameResult.error!;
 
-    // High school validation
-    const hsResult = this.validateText(data.highSchool, 'High school', FIELD_LIMITS.HIGH_SCHOOL, true);
-    if (!hsResult.isValid) errors.highSchool = hsResult.error!;
+    // Organization validation
+    const orgResult = this.validateText(data.organizationName, 'Organization name', FIELD_LIMITS.ORGANIZATION_NAME, true);
+    if (!orgResult.isValid) errors.organizationName = orgResult.error!;
 
     // City validation
     const cityResult = this.validateText(data.city, 'City', FIELD_LIMITS.CITY, true);

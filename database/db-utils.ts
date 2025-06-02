@@ -521,7 +521,7 @@ export const onboardingOperations = {
       secondarySports: profileData.secondarySports || [],
       graduationYear: profileData.graduationYear!,
       educationLevel: profileData.educationLevel || 'high_school',
-      highSchool: profileData.highSchool!,
+      organizationName: profileData.organizationName!,
       city: profileData.city,
       state: profileData.state,
       height: profileData.height!,
@@ -554,6 +554,7 @@ export const onboardingOperations = {
     // Create coach profile
     const coachProfile = await coachOperations.createCoachProfile({
       userId,
+      fullName: profileData.fullName,
       title: profileData.title!,
       role: 'coach',
       sportCoaching: profileData.sportCoaching!,
@@ -597,6 +598,7 @@ export const onboardingOperations = {
     // Create recruiter profile
     const recruiterProfile = await recruitingOperations.createRecruitingProfile({
       userId,
+      fullName: profileData.fullName,
       title: profileData.title!,
       sportRecruiting: profileData.sportCoaching!,
       organizationName: profileData.organizationName!,

@@ -396,7 +396,7 @@ export async function PUT(
         if (updateData.secondarySports !== undefined) profileUpdateData.secondarySports = updateData.secondarySports;
         if (updateData.graduationYear !== undefined) profileUpdateData.graduationYear = updateData.graduationYear;
         if (updateData.educationLevel !== undefined) profileUpdateData.educationLevel = updateData.educationLevel;
-        if (updateData.highSchool !== undefined) profileUpdateData.highSchool = updateData.highSchool;
+        if (updateData.organizationName !== undefined) profileUpdateData.organizationName = updateData.organizationName;
         if (updateData.city !== undefined) profileUpdateData.city = updateData.city;
         if (updateData.state !== undefined) profileUpdateData.state = updateData.state;
         if (updateData.height !== undefined) profileUpdateData.height = updateData.height;
