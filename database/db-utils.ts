@@ -13,10 +13,12 @@ import {
   type NewUser,
   type NewAthleteProfile,
   type NewAthleteMeasurable,
+  type NewAthleteVideo,
   type NewCoachProfile,
   type NewRecruitingProfile,
   type NewRecruitingNeeds,
-  type NewRecruitingProfileNeeds
+  type NewRecruitingProfileNeeds,
+  athleteVideos
 } from './schema';
 import { OnboardingProfileData } from '@/app/(onboarding)/lib/onboarding';
 
@@ -186,6 +188,46 @@ export const athleteOperations = {
     // Insert new measurables if any
     if (measurablesData.length > 0) {
       return await db.insert(athleteMeasurables).values(measurablesData).returning();
+    }
+    return [];
+  },
+
+  // Create athlete video
+  async createAthleteVideo(videoData: NewAthleteVideo) {
+    const [video] = await db.insert(athleteVideos).values(videoData).returning();
+    return video;
+  },
+
+  // Update athlete video
+  async updateAthleteVideo(videoId: number, videoData: Partial<NewAthleteVideo>) {
+    const [video] = await db
+      .update(athleteVideos)
+      .set({ ...videoData })
+      .where(eq(athleteVideos.id, videoId))
+      .returning();
+    return video;
+  },
+
+  // Get athlete video
+  async getAthleteVideo(videoId: number) {
+    return await db.query.athleteVideos.findFirst({
+      where: eq(athleteVideos.id, videoId)
+    });
+  },
+
+  // Delete athlete video
+  async deleteAthleteVideo(videoId: number) {
+    await db.delete(athleteVideos).where(eq(athleteVideos.id, videoId));
+  },
+
+  // Replace all videos for an athlete (useful for profile updates)
+  async replaceAthleteVideos(athleteId: number, videosData: NewAthleteVideo[]) {
+    // Delete existing videos for this athlete
+    await db.delete(athleteVideos).where(eq(athleteVideos.athleteId, athleteId));
+    
+    // Insert new videos if any
+    if (videosData.length > 0) {
+      return await db.insert(athleteVideos).values(videosData).returning();
     }
     return [];
   }

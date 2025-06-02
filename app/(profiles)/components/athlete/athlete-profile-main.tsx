@@ -14,10 +14,14 @@ import {
   Edit,
   Plus,
   GraduationCap,
-  Shield
+  Shield,
+  Trophy,
+  Zap,
+  Target,
+  Timer,
+  X
 } from "lucide-react";
 import { ProfileHeader } from "../shared/profile-header";
-import { AthleticHighlightsSection } from "../shared/athletic-highlights-section";
 import { AcademicSummaryCard } from "../shared/academic-summary-card";
 import { AthleteEditDialogs } from "./athlete-edit-dialogs";
 import { VerificationSection } from "./athlete-verification-section";
@@ -95,36 +99,182 @@ interface AthleteProfileProps {
 }
 
 // Memoize heavy components
-const MeasurablesSection = memo(({ measurables, selectedSport }: { 
+const MeasurablesSection = memo(({ measurables, allSports, selectedSport, onSportChange, isOwnProfile, onEditSection }: { 
   measurables: Measurable[], 
-  selectedSport: string 
+  allSports: string[],
+  selectedSport: string,
+  onSportChange: (sport: string) => void,
+  isOwnProfile?: boolean,
+  onEditSection: (section: string, measurableId?: string) => void
 }) => {
   const sportMeasurables = useMemo(() => 
     measurables.filter(m => m.sport === selectedSport), 
     [measurables, selectedSport]
   );
 
-  if (sportMeasurables.length === 0) return null;
+  // Sport-specific performance metrics to icon mapping
+  const getMeasurableIcon = (label: string) => {
+    const lowerLabel = label.toLowerCase();
+    if (lowerLabel.includes('dash') || lowerLabel.includes('sprint') || lowerLabel.includes('speed')) return Timer;
+    if (lowerLabel.includes('jump') || lowerLabel.includes('vertical') || lowerLabel.includes('broad')) return Zap;
+    if (lowerLabel.includes('throw') || lowerLabel.includes('shot') || lowerLabel.includes('distance')) return Target;
+    return Trophy;
+  };
+
+  const handleAddMeasurable = () => {
+    onEditSection('add-measurables');
+  };
+
+  const handleEditMeasurable = (measurableId: string) => {
+    onEditSection('edit-measurable', measurableId);
+  };
+
+  const handleDeleteMeasurable = (measurableId: string) => {
+    onEditSection('delete-measurable', measurableId);
+  };
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-lg font-semibold flex items-center gap-2">
-          Measurables - {selectedSport}
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="grid grid-cols-2 gap-4">
-          {sportMeasurables.map((measurable) => (
-            <div key={measurable.id} className="text-center p-3 bg-muted/50 rounded-lg">
-              <div className="text-sm text-muted-foreground">{measurable.label}</div>
-              <div className="font-semibold text-lg">{measurable.value}</div>
-              <div className="text-xs text-muted-foreground">
-                {new Date(measurable.measurementDate).toLocaleDateString()}
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-lg font-semibold flex items-center gap-2">
+              <Trophy className="w-5 h-5 text-yellow-600" />
+              Measurements
+            </CardTitle>
+            {isOwnProfile && (
+              <Button 
+                size="sm" 
+                variant="outline"
+                className="text-xs px-2 py-1"
+                onClick={handleAddMeasurable}
+              >
+                <Plus className="w-3 h-3 mr-1" />
+                Add
+              </Button>
+            )}
+          </div>
+          
+          {/* Sport Selector - Only show if multiple sports */}
+          {allSports.length > 1 && (
+            <div className="space-y-2">
+              <p className="text-sm font-medium text-muted-foreground">View measurements for:</p>
+              <div className="flex flex-wrap gap-2">
+                {allSports.map(sport => (
+                  <Button
+                    key={sport}
+                    size="sm"
+                    variant={selectedSport === sport ? "default" : "outline"}
+                    className="text-xs h-8"
+                    onClick={() => onSportChange(sport)}
+                  >
+                    {sport}
+                  </Button>
+                ))}
               </div>
             </div>
-          ))}
+          )}
         </div>
+      </CardHeader>
+      <CardContent>
+        {sportMeasurables.length === 0 ? (
+          <div className="space-y-4">
+            {/* Empty State */}
+            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/30 dark:to-indigo-950/30 rounded-lg p-6 text-center">
+              <div className="w-16 h-16 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Trophy className="w-8 h-8 text-blue-600" />
+              </div>
+              
+              {isOwnProfile ? (
+                <>
+                  <h3 className="font-semibold text-lg mb-2">Showcase Your Athletic Performance</h3>
+                  <p className="text-muted-foreground mb-6 max-w-md mx-auto">
+                    Add your performance metrics for {selectedSport} to stand out to coaches.
+                  </p>
+                  <div className="flex justify-center">
+                    <Button 
+                      className="mb-4"
+                      size="default"
+                      onClick={handleAddMeasurable}
+                    >
+                      <Plus className="w-4 h-4 mr-2" />
+                      Add Your First Performance Metric
+                    </Button>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <h3 className="font-semibold text-lg mb-2">Performance Metrics</h3>
+                  <p className="text-muted-foreground">
+                    {selectedSport} performance data will be displayed here when available.
+                  </p>
+                </>
+              )}
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {sportMeasurables.map((measurable) => {
+                const Icon = getMeasurableIcon(measurable.label);
+                return (
+                  <div key={measurable.id} className="bg-gradient-to-br from-muted/30 to-muted/50 rounded-lg p-4 border border-muted/50 relative group">
+                    {isOwnProfile && (
+                      <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <div className="flex gap-1">
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-6 w-6 p-0"
+                            onClick={() => handleEditMeasurable(measurable.id)}
+                          >
+                            <Edit className="w-3 h-3" />
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-6 w-6 p-0 text-red-500 hover:text-red-700"
+                            onClick={() => handleDeleteMeasurable(measurable.id)}
+                          >
+                            <X className="w-3 h-3" />
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                    <div className="flex items-start justify-between mb-2 pr-12">
+                      <div className="flex items-center gap-2">
+                        <Icon className="w-4 h-4 text-blue-600" />
+                        <span className="text-sm font-medium text-muted-foreground">{measurable.label}</span>
+                      </div>
+                      <Badge variant="outline" className="text-xs">
+                        {new Date(measurable.measurementDate).toLocaleDateString('en-US', { 
+                          month: 'short', 
+                          year: 'numeric' 
+                        })}
+                      </Badge>
+                    </div>
+                    <div className="text-2xl font-bold text-foreground">{measurable.value}</div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Add More Button for own profile */}
+            {isOwnProfile && (
+              <div className="mt-4 text-center">
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => onEditSection('add-measurables')}
+                  className="text-xs"
+                >
+                  <Plus className="w-3 h-3 mr-1" />
+                  Add More Metrics
+                </Button>
+              </div>
+            )}
+          </div>
+        )}
       </CardContent>
     </Card>
   );
@@ -142,12 +292,11 @@ const SocialMediaSection = memo(({ socialMedia, isOwnProfile, onEdit }: {
   return (
     <div className="pt-2 relative">
       <div className="flex items-center justify-between mb-2">
-        <p className="text-sm font-medium">Follow Me</p>
         {isOwnProfile && (
           <Button
             size="sm"
             variant="ghost"
-            className="p-1 h-6 w-6"
+            className="p-1 h-6 w-6 ml-auto"
             onClick={onEdit}
           >
             <Edit className="w-3 h-3" />
@@ -478,26 +627,6 @@ export function AthleteProfile({ data, isOwnProfile = false, onConnect, onShare 
                   isOwnProfile={isOwnProfile}
                   onEdit={() => handleEditSection('social-media')}
                 />
-
-                {/* Sport Selector */}
-                {allSports.length > 1 && (
-                  <div className="pt-4 mt-4 border-t">
-                    <p className="text-sm font-medium mb-2">View Stats For:</p>
-                    <div className="flex flex-wrap gap-1">
-                      {allSports.map(sport => (
-                        <Button
-                          key={sport}
-                          size="sm"
-                          variant={selectedSport === sport ? "default" : "outline"}
-                          className="text-xs h-7"
-                          onClick={() => setSelectedSport(sport)}
-                        >
-                          {sport}
-                        </Button>
-                      ))}
-                    </div>
-                  </div>
-                )}
               </CardContent>
             </Card>
 
@@ -572,10 +701,12 @@ export function AthleteProfile({ data, isOwnProfile = false, onConnect, onShare 
               </Card>
             )}
 
-            {/* Athletic Performance */}
-            <AthleticHighlightsSection
-              measurables={profileData.measurables}
+            {/* Measurements - Combined with sport selector */}
+            <MeasurablesSection
+              measurables={profileData.measurables || []}
+              allSports={allSports}
               selectedSport={selectedSport}
+              onSportChange={setSelectedSport}
               isOwnProfile={isOwnProfile}
               onEditSection={handleEditSection}
             />
@@ -608,41 +739,53 @@ export function AthleteProfile({ data, isOwnProfile = false, onConnect, onShare 
                 </CardHeader>
                 <CardContent>
                   {profileData.hudlUrl ? (
-                    profileData.hudlEmbedUrl ? (
-                      <div className="space-y-4">
-                        <div className="relative aspect-video bg-black rounded-lg overflow-hidden">
-                          <iframe
-                            src={profileData.hudlEmbedUrl}
-                            className="absolute inset-0 w-full h-full"
-                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                            allowFullScreen
-                            title="Hudl Highlights"
-                          />
+                    (() => {
+                      // Generate embed URL from Hudl URL if embed URL is not provided
+                      let embedUrl = profileData.hudlEmbedUrl;
+                      if (!embedUrl && profileData.hudlUrl) {
+                        // Extract Hudl video ID from various Hudl URL formats
+                        const hudlUrlMatch = profileData.hudlUrl.match(/hudl\.com\/(?:video\/)?([^\/\?]+)/);
+                        if (hudlUrlMatch) {
+                          embedUrl = `https://www.hudl.com/embed/video/${hudlUrlMatch[1]}`;
+                        }
+                      }
+
+                      return embedUrl ? (
+                        <div className="space-y-4">
+                          <div className="relative aspect-video bg-black rounded-lg overflow-hidden">
+                            <iframe
+                              src={embedUrl}
+                              className="absolute inset-0 w-full h-full"
+                              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                              allowFullScreen
+                              title="Hudl Highlights"
+                            />
+                          </div>
+                          <div className="flex justify-between items-center">
+                            <p className="text-sm text-muted-foreground">Game film and highlight reels</p>
+                            <Link href={profileData.hudlUrl} target="_blank">
+                              <Button variant="outline" size="sm">
+                                <ExternalLink className="w-4 h-4 mr-1" />
+                                View Full Hudl
+                              </Button>
+                            </Link>
+                          </div>
                         </div>
-                        <div className="flex justify-between items-center">
-                          <p className="text-sm text-muted-foreground">Game film and highlight reels</p>
+                      ) : (
+                        <div className="bg-muted rounded-lg p-4 flex items-center justify-between">
+                          <div>
+                            <p className="font-medium">Hudl Profile</p>
+                            <p className="text-sm text-muted-foreground">Game film and highlight reels</p>
+                          </div>
                           <Link href={profileData.hudlUrl} target="_blank">
                             <Button variant="outline" size="sm">
                               <ExternalLink className="w-4 h-4 mr-1" />
-                              View Full Hudl
+                              View Hudl
                             </Button>
                           </Link>
                         </div>
-                      </div>
-                    ) : (
-                      <div className="bg-muted rounded-lg p-4 flex items-center justify-between">
-                        <div>
-                          <p className="font-medium">Hudl Profile</p>
-                          <p className="text-sm text-muted-foreground">Game film and highlight reels</p>
-                        </div>
-                        <Link href={profileData.hudlUrl} target="_blank">
-                          <Button variant="outline" size="sm">
-                            <ExternalLink className="w-4 h-4 mr-1" />
-                            View Hudl
-                          </Button>
-                        </Link>
-                      </div>
-                    )
+                      );
+                    })()
                   ) : isOwnProfile && (
                     <div className="bg-muted/50 rounded-lg p-4">
                       <div className="text-center">

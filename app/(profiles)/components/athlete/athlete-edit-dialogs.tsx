@@ -248,6 +248,22 @@ export function AthleteEditDialogs({
           return `Name must be ${FIELD_LIMITS.FULL_NAME} characters or less`;
         }
         break;
+      case 'hudlUrl':
+        if (value && typeof value === 'string') {
+          const trimmedValue = value.trim();
+          if (trimmedValue && !trimmedValue.includes('hudl.com')) {
+            return 'Please enter a valid Hudl URL (must contain hudl.com)';
+          }
+        }
+        break;
+      case 'youtubeUrl':
+        if (value && typeof value === 'string') {
+          const trimmedValue = value.trim();
+          if (trimmedValue && !trimmedValue.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)/)) {
+            return 'Please enter a valid YouTube URL';
+          }
+        }
+        break;
       case 'personalStatement':
         if (typeof value === 'string' && value.length > FIELD_LIMITS.PERSONAL_STATEMENT) {
           return `Personal statement must be ${FIELD_LIMITS.PERSONAL_STATEMENT} characters or less`;
@@ -301,16 +317,20 @@ export function AthleteEditDialogs({
   const handleFieldChange = (field: string, value: string | number) => {
     setEditData(prev => ({ ...prev, [field]: value }));
     
-    const error = validateField(field, value);
-    setValidationErrors(prev => {
-      const newErrors = { ...prev };
-      if (error) {
-        newErrors[field] = error;
-      } else {
+    // Clear existing validation error for this field
+    if (validationErrors[field]) {
+      setValidationErrors(prev => {
+        const newErrors = { ...prev };
         delete newErrors[field];
-      }
-      return newErrors;
-    });
+        return newErrors;
+      });
+    }
+
+    // Validate the field
+    const error = validateField(field, value);
+    if (error) {
+      setValidationErrors(prev => ({ ...prev, [field]: error }));
+    }
   };
 
   // Helper functions
@@ -351,6 +371,13 @@ export function AthleteEditDialogs({
     const youtubeUrl = editData.youtubeUrl as string;
     const title = editData.title as string;
     
+    // Validate YouTube URL
+    const urlError = validateField('youtubeUrl', youtubeUrl);
+    if (urlError) {
+      setValidationErrors(prev => ({ ...prev, youtubeUrl: urlError }));
+      return;
+    }
+    
     if (youtubeUrl?.trim() && title?.trim()) {
       const videoIdMatch = youtubeUrl.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&\n?#]+)/);
       if (videoIdMatch) {
@@ -367,6 +394,15 @@ export function AthleteEditDialogs({
         
         setTempVideos(prev => [...(prev || []), newVideo]);
         setEditData(prev => ({ ...prev, youtubeUrl: '', title: '' }));
+        
+        // Clear any validation errors
+        setValidationErrors(prev => {
+          const newErrors = { ...prev };
+          delete newErrors.youtubeUrl;
+          return newErrors;
+        });
+      } else {
+        setValidationErrors(prev => ({ ...prev, youtubeUrl: 'Invalid YouTube URL format' }));
       }
     }
   };
@@ -921,10 +957,13 @@ export function AthleteEditDialogs({
                   id="edit-hudlUrl"
                   placeholder="https://www.hudl.com/..."
                   value={editData.hudlUrl || ''}
-                  onChange={(e) => setEditData(prev => ({ ...prev, hudlUrl: e.target.value }))}
-                  className="h-12"
+                  onChange={(e) => handleFieldChange('hudlUrl', e.target.value)}
+                  className={`h-12 ${validationErrors.hudlUrl ? 'border-red-500' : ''}`}
                   maxLength={FIELD_LIMITS.URL}
                 />
+                {validationErrors.hudlUrl && (
+                  <p className="text-sm text-red-500">{validationErrors.hudlUrl}</p>
+                )}
                 <p className="text-sm text-muted-foreground">
                   Add your Hudl profile to showcase game film and highlight reels
                 </p>
@@ -940,7 +979,7 @@ export function AthleteEditDialogs({
                   maxLength={FIELD_LIMITS.URL}
                 />
                 <p className="text-sm text-muted-foreground">
-                  Optional: Direct embed URL for video player
+                  Optional: Direct embed URL for video player (will be auto-generated if not provided)
                 </p>
               </div>
             </div>
@@ -987,10 +1026,13 @@ export function AthleteEditDialogs({
                     id="edit-youtubeUrl"
                     placeholder="https://www.youtube.com/watch?v=..."
                     value={editData.youtubeUrl || ''}
-                    onChange={(e) => setEditData(prev => ({ ...prev, youtubeUrl: e.target.value }))}
-                    className="h-12"
+                    onChange={(e) => handleFieldChange('youtubeUrl', e.target.value)}
+                    className={`h-12 ${validationErrors.youtubeUrl ? 'border-red-500' : ''}`}
                     maxLength={FIELD_LIMITS.URL}
                   />
+                  {validationErrors.youtubeUrl && (
+                    <p className="text-sm text-red-500">{validationErrors.youtubeUrl}</p>
+                  )}
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="edit-videoTitle">Video Title</Label>
@@ -998,7 +1040,7 @@ export function AthleteEditDialogs({
                     id="edit-videoTitle"
                     placeholder="e.g., Senior Season Highlights"
                     value={editData.title || ''}
-                    onChange={(e) => setEditData(prev => ({ ...prev, title: e.target.value }))}
+                    onChange={(e) => handleFieldChange('title', e.target.value)}
                     className="h-12"
                     maxLength={100}
                   />

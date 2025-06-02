@@ -56,14 +56,14 @@ export function VerificationSection({
           {/* MaxPreps Section */}
           {profileData.maxPrepsUrl ? (
             <div className="bg-gradient-to-r from-blue-50 to-green-50 dark:from-blue-950 dark:to-green-950 rounded-lg p-4">
-              <div className="flex items-center justify-between">
-                <div>
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1">
                     <p className="font-medium">MaxPreps Profile</p>
                     {profileData.isVerified && (
                       <Badge className="bg-green-600 text-white text-xs">
                         <Shield className="w-3 h-3 mr-1" />
-                        Official Verification
+                        Verified
                       </Badge>
                     )}
                   </div>
@@ -71,12 +71,14 @@ export function VerificationSection({
                     Official high school stats, game logs, and team roster verification
                   </p>
                 </div>
-                <Link href={profileData.maxPrepsUrl} target="_blank">
-                  <Button className="bg-[#01ae79] hover:bg-[#01ae79]/90 text-white">
-                    <ExternalLink className="w-4 h-4 mr-1" />
-                    View Official Stats
-                  </Button>
-                </Link>
+                <div className="flex-shrink-0 w-full sm:w-auto">
+                  <Link href={profileData.maxPrepsUrl} target="_blank" className="block">
+                    <Button className="bg-[#01ae79] hover:bg-[#01ae79]/90 text-white w-full sm:w-auto">
+                      <ExternalLink className="w-4 h-4 mr-1" />
+                      <span className="whitespace-nowrap">View Official Stats</span>
+                    </Button>
+                  </Link>
+                </div>
               </div>
               {!profileData.isVerified && (
                 <div className="mt-3 bg-orange-50 dark:bg-orange-950/20 border border-orange-200 dark:border-orange-800 rounded-lg p-3">

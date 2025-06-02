@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireAnyRole } from '@/utils/roles';
 import { userOperations, athleteOperations, coachOperations, recruitingOperations } from '@/database/db-utils';
 import { R2_PUBLIC_URL } from '@/database/r2';
-import { NewAthleteProfile, NewAthleteMeasurable } from '@/database/schema';
+import { NewAthleteProfile, NewAthleteMeasurable, NewAthleteVideo } from '@/database/schema';
 
 interface ProfilePageParams {
   params: Promise<{
@@ -409,6 +409,28 @@ export async function PUT(
           // Replace all existing measurables with new ones
           if (updatedProfile?.id) {
             await athleteOperations.replaceAthleteMeasurables(updatedProfile.id, measurablesData);
+          }
+        }
+
+        // Handle video updates if provided
+        if (updateData.youtubeVideos !== undefined && Array.isArray(updateData.youtubeVideos)) {
+          // Transform client videos data to database format
+          const videosData: NewAthleteVideo[] = updateData.youtubeVideos.map((video: {
+            title: string;
+            url: string;
+            embedUrl: string;
+            sortOrder?: number;
+          }) => ({
+            athleteId: updatedProfile?.id || 0, // Use the database profile ID
+            title: video.title,
+            youtubeUrl: video.url,
+            embedUrl: video.embedUrl,
+            sortOrder: video.sortOrder || 0
+          }));
+          
+          // Replace all existing videos with new ones
+          if (updatedProfile?.id) {
+            await athleteOperations.replaceAthleteVideos(updatedProfile.id, videosData);
           }
         }
         
