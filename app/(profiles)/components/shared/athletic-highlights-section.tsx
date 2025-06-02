@@ -37,17 +37,14 @@ export function AthleticHighlightsSection({ measurables = [], selectedSport, isO
   const suggestedMeasurables = getMeasurablesForSport(selectedSport);
 
   const handleAddMeasurable = () => {
-    // Use the main edit system instead of internal logic
     onEditSection('add-measurables');
   };
 
   const handleEditMeasurable = (measurableId: string) => {
-    // Use the main edit system instead of internal logic  
     onEditSection('edit-measurable', measurableId);
   };
 
   const handleDeleteMeasurable = (measurableId: string) => {
-    // Use the main edit system instead of internal logic
     onEditSection('delete-measurable', measurableId);
   };
 
@@ -120,7 +117,7 @@ export function AthleticHighlightsSection({ measurables = [], selectedSport, isO
                       variant="secondary" 
                       className="cursor-pointer hover:bg-blue-100 dark:hover:bg-blue-900 text-xs"
                       onClick={() => {
-                        onEditSection('edit-measurable');
+                        onEditSection('add-measurables');
                       }}
                     >
                       {measurable}
@@ -146,12 +143,12 @@ export function AthleticHighlightsSection({ measurables = [], selectedSport, isO
           {isOwnProfile && (
             <Button 
               size="sm" 
-              variant="ghost"
-              onClick={() => onEditSection('measurables')}
+              variant="outline"
+              onClick={() => onEditSection('add-measurables')}
               className="text-xs px-2 py-1"
             >
-              <Edit className="w-3 h-3 mr-1" />
-              Edit
+              <Plus className="w-3 h-3 mr-1" />
+              Add
             </Button>
           )}
         </div>
@@ -202,17 +199,17 @@ export function AthleticHighlightsSection({ measurables = [], selectedSport, isO
           })}
         </div>
 
-        {/* Add More Button */}
+        {/* Add More Button for own profile */}
         {isOwnProfile && (
-          <div className="mt-4 pt-4 border-t border-muted/50">
+          <div className="mt-4 text-center">
             <Button 
               variant="outline" 
               size="sm"
-              className="w-full"
               onClick={() => onEditSection('add-measurables')}
+              className="text-xs"
             >
-              <Plus className="w-4 h-4 mr-2" />
-              Add More Performance Metrics
+              <Plus className="w-3 h-3 mr-1" />
+              Add More Metrics
             </Button>
           </div>
         )}

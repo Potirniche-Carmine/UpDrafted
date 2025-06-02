@@ -30,7 +30,7 @@ export interface AthleteProfileData {
 
   // Verification
   maxPrepsUrl?: string;
-  maxPrepsVerified: boolean;
+  isVerified: boolean;
 
   // Media
   hudlUrl?: string;

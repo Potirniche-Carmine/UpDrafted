@@ -120,8 +120,8 @@ function transformProfileData(profileData: Record<string, any>, profileType: str
       };
     }
 
-    // Set maxPrepsVerified based on verification status
-    transformed.maxPrepsVerified = transformed.isVerified || false;
+    // Set verification status from database
+    transformed.isVerified = transformed.isVerified || false;
 
     // Ensure achievements is an array
     if (!Array.isArray(transformed.achievements)) {
@@ -134,9 +134,14 @@ function transformProfileData(profileData: Record<string, any>, profileType: str
     }
 
     // Ensure URLs are properly handled - set to undefined if null or empty
-    if (!transformed.maxPrepsUrl || transformed.maxPrepsUrl.trim() === '') {
+    // Map database field names to frontend field names
+    if (transformed.maxprepsUrl) {
+      transformed.maxPrepsUrl = transformed.maxprepsUrl;
+      delete transformed.maxprepsUrl; // Remove the database field name
+    } else {
       transformed.maxPrepsUrl = undefined;
     }
+    
     if (!transformed.hudlUrl || transformed.hudlUrl.trim() === '') {
       transformed.hudlUrl = undefined;
     }
@@ -372,6 +377,9 @@ export async function PUT(
         if (updateData.maxPrepsUrl !== undefined) profileUpdateData.maxprepsUrl = updateData.maxPrepsUrl; // Note: client sends maxPrepsUrl, DB expects maxprepsUrl
         if (updateData.hudlUrl !== undefined) profileUpdateData.hudlUrl = updateData.hudlUrl;
         if (updateData.hudlEmbedUrl !== undefined) profileUpdateData.hudlEmbedUrl = updateData.hudlEmbedUrl;
+        
+        // Handle verification status
+        if (updateData.isVerified !== undefined) profileUpdateData.isVerified = updateData.isVerified;
         
         // Handle social media - extract from socialMedia object
         if (updateData.socialMedia !== undefined) {

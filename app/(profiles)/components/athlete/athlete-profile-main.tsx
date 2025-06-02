@@ -5,10 +5,12 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import Image from "next/image";
+import Link from "next/link";
 import {
   MapPin,
   Instagram,
   Twitter,
+  ExternalLink,
   Edit,
   Plus,
   GraduationCap,
@@ -17,14 +19,119 @@ import {
 import { ProfileHeader } from "../shared/profile-header";
 import { AthleticHighlightsSection } from "../shared/athletic-highlights-section";
 import { AcademicSummaryCard } from "../shared/academic-summary-card";
-import { VerificationDialog } from "../shared/verification-dialog";
-import { VerificationSection } from "./athlete-verification-section";
 import { AthleteEditDialogs } from "./athlete-edit-dialogs";
+import { VerificationSection } from "./athlete-verification-section";
+import { VerificationDialog } from "../shared/verification-dialog";
 import { useRoleView } from '@/hooks/use-role-view';
-import { AthleteProfileData, AthleteProfileProps, MeasurableEditData } from './athlete-profile-types';
 import { EducationLevel } from '@/app/(onboarding)/lib/onboarding';
 
-// Memoized social media section
+export interface Measurable {
+  id: string;
+  sport: string;
+  label: string;
+  value: string;
+  measurementDate: string;
+}
+
+export interface AthleteProfileData {
+  id: string;
+  userId?: string;
+  // Basic Information
+  fullName: string;
+  profileImage?: string;
+  sport: string;
+  secondarySports?: string[];
+  graduationYear: number;
+  educationLevel: EducationLevel;
+  highSchool: string;
+  city: string;
+  state: string;
+  gpa?: number | string;
+  satScore?: number;
+  actScore?: number;
+  height: string;
+  weight: string;
+  positions: string[];
+
+  // Verification
+  maxPrepsUrl?: string;
+  isVerified: boolean;
+
+  // Media
+  hudlUrl?: string;
+  hudlEmbedUrl?: string;
+  youtubeVideos?: {
+    id?: string;
+    title: string;
+    url: string;
+    embedUrl: string;
+    sortOrder?: number;
+  }[];
+
+  // Social Media
+  socialMedia?: {
+    instagram?: string;
+    twitter?: string;
+  };
+
+  // Academic Information
+  intendedMajor?: string;
+
+  // Personal Statement
+  personalStatement?: string;
+
+  // Additional Info
+  achievements?: string[];
+
+  // Measurables
+  measurables?: Measurable[];
+}
+
+interface AthleteProfileProps {
+  data: AthleteProfileData;
+  isOwnProfile?: boolean;
+  onConnect?: () => void;
+  onShare?: () => void;
+}
+
+// Memoize heavy components
+const MeasurablesSection = memo(({ measurables, selectedSport }: { 
+  measurables: Measurable[], 
+  selectedSport: string 
+}) => {
+  const sportMeasurables = useMemo(() => 
+    measurables.filter(m => m.sport === selectedSport), 
+    [measurables, selectedSport]
+  );
+
+  if (sportMeasurables.length === 0) return null;
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-lg font-semibold flex items-center gap-2">
+          Measurables - {selectedSport}
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="grid grid-cols-2 gap-4">
+          {sportMeasurables.map((measurable) => (
+            <div key={measurable.id} className="text-center p-3 bg-muted/50 rounded-lg">
+              <div className="text-sm text-muted-foreground">{measurable.label}</div>
+              <div className="font-semibold text-lg">{measurable.value}</div>
+              <div className="text-xs text-muted-foreground">
+                {new Date(measurable.measurementDate).toLocaleDateString()}
+              </div>
+            </div>
+          ))}
+        </div>
+      </CardContent>
+    </Card>
+  );
+});
+
+MeasurablesSection.displayName = "MeasurablesSection";
+
 const SocialMediaSection = memo(({ socialMedia, isOwnProfile, onEdit }: { 
   socialMedia?: { instagram?: string; twitter?: string };
   isOwnProfile?: boolean;
@@ -90,26 +197,13 @@ SocialMediaSection.displayName = "SocialMediaSection";
 
 export function AthleteProfile({ data, isOwnProfile = false, onConnect, onShare }: AthleteProfileProps) {
   const [selectedSport, setSelectedSport] = useState(data.sport);
+  const [editDialogOpen, setEditDialogOpen] = useState<string | null>(null);
+  const [measurableIdToEdit, setMeasurableIdToEdit] = useState<string | null>(null);
+  const [verificationDialogOpen, setVerificationDialogOpen] = useState(false);
   const [profileData, setProfileData] = useState(data);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
-  const [showVerificationDialog, setShowVerificationDialog] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const { effectiveRole } = useRoleView();
-  
-  // Edit dialog state
-  const [editDialogOpen, setEditDialogOpen] = useState<string | null>(null);
-  const [editData, setEditData] = useState<Record<string, string | number | string[]>>({});
-  const [validationErrors, setValidationErrors] = useState<{[key: string]: string}>({});
-  const [measurableEditData, setMeasurableEditData] = useState<MeasurableEditData>({
-    label: '',
-    value: '',
-    customLabel: '',
-    isCustom: false,
-    measurementMonth: '',
-    measurementYear: '',
-    selectedMeasurableId: ''
-  });
-  const [tempVideos, setTempVideos] = useState<typeof profileData.youtubeVideos>(profileData.youtubeVideos || []);
   
   // Memoize computed values
   const allSports = useMemo(() => [profileData.sport, ...(profileData.secondarySports || [])], [profileData.sport, profileData.secondarySports]);
@@ -144,113 +238,25 @@ export function AthleteProfile({ data, isOwnProfile = false, onConnect, onShare 
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
   }, [hasUnsavedChanges]);
 
-  // Initialize edit data when opening a dialog
-  const initializeEditData = (section: string) => {
-    switch (section) {
-      case 'basic-info':
-        const heightParts = profileData.height.match(/(\d+)'(\d+)"/);
-        setEditData({
-          fullName: profileData.fullName,
-          sport: profileData.sport,
-          educationLevel: profileData.educationLevel,
-          secondarySports: profileData.secondarySports || [],
-          positions: profileData.positions || [],
-          city: profileData.city,
-          state: profileData.state,
-          highSchool: profileData.highSchool,
-          graduationYear: profileData.graduationYear,
-          heightFeet: heightParts ? heightParts[1] : '',
-          heightInches: heightParts ? heightParts[2] : '',
-          weight: profileData.weight.replace(/\s*lbs?\s*/gi, '')
-        });
-        break;
-      case 'personal-statement':
-      case 'add-personal-statement':
-        setEditData({
-          personalStatement: profileData.personalStatement || ''
-        });
-        break;
-      case 'social-media':
-        setEditData({
-          instagram: profileData.socialMedia?.instagram || '',
-          twitter: profileData.socialMedia?.twitter || ''
-        });
-        break;
-      case 'add-maxpreps':
-      case 'maxpreps-verification':
-        setEditData({
-          maxPrepsUrl: profileData.maxPrepsUrl || ''
-        });
-        break;
-      default:
-        setEditData({});
-        break;
-    }
-    setValidationErrors({});
-  };
-
   const handleEditSection = (section: string, measurableId?: string) => {
-    initializeEditData(section);
-    
-    // If this is a delete operation for a specific measurable, directly delete it
     if (section === 'delete-measurable' && measurableId) {
       const confirmed = window.confirm('Are you sure you want to delete this performance metric? This action cannot be undone.');
       if (confirmed) {
-        handleDeleteMeasurable(measurableId);
+        const updatedMeasurables = (profileData.measurables || []).filter(m => m.id !== measurableId);
+        updateProfileData({ measurables: updatedMeasurables });
       }
       return;
     }
     
-    setEditDialogOpen(section);
-  };
-
-  // Save edit data to profile
-  const saveEditData = () => {
-    const updates: Partial<AthleteProfileData> = {};
-    
-    if (editDialogOpen === 'basic-info') {
-      updates.fullName = editData.fullName as string;
-      updates.sport = editData.sport as string;
-      updates.educationLevel = editData.educationLevel as EducationLevel;
-      updates.secondarySports = editData.secondarySports as string[];
-      updates.positions = editData.positions as string[];
-      updates.city = editData.city as string;
-      updates.state = editData.state as string;
-      updates.highSchool = editData.highSchool as string;
-      updates.graduationYear = editData.graduationYear as number;
-      
-      // Construct height string from feet and inches
-      const feet = editData.heightFeet as string;
-      const inches = editData.heightInches as string;
-      if (feet && inches) {
-        updates.height = `${feet}'${inches}"`;
-      }
-      
-      // Add lbs to weight if not present
-      const weight = editData.weight as string;
-      if (weight) {
-        updates.weight = weight.includes('lbs') ? weight : `${weight} lbs`;
-      }
-    } else if (editDialogOpen === 'personal-statement' || editDialogOpen === 'add-personal-statement') {
-      updates.personalStatement = editData.personalStatement as string;
-    } else if (editDialogOpen === 'social-media') {
-      updates.socialMedia = {
-        instagram: editData.instagram as string || undefined,
-        twitter: editData.twitter as string || undefined
-      };
-    } else if (editDialogOpen === 'add-maxpreps' || editDialogOpen === 'maxpreps-verification') {
-      updates.maxPrepsUrl = editData.maxPrepsUrl as string;
+    if (section === 'manual-verification') {
+      setVerificationDialogOpen(true);
+      return;
     }
-
-    updateProfileData(updates);
-    setEditDialogOpen(null);
-  };
-
-  // Delete measurable function
-  const handleDeleteMeasurable = (measurableId: string) => {
-    const updatedMeasurables = (profileData.measurables || []).filter(m => m.id !== measurableId);
-    updateProfileData({ measurables: updatedMeasurables });
-    setEditDialogOpen(null);
+    
+    if (measurableId) {
+      setMeasurableIdToEdit(measurableId);
+    }
+    setEditDialogOpen(section);
   };
 
   const saveProfile = async () => {
@@ -258,7 +264,7 @@ export function AthleteProfile({ data, isOwnProfile = false, onConnect, onShare 
     
     setIsSaving(true);
     try {
-      // Get the current user's auth token
+      // Get the current user's auth token with proper type definition
       const windowWithClerk = window as unknown as {
         Clerk?: {
           session?: {
@@ -286,9 +292,12 @@ export function AthleteProfile({ data, isOwnProfile = false, onConnect, onShare 
 
       const result = await response.json();
       if (result.success) {
+        // Update the original data to match saved data
         setProfileData(result.profile);
         setHasUnsavedChanges(false);
         console.log('Profile updated successfully');
+        
+        // Update the page data reference so changes are permanent
         Object.assign(data, result.profile);
       } else {
         throw new Error(result.error || 'Failed to update profile');
@@ -322,10 +331,35 @@ export function AthleteProfile({ data, isOwnProfile = false, onConnect, onShare 
         connectLabel="Draft"
         profileName={profileData.fullName}
         profileType="athlete"
-        hasUnsavedChanges={isOwnProfile ? hasUnsavedChanges : false}
+        hasUnsavedChanges={hasUnsavedChanges}
         isSaving={isSaving}
         onSaveChanges={saveProfile}
         onDiscardChanges={discardChanges}
+      />
+
+      {/* Verification Dialog */}
+      <VerificationDialog
+        open={verificationDialogOpen}
+        onOpenChange={setVerificationDialogOpen}
+        role="athlete"
+      />
+
+      {/* Edit Dialogs */}
+      <AthleteEditDialogs
+        isOpen={!!editDialogOpen}
+        dialogType={editDialogOpen}
+        profileData={profileData}
+        measurableIdToEdit={measurableIdToEdit}
+        onClose={() => {
+          setEditDialogOpen(null);
+          setMeasurableIdToEdit(null);
+        }}
+        onSave={(updates: Partial<AthleteProfileData>) => {
+          updateProfileData(updates);
+          setEditDialogOpen(null);
+          setMeasurableIdToEdit(null);
+        }}
+        selectedSport={selectedSport}
       />
 
       <div className="container py-4 md:py-8">
@@ -366,16 +400,10 @@ export function AthleteProfile({ data, isOwnProfile = false, onConnect, onShare 
                   <div className="space-y-2">
                     <div className="flex items-center justify-center gap-2">
                       <h1 className="text-lg md:text-xl font-bold">{profileData.fullName}</h1>
-                      {/* Verification Badge */}
-                      {profileData.maxPrepsVerified ? (
-                        <Badge className="bg-green-600 text-white hover:bg-green-600 text-xs flex items-center gap-1">
-                          <Shield className="w-3 h-3" />
-                          Verified Athlete
-                        </Badge>
-                      ) : (
-                        <Badge variant="outline" className="text-orange-600 border-orange-300 text-xs flex items-center gap-1">
-                          <Shield className="w-3 h-3" />
-                          Unverified
+                      {profileData.isVerified && (
+                        <Badge className="bg-green-600 text-white text-xs">
+                          <Shield className="w-3 h-3 mr-1" />
+                          Verified
                         </Badge>
                       )}
                       {isOwnProfile && (
@@ -533,7 +561,7 @@ export function AthleteProfile({ data, isOwnProfile = false, onConnect, onShare 
                       </p>
                       <Button 
                         variant="outline"
-                        onClick={() => handleEditSection('add-personal-statement')}
+                        onClick={() => handleEditSection('personal-statement')}
                       >
                         <Plus className="w-4 h-4 mr-2" />
                         Add Personal Statement
@@ -552,40 +580,148 @@ export function AthleteProfile({ data, isOwnProfile = false, onConnect, onShare 
               onEditSection={handleEditSection}
             />
 
-            {/* Enhanced Verification Section */}
+            {/* Verification Section */}
             <VerificationSection
               profileData={profileData}
               isOwnProfile={isOwnProfile}
               onEditMaxPreps={() => handleEditSection('maxpreps-verification')}
-              onShowVerificationDialog={() => setShowVerificationDialog(true)}
+              onShowVerificationDialog={() => handleEditSection('manual-verification')}
             />
+            
+            {/* Hudl Highlights */}
+            {(profileData.hudlUrl || isOwnProfile) && (
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <CardTitle>Hudl Highlights</CardTitle>
+                    {isOwnProfile && (
+                      <Button 
+                        size="sm" 
+                        variant="ghost"
+                        onClick={() => handleEditSection('hudl-highlights')}
+                      >
+                        <Edit className="w-4 h-4 mr-1" />
+                        Edit
+                      </Button>
+                    )}
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  {profileData.hudlUrl ? (
+                    profileData.hudlEmbedUrl ? (
+                      <div className="space-y-4">
+                        <div className="relative aspect-video bg-black rounded-lg overflow-hidden">
+                          <iframe
+                            src={profileData.hudlEmbedUrl}
+                            className="absolute inset-0 w-full h-full"
+                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                            allowFullScreen
+                            title="Hudl Highlights"
+                          />
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <p className="text-sm text-muted-foreground">Game film and highlight reels</p>
+                          <Link href={profileData.hudlUrl} target="_blank">
+                            <Button variant="outline" size="sm">
+                              <ExternalLink className="w-4 h-4 mr-1" />
+                              View Full Hudl
+                            </Button>
+                          </Link>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="bg-muted rounded-lg p-4 flex items-center justify-between">
+                        <div>
+                          <p className="font-medium">Hudl Profile</p>
+                          <p className="text-sm text-muted-foreground">Game film and highlight reels</p>
+                        </div>
+                        <Link href={profileData.hudlUrl} target="_blank">
+                          <Button variant="outline" size="sm">
+                            <ExternalLink className="w-4 h-4 mr-1" />
+                            View Hudl
+                          </Button>
+                        </Link>
+                      </div>
+                    )
+                  ) : isOwnProfile && (
+                    <div className="bg-muted/50 rounded-lg p-4">
+                      <div className="text-center">
+                        <p className="font-medium text-muted-foreground mb-2">Hudl Profile Not Added</p>
+                        <p className="text-sm text-muted-foreground mb-4">
+                          Add your Hudl profile to showcase game film and highlight reels
+                        </p>
+                        <Button 
+                          variant="outline"
+                          onClick={() => handleEditSection('hudl-highlights')}
+                        >
+                          <Plus className="w-4 h-4 mr-2" />
+                          Add Hudl URL
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            )}
+
+            {/* YouTube Videos */}
+            {(profileData.youtubeVideos && profileData.youtubeVideos.length > 0) || isOwnProfile ? (
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <CardTitle>Highlight Videos</CardTitle>
+                    {isOwnProfile && (
+                      <Button 
+                        size="sm" 
+                        variant="ghost"
+                        onClick={() => handleEditSection('video-highlights')}
+                      >
+                        <Edit className="w-4 h-4 mr-1" />
+                        Edit
+                      </Button>
+                    )}
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  {profileData.youtubeVideos && profileData.youtubeVideos.length > 0 ? (
+                    <div className="space-y-4">
+                      {profileData.youtubeVideos.sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0)).map((video, index) => (
+                        <div key={video.id || index} className="space-y-2">
+                          <h4 className="font-medium break-words">{video.title}</h4>
+                          <div className="relative aspect-video bg-black rounded-lg overflow-hidden">
+                            <iframe
+                              src={video.embedUrl}
+                              className="absolute inset-0 w-full h-full"
+                              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                              allowFullScreen
+                              title={video.title}
+                            />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : isOwnProfile && (
+                    <div className="bg-muted/50 rounded-lg p-4">
+                      <div className="text-center">
+                        <p className="font-medium text-muted-foreground mb-2">No Highlight Videos Added</p>
+                        <p className="text-sm text-muted-foreground mb-4">
+                          Add YouTube videos to showcase your best plays and skills
+                        </p>
+                        <Button 
+                          variant="outline"
+                          onClick={() => handleEditSection('video-highlights')}
+                        >
+                          <Plus className="w-4 h-4 mr-2" />
+                          Add Videos
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            ) : null}
           </div>
         </div>
-
-        {/* Edit Dialogs */}
-        <AthleteEditDialogs
-          editDialogOpen={editDialogOpen}
-          setEditDialogOpen={setEditDialogOpen}
-          profileData={profileData}
-          editData={editData}
-          setEditData={setEditData}
-          measurableEditData={measurableEditData}
-          setMeasurableEditData={setMeasurableEditData}
-          tempVideos={tempVideos}
-          setTempVideos={setTempVideos}
-          validationErrors={validationErrors}
-          setValidationErrors={setValidationErrors}
-          onSave={saveEditData}
-          selectedSport={selectedSport}
-          onDeleteMeasurable={handleDeleteMeasurable}
-        />
-
-        {/* Verification Dialog */}
-        <VerificationDialog 
-          open={showVerificationDialog}
-          onOpenChange={setShowVerificationDialog}
-          role="athlete"
-        />
       </div>
     </div>
   );

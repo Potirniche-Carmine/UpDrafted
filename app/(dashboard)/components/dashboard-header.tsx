@@ -14,7 +14,7 @@ interface DashboardHeaderProps {
   isAdmin: boolean;
   isViewingAsOtherRole: boolean;
   effectiveRole: string;
-  isVerified: boolean;
+  isVerified?: boolean;
 }
 
 export function DashboardHeader({
@@ -36,9 +36,11 @@ export function DashboardHeader({
           <AlertDescription className="text-blue-700 dark:text-blue-200">
             <div className="flex items-center justify-between">
               <span>Admin Mode: You are viewing the dashboard as a <strong>{effectiveRole}</strong>. Use the role switcher to change perspectives.</span>
-              <Badge variant="outline" className="ml-2">
-                {isVerified ? 'Verified' : 'Unverified'}
-              </Badge>
+              {isVerified !== undefined && (
+                <Badge variant="outline" className="ml-2">
+                  {isVerified ? 'Verified' : 'Unverified'}
+                </Badge>
+              )}
             </div>
           </AlertDescription>
         </Alert>

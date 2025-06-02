@@ -1,7 +1,7 @@
 "use client";
 
 import { useUser } from '@clerk/nextjs';
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -21,10 +21,8 @@ import {
 } from "lucide-react"
 import Link from "next/link"
 import { useRoleView } from '@/hooks/use-role-view'
-import { VerificationDialog } from '@/app/(profiles)/components/shared/verification-dialog'
 import { useProfileNavigation } from '@/hooks/use-profile-navigation'
 import { DashboardHeader } from '../components/dashboard-header'
-import { VerificationAlert } from '../components/verification-alert'
 
 // TypeScript interfaces for actions
 interface ActionWithHref {
@@ -158,18 +156,13 @@ const getUserTypeContent = (role: string, userId: string, handleViewProfile: () 
 
 export default function DashboardPage() {
   const { isSignedIn, user, isLoaded } = useUser();
-  const { effectiveRole, isAdmin, isViewingAsOtherRole, isVerified } = useRoleView();
-  const [showVerificationDialog, setShowVerificationDialog] = useState(false);
+  const { effectiveRole, isAdmin, isViewingAsOtherRole } = useRoleView();
   const { navigateToProfile, isNavigating: profileNavigating } = useProfileNavigation();
   
   // Scroll to top when dashboard loads (after onboarding)
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, []);
-  
-  useEffect(() => {
-    console.log('Dialog state changed:', { showVerificationDialog, effectiveRole, isVerified });
-  }, [showVerificationDialog, effectiveRole, isVerified]);
 
   // Handle profile navigation with proper prefetching
   const handleViewProfile = async () => {
@@ -191,13 +184,6 @@ export default function DashboardPage() {
   // Get user display name
   const displayName = user.fullName || user.firstName || user.username || 'User';
 
-  // Handle verification button click
-  const handleGetVerified = () => {
-    console.log('Get Verified clicked', { effectiveRole, showVerificationDialog });
-    // Show verification dialog for all roles (coaches, recruiters, and athletes)
-    setShowVerificationDialog(true);
-  };
-
   return (
     <div className="min-h-screen bg-background">
       <div className="container mx-auto py-6 px-4 md:px-6 space-y-6">
@@ -210,16 +196,6 @@ export default function DashboardPage() {
           isAdmin={isAdmin}
           isViewingAsOtherRole={isViewingAsOtherRole}
           effectiveRole={effectiveRole || 'athlete'}
-          isVerified={isVerified}
-        />
-
-        {/* Verification Alert */}
-        <VerificationAlert
-          isVerified={isVerified}
-          effectiveRole={effectiveRole || 'athlete'}
-          onGetVerified={handleGetVerified}
-          onViewProfile={handleViewProfile}
-          profileNavigating={profileNavigating}
         />
 
         {/* Quick Stats Grid */}
@@ -387,13 +363,6 @@ export default function DashboardPage() {
             </Card>
           </div>
         </div>
-
-        {/* Verification Dialog */}
-        <VerificationDialog 
-          open={showVerificationDialog}
-          onOpenChange={setShowVerificationDialog}
-          role={effectiveRole as "coach" | "recruiter" | "athlete"}
-        />
       </div>
     </div>
   );
