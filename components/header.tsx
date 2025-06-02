@@ -306,7 +306,7 @@ export function Header() {
   const navItems: NavItem[] = [
     { key: "discover", href: "/discover", label: "Discover", icon: <Search className="h-5 w-5" />, requiresAuth: true },
     { key: "connections", href: "/connections", label: "Connections", icon: <Users className="h-5 w-5" />, requiresAuth: true },
-    { key: "messaging", href: "/messaging", label: "Messages", icon: <MessageSquare className="h-5 w-5" />, requiresAuth: true },
+    { key: "messages", href: "/messages", label: "Messages", icon: <MessageSquare className="h-5 w-5" />, requiresAuth: true },
     { key: "notifications", href: "/notifications", label: "Notifications", icon: <Bell className="h-5 w-5" />, requiresAuth: true }
   ];
 
@@ -361,7 +361,7 @@ export function Header() {
               title={item.label}
             >
               {item.icon}
-              <span className="ml-2 text-sm font-medium">
+              <span className="ml-2 text-sm font-medium hidden lg:inline">
                 {item.label}
               </span>
             </Link>

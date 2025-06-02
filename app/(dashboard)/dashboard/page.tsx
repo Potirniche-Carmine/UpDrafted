@@ -109,7 +109,7 @@ const getUserTypeContent = (role: string, userId: string, handleViewProfile: () 
           { label: "Discover Schools", href: "/discover", icon: Search, description: "Find your perfect college match" },
           { label: profileNavigating ? "Loading..." : "View Profile", onClick: handleViewProfile, icon: Eye, description: "Check your current profile" },
           { label: "My Connections", href: "/connections", icon: Users, description: "Manage your network" },
-          { label: "Check Messages", href: "/messaging", icon: MessageSquare, description: "Connect with coaches" }
+          { label: "Check Messages", href: "/messages", icon: MessageSquare, description: "Connect with coaches" }
         ],
         secondaryActions: []
       }
@@ -122,7 +122,7 @@ const getUserTypeContent = (role: string, userId: string, handleViewProfile: () 
           { label: "Discover Athletes", href: "/discover", icon: Search, description: "Find top prospects" },
           { label: profileNavigating ? "Loading..." : "View Profile", onClick: handleViewProfile, icon: Eye, description: "Check your current profile" },
           { label: "View Notifications", href: "/notifications", icon: Bell, description: "Stay updated" },
-          { label: "Send Messages", href: "/messaging", icon: MessageSquare, description: "Connect with prospects" }
+          { label: "Send Messages", href: "/messages", icon: MessageSquare, description: "Connect with prospects" }
         ],
         secondaryActions: []
       }
@@ -135,7 +135,7 @@ const getUserTypeContent = (role: string, userId: string, handleViewProfile: () 
           { label: "Discover Athletes", href: "/discover", icon: Search, description: "Find athletes & coaches" },
           { label: profileNavigating ? "Loading..." : "View Profile", onClick: handleViewProfile, icon: Eye, description: "Check your current profile" },
           { label: "Manage Matches", href: "/recruiting/matches", icon: Target, description: "Track connections" },
-          { label: "Send Messages", href: "/messaging", icon: MessageSquare, description: "Facilitate connections" }
+          { label: "Send Messages", href: "/messages", icon: MessageSquare, description: "Facilitate connections" }
         ],
         secondaryActions: []
       }
@@ -147,7 +147,7 @@ const getUserTypeContent = (role: string, userId: string, handleViewProfile: () 
         primaryActions: [
           { label: "Discover", href: "/discover", icon: Search, description: "Find what you need" },
           { label: profileNavigating ? "Loading..." : "View Profile", onClick: handleViewProfile, icon: Eye, description: "Check your profile" },
-          { label: "Messages", href: "/messaging", icon: MessageSquare, description: "Check messages" },
+          { label: "Messages", href: "/messages", icon: MessageSquare, description: "Check messages" },
           { label: "Notifications", href: "/notifications", icon: Bell, description: "Stay updated" }
         ],
         secondaryActions: []
