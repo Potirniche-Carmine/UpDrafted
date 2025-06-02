@@ -62,7 +62,10 @@ export default clerkMiddleware(async (auth, req) => {
 export const config = {
   // Run middleware ONLY for API routes:
   matcher: [
-    '/api/(.*)', 
+    '/api/(.*)',
+    '/messages/(.*)',
+    '/api(.*)',
+    '/messages(.*)'
   ],
 };
 
