@@ -1,6 +1,9 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // Move serverComponentsExternalPackages to root level (outside experimental)
+  serverExternalPackages: ['@neondatabase/serverless'],
+  
   images: {
     dangerouslyAllowSVG: true,
     // Add local patterns for static assets
@@ -54,8 +57,6 @@ const nextConfig: NextConfig = {
   // Additional optimizations for cost efficiency
   experimental: {
     optimizePackageImports: ['lucide-react', '@radix-ui/react-icons'],
-    // Reduce edge function usage
-    serverComponentsExternalPackages: ['@neondatabase/serverless'],
     // Optimize for Node.js runtime where possible
     serverActions: {
       allowedOrigins: ['localhost:3000', 'updrafted.carmine.live'],
@@ -91,13 +92,23 @@ const nextConfig: NextConfig = {
         }
       ],
     },
-    // Aggressive caching for all static assets
+    // Aggressive caching for all static assets - fix the regex pattern
     {
-      source: '/(.*\\.(ico|png|jpg|jpeg|gif|webp|svg|woff|woff2|ttf|eot|otf|css|js))',
+      source: '/static/:path*',
       headers: [
         {
           key: 'Cache-Control',
           value: 'public, max-age=31536000, immutable' // 1 year cache for static assets
+        }
+      ],
+    },
+    // Cache for common static file extensions
+    {
+      source: '/:path*\\.(ico|png|jpg|jpeg|gif|webp|svg|woff|woff2|ttf|eot|otf|css|js)$',
+      headers: [
+        {
+          key: 'Cache-Control',
+          value: 'public, max-age=31536000, immutable'
         }
       ],
     },
