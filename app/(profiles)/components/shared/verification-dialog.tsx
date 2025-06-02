@@ -49,7 +49,25 @@ export function VerificationDialog({ open, onOpenChange, role }: VerificationDia
   const [linkDescription, setLinkDescription] = useState("");
   const [additionalInfo, setAdditionalInfo] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [verificationRequestId, setVerificationRequestId] = useState<number | null>(null);
+  const [submitSuccess, setSubmitSuccess] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  // Reset form when dialog opens/closes
+  React.useEffect(() => {
+    if (!open) {
+      // Reset form when dialog closes
+      setFiles([]);
+      setLinkUrl("");
+      setLinkDescription("");
+      setAdditionalInfo("");
+      setSubmitSuccess(false);
+      setErrorMessage(null);
+    } else {
+      // Clear messages when dialog opens
+      setSubmitSuccess(false);
+      setErrorMessage(null);
+    }
+  }, [open]);
 
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const uploadedFiles = Array.from(event.target.files || []);
@@ -89,8 +107,10 @@ export function VerificationDialog({ open, onOpenChange, role }: VerificationDia
     setFiles((prev) => prev.filter((file) => file.id !== id));
   };
 
-  const uploadSingleFile = async (file: VerificationFile): Promise<boolean> => {
-    if (!file.file || !verificationRequestId) return false;
+  const uploadSingleFileWithId = async (file: VerificationFile, requestId: number): Promise<boolean> => {
+    if (!file.file) {
+      return false;
+    }
 
     setFiles((prev) => 
       prev.map((f) => 
@@ -101,7 +121,7 @@ export function VerificationDialog({ open, onOpenChange, role }: VerificationDia
     try {
       const formData = new FormData();
       formData.append('file', file.file);
-      formData.append('verificationRequestId', verificationRequestId.toString());
+      formData.append('verificationRequestId', requestId.toString());
       if (file.description) {
         formData.append('description', file.description);
       }
@@ -112,7 +132,8 @@ export function VerificationDialog({ open, onOpenChange, role }: VerificationDia
       });
 
       if (!response.ok) {
-        throw new Error('Upload failed');
+        const errorText = await response.text();
+        throw new Error(`Upload failed: ${response.status} - ${errorText}`);
       }
 
       setFiles((prev) => 
@@ -137,6 +158,7 @@ export function VerificationDialog({ open, onOpenChange, role }: VerificationDia
     if (!userId) return;
 
     setIsSubmitting(true);
+    setErrorMessage(null);
     
     try {
       // First, create the verification request
@@ -165,7 +187,6 @@ export function VerificationDialog({ open, onOpenChange, role }: VerificationDia
       }
 
       const { verificationRequest } = await submitResponse.json();
-      setVerificationRequestId(verificationRequest.id);
 
       // Upload files if any
       const filesToUpload = files.filter(f => f.file && !f.uploaded);
@@ -173,21 +194,19 @@ export function VerificationDialog({ open, onOpenChange, role }: VerificationDia
       if (filesToUpload.length > 0) {
         // Upload files one by one
         for (const file of filesToUpload) {
-          await uploadSingleFile(file);
+          const uploadSuccess = await uploadSingleFileWithId(file, verificationRequest.id);
+          if (!uploadSuccess) {
+            throw new Error(`Failed to upload ${file.name}`);
+          }
         }
       }
 
-      // Success
-      onOpenChange(false);
-      
-      // Reset form
-      setFiles([]);
-      setAdditionalInfo("");
-      setVerificationRequestId(null);
+      // Success - show success message instead of closing immediately
+      setSubmitSuccess(true);
 
     } catch (error) {
       console.error('Error submitting verification:', error);
-      // TODO: Show error message to user
+      setErrorMessage(error instanceof Error ? error.message : 'An error occurred. Please try again later.');
     } finally {
       setIsSubmitting(false);
     }
@@ -440,24 +459,96 @@ export function VerificationDialog({ open, onOpenChange, role }: VerificationDia
               </div>
             </div>
           </div>
+
+          {/* Error Message */}
+          {errorMessage && (
+            <div className="bg-red-50 dark:bg-red-950/20 rounded-lg p-3 sm:p-4">
+              <div className="flex items-start gap-3">
+                <X className="w-5 h-5 text-red-600 mt-0.5 flex-shrink-0" />
+                <div className="text-sm min-w-0">
+                  <p className="font-medium text-red-900 dark:text-red-100">
+                    Error
+                  </p>
+                  <p className="text-red-800 dark:text-red-200 mt-1">
+                    {errorMessage}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Success Message */}
+          {submitSuccess && (
+            <div className="bg-green-50 dark:bg-green-950/20 rounded-lg p-4 sm:p-6 border border-green-200 dark:border-green-800">
+              <div className="flex items-start gap-3">
+                <div className="flex-shrink-0">
+                  <div className="w-10 h-10 bg-green-100 dark:bg-green-900 rounded-full flex items-center justify-center">
+                    <CheckCircle className="w-6 h-6 text-green-600" />
+                  </div>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h3 className="text-lg font-semibold text-green-900 dark:text-green-100 mb-2">
+                    Verification Submitted Successfully! 🎉
+                  </h3>
+                  <div className="space-y-2 text-sm text-green-800 dark:text-green-200">
+                    <p>
+                      Thank you for submitting your verification request. Our team will carefully review your documentation.
+                    </p>
+                    <div className="bg-green-100 dark:bg-green-900/50 rounded-lg p-3 border border-green-200 dark:border-green-700">
+                      <p className="font-medium text-green-900 dark:text-green-100 mb-1">
+                        ⏰ What happens next?
+                      </p>
+                      <ul className="text-green-800 dark:text-green-200 space-y-1">
+                        <li>• We&apos;ll review your submission within 1-3 business days</li>
+                        <li>• Once approved, a verified badge will appear on your profile</li>
+                        <li>• This badge shows other users that you&apos;re a legitimate {role}</li>
+                      </ul>
+                    </div>
+                    <p className="text-xs text-green-700 dark:text-green-300">
+                      Your verification status will be updated automatically once our review is complete.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         <DialogFooter className="flex-col-reverse sm:flex-row gap-2 sm:gap-0">
-          <Button 
-            variant="outline" 
-            onClick={() => onOpenChange(false)} 
-            className="w-full sm:w-auto"
-            disabled={isSubmitting}
-          >
-            Cancel
-          </Button>
-          <Button
-            onClick={handleSubmit}
-            disabled={!canSubmit}
-            className="w-full sm:w-auto"
-          >
-            {isSubmitting ? "Submitting..." : "Submit for Verification"}
-          </Button>
+          {submitSuccess ? (
+            <Button 
+              onClick={() => {
+                setSubmitSuccess(false);
+                setFiles([]);
+                setLinkUrl("");
+                setLinkDescription("");
+                setAdditionalInfo("");
+                setErrorMessage(null);
+                onOpenChange(false);
+              }}
+              className="w-full sm:w-auto bg-green-600 hover:bg-green-700 text-white"
+            >
+              Close
+            </Button>
+          ) : (
+            <>
+              <Button 
+                variant="outline" 
+                onClick={() => onOpenChange(false)} 
+                className="w-full sm:w-auto"
+                disabled={isSubmitting}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleSubmit}
+                disabled={!canSubmit}
+                className="w-full sm:w-auto"
+              >
+                {isSubmitting ? "Submitting..." : "Submit for Verification"}
+              </Button>
+            </>
+          )}
         </DialogFooter>
       </DialogContent>
     </Dialog>

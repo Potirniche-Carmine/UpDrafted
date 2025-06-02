@@ -2,7 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireAnyRole } from '@/utils/roles';
 import { userOperations, athleteOperations, coachOperations, recruitingOperations } from '@/database/db-utils';
 import { R2_PUBLIC_URL } from '@/database/r2';
-import { NewAthleteProfile, NewAthleteMeasurable, NewAthleteVideo } from '@/database/schema';
+import { NewAthleteProfile, NewAthleteMeasurable, NewAthleteVideo, verificationRequests } from '@/database/schema';
+import { db } from '@/database/db';
+import { eq } from 'drizzle-orm';
 
 // Force Node.js runtime to avoid expensive edge function costs
 export const runtime = 'nodejs';
@@ -248,6 +250,7 @@ export async function GET(
     // Determine the user's role and get appropriate profile data
     let profileData = null;
     let profileType = null;
+    let verificationStatus = null;
 
     try {
       if (userWithProfile.role === 'athlete' && userWithProfile.athleteProfile) {
@@ -255,6 +258,25 @@ export async function GET(
         // Get full athlete profile with related data
         const athleteProfile = await athleteOperations.getAthleteProfile(profileUserId);
         profileData = athleteProfile;
+
+        // Check for pending verification request if it's the user's own profile
+        if (isOwnProfile) {
+          const pendingVerification = await db
+            .select({
+              status: verificationRequests.status,
+              submittedAt: verificationRequests.submittedAt
+            })
+            .from(verificationRequests)
+            .where(eq(verificationRequests.userId, profileUserId))
+            .limit(1);
+
+          if (pendingVerification.length > 0 && pendingVerification[0].status === 'pending') {
+            verificationStatus = {
+              hasPendingVerification: true,
+              pendingSubmittedAt: pendingVerification[0].submittedAt.toISOString()
+            };
+          }
+        }
       } else if (userWithProfile.role === 'coach' && userWithProfile.coachProfile) {
         profileType = 'coach';
         // Get full coach profile with related data
@@ -294,8 +316,8 @@ export async function GET(
     // Transform the profile data to match the component interface
     const transformedProfile = transformProfileData(sanitizedProfile, profileType);
 
-    // Return profile data with ownership information
-    const response = NextResponse.json({
+    // Add verification status to the response if applicable
+    const responseData = {
       success: true,
       profile: transformedProfile,
       profileType,
@@ -303,7 +325,11 @@ export async function GET(
       isAdmin,
       canEdit: isOwnProfile || isAdmin,
       currentUserRole,
-    });
+      ...(verificationStatus && verificationStatus)
+    };
+
+    // Return profile data with ownership information
+    const response = NextResponse.json(responseData);
 
     // Set cache headers based on user role
     if (isOwnProfile || isAdmin) {

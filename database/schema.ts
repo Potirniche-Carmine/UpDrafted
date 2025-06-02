@@ -257,6 +257,7 @@ export const verificationRequests = pgTable('verification_requests', {
   index('idx_verification_requests_user_id').on(table.userId),
   index('idx_verification_requests_status').on(table.status),
   index('idx_verification_requests_submitted_at').on(table.submittedAt),
+  unique('verification_requests_user_id_unique').on(table.userId),
 ]);
 
 export const verificationFiles = pgTable('verification_files', {

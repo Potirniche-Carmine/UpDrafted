@@ -67,6 +67,8 @@ export interface AthleteProfileProps {
   isOwnProfile?: boolean;
   onConnect?: () => void;
   onShare?: () => void;
+  hasPendingVerification?: boolean;
+  pendingSubmittedAt?: string;
 }
 
 export interface MeasurableEditData {

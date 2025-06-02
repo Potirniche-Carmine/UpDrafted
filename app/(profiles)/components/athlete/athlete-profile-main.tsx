@@ -27,76 +27,7 @@ import { AthleteEditDialogs } from "./athlete-edit-dialogs";
 import { VerificationSection } from "./athlete-verification-section";
 import { VerificationDialog } from "../shared/verification-dialog";
 import { useRoleView } from '@/hooks/use-role-view';
-import { EducationLevel } from '@/app/(onboarding)/lib/onboarding';
-
-export interface Measurable {
-  id: string;
-  sport: string;
-  label: string;
-  value: string;
-  measurementDate: string;
-}
-
-export interface AthleteProfileData {
-  id: string;
-  userId?: string;
-  // Basic Information
-  fullName: string;
-  profileImage?: string;
-  sport: string;
-  secondarySports?: string[];
-  graduationYear: number;
-  educationLevel: EducationLevel;
-  highSchool: string;
-  city: string;
-  state: string;
-  gpa?: number | string;
-  satScore?: number;
-  actScore?: number;
-  height: string;
-  weight: string;
-  positions: string[];
-
-  // Verification
-  maxPrepsUrl?: string;
-  isVerified: boolean;
-
-  // Media
-  hudlUrl?: string;
-  hudlEmbedUrl?: string;
-  youtubeVideos?: {
-    id?: string;
-    title: string;
-    url: string;
-    embedUrl: string;
-    sortOrder?: number;
-  }[];
-
-  // Social Media
-  socialMedia?: {
-    instagram?: string;
-    twitter?: string;
-  };
-
-  // Academic Information
-  intendedMajor?: string;
-
-  // Personal Statement
-  personalStatement?: string;
-
-  // Additional Info
-  achievements?: string[];
-
-  // Measurables
-  measurables?: Measurable[];
-}
-
-interface AthleteProfileProps {
-  data: AthleteProfileData;
-  isOwnProfile?: boolean;
-  onConnect?: () => void;
-  onShare?: () => void;
-}
+import { AthleteProfileData, AthleteProfileProps, Measurable } from './athlete-profile-types';
 
 // Memoize heavy components
 const MeasurablesSection = memo(({ measurables, allSports, selectedSport, onSportChange, isOwnProfile, onEditSection }: { 
@@ -344,7 +275,14 @@ const SocialMediaSection = memo(({ socialMedia, isOwnProfile, onEdit }: {
 
 SocialMediaSection.displayName = "SocialMediaSection";
 
-export function AthleteProfile({ data, isOwnProfile = false, onConnect, onShare }: AthleteProfileProps) {
+export function AthleteProfile({ 
+  data, 
+  isOwnProfile = false, 
+  onConnect, 
+  onShare,
+  hasPendingVerification,
+  pendingSubmittedAt 
+}: AthleteProfileProps) {
   const [selectedSport, setSelectedSport] = useState(data.sport);
   const [editDialogOpen, setEditDialogOpen] = useState<string | null>(null);
   const [measurableIdToEdit, setMeasurableIdToEdit] = useState<string | null>(null);
@@ -717,6 +655,8 @@ export function AthleteProfile({ data, isOwnProfile = false, onConnect, onShare 
               isOwnProfile={isOwnProfile}
               onEditMaxPreps={() => handleEditSection('maxpreps-verification')}
               onShowVerificationDialog={() => handleEditSection('manual-verification')}
+              hasPendingVerification={hasPendingVerification}
+              pendingSubmittedAt={pendingSubmittedAt}
             />
             
             {/* Hudl Highlights */}

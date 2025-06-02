@@ -73,6 +73,8 @@ interface ProfileApiResponse {
   isAdmin: boolean;
   canEdit: boolean;
   currentUserRole: string;
+  hasPendingVerification?: boolean;
+  pendingSubmittedAt?: string;
 }
 
 // Enhanced loading component for better UX
@@ -349,6 +351,8 @@ function ProfileContent({ profileId }: { profileId: string }) {
         <AthleteProfileWrapper
           data={profileData.profile as AthleteProfileData}
           isOwnProfile={profileData.isOwnProfile}
+          hasPendingVerification={profileData.hasPendingVerification}
+          pendingSubmittedAt={profileData.pendingSubmittedAt}
         />
       )}
 

@@ -4,7 +4,7 @@ import React from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Edit, Plus, Shield, ExternalLink } from "lucide-react";
+import { Edit, Plus, Shield, ExternalLink, Clock } from "lucide-react";
 import Link from "next/link";
 import { AthleteProfileData } from "./athlete-profile-types";
 
@@ -13,14 +13,19 @@ interface VerificationSectionProps {
   isOwnProfile: boolean;
   onEditMaxPreps: () => void;
   onShowVerificationDialog: () => void;
+  hasPendingVerification?: boolean;
+  pendingSubmittedAt?: string;
 }
 
 export function VerificationSection({
   profileData,
   isOwnProfile,
   onEditMaxPreps,
-  onShowVerificationDialog
+  onShowVerificationDialog,
+  hasPendingVerification = false,
+  pendingSubmittedAt
 }: VerificationSectionProps) {
+
   // If user is verified but has no MaxPreps URL, they were manually verified
   // In this case, don't show the verification section at all
   if (profileData.isVerified && !profileData.maxPrepsUrl) {
@@ -28,8 +33,11 @@ export function VerificationSection({
   }
 
   // Check if user should see manual verification option
-  // Hide it if they already have MaxPreps URL or are already verified
-  const shouldShowManualVerification = !profileData.maxPrepsUrl && !profileData.isVerified;
+  // Hide it if they already have MaxPreps URL, are already verified, or have a pending request
+  const shouldShowManualVerification = !profileData.maxPrepsUrl && !profileData.isVerified && !hasPendingVerification;
+
+  // Show pending verification status
+  const shouldShowPendingVerification = hasPendingVerification;
 
   return (
     <Card>
@@ -135,6 +143,29 @@ export function VerificationSection({
                     Apply for Manual Verification
                   </Button>
                 )}
+              </div>
+            </div>
+          )}
+
+          {/* Pending Verification Section */}
+          {shouldShowPendingVerification && (
+            <div className="bg-yellow-50 dark:bg-yellow-950/20 rounded-lg p-4 border border-yellow-200 dark:border-yellow-800">
+              <div className="text-center">
+                <div className="w-16 h-16 bg-yellow-100 dark:bg-yellow-900 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Clock className="w-8 h-8 text-yellow-600" />
+                </div>
+                <h3 className="font-medium text-yellow-900 dark:text-yellow-100 mb-2">Verification Pending</h3>
+                <p className="text-sm text-yellow-700 dark:text-yellow-200 mb-3">
+                  Your verification request is being reviewed by our team. This usually takes 1-3 business days.
+                </p>
+                <div className="bg-yellow-100 dark:bg-yellow-900/50 rounded-lg p-3 border border-yellow-200 dark:border-yellow-700">
+                  <p className="text-xs text-yellow-800 dark:text-yellow-200">
+                    <strong>Submitted:</strong> {pendingSubmittedAt ? new Date(pendingSubmittedAt).toLocaleDateString() : 'Recently'}
+                  </p>
+                  <p className="text-xs text-yellow-800 dark:text-yellow-200 mt-1">
+                    You&apos;ll see a verified badge on your profile once approved.
+                  </p>
+                </div>
               </div>
             </div>
           )}

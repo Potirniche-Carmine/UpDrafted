@@ -10,6 +10,7 @@ import AthleteForm from "./AthleteForm";
 import CoachRecruiterForm from "./CoachRecruiterForm";
 import TermsAndConditions from "./TermsAndConditions";
 import { LoadingScreen } from "./LoadingScreen";
+import { useProfileNavigation } from '@/hooks/use-profile-navigation';
 
 interface OnboardingFormProps {
   role: UserRole;
@@ -65,6 +66,7 @@ const initialData: OnboardingData = {
 export default function OnboardingForm({ role, onBack }: OnboardingFormProps) {
   const { user } = useUser();
   const { getToken } = useAuth();
+  const { navigateToProfile } = useProfileNavigation();
   const [isLoading, setIsLoading] = useState(false);
   const [data, setData] = useState<OnboardingData>({ ...initialData, role });
 
@@ -130,8 +132,8 @@ export default function OnboardingForm({ role, onBack }: OnboardingFormProps) {
         // Add artificial delay to ensure smooth role propagation and better UX
         await new Promise(resolve => setTimeout(resolve, 3000));
         
-        // Hard refresh to ensure middleware picks up the new role
-        window.location.href = '/dashboard';
+        // Navigate to user's profile instead of dashboard
+        await navigateToProfile();
       } else {
         const errorData = await response.json();
         throw new Error(errorData.error || 'Failed to create profile');

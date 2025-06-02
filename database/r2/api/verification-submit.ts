@@ -1,0 +1,87 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { requireRole } from '@/utils/roles';
+import { db } from '@/database/db';
+import { verificationRequests, verificationFiles } from '@/database/schema';
+import { eq } from 'drizzle-orm';
+
+export async function handleVerificationSubmit(request: NextRequest) {
+  try {
+    // Require authentication and valid role
+    const auth = await requireRole(['admin', 'athlete', 'coach', 'recruiter']);
+    if (auth instanceof NextResponse) return auth;
+
+    const { userId } = auth;
+
+    // Parse request body
+    const { role, additionalInfo, links } = await request.json();
+
+    // Validate role
+    if (!role || !['athlete', 'coach', 'recruiter'].includes(role)) {
+      return NextResponse.json(
+        { error: 'Invalid role' },
+        { status: 400 }
+      );
+    }
+
+    try {
+      // Check if user already has a verification request
+      const existingRequest = await db
+        .select()
+        .from(verificationRequests)
+        .where(eq(verificationRequests.userId, userId))
+        .limit(1);
+
+      if (existingRequest.length > 0) {
+        const request = existingRequest[0];
+        return NextResponse.json(
+          { 
+            error: 'You already have a verification request',
+            details: `Your verification request is currently ${request.status}. Please wait for the review to complete.`,
+            existingRequest: request
+          },
+          { status: 409 } // Conflict status code
+        );
+      }
+
+      // Create verification request
+      const verificationRequest = await db.insert(verificationRequests).values({
+        userId: userId,
+        role: role,
+        status: 'pending',
+        additionalInfo: additionalInfo || null,
+      }).returning();
+
+      // Create link records if any
+      if (links && links.length > 0) {
+        await db.insert(verificationFiles).values(
+          links.map((link: { url: string; description?: string }) => ({
+            verificationRequestId: verificationRequest[0].id,
+            fileName: link.description || link.url,
+            fileType: 'link',
+            linkUrl: link.url,
+            description: link.description || null,
+          }))
+        );
+      }
+
+      return NextResponse.json({
+        success: true,
+        verificationRequest: verificationRequest[0],
+      });
+
+    } catch (dbError) {
+      console.error('Database error creating verification request:', dbError);
+      return NextResponse.json(
+        { error: 'Failed to create verification request' },
+        { status: 500 }
+      );
+    }
+
+  } catch (error) {
+    console.error('Error in verification submit API:', error);
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    );
+  }
+} 
