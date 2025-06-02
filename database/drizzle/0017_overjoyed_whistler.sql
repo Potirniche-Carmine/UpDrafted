@@ -1,0 +1,1 @@
+ALTER TABLE "verification_requests" RENAME COLUMN "rejection_reason" TO "moderator_notes";

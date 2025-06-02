@@ -270,7 +270,7 @@ export async function GET(
             .where(eq(verificationRequests.userId, profileUserId))
             .limit(1);
 
-          if (pendingVerification.length > 0 && pendingVerification[0].status === 'pending') {
+          if (pendingVerification.length > 0 && (pendingVerification[0].status === 'pending' || pendingVerification[0].status === 'under_review')) {
             verificationStatus = {
               hasPendingVerification: true,
               pendingSubmittedAt: pendingVerification[0].submittedAt.toISOString()

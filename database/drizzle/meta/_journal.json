@@ -120,6 +120,20 @@
       "when": 1748841583469,
       "tag": "0016_whole_jackpot",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1748842590364,
+      "tag": "0017_overjoyed_whistler",
+      "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1748843067647,
+      "tag": "0018_loving_celestials",
+      "breakpoints": true
     }
   ]
 }

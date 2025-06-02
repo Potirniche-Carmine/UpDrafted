@@ -252,6 +252,7 @@ export const verificationRequests = pgTable('verification_requests', {
   reviewedAt: timestamp('reviewed_at', { withTimezone: true }),
   reviewedBy: text('reviewed_by').references(() => users.id),
   rejectionReason: text('rejection_reason'),
+  moderatorNotes: text('moderator_notes'),
   additionalInfo: text('additional_info'),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
