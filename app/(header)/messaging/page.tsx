@@ -6,6 +6,7 @@ import { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import { Badge } from "@/components/ui/badge";
 import Image from 'next/image';
 import Link from 'next/link';
+import { AuthWrapper } from '../../../components/auth-wrapper';
 
 // Placeholder data types
 interface Conversation {
@@ -291,299 +292,301 @@ export default function MessagingPage() {
   };
 
   return (
-    <div className="min-h-screen bg-background p-4 md:p-6">
-      <div className="max-w-7xl mx-auto h-[calc(100vh-2rem)] md:h-[calc(100vh-3rem)]">
-        {/* Unified messaging interface */}
-        <div className="h-full flex border border-border/50 rounded-xl shadow-lg bg-card overflow-hidden">
-          
-          {/* Sidebar - Conversations/Search Results */}
-          <div className={`${selectedConversationId ? 'hidden md:flex' : 'flex'} w-full md:w-80 lg:w-96 border-r border-border/50 flex-col bg-gradient-to-b from-[#01ae79]/20 to-[#01ae79]/20 dark:from-[#01ae79]/10 dark:to-[#01ae79]/10`}>
+    <AuthWrapper>
+      <div className="min-h-screen bg-background p-4 md:p-6">
+        <div className="max-w-7xl mx-auto h-[calc(100vh-2rem)] md:h-[calc(100vh-3rem)]">
+          {/* Unified messaging interface */}
+          <div className="h-full flex border border-border/50 rounded-xl shadow-lg bg-card overflow-hidden">
             
-            {/* Sidebar Header with integrated search */}
-            <div className="p-4 border-b border-border/50 bg-card/50 backdrop-blur-sm space-y-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h1 className="text-2xl font-bold bg-gradient-to-r from-[#01ae79] via-[#01ae79] to-[#01ae79] bg-clip-text text-transparent">
-                    Messages
-                  </h1>
-                  <div className="flex items-center gap-2 mt-1">
-                    {unreadCount > 0 && (
-                      <Badge variant="secondary" className="bg-[#01ae79]/10 text-[#01ae79] dark:bg-[#01ae79]/20 dark:text-[#01ae79] text-xs">
-                        {unreadCount} unread
+            {/* Sidebar - Conversations/Search Results */}
+            <div className={`${selectedConversationId ? 'hidden md:flex' : 'flex'} w-full md:w-80 lg:w-96 border-r border-border/50 flex-col bg-gradient-to-b from-[#01ae79]/20 to-[#01ae79]/20 dark:from-[#01ae79]/10 dark:to-[#01ae79]/10`}>
+              
+              {/* Sidebar Header with integrated search */}
+              <div className="p-4 border-b border-border/50 bg-card/50 backdrop-blur-sm space-y-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h1 className="text-2xl font-bold bg-gradient-to-r from-[#01ae79] via-[#01ae79] to-[#01ae79] bg-clip-text text-transparent">
+                      Messages
+                    </h1>
+                    <div className="flex items-center gap-2 mt-1">
+                      {unreadCount > 0 && (
+                        <Badge variant="secondary" className="bg-[#01ae79]/10 text-[#01ae79] dark:bg-[#01ae79]/20 dark:text-[#01ae79] text-xs">
+                          {unreadCount} unread
+                        </Badge>
+                      )}
+                      <Badge variant="outline" className="text-xs">
+                        {conversations.length} conversations
                       </Badge>
-                    )}
-                    <Badge variant="outline" className="text-xs">
-                      {conversations.length} conversations
-                    </Badge>
+                    </div>
                   </div>
+                  <Button variant="outline" size="sm" className="border-[#01ae79]/30 hover:border-[#01ae79]/50 hover:bg-[#01ae79]/5 dark:border-[#01ae79]/40 dark:hover:border-[#01ae79]/60 dark:hover:bg-[#01ae79]/10">
+                    <PlusCircle className="h-4 w-4 mr-2"/> New
+                  </Button>
                 </div>
-                <Button variant="outline" size="sm" className="border-[#01ae79]/30 hover:border-[#01ae79]/50 hover:bg-[#01ae79]/5 dark:border-[#01ae79]/40 dark:hover:border-[#01ae79]/60 dark:hover:bg-[#01ae79]/10">
-                  <PlusCircle className="h-4 w-4 mr-2"/> New
-                </Button>
+                
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <input
+                    type="text"
+                    placeholder="Search conversations and messages..."
+                    className="w-full pl-9 pr-4 py-2.5 text-sm border border-border/50 bg-background/80 backdrop-blur-sm text-foreground rounded-lg focus:outline-none focus:ring-2 focus:ring-[#01ae79] focus:border-[#01ae79] transition-all"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                  />
+                </div>
+                
+                {searchTerm.trim() && (
+                  <p className="text-sm text-muted-foreground">
+                    {searchResults.length} results for &ldquo;{searchTerm}&rdquo;
+                  </p>
+                )}
               </div>
-              
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <input
-                  type="text"
-                  placeholder="Search conversations and messages..."
-                  className="w-full pl-9 pr-4 py-2.5 text-sm border border-border/50 bg-background/80 backdrop-blur-sm text-foreground rounded-lg focus:outline-none focus:ring-2 focus:ring-[#01ae79] focus:border-[#01ae79] transition-all"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                />
-              </div>
-              
-              {searchTerm.trim() && (
-                <p className="text-sm text-muted-foreground">
-                  {searchResults.length} results for &ldquo;{searchTerm}&rdquo;
-                </p>
-              )}
-            </div>
 
-            {/* Conversations/Search Results List */}
-            <div className="flex-grow overflow-y-auto">
-              {searchTerm.trim() ? (
-                // Search Results
-                searchResults.length > 0 ? (
-                  <div className="space-y-1 p-2">
-                    {searchResults.map((result, index) => (
-                      <div
-                        key={`${result.conversation.id}-${result.type}-${index}`}
-                        onClick={() => handleSearchResultClick(result)}
-                        className="p-3 rounded-lg cursor-pointer hover:bg-[#01ae79]/5 dark:hover:bg-[#01ae79]/10 transition-colors border border-transparent hover:border-[#01ae79]/20 dark:hover:border-[#01ae79]/30"
-                      >
-                        <div className="flex items-start space-x-3">
-                          <Image 
-                            src={result.conversation.partnerAvatarUrl} 
-                            alt={result.conversation.partnerName} 
-                            width={40} 
-                            height={40} 
-                            className="rounded-full object-cover ring-2 ring-[#01ae79]/20 dark:ring-[#01ae79]/30 flex-shrink-0" 
-                          />
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center justify-between mb-1">
-                              <h4 className="font-medium text-sm text-foreground truncate">
-                                {highlightSearchTerm(result.conversation.partnerName, searchTerm)}
-                              </h4>
-                              <Badge variant="outline" className="text-xs ml-2 flex-shrink-0">
-                                {result.type}
-                              </Badge>
-                            </div>
-                            <p className="text-xs text-muted-foreground line-clamp-2">
-                              {result.type === 'message' ? (
-                                <>
-                                  <span className="font-medium">
-                                    {result.message?.sender === 'me' ? 'You: ' : `${result.conversation.partnerName}: `}
-                                  </span>
-                                  {highlightSearchTerm(result.matchText || '', searchTerm)}
-                                </>
-                              ) : (
-                                highlightSearchTerm(result.matchText || '', searchTerm)
-                              )}
-                            </p>
-                            {result.message && (
-                              <p className="text-xs text-[#01ae79] dark:text-[#01ae79] mt-1">
-                                {result.message.timestamp}
-                              </p>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="p-8 text-center">
-                    <Search size={48} className="mx-auto text-muted-foreground/50 mb-4" />
-                    <p className="text-muted-foreground">No results found</p>
-                    <p className="text-sm text-muted-foreground/80 mt-1">Try different keywords</p>
-                  </div>
-                )
-              ) : (
-                // Regular Conversations
-                filteredConversations.length > 0 ? (
-                  <div className="space-y-1 p-2">
-                    {filteredConversations.map(convo => (
-                      <div
-                        key={convo.id}
-                        onClick={() => setSelectedConversationId(convo.id)}
-                        className={`p-4 rounded-lg cursor-pointer transition-all duration-200 ${
-                          selectedConversationId === convo.id
-                            ? 'bg-[#01ae79]/10 dark:bg-[#01ae79]/20 border border-[#01ae79]/30 dark:border-[#01ae79]/40 shadow-sm'
-                            : 'hover:bg-[#01ae79]/5 dark:hover:bg-[#01ae79]/10 border border-transparent hover:border-[#01ae79]/20 dark:hover:border-[#01ae79]/30'
-                        }`}
-                      >
-                        <div className="flex items-center space-x-3">
-                          <div className="relative flex-shrink-0">
+              {/* Conversations/Search Results List */}
+              <div className="flex-grow overflow-y-auto">
+                {searchTerm.trim() ? (
+                  // Search Results
+                  searchResults.length > 0 ? (
+                    <div className="space-y-1 p-2">
+                      {searchResults.map((result, index) => (
+                        <div
+                          key={`${result.conversation.id}-${result.type}-${index}`}
+                          onClick={() => handleSearchResultClick(result)}
+                          className="p-3 rounded-lg cursor-pointer hover:bg-[#01ae79]/5 dark:hover:bg-[#01ae79]/10 transition-colors border border-transparent hover:border-[#01ae79]/20 dark:hover:border-[#01ae79]/30"
+                        >
+                          <div className="flex items-start space-x-3">
                             <Image 
-                              src={convo.partnerAvatarUrl} 
-                              alt={convo.partnerName} 
-                              width={48} 
-                              height={48} 
-                              className="rounded-full object-cover ring-2 ring-[#01ae79]/20 dark:ring-[#01ae79]/30" 
+                              src={result.conversation.partnerAvatarUrl} 
+                              alt={result.conversation.partnerName} 
+                              width={40} 
+                              height={40} 
+                              className="rounded-full object-cover ring-2 ring-[#01ae79]/20 dark:ring-[#01ae79]/30 flex-shrink-0" 
                             />
-                            {convo.isOnline && <span className="absolute bottom-0 right-0 block h-3 w-3 rounded-full bg-[#01ae79] ring-2 ring-card"></span>}
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <div className="flex justify-between items-center mb-1">
-                              <h3 className={`text-sm font-semibold truncate ${
-                                selectedConversationId === convo.id 
-                                  ? 'text-[#01ae79] dark:text-[#01ae79]' 
-                                  : 'text-foreground'
-                              }`}>
-                                {convo.partnerName}
-                              </h3>
-                              <span className="text-xs text-muted-foreground flex-shrink-0">{convo.timestamp}</span>
-                            </div>
-                            <div className="flex justify-between items-center">
-                              <p className="text-xs text-muted-foreground truncate">{convo.lastMessage}</p>
-                              {convo.unreadCount > 0 && (
-                                <span className="ml-2 bg-[#01ae79] text-white text-xs font-bold px-2 py-1 rounded-full flex-shrink-0">{convo.unreadCount}</span>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center justify-between mb-1">
+                                <h4 className="font-medium text-sm text-foreground truncate">
+                                  {highlightSearchTerm(result.conversation.partnerName, searchTerm)}
+                                </h4>
+                                <Badge variant="outline" className="text-xs ml-2 flex-shrink-0">
+                                  {result.type}
+                                </Badge>
+                              </div>
+                              <p className="text-xs text-muted-foreground line-clamp-2">
+                                {result.type === 'message' ? (
+                                  <>
+                                    <span className="font-medium">
+                                      {result.message?.sender === 'me' ? 'You: ' : `${result.conversation.partnerName}: `}
+                                    </span>
+                                    {highlightSearchTerm(result.matchText || '', searchTerm)}
+                                  </>
+                                ) : (
+                                  highlightSearchTerm(result.matchText || '', searchTerm)
+                                )}
+                              </p>
+                              {result.message && (
+                                <p className="text-xs text-[#01ae79] dark:text-[#01ae79] mt-1">
+                                  {result.message.timestamp}
+                                </p>
                               )}
                             </div>
                           </div>
                         </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="p-8 text-center">
+                      <Search size={48} className="mx-auto text-muted-foreground/50 mb-4" />
+                      <p className="text-muted-foreground">No results found</p>
+                      <p className="text-sm text-muted-foreground/80 mt-1">Try different keywords</p>
+                    </div>
+                  )
+                ) : (
+                  // Regular Conversations
+                  filteredConversations.length > 0 ? (
+                    <div className="space-y-1 p-2">
+                      {filteredConversations.map(convo => (
+                        <div
+                          key={convo.id}
+                          onClick={() => setSelectedConversationId(convo.id)}
+                          className={`p-4 rounded-lg cursor-pointer transition-all duration-200 ${
+                            selectedConversationId === convo.id
+                              ? 'bg-[#01ae79]/10 dark:bg-[#01ae79]/20 border border-[#01ae79]/30 dark:border-[#01ae79]/40 shadow-sm'
+                              : 'hover:bg-[#01ae79]/5 dark:hover:bg-[#01ae79]/10 border border-transparent hover:border-[#01ae79]/20 dark:hover:border-[#01ae79]/30'
+                          }`}
+                        >
+                          <div className="flex items-center space-x-3">
+                            <div className="relative flex-shrink-0">
+                              <Image 
+                                src={convo.partnerAvatarUrl} 
+                                alt={convo.partnerName} 
+                                width={48} 
+                                height={48} 
+                                className="rounded-full object-cover ring-2 ring-[#01ae79]/20 dark:ring-[#01ae79]/30" 
+                              />
+                              {convo.isOnline && <span className="absolute bottom-0 right-0 block h-3 w-3 rounded-full bg-[#01ae79] ring-2 ring-card"></span>}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex justify-between items-center mb-1">
+                                <h3 className={`text-sm font-semibold truncate ${
+                                  selectedConversationId === convo.id 
+                                    ? 'text-[#01ae79] dark:text-[#01ae79]' 
+                                    : 'text-foreground'
+                                }`}>
+                                  {convo.partnerName}
+                                </h3>
+                                <span className="text-xs text-muted-foreground flex-shrink-0">{convo.timestamp}</span>
+                              </div>
+                              <div className="flex justify-between items-center">
+                                <p className="text-xs text-muted-foreground truncate">{convo.lastMessage}</p>
+                                {convo.unreadCount > 0 && (
+                                  <span className="ml-2 bg-[#01ae79] text-white text-xs font-bold px-2 py-1 rounded-full flex-shrink-0">{convo.unreadCount}</span>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="p-8 text-center">
+                      <Users size={48} className="mx-auto text-muted-foreground/50 mb-4" />
+                      <p className="text-muted-foreground">No conversations yet</p>
+                      <p className="text-sm text-muted-foreground/80 mt-1">Start a new conversation</p>
+                    </div>
+                  )
+                )}
+              </div>
+            </div>
+
+            {/* Main Chat Area */}
+            <div className={`${selectedConversationId ? 'flex' : 'hidden md:flex'} flex-1 flex-col bg-gradient-to-b from-background to-[#01ae79]/10 dark:to-[#01ae79]/5`}>
+              {activeConversation ? (
+                <>
+                  {/* Simplified Chat Header */}
+                  <div className="p-4 border-b border-border/50 bg-card/80 backdrop-blur-sm">
+                    <div className="flex items-center space-x-3">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setSelectedConversationId(null)}
+                        className="md:hidden mr-2 hover:bg-[#01ae79]/10 dark:hover:bg-[#01ae79]/20"
+                      >
+                        <ArrowLeft size={18} />
+                      </Button>
+                      <Link href={`/profile/${activeConversation.id}`} className="relative cursor-pointer hover:opacity-80 transition-opacity">
+                        <Image 
+                          src={activeConversation.partnerAvatarUrl} 
+                          alt={activeConversation.partnerName} 
+                          width={48} 
+                          height={48} 
+                          className="rounded-full object-cover ring-2 ring-[#01ae79]/20 dark:ring-[#01ae79]/30" 
+                        />
+                        {activeConversation.isOnline && (
+                          <span className="absolute bottom-0 right-0 block h-3 w-3 rounded-full bg-[#01ae79] ring-2 ring-card"></span>
+                        )}
+                      </Link>
+                      <div>
+                        <Link href={`/profile/${activeConversation.id}`} className="cursor-pointer hover:opacity-80 transition-opacity">
+                          <h2 className="text-lg font-semibold text-foreground">{activeConversation.partnerName}</h2>
+                        </Link>
+                        {activeConversation.isOnline ? (
+                          <p className="text-sm text-[#01ae79] dark:text-[#01ae79]">Online now</p>
+                        ) : (
+                          <p className="text-sm text-muted-foreground">Last seen {activeConversation.timestamp}</p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Messages Area */}
+                  <div 
+                    ref={messagesContainerRef}
+                    className="flex-grow p-4 space-y-4 overflow-y-auto bg-gradient-to-b from-transparent to-[#01ae79]/5 dark:to-[#01ae79]/5"
+                  >
+                    {activeMessages.map((msg) => (
+                      <div 
+                        key={msg.id} 
+                        data-message-id={msg.id}
+                        className={`flex ${msg.sender === 'me' ? 'justify-end' : 'justify-start'}`}
+                      >
+                        <div className={`max-w-[75%] md:max-w-[70%] p-3 rounded-2xl shadow-sm relative ${
+                          msg.sender === 'me' 
+                            ? 'bg-[#01ae79] text-white rounded-br-md' 
+                            : `bg-card border text-foreground rounded-bl-md ${
+                                !msg.isRead && msg.sender === 'partner' 
+                                  ? 'border-[#01ae79]/30 dark:border-[#01ae79]/40 bg-[#01ae79]/5 dark:bg-[#01ae79]/10' 
+                                  : 'border-border/40'
+                              }`
+                        }`}>
+                          {!msg.isRead && msg.sender === 'partner' && (
+                            <div className="absolute -left-2 top-1/2 transform -translate-y-1/2 w-2 h-2 bg-[#01ae79] rounded-full transition-opacity duration-300"></div>
+                          )}
+                          <p className="text-sm leading-relaxed">{msg.text}</p>
+                          <p className={`text-xs mt-2 ${
+                            msg.sender === 'me' 
+                              ? 'text-[#01ae79]/20 text-right' 
+                              : 'text-muted-foreground text-left'
+                          }`}>
+                            {msg.timestamp}
+                          </p>
+                        </div>
                       </div>
                     ))}
                   </div>
-                ) : (
-                  <div className="p-8 text-center">
-                    <Users size={48} className="mx-auto text-muted-foreground/50 mb-4" />
-                    <p className="text-muted-foreground">No conversations yet</p>
-                    <p className="text-sm text-muted-foreground/80 mt-1">Start a new conversation</p>
-                  </div>
-                )
-              )}
-            </div>
-          </div>
 
-          {/* Main Chat Area */}
-          <div className={`${selectedConversationId ? 'flex' : 'hidden md:flex'} flex-1 flex-col bg-gradient-to-b from-background to-[#01ae79]/10 dark:to-[#01ae79]/5`}>
-            {activeConversation ? (
-              <>
-                {/* Simplified Chat Header */}
-                <div className="p-4 border-b border-border/50 bg-card/80 backdrop-blur-sm">
-                  <div className="flex items-center space-x-3">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setSelectedConversationId(null)}
-                      className="md:hidden mr-2 hover:bg-[#01ae79]/10 dark:hover:bg-[#01ae79]/20"
-                    >
-                      <ArrowLeft size={18} />
-                    </Button>
-                    <Link href={`/profile/${activeConversation.id}`} className="relative cursor-pointer hover:opacity-80 transition-opacity">
-                      <Image 
-                        src={activeConversation.partnerAvatarUrl} 
-                        alt={activeConversation.partnerName} 
-                        width={48} 
-                        height={48} 
-                        className="rounded-full object-cover ring-2 ring-[#01ae79]/20 dark:ring-[#01ae79]/30" 
-                      />
-                      {activeConversation.isOnline && (
-                        <span className="absolute bottom-0 right-0 block h-3 w-3 rounded-full bg-[#01ae79] ring-2 ring-card"></span>
-                      )}
-                    </Link>
-                    <div>
-                      <Link href={`/profile/${activeConversation.id}`} className="cursor-pointer hover:opacity-80 transition-opacity">
-                        <h2 className="text-lg font-semibold text-foreground">{activeConversation.partnerName}</h2>
-                      </Link>
-                      {activeConversation.isOnline ? (
-                        <p className="text-sm text-[#01ae79] dark:text-[#01ae79]">Online now</p>
-                      ) : (
-                        <p className="text-sm text-muted-foreground">Last seen {activeConversation.timestamp}</p>
-                      )}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Messages Area */}
-                <div 
-                  ref={messagesContainerRef}
-                  className="flex-grow p-4 space-y-4 overflow-y-auto bg-gradient-to-b from-transparent to-[#01ae79]/5 dark:to-[#01ae79]/5"
-                >
-                  {activeMessages.map((msg) => (
-                    <div 
-                      key={msg.id} 
-                      data-message-id={msg.id}
-                      className={`flex ${msg.sender === 'me' ? 'justify-end' : 'justify-start'}`}
-                    >
-                      <div className={`max-w-[75%] md:max-w-[70%] p-3 rounded-2xl shadow-sm relative ${
-                        msg.sender === 'me' 
-                          ? 'bg-[#01ae79] text-white rounded-br-md' 
-                          : `bg-card border text-foreground rounded-bl-md ${
-                              !msg.isRead && msg.sender === 'partner' 
-                                ? 'border-[#01ae79]/30 dark:border-[#01ae79]/40 bg-[#01ae79]/5 dark:bg-[#01ae79]/10' 
-                                : 'border-border/40'
-                            }`
-                      }`}>
-                        {!msg.isRead && msg.sender === 'partner' && (
-                          <div className="absolute -left-2 top-1/2 transform -translate-y-1/2 w-2 h-2 bg-[#01ae79] rounded-full transition-opacity duration-300"></div>
-                        )}
-                        <p className="text-sm leading-relaxed">{msg.text}</p>
-                        <p className={`text-xs mt-2 ${
-                          msg.sender === 'me' 
-                            ? 'text-[#01ae79]/20 text-right' 
-                            : 'text-muted-foreground text-left'
-                        }`}>
-                          {msg.timestamp}
-                        </p>
+                  {/* Message Input */}
+                  <form onSubmit={handleSendMessage} className="p-4 border-t border-border/50 bg-card/80 backdrop-blur-sm">
+                    <div className="flex items-center space-x-3">
+                      <Button variant="ghost" size="icon" type="button" className="hidden sm:flex text-muted-foreground hover:text-[#01ae79] hover:bg-[#01ae79]/10 dark:hover:bg-[#01ae79]/20">
+                        <Paperclip className="h-5 w-5"/>
+                      </Button>
+                      <div className="flex-1 relative">
+                        <input
+                          type="text"
+                          value={newMessage}
+                          onChange={(e) => setNewMessage(e.target.value)}
+                          placeholder="Type a message..."
+                          className="w-full px-4 py-3 pr-12 text-sm rounded-full border border-border/50 bg-background/70 focus:ring-2 focus:ring-[#01ae79] focus:border-[#01ae79] outline-none transition-all"
+                        />
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          type="button" 
+                          className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8 text-muted-foreground hover:text-[#01ae79] hover:bg-[#01ae79]/10 dark:hover:bg-[#01ae79]/20"
+                        >
+                          <Smile className="h-4 w-4"/>
+                        </Button>
                       </div>
-                    </div>
-                  ))}
-                </div>
-
-                {/* Message Input */}
-                <form onSubmit={handleSendMessage} className="p-4 border-t border-border/50 bg-card/80 backdrop-blur-sm">
-                  <div className="flex items-center space-x-3">
-                    <Button variant="ghost" size="icon" type="button" className="hidden sm:flex text-muted-foreground hover:text-[#01ae79] hover:bg-[#01ae79]/10 dark:hover:bg-[#01ae79]/20">
-                      <Paperclip className="h-5 w-5"/>
-                    </Button>
-                    <div className="flex-1 relative">
-                      <input
-                        type="text"
-                        value={newMessage}
-                        onChange={(e) => setNewMessage(e.target.value)}
-                        placeholder="Type a message..."
-                        className="w-full px-4 py-3 pr-12 text-sm rounded-full border border-border/50 bg-background/70 focus:ring-2 focus:ring-[#01ae79] focus:border-[#01ae79] outline-none transition-all"
-                      />
                       <Button 
-                        variant="ghost" 
+                        type="submit" 
                         size="icon" 
-                        type="button" 
-                        className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8 text-muted-foreground hover:text-[#01ae79] hover:bg-[#01ae79]/10 dark:hover:bg-[#01ae79]/20"
+                        disabled={!newMessage.trim()}
+                        className="bg-[#01ae79] hover:bg-[#01ae79]/90 text-white h-12 w-12 rounded-full shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
                       >
-                        <Smile className="h-4 w-4"/>
+                        <Send className="h-5 w-5" />
                       </Button>
                     </div>
-                    <Button 
-                      type="submit" 
-                      size="icon" 
-                      disabled={!newMessage.trim()}
-                      className="bg-[#01ae79] hover:bg-[#01ae79]/90 text-white h-12 w-12 rounded-full shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      <Send className="h-5 w-5" />
-                    </Button>
+                  </form>
+                </>
+              ) : (
+                <div className="flex-grow flex flex-col items-center justify-center text-center p-8">
+                  <div className="w-24 h-24 rounded-full bg-[#01ae79]/10 dark:bg-[#01ae79]/20 flex items-center justify-center mb-6">
+                    <MessageSquare className="h-12 w-12 text-[#01ae79] dark:text-[#01ae79]" />
                   </div>
-                </form>
-              </>
-            ) : (
-              <div className="flex-grow flex flex-col items-center justify-center text-center p-8">
-                <div className="w-24 h-24 rounded-full bg-[#01ae79]/10 dark:bg-[#01ae79]/20 flex items-center justify-center mb-6">
-                  <MessageSquare className="h-12 w-12 text-[#01ae79] dark:text-[#01ae79]" />
+                  <h3 className="text-2xl font-semibold text-foreground mb-2">Select a conversation</h3>
+                  <p className="text-muted-foreground mb-6 max-w-md">
+                    Choose a conversation from the sidebar to start messaging, or search for specific conversations and messages.
+                  </p>
+                  <Button variant="outline" className="border-[#01ae79]/30 hover:bg-[#01ae79]/5 dark:border-[#01ae79]/40 dark:hover:bg-[#01ae79]/10">
+                    <PlusCircle className="h-4 w-4 mr-2" />
+                    Start New Conversation
+                  </Button>
                 </div>
-                <h3 className="text-2xl font-semibold text-foreground mb-2">Select a conversation</h3>
-                <p className="text-muted-foreground mb-6 max-w-md">
-                  Choose a conversation from the sidebar to start messaging, or search for specific conversations and messages.
-                </p>
-                <Button variant="outline" className="border-[#01ae79]/30 hover:bg-[#01ae79]/5 dark:border-[#01ae79]/40 dark:hover:bg-[#01ae79]/10">
-                  <PlusCircle className="h-4 w-4 mr-2" />
-                  Start New Conversation
-                </Button>
-              </div>
-            )}
+              )}
+            </div>
           </div>
         </div>
       </div>
-    </div>
+    </AuthWrapper>
   );
 }

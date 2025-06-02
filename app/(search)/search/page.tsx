@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent } from "@/components/ui/card";
+import { AuthWrapper } from '../../../components/auth-wrapper';
 
 // Same interface and mock data as search-bar component
 interface SearchUser {
@@ -443,8 +444,10 @@ function SearchPageContent() {
 
 export default function SearchPage() {
   return (
-    <Suspense fallback={<div>Loading...</div>}>
-      <SearchPageContent />
-    </Suspense>
+    <AuthWrapper>
+      <Suspense fallback={<div>Loading...</div>}>
+        <SearchPageContent />
+      </Suspense>
+    </AuthWrapper>
   );
 } 

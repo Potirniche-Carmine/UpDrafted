@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { requireAnyRole } from '@/utils/roles';
+import { requireAnyRole, requireOwnershipOrAdmin } from '@/utils/roles';
 import { userOperations, athleteOperations, coachOperations, recruitingOperations } from '@/database/db-utils';
 import { R2_PUBLIC_URL } from '@/database/r2';
 import { NewAthleteProfile, NewAthleteMeasurable, NewAthleteVideo, verificationRequests } from '@/database/schema';
@@ -17,23 +17,34 @@ interface ProfilePageParams {
 
 // Cache configuration - balanced caching to reduce edge requests while maintaining freshness
 const CACHE_CONFIG = {
-  // Public profile data can be cached longer but not too long for user experience
-  PUBLIC_PROFILE_CACHE_SECONDS: 600, // 10 minutes (reduced from 15)
+  // Public profile data can be cached longer to reduce costs - increased from 10 minutes
+  PUBLIC_PROFILE_CACHE_SECONDS: 1800, // 30 minutes (increased from 10 minutes)
   // Own profile data cached for reasonable freshness
-  OWN_PROFILE_CACHE_SECONDS: 180, // 3 minutes (reduced from 5)
-  // Admin views get fresh data
-  ADMIN_CACHE_SECONDS: 60, // 1 minute (reduced from 3)
+  OWN_PROFILE_CACHE_SECONDS: 300, // 5 minutes (increased from 3 minutes)
+  // Admin views get fresh data but slightly longer cache
+  ADMIN_CACHE_SECONDS: 120, // 2 minutes (increased from 1 minute)
 };
 
 // Helper function to set cache headers
-function setCacheHeaders(response: NextResponse, cacheSeconds: number) {
+function setCacheHeaders(response: NextResponse, cacheSeconds: number, isPublicProfile = false) {
   try {
-    // Balanced cache headers to reduce edge requests while maintaining freshness
-    response.headers.set('Cache-Control', `public, max-age=${cacheSeconds}, s-maxage=${cacheSeconds}, stale-while-revalidate=60`);
+    // More aggressive caching for public profiles to reduce costs
+    if (isPublicProfile) {
+      // Public profiles can be cached more aggressively
+      response.headers.set('Cache-Control', `public, max-age=${cacheSeconds}, s-maxage=${cacheSeconds * 2}, stale-while-revalidate=300`);
+      // CDN can cache even longer for public profiles
+      response.headers.set('CDN-Cache-Control', `public, max-age=${cacheSeconds * 3}`); // 90 minutes for CDN
+    } else {
+      // More conservative caching for own profiles
+      response.headers.set('Cache-Control', `public, max-age=${cacheSeconds}, s-maxage=${cacheSeconds}, stale-while-revalidate=60`);
+      response.headers.set('CDN-Cache-Control', `public, max-age=${Math.min(cacheSeconds * 1.5, 900)}`); // Cap at 15 minutes
+    }
+    
     // Add ETag for better cache validation
     response.headers.set('Vary', 'Authorization');
-    // Add CDN cache optimization but less aggressive
-    response.headers.set('CDN-Cache-Control', `public, max-age=${Math.min(cacheSeconds * 1.5, 900)}`); // Cap at 15 minutes
+    
+    // Add cache tags for better invalidation (if using a CDN that supports it)
+    response.headers.set('Cache-Tag', 'profile');
   } catch (error) {
     // If header setting fails, log but don't fail the request
     console.warn('Failed to set cache headers:', error);
@@ -185,6 +196,39 @@ export async function GET(
   { params }: ProfilePageParams
 ) {
   try {
+    // SECURITY: Validate request size and URL length to prevent DoS attacks
+    const url = new URL(request.url);
+    
+    // Limit total URL length (including query params)
+    const MAX_URL_LENGTH = 2048; // Standard browser limit
+    if (request.url.length > MAX_URL_LENGTH) {
+      return NextResponse.json(
+        { error: 'URL too long' },
+        { status: 414 } // 414 URI Too Long
+      );
+    }
+
+    // Limit query string size
+    const MAX_QUERY_LENGTH = 1024;
+    if (url.search.length > MAX_QUERY_LENGTH) {
+      return NextResponse.json(
+        { error: 'Query parameters too long' },
+        { status: 400 }
+      );
+    }
+
+    // Limit number of query parameters to prevent parameter pollution
+    const MAX_QUERY_PARAMS = 10;
+    if (url.searchParams.size > MAX_QUERY_PARAMS) {
+      return NextResponse.json(
+        { error: 'Too many query parameters' },
+        { status: 400 }
+      );
+    }
+
+    // SECURITY NOTE: This is where REAL auth happens
+    // Client-side AuthWrapper is just for UX - this is the actual security layer
+    
     // Validate required Clerk headers for client-side requests
     const authHeader = request.headers.get('authorization');
     
@@ -333,9 +377,9 @@ export async function GET(
 
     // Set cache headers based on user role
     if (isOwnProfile || isAdmin) {
-      setCacheHeaders(response, CACHE_CONFIG.OWN_PROFILE_CACHE_SECONDS);
+      setCacheHeaders(response, CACHE_CONFIG.OWN_PROFILE_CACHE_SECONDS, false);
     } else {
-      setCacheHeaders(response, CACHE_CONFIG.PUBLIC_PROFILE_CACHE_SECONDS);
+      setCacheHeaders(response, CACHE_CONFIG.PUBLIC_PROFILE_CACHE_SECONDS, true);
     }
 
     return response;
@@ -354,26 +398,48 @@ export async function PUT(
   { params }: ProfilePageParams
 ) {
   try {
-    // Require any authenticated role
-    const auth = await requireAnyRole();
+    // SECURITY: Validate request size and URL length to prevent DoS attacks
+    const url = new URL(request.url);
+    
+    // Limit total URL length (including query params)
+    const MAX_URL_LENGTH = 2048;
+    if (request.url.length > MAX_URL_LENGTH) {
+      return NextResponse.json(
+        { error: 'URL too long' },
+        { status: 414 }
+      );
+    }
+
+    // Limit query string size
+    const MAX_QUERY_LENGTH = 512; // Smaller for PUT requests
+    if (url.search.length > MAX_QUERY_LENGTH) {
+      return NextResponse.json(
+        { error: 'Query parameters too long' },
+        { status: 400 }
+      );
+    }
+
+    const { id: profileUserId } = await params;
+
+    // Use the secure ownership validation utility
+    const auth = await requireOwnershipOrAdmin(profileUserId);
     if (auth instanceof NextResponse) return auth;
 
     const { userId: currentUserId } = auth;
-    const { id: profileUserId } = await params;
-
-    // Only allow users to update their own profile
-    if (currentUserId !== profileUserId) {
-      return NextResponse.json(
-        { error: 'Unauthorized - can only update your own profile' },
-        { status: 403 }
-      );
-    }
 
     // Parse the request body
     const updateData = await request.json();
 
+    // SECURITY: Prevent privilege escalation attacks
+    // Never allow these critical security fields to be updated via profile API
+    delete updateData.isVerified; // Only admins should set verification via separate process
+    delete updateData.role; // Roles should never be changeable via profile API
+    delete updateData.userId; // User ID should never be changeable
+    delete updateData.createdAt; // Creation date should never be changeable
+    delete updateData.updatedAt; // Update date is managed by database
+
     // Get the current user to determine their role
-    const userWithProfile = await userOperations.getUserWithProfile(profileUserId);
+    const userWithProfile = await userOperations.getUserWithProfile(currentUserId);
     if (!userWithProfile) {
       return NextResponse.json(
         { error: 'User not found' },
@@ -413,9 +479,6 @@ export async function PUT(
         if (updateData.maxPrepsUrl !== undefined) profileUpdateData.maxprepsUrl = updateData.maxPrepsUrl; // Note: client sends maxPrepsUrl, DB expects maxprepsUrl
         if (updateData.hudlUrl !== undefined) profileUpdateData.hudlUrl = updateData.hudlUrl;
         if (updateData.hudlEmbedUrl !== undefined) profileUpdateData.hudlEmbedUrl = updateData.hudlEmbedUrl;
-        
-        // Handle verification status
-        if (updateData.isVerified !== undefined) profileUpdateData.isVerified = updateData.isVerified;
         
         // Handle social media - extract from socialMedia object
         if (updateData.socialMedia !== undefined) {

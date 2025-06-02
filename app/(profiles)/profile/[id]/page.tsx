@@ -7,6 +7,7 @@ import { Suspense } from 'react';
 import { AthleteProfileWrapper } from '../../components/athlete-profile-wrapper';
 import { CoachProfileWrapper } from '../../components/coach-profile-wrapper';
 import { RecruiterProfileWrapper } from '../../components/recruiter-profile-wrapper';
+import { AuthWrapper } from '../../../../components/auth-wrapper';
 import { navigationStateManager } from '../../lib/navigation-state';
 import type { AthleteProfileData } from '../../components/athlete-profile';
 import type { CoachProfileData, RecruitingProfileData } from '../../lib/base-profile-types';
@@ -18,8 +19,8 @@ const globalProfileCache = new Map<string, {
   lastAccessed: number;
 }>();
 
-const CACHE_DURATION = 10 * 60 * 1000; // 10 minutes
-const MAX_CACHE_SIZE = 100;
+const CACHE_DURATION = 20 * 60 * 1000; // 20 minutes (increased from 10 minutes for better cost optimization)
+const MAX_CACHE_SIZE = 150; // Increased from 100 to store more profiles
 
 // Cache management utilities
 const getCachedProfile = (profileId: string) => {
@@ -30,9 +31,11 @@ const getCachedProfile = (profileId: string) => {
     // Update last accessed time for LRU cleanup
     cached.lastAccessed = Date.now();
     globalProfileCache.set(cacheKey, cached);
+    console.log(`Profile cache HIT for ${profileId}`);
     return cached.data;
   }
   
+  console.log(`Profile cache MISS for ${profileId}${cached ? ' (expired)' : ' (not found)'}`);
   return null;
 };
 
@@ -46,15 +49,20 @@ const setCachedProfile = (profileId: string, data: ProfileApiResponse) => {
     lastAccessed: now
   });
   
+  console.log(`Profile cached for ${profileId}, cache size: ${globalProfileCache.size}`);
+  
   // Clean up old cache entries using LRU strategy
   if (globalProfileCache.size > MAX_CACHE_SIZE) {
     const entries = Array.from(globalProfileCache.entries());
     const sortedByAccess = entries.sort((a, b) => a[1].lastAccessed - b[1].lastAccessed);
     
-    // Remove oldest 20 entries
-    for (let i = 0; i < 20; i++) {
+    // Remove oldest 25% of entries or minimum 10, whichever is larger
+    const entriesToRemove = Math.max(10, Math.floor(globalProfileCache.size * 0.25));
+    for (let i = 0; i < entriesToRemove; i++) {
       globalProfileCache.delete(sortedByAccess[i][0]);
     }
+    
+    console.log(`Profile cache cleanup: removed ${entriesToRemove} entries, ${globalProfileCache.size} remaining`);
   }
 };
 
@@ -347,28 +355,34 @@ function ProfileContent({ profileId }: { profileId: string }) {
 
   return (
     <Suspense fallback={<ProfileSkeleton />}>
-      {profileData.profileType === 'athlete' && (
-        <AthleteProfileWrapper
-          data={profileData.profile as AthleteProfileData}
-          isOwnProfile={profileData.isOwnProfile}
-          hasPendingVerification={profileData.hasPendingVerification}
-          pendingSubmittedAt={profileData.pendingSubmittedAt}
-        />
-      )}
+      <AuthWrapper 
+        requireAuth={true}
+        requireRole={['athlete', 'coach', 'recruiter', 'admin']}
+        loadingComponent={<ProfileSkeleton />}
+      >
+        {profileData.profileType === 'athlete' && (
+          <AthleteProfileWrapper
+            data={profileData.profile as AthleteProfileData}
+            isOwnProfile={profileData.isOwnProfile}
+            hasPendingVerification={profileData.hasPendingVerification}
+            pendingSubmittedAt={profileData.pendingSubmittedAt}
+          />
+        )}
 
-      {profileData.profileType === 'coach' && (
-        <CoachProfileWrapper
-          data={profileData.profile as CoachProfileData}
-          isOwnProfile={profileData.isOwnProfile}
-        />
-      )}
+        {profileData.profileType === 'coach' && (
+          <CoachProfileWrapper
+            data={profileData.profile as CoachProfileData}
+            isOwnProfile={profileData.isOwnProfile}
+          />
+        )}
 
-      {profileData.profileType === 'recruiter' && (
-        <RecruiterProfileWrapper
-          data={profileData.profile as RecruitingProfileData}
-          isOwnProfile={profileData.isOwnProfile}
-        />
-      )}
+        {profileData.profileType === 'recruiter' && (
+          <RecruiterProfileWrapper
+            data={profileData.profile as RecruitingProfileData}
+            isOwnProfile={profileData.isOwnProfile}
+          />
+        )}
+      </AuthWrapper>
     </Suspense>
   );
 }
@@ -396,5 +410,13 @@ export default function ProfilePage({ params }: ProfilePageProps) {
     return <ProfileSkeleton />;
   }
 
-  return <ProfileContent profileId={profileId} />;
+  return (
+    <AuthWrapper 
+      requireAuth={true}
+      requireRole={['athlete', 'coach', 'recruiter', 'admin']}
+      loadingComponent={<ProfileSkeleton />}
+    >
+      <ProfileContent profileId={profileId} />
+    </AuthWrapper>
+  );
 } 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useEffect, Suspense } from "react";
+import React, { useState, useMemo, useEffect, Suspense } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -11,6 +11,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { getSportsList, US_STATES, GRADUATION_YEARS, DIVISIONS } from "@/lib/sports-data";
 import { useRoleView } from "@/hooks/use-role-view";
+import { AuthWrapper } from '../../../components/auth-wrapper';
 
 // Fallback data in case imports fail
 const FALLBACK_SPORTS = ['Basketball', 'Football', 'Baseball', 'Soccer', 'Tennis', 'Golf', 'Swimming', 'Track & Field'];
@@ -785,8 +786,10 @@ function SearchPageContent() {
 
 export default function SearchPage() {
   return (
-    <Suspense fallback={<div>Loading...</div>}>
-      <SearchPageContent />
-    </Suspense>
+    <AuthWrapper>
+      <Suspense fallback={<div>Loading...</div>}>
+        <SearchPageContent />
+      </Suspense>
+    </AuthWrapper>
   );
 } 

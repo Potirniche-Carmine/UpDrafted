@@ -1,7 +1,8 @@
-'use client';
+"use client";
+
 import React, { useState, useMemo, useEffect, Suspense } from 'react';
-import { Users, Search, MessageSquare, User, MoreVertical, XCircle, ShieldAlert, UserCheck, UserCog, UsersRound, CheckCircle, X, Clock} from 'lucide-react';
-import { Card, CardContent } from "@/components/ui/card";
+import { Users, Search, MessageSquare, User, ShieldAlert, UserCheck, UserCog, UsersRound, CheckCircle, X, Clock, MoreHorizontal } from 'lucide-react';
+import { Card, CardContent} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -9,6 +10,7 @@ import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import Link from "next/link";
 import { useSearchParams } from 'next/navigation';
+import { AuthWrapper } from '../../../components/auth-wrapper';
 
 const initialUsers: User[] = [
   { id: 1, name: 'Alex Johnson', sport: 'Basketball', type: 'athlete', avatar: 'https://placehold.co/100x100/E2E8F0/4A5568?text=AJ', mutualConnections: 12 },
@@ -143,7 +145,7 @@ const UserCard: React.FC<UserCardProps> = ({ user, onRemove }) => {
                 onClick={handleMenuClick}
                 className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground"
               >
-                <MoreVertical size={16} />
+                <MoreHorizontal size={16} />
               </Button>
               {showMenu && (
                 <div className="absolute right-0 mt-2 w-48 bg-card rounded-lg shadow-lg border border-border py-1 z-10">
@@ -153,7 +155,7 @@ const UserCard: React.FC<UserCardProps> = ({ user, onRemove }) => {
                     onClick={handleRemove}
                     className="w-full justify-start text-destructive hover:text-destructive hover:bg-destructive/10 px-3 py-2 h-auto"
                   >
-                    <XCircle size={16} className="mr-2" />
+                    <X size={16} className="mr-2" />
                     Remove Connection
                   </Button>
                 </div>
@@ -454,8 +456,10 @@ function App() {
 
 export default function ConnectionsPage() {
   return (
-    <Suspense fallback={<div>Loading...</div>}>
-      <App />
-    </Suspense>
+    <AuthWrapper>
+      <Suspense fallback={<div>Loading...</div>}>
+        <App />
+      </Suspense>
+    </AuthWrapper>
   );
 }

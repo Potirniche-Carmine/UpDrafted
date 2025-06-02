@@ -4,8 +4,9 @@ import { useState, useEffect } from "react";
 import { UserRole } from "../lib/types";
 import RoleSelection from "../components/RoleSelection";
 import OnboardingForm from "../components/OnboardingForm";
+import { AuthWrapper } from "../../../components/auth-wrapper";
 
-export default function OnboardingPage() {
+function OnboardingContent() {
   const [step, setStep] = useState<"role" | "details">("role");
   const [selectedRole, setSelectedRole] = useState<UserRole | null>(null);
 
@@ -36,4 +37,12 @@ export default function OnboardingPage() {
   }
 
   return null;
+}
+
+export default function OnboardingPage() {
+  return (
+    <AuthWrapper type="onboarding">
+      <OnboardingContent />
+    </AuthWrapper>
+  );
 }

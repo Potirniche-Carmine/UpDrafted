@@ -650,14 +650,16 @@ export function AthleteProfile({
             />
 
             {/* Verification Section */}
-            <VerificationSection
-              profileData={profileData}
-              isOwnProfile={isOwnProfile}
-              onEditMaxPreps={() => handleEditSection('maxpreps-verification')}
-              onShowVerificationDialog={() => handleEditSection('manual-verification')}
-              hasPendingVerification={hasPendingVerification}
-              pendingSubmittedAt={pendingSubmittedAt}
-            />
+            {isOwnProfile && (
+              <VerificationSection
+                profileData={profileData}
+                isOwnProfile={isOwnProfile}
+                onEditMaxPreps={() => handleEditSection('maxpreps-verification')}
+                onShowVerificationDialog={() => handleEditSection('manual-verification')}
+                hasPendingVerification={hasPendingVerification}
+                pendingSubmittedAt={pendingSubmittedAt}
+              />
+            )}
             
             {/* Hudl Highlights */}
             {(profileData.hudlUrl || isOwnProfile) && (

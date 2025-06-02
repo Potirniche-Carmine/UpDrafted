@@ -3,8 +3,9 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ArrowRight, CheckCircle, Globe, Search, Shield, Target, Users } from "lucide-react";
+import { AuthWrapper } from "../../components/auth-wrapper";
 
-export default function HomePage() {
+function HomePageContent() {
   return (
     <div className="flex flex-col">
       {/* Hero Section */}
@@ -266,5 +267,13 @@ export default function HomePage() {
         </div>
       </section>
     </div>
+  );
+}
+
+export default function HomePage() {
+  return (
+    <AuthWrapper type="landing" requireAuth={false}>
+      <HomePageContent />
+    </AuthWrapper>
   );
 }
