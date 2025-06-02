@@ -51,10 +51,57 @@ const nextConfig: NextConfig = {
     // Quality settings for different use cases
     loader: 'default',
   },
-  // Additional optimizations
+  // Additional optimizations for cost efficiency
   experimental: {
     optimizePackageImports: ['lucide-react', '@radix-ui/react-icons'],
-  }
+    // Reduce edge function usage
+    serverComponentsExternalPackages: ['@neondatabase/serverless'],
+    // Optimize for Node.js runtime where possible
+    serverActions: {
+      allowedOrigins: ['localhost:3000', 'updrafted.carmine.live'],
+    },
+    // Minimize middleware processing
+    middlewarePrefetch: 'flexible',
+  },
+  // Force static optimization where possible
+  trailingSlash: false,
+  compress: true,
+  // Optimize headers
+  headers: async () => [
+    {
+      source: '/:path*',
+      headers: [
+        {
+          key: 'X-DNS-Prefetch-Control',
+          value: 'on'
+        },
+        {
+          key: 'X-Frame-Options',
+          value: 'DENY'
+        }
+      ],
+    },
+    // Aggressive caching for favicon to reduce bot-driven edge invocations
+    {
+      source: '/favicon.ico',
+      headers: [
+        {
+          key: 'Cache-Control',
+          value: 'public, max-age=31536000, immutable' // 1 year cache
+        }
+      ],
+    },
+    // Aggressive caching for all static assets
+    {
+      source: '/(.*\\.(ico|png|jpg|jpeg|gif|webp|svg|woff|woff2|ttf|eot|otf|css|js))',
+      headers: [
+        {
+          key: 'Cache-Control',
+          value: 'public, max-age=31536000, immutable' // 1 year cache for static assets
+        }
+      ],
+    },
+  ],
 };
 
 export default nextConfig;

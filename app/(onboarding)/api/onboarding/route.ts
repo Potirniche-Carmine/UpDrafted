@@ -6,6 +6,9 @@ import { onboardingOperations } from '@/database/db-utils'
 import { convertFormDataToProfileData } from '@/app/(onboarding)/lib/onboarding'
 import { FormValidator } from '@/app/(onboarding)/lib/form-validation'
 
+// Force Node.js runtime to avoid expensive edge function costs
+export const runtime = 'nodejs'
+
 const clerkClient = createClerkClient({
   secretKey: process.env.CLERK_SECRET_KEY
 })

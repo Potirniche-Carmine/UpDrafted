@@ -4,28 +4,38 @@ import { userOperations, athleteOperations, coachOperations, recruitingOperation
 import { R2_PUBLIC_URL } from '@/database/r2';
 import { NewAthleteProfile, NewAthleteMeasurable, NewAthleteVideo } from '@/database/schema';
 
+// Force Node.js runtime to avoid expensive edge function costs
+export const runtime = 'nodejs';
+
 interface ProfilePageParams {
   params: Promise<{
     id: string;
   }>;
 }
 
-// Cache configuration - different cache times based on data sensitivity
+// Cache configuration - balanced caching to reduce edge requests while maintaining freshness
 const CACHE_CONFIG = {
-  // Public profile data can be cached longer
-  PUBLIC_PROFILE_CACHE_SECONDS: 300, // 5 minutes
-  // Own profile data cached shorter for freshness
-  OWN_PROFILE_CACHE_SECONDS: 60, // 1 minute
+  // Public profile data can be cached longer but not too long for user experience
+  PUBLIC_PROFILE_CACHE_SECONDS: 600, // 10 minutes (reduced from 15)
+  // Own profile data cached for reasonable freshness
+  OWN_PROFILE_CACHE_SECONDS: 180, // 3 minutes (reduced from 5)
   // Admin views get fresh data
-  ADMIN_CACHE_SECONDS: 30, // 30 seconds
+  ADMIN_CACHE_SECONDS: 60, // 1 minute (reduced from 3)
 };
 
 // Helper function to set cache headers
 function setCacheHeaders(response: NextResponse, cacheSeconds: number) {
-  // Set Cache-Control header for both browser and CDN caching
-  response.headers.set('Cache-Control', `public, max-age=${cacheSeconds}, s-maxage=${cacheSeconds}, stale-while-revalidate=60`);
-  // Add ETag for better cache validation
-  response.headers.set('Vary', 'Authorization');
+  try {
+    // Balanced cache headers to reduce edge requests while maintaining freshness
+    response.headers.set('Cache-Control', `public, max-age=${cacheSeconds}, s-maxage=${cacheSeconds}, stale-while-revalidate=60`);
+    // Add ETag for better cache validation
+    response.headers.set('Vary', 'Authorization');
+    // Add CDN cache optimization but less aggressive
+    response.headers.set('CDN-Cache-Control', `public, max-age=${Math.min(cacheSeconds * 1.5, 900)}`); // Cap at 15 minutes
+  } catch (error) {
+    // If header setting fails, log but don't fail the request
+    console.warn('Failed to set cache headers:', error);
+  }
   return response;
 }
 

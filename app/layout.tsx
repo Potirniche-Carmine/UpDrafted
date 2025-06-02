@@ -5,8 +5,6 @@ import { ThemeProvider } from "@/components/theme-provider";
 import { ClerkProviderWrapper } from "@/components/clerk-theme-wrapper"; 
 import { Header } from "@/components/header";
 import { Footer } from "@/components/footer";
-import { Analytics } from "@vercel/analytics/next";
-import { SpeedInsights } from "@vercel/speed-insights/next";
 import { QueryProvider } from '@/components/providers/query-provider'
 import { RoleSwitcher } from '@/components/role-switcher'
 
@@ -44,8 +42,6 @@ export default function RootLayout({
               <Header />
               <main className="flex-grow container mx-auto max-w-screen-2xl px-4 sm:px-6 lg:px-8 py-8">
                 {children}
-                <Analytics />
-                <SpeedInsights />
               </main>
               <Footer />
               <RoleSwitcher />
