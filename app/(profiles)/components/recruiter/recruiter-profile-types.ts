@@ -51,4 +51,7 @@ export interface RecruiterProfileProps {
   onShare?: () => void;
   hasPendingVerification?: boolean;
   pendingSubmittedAt?: string;
+  hasRejectedVerification?: boolean;
+  rejectionReason?: string;
+  rejectedAt?: string;
 } 

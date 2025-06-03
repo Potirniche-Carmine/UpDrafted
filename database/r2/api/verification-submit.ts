@@ -33,6 +33,50 @@ export async function handleVerificationSubmit(request: NextRequest) {
 
       if (existingRequest.length > 0) {
         const request = existingRequest[0];
+        
+        // Allow reapplication if the existing request was rejected
+        if (request.status === 'rejected') {
+          // Update the existing request for reapplication
+          const updatedRequest = await db
+            .update(verificationRequests)
+            .set({
+              status: 'pending',
+              submittedAt: new Date(),
+              reviewedAt: null,
+              reviewedBy: null,
+              rejectionReason: null,
+              additionalInfo: additionalInfo || null,
+              updatedAt: new Date()
+            })
+            .where(eq(verificationRequests.id, request.id))
+            .returning();
+
+          // Delete old verification files and links
+          await db
+            .delete(verificationFiles)
+            .where(eq(verificationFiles.verificationRequestId, request.id));
+
+          // Create new link records if any
+          if (links && links.length > 0) {
+            await db.insert(verificationFiles).values(
+              links.map((link: { url: string; description?: string }) => ({
+                verificationRequestId: request.id,
+                fileName: link.description || link.url,
+                fileType: 'link',
+                linkUrl: link.url,
+                description: link.description || null,
+              }))
+            );
+          }
+
+          return NextResponse.json({
+            success: true,
+            verificationRequest: updatedRequest[0],
+            reapplication: true
+          });
+        }
+        
+        // Block if request is pending or approved
         return NextResponse.json(
           { 
             error: 'You already have a verification request',

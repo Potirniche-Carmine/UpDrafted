@@ -13,6 +13,7 @@ import { Save, X, Plus, Upload } from "lucide-react";
 import { getSportsList, US_STATES, GRADUATION_YEARS, getPositionsForSport, getMeasurablesForSport } from '@/lib/sports-data';
 import { EducationLevel } from '@/app/(onboarding)/lib/onboarding';
 import Image from "next/image";
+import { sanitizeProfileData } from '@/utils/sanitization';
 
 // Import field validation
 const FIELD_LIMITS = {
@@ -638,7 +639,10 @@ export function AthleteEditDialogs({
         );
     }
 
-    onSave(updates);
+    // SECURITY: Sanitize all user input to prevent XSS attacks
+    const sanitizedUpdates = sanitizeProfileData(updates) as Partial<AthleteProfileData>;
+
+    onSave(sanitizedUpdates);
     setMeasurableToEdit(null);
   };
 

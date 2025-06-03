@@ -76,6 +76,9 @@ interface ProfileApiResponse {
   currentUserRole: string;
   hasPendingVerification?: boolean;
   pendingSubmittedAt?: string;
+  hasRejectedVerification?: boolean;
+  rejectionReason?: string;
+  rejectedAt?: string;
 }
 
 export default function ProfilePage({ params }: ProfilePageProps) {
@@ -414,6 +417,9 @@ function ProfileContent({ profileId }: { profileId: string }) {
           isOwnProfile={profileData.isOwnProfile}
           hasPendingVerification={profileData.hasPendingVerification}
           pendingSubmittedAt={profileData.pendingSubmittedAt}
+          hasRejectedVerification={profileData.hasRejectedVerification}
+          rejectionReason={profileData.rejectionReason}
+          rejectedAt={profileData.rejectedAt}
         />
       )}
     </>

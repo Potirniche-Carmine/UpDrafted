@@ -3,7 +3,7 @@
 import React from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Shield, Clock } from "lucide-react";
+import { Shield, Clock, AlertTriangle, Mail } from "lucide-react";
 import { RecruiterProfileData } from "./recruiter-profile-types";
 
 interface RecruiterVerificationSectionProps {
@@ -12,6 +12,9 @@ interface RecruiterVerificationSectionProps {
   onShowVerificationDialog: () => void;
   hasPendingVerification?: boolean;
   pendingSubmittedAt?: string;
+  hasRejectedVerification?: boolean;
+  rejectionReason?: string;
+  rejectedAt?: string;
 }
 
 export function RecruiterVerificationSection({
@@ -19,7 +22,10 @@ export function RecruiterVerificationSection({
   isOwnProfile,
   onShowVerificationDialog,
   hasPendingVerification = false,
-  pendingSubmittedAt
+  pendingSubmittedAt,
+  hasRejectedVerification = false,
+  rejectionReason,
+  rejectedAt
 }: RecruiterVerificationSectionProps) {
 
   // If user is verified, don't show the verification section at all
@@ -29,10 +35,13 @@ export function RecruiterVerificationSection({
 
   // Check if user should see manual verification option
   // Hide it if they are already verified or have a pending request
-  const shouldShowManualVerification = !profileData.isVerified && !hasPendingVerification;
+  const shouldShowManualVerification = !profileData.isVerified && !hasPendingVerification && !hasRejectedVerification;
 
   // Show pending verification status
   const shouldShowPendingVerification = hasPendingVerification;
+
+  // Show rejection status
+  const shouldShowRejectedVerification = hasRejectedVerification;
 
   return (
     <Card>
@@ -44,7 +53,7 @@ export function RecruiterVerificationSection({
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
-          {/* Manual Verification Section - Only show if not already verified */}
+          {/* Manual Verification Section - Only show if not already verified, pending, or rejected */}
           {shouldShowManualVerification && (
             <div className="bg-blue-50 dark:bg-blue-950/20 rounded-lg p-4">
               <div className="text-center">
@@ -88,6 +97,59 @@ export function RecruiterVerificationSection({
                     You&apos;ll see a verified badge on your profile once approved.
                   </p>
                 </div>
+              </div>
+            </div>
+          )}
+
+          {/* Rejected Verification Section */}
+          {shouldShowRejectedVerification && (
+            <div className="bg-red-50 dark:bg-red-950/20 rounded-lg p-4 border border-red-200 dark:border-red-800">
+              <div className="text-center">
+                <div className="w-16 h-16 bg-red-100 dark:bg-red-900 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <AlertTriangle className="w-8 h-8 text-red-600" />
+                </div>
+                <h3 className="font-medium text-red-900 dark:text-red-100 mb-2">Verification Not Approved</h3>
+                <p className="text-sm text-red-700 dark:text-red-200 mb-3">
+                  Your verification request was not approved. Please review the feedback below and resubmit with the required information.
+                </p>
+                
+                {/* Rejection Details */}
+                <div className="bg-red-100 dark:bg-red-900/50 rounded-lg p-3 border border-red-200 dark:border-red-700 mb-4 text-left">
+                  {rejectedAt && (
+                    <p className="text-xs text-red-800 dark:text-red-200 mb-2">
+                      <strong>Reviewed:</strong> {new Date(rejectedAt).toLocaleDateString()}
+                    </p>
+                  )}
+                  {rejectionReason && (
+                    <div className="mb-2">
+                      <p className="text-xs font-medium text-red-800 dark:text-red-200 mb-1">Reason for Rejection:</p>
+                      <p className="text-xs text-red-700 dark:text-red-300 bg-red-50 dark:bg-red-900/30 p-2 rounded border">
+                        {rejectionReason}
+                      </p>
+                    </div>
+                  )}
+                </div>
+
+                {/* Action Buttons */}
+                {isOwnProfile && (
+                  <div className="flex flex-col sm:flex-row gap-2 justify-center">
+                    <Button 
+                      onClick={onShowVerificationDialog}
+                      className="bg-blue-600 hover:bg-blue-700 text-white"
+                    >
+                      <Shield className="w-4 h-4 mr-2" />
+                      Reapply for Verification
+                    </Button>
+                    <Button 
+                      variant="outline"
+                      onClick={() => window.open('mailto:support@updrafted.com?subject=Verification%20Question', '_blank')}
+                      className="border-red-300 text-red-700 hover:bg-red-50"
+                    >
+                      <Mail className="w-4 h-4 mr-2" />
+                      Contact Support
+                    </Button>
+                  </div>
+                )}
               </div>
             </div>
           )}

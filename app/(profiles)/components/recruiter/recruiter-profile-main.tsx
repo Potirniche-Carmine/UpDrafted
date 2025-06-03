@@ -122,7 +122,10 @@ export function RecruiterProfile({
   onConnect, 
   onShare,
   hasPendingVerification,
-  pendingSubmittedAt 
+  pendingSubmittedAt,
+  hasRejectedVerification,
+  rejectionReason,
+  rejectedAt
 }: RecruiterProfileProps) {
   const [profileData, setProfileData] = useState<RecruiterProfileData>(data);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
@@ -527,6 +530,9 @@ export function RecruiterProfile({
                 onShowVerificationDialog={() => handleEditSection('manual-verification')}
                 hasPendingVerification={hasPendingVerification}
                 pendingSubmittedAt={pendingSubmittedAt}
+                hasRejectedVerification={hasRejectedVerification}
+                rejectionReason={rejectionReason}
+                rejectedAt={rejectedAt}
               />
             )}
           </div>

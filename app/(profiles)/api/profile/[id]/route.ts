@@ -2,9 +2,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireAnyRole, requireOwnershipOrAdmin } from '@/utils/roles';
 import { userOperations, athleteOperations, coachOperations, recruitingOperations, recruitingNeedsOperations } from '@/database/db-utils';
 import { R2_PUBLIC_URL } from '@/database/r2';
-import { NewAthleteProfile, NewAthleteMeasurable, NewAthleteVideo, NewCoachProfile, NewRecruitingProfile, verificationRequests } from '@/database/schema';
+import { NewAthleteProfile, NewAthleteMeasurable, NewAthleteVideo, NewCoachProfile, NewRecruitingProfile, verificationRequests, AthleteProfile, CoachProfile, RecruitingProfile } from '@/database/schema';
 import { db } from '@/database/db';
 import { eq } from 'drizzle-orm';
+import { sanitizeProfileData } from '@/utils/sanitization';
+import { EducationLevel } from '@/app/(onboarding)/lib/onboarding';
 
 // Force Node.js runtime to avoid expensive edge function costs
 export const runtime = 'nodejs';
@@ -13,79 +15,6 @@ interface ProfilePageParams {
   params: Promise<{
     id: string;
   }>;
-}
-
-// Cache configuration - balanced caching to reduce edge requests while maintaining freshness
-const CACHE_CONFIG = {
-  // Public profile data can be cached longer to reduce costs - increased from 10 minutes
-  PUBLIC_PROFILE_CACHE_SECONDS: 1800, // 30 minutes (increased from 10 minutes)
-  // Own profile data cached for reasonable freshness
-  OWN_PROFILE_CACHE_SECONDS: 300, // 5 minutes (increased from 3 minutes)
-  // Admin views get fresh data but slightly longer cache
-  ADMIN_CACHE_SECONDS: 120, // 2 minutes (increased from 1 minute)
-};
-
-// Helper function to set cache headers
-function setCacheHeaders(response: NextResponse, cacheSeconds: number, isPublicProfile = false) {
-  try {
-    // More aggressive caching for public profiles to reduce costs
-    if (isPublicProfile) {
-      // Public profiles can be cached more aggressively
-      response.headers.set('Cache-Control', `public, max-age=${cacheSeconds}, s-maxage=${cacheSeconds * 2}, stale-while-revalidate=300`);
-      // CDN can cache even longer for public profiles
-      response.headers.set('CDN-Cache-Control', `public, max-age=${cacheSeconds * 3}`); // 90 minutes for CDN
-    } else {
-      // More conservative caching for own profiles
-      response.headers.set('Cache-Control', `public, max-age=${cacheSeconds}, s-maxage=${cacheSeconds}, stale-while-revalidate=60`);
-      response.headers.set('CDN-Cache-Control', `public, max-age=${Math.min(cacheSeconds * 1.5, 900)}`); // Cap at 15 minutes
-    }
-    
-    // Add ETag for better cache validation
-    response.headers.set('Vary', 'Authorization');
-    
-    // Add cache tags for better invalidation (if using a CDN that supports it)
-    response.headers.set('Cache-Tag', 'profile');
-  } catch (error) {
-    // If header setting fails, log but don't fail the request
-    console.warn('Failed to set cache headers:', error);
-  }
-  return response;
-}
-
-// Helper function to sanitize profile data based on viewing permissions
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function sanitizeProfileData(profileData: Record<string, any>, profileType: string | null, isOwnProfile: boolean, isAdmin: boolean): Record<string, any> | null {
-  if (!profileData || !profileType) return null;
-
-  // If it's the user's own profile or admin, return full data
-  if (isOwnProfile || isAdmin) {
-    return profileData;
-  }
-
-  // For other users viewing the profile, remove sensitive information
-  const sanitized = { ...profileData };
-  
-  // Remove sensitive user data that should only be visible to the profile owner
-  if (sanitized.user) {
-    delete sanitized.user.email;
-    delete sanitized.user.createdAt;
-    delete sanitized.user.updatedAt;
-  }
-
-  // Remove sensitive profile data based on type
-  if (profileType === 'athlete') {
-    // Keep public athlete information but remove private details
-    delete sanitized.personalStatement; // Keep this for now, but could be made private
-    // Remove any private measurables or stats if needed
-  } else if (profileType === 'coach' || profileType === 'recruiter') {
-    // Remove any sensitive coaching/recruiting information
-    delete sanitized.recruitingNeeds?.recruitingPhilosophy; // Keep this public for now
-  }
-
-  // Remove connection data for privacy
-  delete sanitized.connections;
-
-  return sanitized;
 }
 
 // Helper function to transform database profile data to match component interface
@@ -189,6 +118,99 @@ function transformProfileData(profileData: Record<string, any>, profileType: str
   }
 
   return transformed;
+}
+
+// Basic input validation schemas
+const validateBasicFields = (data: Record<string, unknown>) => {
+  const errors: string[] = [];
+  
+  // String length validation
+  if (data.fullName && (typeof data.fullName !== 'string' || data.fullName.length > 100)) {
+    errors.push('Full name must be a string under 100 characters');
+  }
+  
+  if (data.city && (typeof data.city !== 'string' || data.city.length > 50)) {
+    errors.push('City must be a string under 50 characters');
+  }
+  
+  if (data.personalStatement && (typeof data.personalStatement !== 'string' || data.personalStatement.length > 1000)) {
+    errors.push('Personal statement must be under 1000 characters');
+  }
+  
+  // Numeric validation
+  if (data.gpa !== undefined && (typeof data.gpa !== 'number' || data.gpa < 0 || data.gpa > 5)) {
+    errors.push('GPA must be a number between 0 and 5');
+  }
+  
+  if (data.graduationYear && (typeof data.graduationYear !== 'number' || data.graduationYear < 2020 || data.graduationYear > 2040)) {
+    errors.push('Graduation year must be between 2020 and 2035');
+  }
+  
+  // URL validation
+  if (data.maxPrepsUrl && typeof data.maxPrepsUrl === 'string' && data.maxPrepsUrl.length > 0) {
+    try {
+      new URL(data.maxPrepsUrl);
+      if (!data.maxPrepsUrl.includes('maxpreps.com')) {
+        errors.push('MaxPreps URL must be from maxpreps.com');
+      }
+    } catch {
+      errors.push('MaxPreps URL must be a valid URL');
+    }
+  }
+  
+  return errors;
+};
+
+// Sanitize error messages
+const sanitizeError = (error: Error | unknown): string => {
+  const message = error instanceof Error ? error.message : 'Unknown error';
+  
+  // Don't expose internal details
+  if (message.includes('database') || message.includes('SQL') || message.includes('connection')) {
+    return 'A database error occurred. Please try again.';
+  }
+  
+  if (message.includes('permission') || message.includes('unauthorized')) {
+    return 'You do not have permission to perform this action.';
+  }
+  
+  return 'An error occurred while updating your profile.';
+};
+
+// Helper function to sanitize profile data based on viewing permissions
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function sanitizeForViewing(profileData: Record<string, any>, profileType: string | null, isOwnProfile: boolean, isAdmin: boolean): Record<string, any> | null {
+  if (!profileData || !profileType) return null;
+
+  // If it's the user's own profile or admin, return full data
+  if (isOwnProfile || isAdmin) {
+    return profileData;
+  }
+
+  // For other users viewing the profile, remove sensitive information
+  const sanitized = { ...profileData };
+  
+  // Remove sensitive user data that should only be visible to the profile owner
+  if (sanitized.user) {
+    delete sanitized.user.email;
+    delete sanitized.user.createdAt;
+    delete sanitized.user.updatedAt;
+  }
+
+  // Remove sensitive profile data based on type
+  if (profileType === 'athlete') {
+    // Keep public athlete information but remove private details
+    delete sanitized.personalStatement; // Keep this for now, but could be made private
+    // Remove any private measurables or stats if needed
+  } else if (profileType === 'coach' || profileType === 'recruiter') {
+    // Remove any sensitive coaching/recruiting information
+    delete sanitized.recruitingNeeds?.recruitingPhilosophy; // Keep this public for now
+  }
+
+  // Remove connection data for privacy
+  delete sanitized.connections;
+
+  return sanitized;
 }
 
 export async function GET(
@@ -303,22 +325,37 @@ export async function GET(
         const athleteProfile = await athleteOperations.getAthleteProfile(profileUserId);
         profileData = athleteProfile;
 
-        // Check for pending verification request if it's the user's own profile
+        // Check for verification request status if it's the user's own profile
         if (isOwnProfile) {
-          const pendingVerification = await db
+          const verificationRequest = await db
             .select({
               status: verificationRequests.status,
-              submittedAt: verificationRequests.submittedAt
+              submittedAt: verificationRequests.submittedAt,
+              reviewedAt: verificationRequests.reviewedAt,
+              rejectionReason: verificationRequests.rejectionReason
             })
             .from(verificationRequests)
             .where(eq(verificationRequests.userId, profileUserId))
             .limit(1);
 
-          if (pendingVerification.length > 0 && (pendingVerification[0].status === 'pending' || pendingVerification[0].status === 'under_review')) {
-            verificationStatus = {
-              hasPendingVerification: true,
-              pendingSubmittedAt: pendingVerification[0].submittedAt.toISOString()
-            };
+          if (verificationRequest.length > 0) {
+            const verification = verificationRequest[0];
+            
+            if (verification.status === 'pending' || verification.status === 'under_review') {
+              verificationStatus = {
+                hasPendingVerification: true,
+                pendingSubmittedAt: verification.submittedAt.toISOString()
+              };
+            } else if (verification.status === 'rejected') {
+              verificationStatus = {
+                hasRejectedVerification: true,
+                rejectionReason: verification.rejectionReason,
+                rejectedAt: verification.reviewedAt?.toISOString(),
+                submittedAt: verification.submittedAt.toISOString()
+              };
+            } else if (verification.status === 'approved') {
+              // This should already be reflected in the isVerified field on the profile
+            }
           }
         }
       } else if (userWithProfile.role === 'coach' && userWithProfile.coachProfile) {
@@ -327,22 +364,37 @@ export async function GET(
         const coachProfile = await coachOperations.getCoachProfile(profileUserId);
         profileData = coachProfile;
 
-        // Check for pending verification request if it's the user's own profile
+        // Check for verification request status if it's the user's own profile
         if (isOwnProfile) {
-          const pendingVerification = await db
+          const verificationRequest = await db
             .select({
               status: verificationRequests.status,
-              submittedAt: verificationRequests.submittedAt
+              submittedAt: verificationRequests.submittedAt,
+              reviewedAt: verificationRequests.reviewedAt,
+              rejectionReason: verificationRequests.rejectionReason
             })
             .from(verificationRequests)
             .where(eq(verificationRequests.userId, profileUserId))
             .limit(1);
 
-          if (pendingVerification.length > 0 && (pendingVerification[0].status === 'pending' || pendingVerification[0].status === 'under_review')) {
-            verificationStatus = {
-              hasPendingVerification: true,
-              pendingSubmittedAt: pendingVerification[0].submittedAt.toISOString()
-            };
+          if (verificationRequest.length > 0) {
+            const verification = verificationRequest[0];
+            
+            if (verification.status === 'pending' || verification.status === 'under_review') {
+              verificationStatus = {
+                hasPendingVerification: true,
+                pendingSubmittedAt: verification.submittedAt.toISOString()
+              };
+            } else if (verification.status === 'rejected') {
+              verificationStatus = {
+                hasRejectedVerification: true,
+                rejectionReason: verification.rejectionReason,
+                rejectedAt: verification.reviewedAt?.toISOString(),
+                submittedAt: verification.submittedAt.toISOString()
+              };
+            } else if (verification.status === 'approved') {
+              // This should already be reflected in the isVerified field on the profile
+            }
           }
         }
       } else if (userWithProfile.role === 'recruiter' && userWithProfile.recruitingProfile) {
@@ -351,22 +403,37 @@ export async function GET(
         const recruitingProfile = await recruitingOperations.getRecruitingProfile(profileUserId);
         profileData = recruitingProfile;
 
-        // Check for pending verification request if it's the user's own profile
+        // Check for verification request status if it's the user's own profile
         if (isOwnProfile) {
-          const pendingVerification = await db
+          const verificationRequest = await db
             .select({
               status: verificationRequests.status,
-              submittedAt: verificationRequests.submittedAt
+              submittedAt: verificationRequests.submittedAt,
+              reviewedAt: verificationRequests.reviewedAt,
+              rejectionReason: verificationRequests.rejectionReason
             })
             .from(verificationRequests)
             .where(eq(verificationRequests.userId, profileUserId))
             .limit(1);
 
-          if (pendingVerification.length > 0 && (pendingVerification[0].status === 'pending' || pendingVerification[0].status === 'under_review')) {
-            verificationStatus = {
-              hasPendingVerification: true,
-              pendingSubmittedAt: pendingVerification[0].submittedAt.toISOString()
-            };
+          if (verificationRequest.length > 0) {
+            const verification = verificationRequest[0];
+            
+            if (verification.status === 'pending' || verification.status === 'under_review') {
+              verificationStatus = {
+                hasPendingVerification: true,
+                pendingSubmittedAt: verification.submittedAt.toISOString()
+              };
+            } else if (verification.status === 'rejected') {
+              verificationStatus = {
+                hasRejectedVerification: true,
+                rejectionReason: verification.rejectionReason,
+                rejectedAt: verification.reviewedAt?.toISOString(),
+                submittedAt: verification.submittedAt.toISOString()
+              };
+            } else if (verification.status === 'approved') {
+              // This should already be reflected in the isVerified field on the profile
+            }
           }
         }
       }
@@ -386,7 +453,7 @@ export async function GET(
     }
 
     // Sanitize the profile data based on viewing permissions
-    const sanitizedProfile = sanitizeProfileData(profileData, profileType, isOwnProfile, isAdmin);
+    const sanitizedProfile = sanitizeForViewing(profileData, profileType, isOwnProfile, isAdmin);
 
     if (!sanitizedProfile || !profileType) {
       return NextResponse.json(
@@ -410,24 +477,22 @@ export async function GET(
       ...(verificationStatus && verificationStatus)
     };
 
-    // Return profile data with ownership information
-    const response = NextResponse.json(responseData);
-
-    // Set cache headers based on user role
-    if (isOwnProfile || isAdmin) {
-      setCacheHeaders(response, CACHE_CONFIG.OWN_PROFILE_CACHE_SECONDS, false);
+    // Handle CORS properly
+    if (isOwnProfile) {
+      // Return full profile data for the user - verification status at top level
+      return NextResponse.json(responseData);
     } else {
-      setCacheHeaders(response, CACHE_CONFIG.PUBLIC_PROFILE_CACHE_SECONDS, true);
+      // Return public profile data for other users
+      const publicProfileData = sanitizeForViewing(responseData, profileType, isOwnProfile, isAdmin);
+      return NextResponse.json(publicProfileData || responseData);
     }
 
-    return response;
-
   } catch (error) {
-    console.error('Error fetching profile:', error);
-    return NextResponse.json(
-      { error: 'Failed to fetch profile' },
-      { status: 500 }
-    );
+    console.error('Error in profile GET:', error);
+    return NextResponse.json({ 
+      error: 'Failed to retrieve profile',
+      details: 'An unexpected error occurred'
+    }, { status: 500 });
   }
 }
 
@@ -468,220 +533,232 @@ export async function PUT(
     // Parse the request body
     const updateData = await request.json();
 
-    // SECURITY: Prevent privilege escalation attacks
-    // Never allow these critical security fields to be updated via profile API
-    delete updateData.isVerified; // Only admins should set verification via separate process
-    delete updateData.role; // Roles should never be changeable via profile API
-    delete updateData.userId; // User ID should never be changeable
-    delete updateData.createdAt; // Creation date should never be changeable
-    delete updateData.updatedAt; // Update date is managed by database
+    // CRITICAL: XSS Protection - Sanitize all user input
+    const sanitizedData = sanitizeProfileData(updateData);
 
-    // Get the current user to determine their role
-    const userWithProfile = await userOperations.getUserWithProfile(currentUserId);
-    if (!userWithProfile) {
+    // CRITICAL: Input validation
+    const validationErrors = validateBasicFields(sanitizedData);
+    if (validationErrors.length > 0) {
       return NextResponse.json(
-        { error: 'User not found' },
-        { status: 404 }
+        { error: `Validation failed: ${validationErrors.join(', ')}` },
+        { status: 400 }
       );
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    let updatedProfile: any = null;
+    // SECURITY: Prevent privilege escalation attacks
+    // Never allow these critical security fields to be updated via profile API
+    delete sanitizedData.isVerified; // Only admins should set verification via separate process
+    delete sanitizedData.role; // Roles should never be changeable via profile API
+    delete sanitizedData.userId; // User ID should never be changeable
+    delete sanitizedData.createdAt; // Creation date should never be changeable
+    delete sanitizedData.updatedAt; // Update date is managed by database
 
-    if (userWithProfile.role === 'athlete') {
-      // Update athlete profile
-      try {
-        // Transform the update data to match database schema
-        const profileUpdateData: Partial<NewAthleteProfile> = {};
-        
-        // Map common fields
-        if (updateData.fullName !== undefined) profileUpdateData.fullName = updateData.fullName;
-        if (updateData.sport !== undefined) profileUpdateData.sport = updateData.sport;
-        if (updateData.secondarySports !== undefined) profileUpdateData.secondarySports = updateData.secondarySports;
-        if (updateData.graduationYear !== undefined) profileUpdateData.graduationYear = updateData.graduationYear;
-        if (updateData.educationLevel !== undefined) profileUpdateData.educationLevel = updateData.educationLevel;
-        if (updateData.organizationName !== undefined) profileUpdateData.organizationName = updateData.organizationName;
-        if (updateData.city !== undefined) profileUpdateData.city = updateData.city;
-        if (updateData.state !== undefined) profileUpdateData.state = updateData.state;
-        if (updateData.height !== undefined) profileUpdateData.height = updateData.height;
-        if (updateData.weight !== undefined) profileUpdateData.weight = updateData.weight;
-        if (updateData.positions !== undefined) profileUpdateData.positions = updateData.positions;
-        if (updateData.gpa !== undefined) profileUpdateData.gpa = updateData.gpa;
-        if (updateData.satScore !== undefined) profileUpdateData.satScore = updateData.satScore;
-        if (updateData.actScore !== undefined) profileUpdateData.actScore = updateData.actScore;
-        if (updateData.intendedMajor !== undefined) profileUpdateData.intendedMajor = updateData.intendedMajor;
-        if (updateData.gender !== undefined) profileUpdateData.gender = updateData.gender;
-        if (updateData.personalStatement !== undefined) profileUpdateData.personalStatement = updateData.personalStatement;
-        
-        // Handle URL fields with correct field names
-        if (updateData.maxPrepsUrl !== undefined) profileUpdateData.maxprepsUrl = updateData.maxPrepsUrl; // Note: client sends maxPrepsUrl, DB expects maxprepsUrl
-        if (updateData.hudlUrl !== undefined) profileUpdateData.hudlUrl = updateData.hudlUrl;
-        if (updateData.hudlEmbedUrl !== undefined) profileUpdateData.hudlEmbedUrl = updateData.hudlEmbedUrl;
-        
-        // Handle social media - extract from socialMedia object
-        if (updateData.socialMedia !== undefined) {
-          profileUpdateData.instagramHandle = updateData.socialMedia?.instagram || null;
-          profileUpdateData.twitterHandle = updateData.socialMedia?.twitter || null;
-        }
+    // Get the current user to determine their role
+    const userWithProfile = await userOperations.getUserWithProfile(currentUserId);
 
-        // Update the athlete profile in the database
-        updatedProfile = await athleteOperations.updateAthleteProfile(profileUserId, profileUpdateData);
-        
-        // Handle measurables updates if provided
-        if (updateData.measurables !== undefined && Array.isArray(updateData.measurables)) {
-          // Transform client measurables data to database format
-          const measurablesData: NewAthleteMeasurable[] = updateData.measurables.map((measurable: {
-            sport: string;
-            label: string;
-            value: string;
-            measurementDate: string;
-          }) => ({
-            athleteId: updatedProfile?.id || 0, // Use the database profile ID
-            sport: measurable.sport,
-            label: measurable.label,
-            value: measurable.value,
-            measurementDate: measurable.measurementDate
-          }));
-          
-          // Replace all existing measurables with new ones
-          if (updatedProfile?.id) {
-            await athleteOperations.replaceAthleteMeasurables(updatedProfile.id, measurablesData);
-          }
-        }
+    if (!userWithProfile) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    }
 
-        // Handle video updates if provided
-        if (updateData.youtubeVideos !== undefined && Array.isArray(updateData.youtubeVideos)) {
-          // Transform client videos data to database format
-          const videosData: NewAthleteVideo[] = updateData.youtubeVideos.map((video: {
-            title: string;
-            url: string;
-            embedUrl: string;
-            sortOrder?: number;
-          }) => ({
-            athleteId: updatedProfile?.id || 0, // Use the database profile ID
-            title: video.title,
-            youtubeUrl: video.url,
-            embedUrl: video.embedUrl,
-            sortOrder: video.sortOrder || 0
-          }));
-          
-          // Replace all existing videos with new ones
-          if (updatedProfile?.id) {
-            await athleteOperations.replaceAthleteVideos(updatedProfile.id, videosData);
-          }
-        }
-        
-        // Re-fetch the complete profile with all related data to ensure consistency
-        updatedProfile = await athleteOperations.getAthleteProfile(profileUserId);
-        
-      } catch (dbError) {
-        console.error('Database error updating athlete profile:', dbError);
-        return NextResponse.json(
-          { error: 'Failed to update athlete profile' },
-          { status: 500 }
-        );
+    const profileType = userWithProfile.role;
+    let updatedProfile: AthleteProfile | CoachProfile | RecruitingProfile | null = null;
+
+    // Update profile based on type
+    if (profileType === 'athlete') {
+      // First, update the athlete profile data
+      const profileUpdateData: Partial<NewAthleteProfile> = {};
+      
+      // Map common fields with proper type casting
+      if (sanitizedData.fullName !== undefined) profileUpdateData.fullName = sanitizedData.fullName as string;
+      if (sanitizedData.sport !== undefined) profileUpdateData.sport = sanitizedData.sport as string;
+      if (sanitizedData.secondarySports !== undefined) profileUpdateData.secondarySports = sanitizedData.secondarySports as string[];
+      if (sanitizedData.graduationYear !== undefined) profileUpdateData.graduationYear = sanitizedData.graduationYear as number;
+      if (sanitizedData.educationLevel !== undefined) profileUpdateData.educationLevel = sanitizedData.educationLevel as EducationLevel;
+      if (sanitizedData.organizationName !== undefined) profileUpdateData.organizationName = sanitizedData.organizationName as string;
+      if (sanitizedData.city !== undefined) profileUpdateData.city = sanitizedData.city as string;
+      if (sanitizedData.state !== undefined) profileUpdateData.state = sanitizedData.state as string;
+      if (sanitizedData.height !== undefined) profileUpdateData.height = sanitizedData.height as string;
+      if (sanitizedData.weight !== undefined) profileUpdateData.weight = sanitizedData.weight as string;
+      if (sanitizedData.positions !== undefined) profileUpdateData.positions = sanitizedData.positions as string[];
+      if (sanitizedData.gpa !== undefined) profileUpdateData.gpa = String(sanitizedData.gpa as number);
+      if (sanitizedData.satScore !== undefined) profileUpdateData.satScore = sanitizedData.satScore as number;
+      if (sanitizedData.actScore !== undefined) profileUpdateData.actScore = sanitizedData.actScore as number;
+      if (sanitizedData.intendedMajor !== undefined) profileUpdateData.intendedMajor = sanitizedData.intendedMajor as string;
+      if (sanitizedData.personalStatement !== undefined) profileUpdateData.personalStatement = sanitizedData.personalStatement as string;
+      
+      // Handle URL fields with correct field names
+      if (sanitizedData.maxPrepsUrl !== undefined) profileUpdateData.maxprepsUrl = sanitizedData.maxPrepsUrl as string;
+      if (sanitizedData.hudlUrl !== undefined) profileUpdateData.hudlUrl = sanitizedData.hudlUrl as string;
+      if (sanitizedData.hudlEmbedUrl !== undefined) profileUpdateData.hudlEmbedUrl = sanitizedData.hudlEmbedUrl as string;
+      
+      // Handle social media - extract from socialMedia object
+      if (sanitizedData.socialMedia !== undefined) {
+        const socialMedia = sanitizedData.socialMedia as { instagram?: string; twitter?: string };
+        profileUpdateData.instagramHandle = socialMedia?.instagram || null;
+        profileUpdateData.twitterHandle = socialMedia?.twitter || null;
       }
-    } else if (userWithProfile.role === 'coach') {
+
+      // Update the athlete profile in the database
+      updatedProfile = await athleteOperations.updateAthleteProfile(profileUserId, profileUpdateData);
+      
+      // Handle measurables updates if provided
+      if (sanitizedData.measurables !== undefined && Array.isArray(sanitizedData.measurables)) {
+        // Transform client measurables data to database format
+        const measurablesData: NewAthleteMeasurable[] = sanitizedData.measurables.map((measurable: {
+          sport: string;
+          label: string;
+          value: string;
+          measurementDate: string;
+        }) => ({
+          athleteId: updatedProfile?.id || 0, // Use the database profile ID
+          sport: measurable.sport,
+          label: measurable.label,
+          value: measurable.value,
+          measurementDate: measurable.measurementDate
+        }));
+        
+        // Replace all existing measurables with new ones
+        if (updatedProfile?.id) {
+          await athleteOperations.replaceAthleteMeasurables(updatedProfile.id, measurablesData);
+        }
+      }
+
+      // Handle video updates if provided
+      if (sanitizedData.youtubeVideos !== undefined && Array.isArray(sanitizedData.youtubeVideos)) {
+        // Transform client videos data to database format
+        const videosData: NewAthleteVideo[] = sanitizedData.youtubeVideos.map((video: {
+          title: string;
+          url: string;
+          embedUrl: string;
+          sortOrder?: number;
+        }) => ({
+          athleteId: updatedProfile?.id || 0, // Use the database profile ID
+          title: video.title,
+          youtubeUrl: video.url,
+          embedUrl: video.embedUrl,
+          sortOrder: video.sortOrder || 0
+        }));
+        
+        // Replace all existing videos with new ones
+        if (updatedProfile?.id) {
+          await athleteOperations.replaceAthleteVideos(updatedProfile.id, videosData);
+        }
+      }
+      
+      // Re-fetch the complete profile with all related data to ensure consistency
+      const refetchedProfile = await athleteOperations.getAthleteProfile(profileUserId);
+      if (refetchedProfile) {
+        updatedProfile = refetchedProfile;
+      }
+      
+    } else if (profileType === 'coach') {
       // Update coach profile
-      try {
-        // Transform the update data to match database schema
-        const profileUpdateData: Partial<NewCoachProfile> = {};
-        
-        // Map common fields
-        if (updateData.fullName !== undefined) profileUpdateData.fullName = updateData.fullName;
-        if (updateData.title !== undefined) profileUpdateData.title = updateData.title;
-        if (updateData.sportCoaching !== undefined) profileUpdateData.sportCoaching = updateData.sportCoaching;
-        if (updateData.organizationName !== undefined) profileUpdateData.organizationName = updateData.organizationName;
-        if (updateData.city !== undefined) profileUpdateData.city = updateData.city;
-        if (updateData.state !== undefined) profileUpdateData.state = updateData.state;
-        if (updateData.division !== undefined) profileUpdateData.division = updateData.division;
-        if (updateData.conference !== undefined) profileUpdateData.conference = updateData.conference;
-        if (updateData.personalStatement !== undefined) profileUpdateData.personalStatement = updateData.personalStatement;
-        if (updateData.programWebsite !== undefined) profileUpdateData.programWebsite = updateData.programWebsite;
-        if (updateData.schoolWebsite !== undefined) profileUpdateData.schoolWebsite = updateData.schoolWebsite;
-        if (updateData.instagramHandle !== undefined) profileUpdateData.instagramHandle = updateData.instagramHandle;
-        if (updateData.twitterHandle !== undefined) profileUpdateData.twitterHandle = updateData.twitterHandle;
-        if (updateData.showcaseVideoTitle !== undefined) profileUpdateData.showcaseVideoTitle = updateData.showcaseVideoTitle;
-        if (updateData.showcaseVideoUrl !== undefined) profileUpdateData.showcaseVideoUrl = updateData.showcaseVideoUrl;
-        if (updateData.showcaseVideoEmbedUrl !== undefined) profileUpdateData.showcaseVideoEmbedUrl = updateData.showcaseVideoEmbedUrl;
+      const profileUpdateData: Partial<NewCoachProfile> = {};
+      
+      // Map common fields with proper type casting
+      if (sanitizedData.fullName !== undefined) profileUpdateData.fullName = sanitizedData.fullName as string;
+      if (sanitizedData.title !== undefined) profileUpdateData.title = sanitizedData.title as string;
+      if (sanitizedData.sportCoaching !== undefined) profileUpdateData.sportCoaching = sanitizedData.sportCoaching as string;
+      if (sanitizedData.organizationName !== undefined) profileUpdateData.organizationName = sanitizedData.organizationName as string;
+      if (sanitizedData.city !== undefined) profileUpdateData.city = sanitizedData.city as string;
+      if (sanitizedData.state !== undefined) profileUpdateData.state = sanitizedData.state as string;
+      if (sanitizedData.division !== undefined) profileUpdateData.division = sanitizedData.division as string;
+      if (sanitizedData.conference !== undefined) profileUpdateData.conference = sanitizedData.conference as string;
+      if (sanitizedData.personalStatement !== undefined) profileUpdateData.personalStatement = sanitizedData.personalStatement as string;
+      if (sanitizedData.programWebsite !== undefined) profileUpdateData.programWebsite = sanitizedData.programWebsite as string;
+      if (sanitizedData.schoolWebsite !== undefined) profileUpdateData.schoolWebsite = sanitizedData.schoolWebsite as string;
+      if (sanitizedData.instagramHandle !== undefined) profileUpdateData.instagramHandle = sanitizedData.instagramHandle as string;
+      if (sanitizedData.twitterHandle !== undefined) profileUpdateData.twitterHandle = sanitizedData.twitterHandle as string;
+      if (sanitizedData.showcaseVideoTitle !== undefined) profileUpdateData.showcaseVideoTitle = sanitizedData.showcaseVideoTitle as string;
+      if (sanitizedData.showcaseVideoUrl !== undefined) profileUpdateData.showcaseVideoUrl = sanitizedData.showcaseVideoUrl as string;
+      if (sanitizedData.showcaseVideoEmbedUrl !== undefined) profileUpdateData.showcaseVideoEmbedUrl = sanitizedData.showcaseVideoEmbedUrl as string;
 
-        // Update the coach profile in the database
-        updatedProfile = await coachOperations.updateCoachProfile(profileUserId, profileUpdateData);
+      // Update the coach profile in the database
+      updatedProfile = await coachOperations.updateCoachProfile(profileUserId, profileUpdateData);
+      
+      // Handle recruiting needs updates if provided
+      if (sanitizedData.recruitingNeeds !== undefined && updatedProfile?.id) {
+        const recruitingNeeds = sanitizedData.recruitingNeeds as {
+          graduationYears?: number[];
+          positions?: string[];
+          scholarshipsAvailable?: number;
+          recruitingPhilosophy?: string;
+        };
         
-        // Handle recruiting needs updates if provided
-        if (updateData.recruitingNeeds !== undefined && updatedProfile?.id) {
-          const recruitingNeedsData = {
-            graduationYears: updateData.recruitingNeeds.graduationYears || [],
-            positions: updateData.recruitingNeeds.positions || [],
-            scholarshipsAvailable: updateData.recruitingNeeds.scholarshipsAvailable || null,
-            recruitingPhilosophy: updateData.recruitingNeeds.recruitingPhilosophy || null
-          };
-          
-          await recruitingNeedsOperations.updateRecruitingNeeds(updatedProfile.id, recruitingNeedsData);
-        }
+        const recruitingNeedsData = {
+          graduationYears: recruitingNeeds.graduationYears || [],
+          positions: recruitingNeeds.positions || [],
+          scholarshipsAvailable: recruitingNeeds.scholarshipsAvailable || null,
+          recruitingPhilosophy: recruitingNeeds.recruitingPhilosophy || null
+        };
         
-        // Re-fetch the complete profile with all related data to ensure consistency
-        updatedProfile = await coachOperations.getCoachProfile(profileUserId);
-        
-      } catch (dbError) {
-        console.error('Database error updating coach profile:', dbError);
-        return NextResponse.json(
-          { error: 'Failed to update coach profile' },
-          { status: 500 }
-        );
+        await recruitingNeedsOperations.updateRecruitingNeeds(updatedProfile.id, recruitingNeedsData);
       }
-    } else if (userWithProfile.role === 'recruiter') {
+      
+      // Re-fetch the complete profile with all related data to ensure consistency
+      const refetchedProfile = await coachOperations.getCoachProfile(profileUserId);
+      if (refetchedProfile) {
+        updatedProfile = refetchedProfile;
+      }
+      
+    } else if (profileType === 'recruiter') {
       // Update recruiting profile
-      try {
-        // Transform the update data to match database schema
-        const profileUpdateData: Partial<NewRecruitingProfile> = {};
-        
-        // Map common fields
-        if (updateData.fullName !== undefined) profileUpdateData.fullName = updateData.fullName;
-        if (updateData.title !== undefined) profileUpdateData.title = updateData.title;
-        if (updateData.sportRecruiting !== undefined) profileUpdateData.sportRecruiting = updateData.sportRecruiting;
-        if (updateData.organizationName !== undefined) profileUpdateData.organizationName = updateData.organizationName;
-        if (updateData.city !== undefined) profileUpdateData.city = updateData.city;
-        if (updateData.state !== undefined) profileUpdateData.state = updateData.state;
-        if (updateData.division !== undefined) profileUpdateData.division = updateData.division;
-        if (updateData.conference !== undefined) profileUpdateData.conference = updateData.conference;
-        if (updateData.personalStatement !== undefined) profileUpdateData.personalStatement = updateData.personalStatement;
-        if (updateData.programWebsite !== undefined) profileUpdateData.programWebsite = updateData.programWebsite;
-        if (updateData.schoolWebsite !== undefined) profileUpdateData.schoolWebsite = updateData.schoolWebsite;
-        if (updateData.instagramHandle !== undefined) profileUpdateData.instagramHandle = updateData.instagramHandle;
-        if (updateData.twitterHandle !== undefined) profileUpdateData.twitterHandle = updateData.twitterHandle;
-        if (updateData.showcaseVideoTitle !== undefined) profileUpdateData.showcaseVideoTitle = updateData.showcaseVideoTitle;
-        if (updateData.showcaseVideoUrl !== undefined) profileUpdateData.showcaseVideoUrl = updateData.showcaseVideoUrl;
-        if (updateData.showcaseVideoEmbedUrl !== undefined) profileUpdateData.showcaseVideoEmbedUrl = updateData.showcaseVideoEmbedUrl;
+      const profileUpdateData: Partial<NewRecruitingProfile> = {};
+      
+      // Map common fields with proper type casting
+      if (sanitizedData.fullName !== undefined) profileUpdateData.fullName = sanitizedData.fullName as string;
+      if (sanitizedData.title !== undefined) profileUpdateData.title = sanitizedData.title as string;
+      if (sanitizedData.sportRecruiting !== undefined) profileUpdateData.sportRecruiting = sanitizedData.sportRecruiting as string;
+      if (sanitizedData.organizationName !== undefined) profileUpdateData.organizationName = sanitizedData.organizationName as string;
+      if (sanitizedData.city !== undefined) profileUpdateData.city = sanitizedData.city as string;
+      if (sanitizedData.state !== undefined) profileUpdateData.state = sanitizedData.state as string;
+      if (sanitizedData.division !== undefined) profileUpdateData.division = sanitizedData.division as string;
+      if (sanitizedData.conference !== undefined) profileUpdateData.conference = sanitizedData.conference as string;
+      if (sanitizedData.personalStatement !== undefined) profileUpdateData.personalStatement = sanitizedData.personalStatement as string;
+      if (sanitizedData.programWebsite !== undefined) profileUpdateData.programWebsite = sanitizedData.programWebsite as string;
+      if (sanitizedData.schoolWebsite !== undefined) profileUpdateData.schoolWebsite = sanitizedData.schoolWebsite as string;
+      if (sanitizedData.instagramHandle !== undefined) profileUpdateData.instagramHandle = sanitizedData.instagramHandle as string;
+      if (sanitizedData.twitterHandle !== undefined) profileUpdateData.twitterHandle = sanitizedData.twitterHandle as string;
+      if (sanitizedData.showcaseVideoTitle !== undefined) profileUpdateData.showcaseVideoTitle = sanitizedData.showcaseVideoTitle as string;
+      if (sanitizedData.showcaseVideoUrl !== undefined) profileUpdateData.showcaseVideoUrl = sanitizedData.showcaseVideoUrl as string;
+      if (sanitizedData.showcaseVideoEmbedUrl !== undefined) profileUpdateData.showcaseVideoEmbedUrl = sanitizedData.showcaseVideoEmbedUrl as string;
 
-        // Update the recruiting profile in the database
-        updatedProfile = await recruitingOperations.updateRecruitingProfile(profileUserId, profileUpdateData);
+      // Update the recruiting profile in the database
+      updatedProfile = await recruitingOperations.updateRecruitingProfile(profileUserId, profileUpdateData);
+      
+      // Handle recruiting needs updates if provided
+      if (sanitizedData.recruitingNeeds !== undefined && updatedProfile?.id) {
+        const recruitingNeeds = sanitizedData.recruitingNeeds as {
+          graduationYears?: number[];
+          positions?: string[];
+          scholarshipsAvailable?: number;
+          recruitingPhilosophy?: string;
+        };
         
-        // Handle recruiting needs updates if provided
-        if (updateData.recruitingNeeds !== undefined && updatedProfile?.id) {
-          const recruitingNeedsData = {
-            graduationYears: updateData.recruitingNeeds.graduationYears || [],
-            positions: updateData.recruitingNeeds.positions || [],
-            scholarshipsAvailable: updateData.recruitingNeeds.scholarshipsAvailable || null,
-            recruitingPhilosophy: updateData.recruitingNeeds.recruitingPhilosophy || null
-          };
-          
-          // Use recruitingProfileNeeds instead of recruitingNeeds for recruiting profiles
-          if (recruitingNeedsOperations.updateRecruitingProfileNeeds) {
-            await recruitingNeedsOperations.updateRecruitingProfileNeeds(updatedProfile.id, recruitingNeedsData);
-          }
+        const recruitingNeedsData = {
+          graduationYears: recruitingNeeds.graduationYears || [],
+          positions: recruitingNeeds.positions || [],
+          scholarshipsAvailable: recruitingNeeds.scholarshipsAvailable || null,
+          recruitingPhilosophy: recruitingNeeds.recruitingPhilosophy || null
+        };
+        
+        // Use recruitingProfileNeeds instead of recruitingNeeds for recruiting profiles
+        if (recruitingNeedsOperations.updateRecruitingProfileNeeds) {
+          await recruitingNeedsOperations.updateRecruitingProfileNeeds(updatedProfile.id, recruitingNeedsData);
         }
-        
-        // Re-fetch the complete profile with all related data to ensure consistency
-        updatedProfile = await recruitingOperations.getRecruitingProfile(profileUserId);
-        
-      } catch (dbError) {
-        console.error('Database error updating recruiting profile:', dbError);
-        return NextResponse.json(
-          { error: 'Failed to update recruiting profile' },
-          { status: 500 }
-        );
       }
+      
+      // Re-fetch the complete profile with all related data to ensure consistency
+      const refetchedProfile = await recruitingOperations.getRecruitingProfile(profileUserId);
+      if (refetchedProfile) {
+        updatedProfile = refetchedProfile;
+      }
+      
+    } else {
+      return NextResponse.json(
+        { error: 'Invalid profile type' },
+        { status: 400 }
+      );
     }
 
     if (!updatedProfile) {
@@ -692,18 +769,17 @@ export async function PUT(
     }
 
     // Transform the updated profile data to match the component interface
-    const transformedProfile = transformProfileData(updatedProfile, userWithProfile.role);
+    const transformedProfile = transformProfileData(updatedProfile, profileType);
 
     return NextResponse.json({
       success: true,
-      profile: transformedProfile,
-      message: 'Profile updated successfully'
+      data: transformedProfile
     });
 
   } catch (error) {
     console.error('Error updating profile:', error);
     return NextResponse.json(
-      { error: 'Failed to update profile' },
+      { error: sanitizeError(error) },
       { status: 500 }
     );
   }

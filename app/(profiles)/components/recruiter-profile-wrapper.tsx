@@ -9,13 +9,19 @@ interface RecruiterProfileWrapperProps {
   isOwnProfile?: boolean;
   hasPendingVerification?: boolean;
   pendingSubmittedAt?: string;
+  hasRejectedVerification?: boolean;
+  rejectionReason?: string;
+  rejectedAt?: string;
 }
 
 export function RecruiterProfileWrapper({ 
   data, 
   isOwnProfile = false, 
   hasPendingVerification,
-  pendingSubmittedAt 
+  pendingSubmittedAt,
+  hasRejectedVerification,
+  rejectionReason,
+  rejectedAt
 }: RecruiterProfileWrapperProps) {
   const handleShowInterest = () => {
     console.log('Show interest in recruiter clicked');
@@ -35,6 +41,9 @@ export function RecruiterProfileWrapper({
       onShare={handleShare}
       hasPendingVerification={hasPendingVerification}
       pendingSubmittedAt={pendingSubmittedAt}
+      hasRejectedVerification={hasRejectedVerification}
+      rejectionReason={rejectionReason}
+      rejectedAt={rejectedAt}
     />
   );
 } 

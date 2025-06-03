@@ -13,6 +13,7 @@ import { Save, X, Upload } from "lucide-react";
 import Image from "next/image";
 import { getSportsList, US_STATES, GRADUATION_YEARS, DIVISIONS, getPositionsForSport } from '@/lib/sports-data';
 import { RecruiterProfileData } from './recruiter-profile-types';
+import { sanitizeProfileData } from '@/utils/sanitization';
 
 // Field validation limits
 const FIELD_LIMITS = {
@@ -424,7 +425,10 @@ export function RecruiterEditDialogs({
         break;
     }
 
-    onSave(updates);
+    // SECURITY: Sanitize all user input to prevent XSS attacks
+    const sanitizedUpdates = sanitizeProfileData(updates) as Partial<RecruiterProfileData>;
+
+    onSave(sanitizedUpdates);
     onClose();
   };
 
