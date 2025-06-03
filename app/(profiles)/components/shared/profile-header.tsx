@@ -20,6 +20,7 @@ interface ProfileHeaderProps {
   connectLabel?: string;
   profileName?: string;
   profileType?: "athlete" | "coach" | "recruiter";
+  reportedUserId?: string;
   // Save functionality props
   hasUnsavedChanges?: boolean;
   isSaving?: boolean;
@@ -35,6 +36,7 @@ export function ProfileHeader({
   connectLabel = "Connect",
   profileName = "this profile",
   profileType = "coach",
+  reportedUserId,
   hasUnsavedChanges = false,
   isSaving = false,
   onSaveChanges,
@@ -258,6 +260,7 @@ export function ProfileHeader({
         onOpenChange={setShowReportDialog}
         profileName={profileName}
         profileType={profileType}
+        reportedUserId={reportedUserId || ""}
       />
     </>
   );

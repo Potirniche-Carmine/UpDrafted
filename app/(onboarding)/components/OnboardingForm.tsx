@@ -10,7 +10,6 @@ import AthleteForm from "./AthleteForm";
 import CoachRecruiterForm from "./CoachRecruiterForm";
 import TermsAndConditions from "./TermsAndConditions";
 import { LoadingScreen } from "./LoadingScreen";
-import { useProfileNavigation } from '@/hooks/use-profile-navigation';
 
 interface OnboardingFormProps {
   role: UserRole;
@@ -65,7 +64,6 @@ const initialData: OnboardingData = {
 export default function OnboardingForm({ role, onBack }: OnboardingFormProps) {
   const { user } = useUser();
   const { getToken } = useAuth();
-  const { navigateToProfile } = useProfileNavigation();
   const [isLoading, setIsLoading] = useState(false);
   const [data, setData] = useState<OnboardingData>({ ...initialData, role });
 
@@ -128,11 +126,11 @@ export default function OnboardingForm({ role, onBack }: OnboardingFormProps) {
         // Force reload the user to get updated metadata
         await user.reload();
         
-        // Add artificial delay to ensure smooth role propagation and better UX
-        await new Promise(resolve => setTimeout(resolve, 3000));
+        // Give the system time to propagate the role changes
+        await new Promise(resolve => setTimeout(resolve, 2000));
         
-        // Navigate to user's profile instead of dashboard
-        await navigateToProfile();
+        // Keep user on loading screen - LoadingScreen will handle the redirect
+        // Don't call navigateToProfile here to avoid multiple redirects
       } else {
         const errorData = await response.json();
         throw new Error(errorData.error || 'Failed to create profile');
@@ -142,6 +140,7 @@ export default function OnboardingForm({ role, onBack }: OnboardingFormProps) {
       alert(`Something went wrong: ${error instanceof Error ? error.message : 'Please try again.'}`);
       setIsLoading(false);
     }
+    // Note: Don't set setIsLoading(false) on success - let LoadingScreen handle the full flow
   };
 
   const canSubmit = () => {

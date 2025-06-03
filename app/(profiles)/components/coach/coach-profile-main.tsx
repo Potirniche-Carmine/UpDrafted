@@ -300,6 +300,7 @@ export function CoachProfile({
         connectLabel="Connect with Coach"
         profileName={profileData.fullName}
         profileType="coach"
+        reportedUserId={profileData.userId}
         hasUnsavedChanges={hasUnsavedChanges}
         isSaving={isSaving}
         onSaveChanges={saveProfile}

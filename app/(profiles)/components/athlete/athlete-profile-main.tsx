@@ -498,6 +498,7 @@ export function AthleteProfile({
         connectLabel="Draft"
         profileName={profileData.fullName}
         profileType="athlete"
+        reportedUserId={profileData.userId}
         hasUnsavedChanges={hasUnsavedChanges}
         isSaving={isSaving}
         onSaveChanges={saveProfile}

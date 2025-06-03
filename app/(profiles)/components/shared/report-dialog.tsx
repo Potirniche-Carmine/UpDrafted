@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import { useUser } from "@clerk/nextjs";
 import {
   Dialog,
   DialogContent,
@@ -20,6 +21,7 @@ import {
   AlertTriangle,
   UserX,
   FileText,
+  CheckCircle,
 } from "lucide-react";
 
 interface ReportDialogProps {
@@ -27,6 +29,7 @@ interface ReportDialogProps {
   onOpenChange: (open: boolean) => void;
   profileName: string;
   profileType: "athlete" | "coach" | "recruiter";
+  reportedUserId: string;
 }
 
 const reportReasons = [
@@ -74,150 +77,230 @@ const reportReasons = [
   },
 ];
 
-export function ReportDialog({ open, onOpenChange, profileName, profileType }: ReportDialogProps) {
+export function ReportDialog({ open, onOpenChange, profileName, profileType, reportedUserId }: ReportDialogProps) {
+  const { user } = useUser();
   const [selectedReason, setSelectedReason] = useState<string>("");
   const [additionalDetails, setAdditionalDetails] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitSuccess, setSubmitSuccess] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   const handleReasonSelect = (reasonId: string) => {
     setSelectedReason(reasonId === selectedReason ? "" : reasonId);
+    setSubmitError(null); // Clear any previous errors
   };
 
   const handleSubmit = async () => {
-    if (!selectedReason) return;
+    if (!selectedReason || !user) return;
+
+    // Validate "other" reason requires details
+    if (selectedReason === "other" && !additionalDetails.trim()) {
+      setSubmitError("Please provide additional details for 'Other' reports");
+      return;
+    }
 
     setIsSubmitting(true);
+    setSubmitError(null);
     
-    // TODO: Implement actual report submission logic
-    console.log("Report submitted:", {
-      profileName,
-      profileType,
-      reason: selectedReason,
-      details: additionalDetails,
-    });
-    
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 1500));
-    
-    setIsSubmitting(false);
-    onOpenChange(false);
-    
-    // Reset form
-    setSelectedReason("");
-    setAdditionalDetails("");
+    try {
+      const response = await fetch('/api/reports', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          reportedUserId,
+          reportReason: selectedReason,
+          additionalDetails: additionalDetails.trim() || undefined,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to submit report');
+      }
+
+      setSubmitSuccess(true);
+      
+      // Close dialog after showing success for 2 seconds
+      setTimeout(() => {
+        onOpenChange(false);
+        setSubmitSuccess(false);
+        setSelectedReason("");
+        setAdditionalDetails("");
+      }, 2000);
+
+    } catch (error) {
+      console.error('Error submitting report:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to submit report';
+      
+      if (errorMessage.includes('already reported')) {
+        setSubmitError("You have already reported this user. You can only report each user once.");
+      } else if (errorMessage.includes('Cannot report yourself')) {
+        setSubmitError("Cannot report yourself");
+      } else {
+        setSubmitError("Failed to submit report. Please try again later or contact support if the issue persists.");
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // Reset state when dialog closes
+  const handleDialogChange = (open: boolean) => {
+    onOpenChange(open);
+    if (!open) {
+      setSubmitSuccess(false);
+      setSubmitError(null);
+      setSelectedReason("");
+      setAdditionalDetails("");
+    }
   };
 
   const selectedReasonData = reportReasons.find((reason) => reason.id === selectedReason);
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[95vw] w-full sm:max-w-lg max-h-[90vh] overflow-y-auto mx-4 sm:mx-auto">
+    <Dialog open={open} onOpenChange={handleDialogChange}>
+      <DialogContent className="w-[calc(100vw-1rem)] max-w-md sm:max-w-lg mx-auto max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-lg">
-            <Flag className="w-5 h-5 text-red-600 flex-shrink-0" />
-            <span className="break-words">Report {profileName}</span>
+            {submitSuccess ? (
+              <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0" />
+            ) : (
+              <Flag className="w-5 h-5 text-red-600 flex-shrink-0" />
+            )}
+            <span className="break-words">
+              {submitSuccess ? "Report Submitted" : `Report ${profileName}`}
+            </span>
           </DialogTitle>
           <DialogDescription className="text-sm">
-            Help us keep UpDrafted safe by reporting profiles that violate our community guidelines.
-            All reports are reviewed confidentially.
+            {submitSuccess ? (
+              "Thank you for your report. Our moderation team will review this within 24-48 hours."
+            ) : (
+              "Help us keep UpDrafted safe by reporting profiles that violate our community guidelines. All reports are reviewed confidentially."
+            )}
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-6">
-          {/* Report Reasons */}
-          <div>
-            <Label className="text-base font-medium mb-4 block">
-              Why are you reporting this {profileType} profile?
-            </Label>
-            <div className="space-y-3">
-              {reportReasons.map((reason) => (
-                <div
-                  key={reason.id}
-                  onClick={() => handleReasonSelect(reason.id)}
-                  className={`flex items-start space-x-3 p-3 rounded-lg border cursor-pointer transition-colors ${
-                    selectedReason === reason.id
-                      ? "border-primary bg-primary/5"
-                      : "border-gray-200 hover:border-gray-300 hover:bg-gray-50 dark:border-gray-700 dark:hover:border-gray-600 dark:hover:bg-gray-800"
-                  }`}
-                >
-                  <div className="flex-shrink-0 mt-1">
-                    <div
-                      className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
-                        selectedReason === reason.id
-                          ? "border-primary bg-primary"
-                          : "border-gray-300"
-                      }`}
-                    >
-                      {selectedReason === reason.id && (
-                        <div className="w-2 h-2 rounded-full bg-white"></div>
-                      )}
-                    </div>
-                  </div>
-                  <div className="flex-1 space-y-1">
-                    <div className="flex items-center gap-2">
-                      {reason.icon}
-                      <span className="font-medium text-sm">{reason.label}</span>
-                    </div>
-                    <p className="text-xs text-muted-foreground">
-                      {reason.description}
-                    </p>
-                  </div>
-                </div>
-              ))}
+        {submitSuccess ? (
+          <div className="flex justify-center py-8">
+            <div className="text-center">
+              <CheckCircle className="w-16 h-16 text-green-600 mx-auto mb-4" />
+              <p className="text-lg font-medium text-green-900 dark:text-green-100">
+                Report Submitted Successfully
+              </p>
             </div>
           </div>
+        ) : (
+          <div className="space-y-6">
+            {/* Error Message */}
+            {submitError && (
+              <div className="bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
+                <div className="flex items-start gap-3">
+                  <AlertTriangle className="w-5 h-5 text-red-600 mt-0.5 flex-shrink-0" />
+                  <p className="text-sm text-red-800 dark:text-red-200">{submitError}</p>
+                </div>
+              </div>
+            )}
 
-          {/* Additional Details */}
-          {selectedReason && (
+            {/* Report Reasons */}
             <div>
-              <Label htmlFor="additional-details" className="text-base font-medium">
-                Additional Details {selectedReason === "other" ? "(Required)" : "(Optional)"}
+              <Label className="text-base font-medium mb-4 block">
+                Why are you reporting this {profileType} profile?
               </Label>
-              <p className="text-sm text-muted-foreground mb-3">
-                {selectedReasonData && (
-                  <>Please provide more information about: {selectedReasonData.label.toLowerCase()}</>
-                )}
-              </p>
-              <Textarea
-                id="additional-details"
-                placeholder="Please describe what you observed and provide any additional context..."
-                value={additionalDetails}
-                onChange={(e) => setAdditionalDetails(e.target.value)}
-                className="w-full min-w-0 text-sm"
-                rows={4}
-              />
+              <div className="space-y-3">
+                {reportReasons.map((reason) => (
+                  <div
+                    key={reason.id}
+                    onClick={() => handleReasonSelect(reason.id)}
+                    className={`flex items-start space-x-3 p-3 rounded-lg border cursor-pointer transition-colors ${
+                      selectedReason === reason.id
+                        ? "border-primary bg-primary/5"
+                        : "border-gray-200 hover:border-gray-300 hover:bg-gray-50 dark:border-gray-700 dark:hover:border-gray-600 dark:hover:bg-gray-800"
+                    }`}
+                  >
+                    <div className="flex-shrink-0 mt-1">
+                      <div
+                        className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
+                          selectedReason === reason.id
+                            ? "border-primary bg-primary"
+                            : "border-gray-300"
+                        }`}
+                      >
+                        {selectedReason === reason.id && (
+                          <div className="w-2 h-2 rounded-full bg-white"></div>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex-1 space-y-1">
+                      <div className="flex items-center gap-2">
+                        {reason.icon}
+                        <span className="font-medium text-sm">{reason.label}</span>
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        {reason.description}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
-          )}
 
-          {/* Information Notice */}
-          <div className="bg-amber-50 dark:bg-amber-950/20 rounded-lg p-4">
-            <div className="flex items-start gap-3">
-              <AlertTriangle className="w-5 h-5 text-amber-600 mt-0.5 flex-shrink-0" />
-              <div className="text-sm">
-                <p className="font-medium text-amber-900 dark:text-amber-100 mb-1">
-                  Review Process
+            {/* Additional Details */}
+            {selectedReason && (
+              <div>
+                <Label htmlFor="additional-details" className="text-base font-medium">
+                  Additional Details {selectedReason === "other" ? "(Required)" : "(Optional)"}
+                </Label>
+                <p className="text-sm text-muted-foreground mb-3">
+                  {selectedReasonData && (
+                    <>Please provide more information about: {selectedReasonData.label.toLowerCase()}</>
+                  )}
                 </p>
-                <p className="text-amber-800 dark:text-amber-200">
-                  Our moderation team will review this report within 24-48 hours. 
-                  False reports may result in restrictions to your account.
-                </p>
+                <Textarea
+                  id="additional-details"
+                  placeholder="Please describe what you observed and provide any additional context..."
+                  value={additionalDetails}
+                  onChange={(e) => setAdditionalDetails(e.target.value)}
+                  className="w-full min-w-0 text-sm"
+                  rows={4}
+                />
+              </div>
+            )}
+
+            {/* Information Notice */}
+            <div className="bg-amber-50 dark:bg-amber-950/20 rounded-lg p-4">
+              <div className="flex items-start gap-3">
+                <AlertTriangle className="w-5 h-5 text-amber-600 mt-0.5 flex-shrink-0" />
+                <div className="text-sm">
+                  <p className="font-medium text-amber-900 dark:text-amber-100 mb-1">
+                    Review Process
+                  </p>
+                  <p className="text-amber-800 dark:text-amber-200">
+                    Our moderation team will review this report within 24-48 hours. 
+                    False reports may result in restrictions to your account.
+                  </p>
+                </div>
               </div>
             </div>
           </div>
-        </div>
+        )}
 
-        <DialogFooter className="flex-col-reverse sm:flex-row gap-2 sm:gap-0">
-          <Button variant="outline" onClick={() => onOpenChange(false)} className="w-full sm:w-auto">
-            Cancel
-          </Button>
-          <Button
-            onClick={handleSubmit}
-            disabled={!selectedReason || (selectedReason === "other" && !additionalDetails.trim()) || isSubmitting}
-            className="w-full sm:w-auto bg-red-600 hover:bg-red-700 text-white"
-          >
-            {isSubmitting ? "Submitting Report..." : "Submit Report"}
-          </Button>
-        </DialogFooter>
+        {!submitSuccess && (
+          <DialogFooter className="flex-col-reverse sm:flex-row gap-2 sm:gap-0">
+            <Button variant="outline" onClick={() => handleDialogChange(false)} className="w-full sm:w-auto">
+              Cancel
+            </Button>
+            <Button
+              onClick={handleSubmit}
+              disabled={!selectedReason || (selectedReason === "other" && !additionalDetails.trim()) || isSubmitting}
+              className="w-full sm:w-auto bg-red-600 hover:bg-red-700 text-white"
+            >
+              {isSubmitting ? "Submitting Report..." : "Submit Report"}
+            </Button>
+          </DialogFooter>
+        )}
       </DialogContent>
     </Dialog>
   );

@@ -10,6 +10,7 @@ import {
   recruitingProfileNeeds,
   connections,
   activityLog,
+  reports,
   type NewUser,
   type NewAthleteProfile,
   type NewAthleteMeasurable,
@@ -18,6 +19,7 @@ import {
   type NewRecruitingProfile,
   type NewRecruitingNeeds,
   type NewRecruitingProfileNeeds,
+  type NewReport,
   athleteVideos
 } from './schema';
 import { OnboardingProfileData } from '@/app/(onboarding)/lib/onboarding';
@@ -628,5 +630,107 @@ export const onboardingOperations = {
     }
 
     return { user, profile: recruiterProfile, recruitingProfileNeeds };
+  }
+};
+
+// Report operations
+export const reportOperations = {
+  // Create a new report
+  async createReport(reportData: NewReport) {
+    const [report] = await db.insert(reports).values(reportData).returning();
+    return report;
+  },
+
+  // Get report by ID
+  async getReportById(reportId: number) {
+    return await db.query.reports.findFirst({
+      where: eq(reports.id, reportId),
+      with: {
+        reporter: true,
+        reportedUser: true,
+        reviewer: true,
+      }
+    });
+  },
+
+  // Get reports by reporter
+  async getReportsByReporter(reporterId: string) {
+    return await db.query.reports.findMany({
+      where: eq(reports.reporterId, reporterId),
+      with: {
+        reportedUser: true,
+      },
+      orderBy: [desc(reports.submittedAt)]
+    });
+  },
+
+  // Get reports for a specific user (that were reported)
+  async getReportsForUser(reportedUserId: string) {
+    return await db.query.reports.findMany({
+      where: eq(reports.reportedUserId, reportedUserId),
+      with: {
+        reporter: true,
+        reviewer: true,
+      },
+      orderBy: [desc(reports.submittedAt)]
+    });
+  },
+
+  // Update report status (for moderation)
+  async updateReportStatus(
+    reportId: number, 
+    status: 'pending' | 'under_review' | 'resolved' | 'dismissed',
+    reviewedBy?: string,
+    moderatorNotes?: string,
+    actionTaken?: string
+  ) {
+    const updateData: {
+      status: 'pending' | 'under_review' | 'resolved' | 'dismissed';
+      reviewedAt: Date;
+      updatedAt: Date;
+      reviewedBy?: string;
+      moderatorNotes?: string;
+      actionTaken?: string;
+    } = {
+      status,
+      reviewedAt: new Date(),
+      updatedAt: new Date(),
+    };
+
+    if (reviewedBy) updateData.reviewedBy = reviewedBy;
+    if (moderatorNotes) updateData.moderatorNotes = moderatorNotes;
+    if (actionTaken) updateData.actionTaken = actionTaken;
+
+    const [report] = await db
+      .update(reports)
+      .set(updateData)
+      .where(eq(reports.id, reportId))
+      .returning();
+    return report;
+  },
+
+  // Get all reports (for admin/moderation)
+  async getAllReports(limit = 50, offset = 0) {
+    return await db.query.reports.findMany({
+      with: {
+        reporter: true,
+        reportedUser: true,
+        reviewer: true,
+      },
+      limit,
+      offset,
+      orderBy: [desc(reports.submittedAt)]
+    });
+  },
+
+  // Check if user has already reported another user
+  async hasUserReportedUser(reporterId: string, reportedUserId: string) {
+    const existingReport = await db.query.reports.findFirst({
+      where: and(
+        eq(reports.reporterId, reporterId),
+        eq(reports.reportedUserId, reportedUserId)
+      )
+    });
+    return !!existingReport;
   }
 }; 

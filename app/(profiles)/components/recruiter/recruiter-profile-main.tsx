@@ -296,6 +296,7 @@ export function RecruiterProfile({
         connectLabel="Get Recruited"
         profileName={profileData.fullName}
         profileType="recruiter"
+        reportedUserId={profileData.userId}
         hasUnsavedChanges={hasUnsavedChanges}
         isSaving={isSaving}
         onSaveChanges={saveProfile}
