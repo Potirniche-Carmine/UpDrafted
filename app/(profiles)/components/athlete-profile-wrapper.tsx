@@ -17,11 +17,9 @@ export function AthleteProfileWrapper({
   pendingSubmittedAt 
 }: AthleteProfileWrapperProps) {
   const handleConnect = () => {
-    console.log('Connect clicked');
   };
 
   const handleShare = () => {
-    console.log('Share clicked');
   };
 
   return (

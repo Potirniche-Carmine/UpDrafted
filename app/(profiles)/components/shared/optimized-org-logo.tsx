@@ -37,6 +37,9 @@ export function OptimizedOrgLogo({
   
   const config = sizeConfig[size];
   
+  // Add cache-busting parameter only if the URL doesn't already have one
+  const imageUrl = src.includes('?') ? src : `${src}?v=1`;
+  
   if (hasError) {
     return (
       <div className={`${config.containerClass} flex items-center justify-center bg-muted rounded-lg border border-border/50 ${className}`}>
@@ -50,7 +53,7 @@ export function OptimizedOrgLogo({
   return (
     <div className={`${config.containerClass} relative ${className}`}>
       <Image
-        src={src}
+        src={imageUrl}
         alt={`${organizationName} logo`}
         width={config.width}
         height={config.height}

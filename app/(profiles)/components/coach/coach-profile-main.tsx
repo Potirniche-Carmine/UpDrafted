@@ -200,9 +200,7 @@ export function CoachProfile({
       if (result.success) {
         // Update the original data to match saved data
         setProfileData(result.profile);
-        setHasUnsavedChanges(false);
-        console.log('Profile updated successfully');
-        
+        setHasUnsavedChanges(false);        
         // Update the page data reference so changes are permanent
         Object.assign(data, result.profile);
       } else {
@@ -282,9 +280,7 @@ export function CoachProfile({
         updates.organizationLogo = undefined;
       }
       
-      updateProfileData(updates);
-      console.log(`${imageName} removed successfully`);
-      
+      updateProfileData(updates);      
     } catch (error) {
       console.error(`Error removing ${imageName}:`, error);
       alert(`Failed to remove ${imageName}. Please try again.`);
@@ -340,7 +336,7 @@ export function CoachProfile({
                   <div className="relative w-24 h-24 md:w-32 md:h-32 mx-auto mb-4">
                     {profileData.profileImage ? (
                       <Image
-                        src={profileData.profileImage}
+                        src={profileData.profileImage.includes('?') ? profileData.profileImage : `${profileData.profileImage}?v=1`}
                         alt={profileData.fullName || "Profile picture"}
                         fill
                         className="rounded-full object-cover"
@@ -349,7 +345,7 @@ export function CoachProfile({
                     ) : (
                       <div className="w-full h-full bg-muted rounded-full flex items-center justify-center">
                         <span className="text-lg md:text-xl font-semibold text-muted-foreground">
-                          {profileData.fullName.split(' ').map((n: string) => n[0]).join('')}
+                          {profileData.fullName?.split(' ').map((n: string) => n[0]).join('') || '?'}
                         </span>
                       </div>
                     )}

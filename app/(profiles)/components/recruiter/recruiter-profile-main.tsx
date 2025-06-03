@@ -199,7 +199,6 @@ export function RecruiterProfile({
       const result = await response.json();
       if (result.success) {
         setHasUnsavedChanges(false);
-        console.log('Profile updated successfully');
       } else {
         throw new Error(result.error || 'Failed to update profile');
       }
@@ -273,7 +272,6 @@ export function RecruiterProfile({
       }
       
       updateProfileData(updates);
-      console.log(`${imageName} removed successfully`);
       
     } catch (error) {
       console.error(`Error removing ${imageName}:`, error);
@@ -284,7 +282,6 @@ export function RecruiterProfile({
   };
 
   const handleReportProfile = () => {
-    console.log('Report profile clicked');
     // TODO: Open report modal or navigate to report page
   };
 
@@ -316,7 +313,7 @@ export function RecruiterProfile({
                   <div className="relative w-24 h-24 md:w-32 md:h-32 mx-auto mb-4">
                     {profileData.profileImage ? (
                       <Image
-                        src={profileData.profileImage}
+                        src={profileData.profileImage.includes('?') ? profileData.profileImage : `${profileData.profileImage}?v=1`}
                         alt={profileData.fullName || "Profile picture"}
                         fill
                         className="rounded-full object-cover"
@@ -325,7 +322,7 @@ export function RecruiterProfile({
                     ) : (
                       <div className="w-full h-full bg-muted rounded-full flex items-center justify-center">
                         <span className="text-lg md:text-xl font-semibold text-muted-foreground">
-                          {profileData.fullName.split(' ').map((n: string) => n[0]).join('')}
+                          {profileData.fullName?.split(' ').map((n: string) => n[0]).join('') || '?'}
                         </span>
                       </div>
                     )}

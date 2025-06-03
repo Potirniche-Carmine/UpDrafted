@@ -404,9 +404,7 @@ export function AthleteProfile({
       if (result.success) {
         // Update the original data to match saved data
         setProfileData(result.profile);
-        setHasUnsavedChanges(false);
-        console.log('Profile updated successfully');
-        
+        setHasUnsavedChanges(false);        
         // Update the page data reference so changes are permanent
         Object.assign(data, result.profile);
       } else {
@@ -480,9 +478,7 @@ export function AthleteProfile({
         profileImage: undefined
       };
       
-      updateProfileData(updates);
-      console.log('Profile picture removed successfully');
-      
+      updateProfileData(updates);      
     } catch (error) {
       console.error('Error removing profile picture:', error);
       alert('Failed to remove profile picture. Please try again.');

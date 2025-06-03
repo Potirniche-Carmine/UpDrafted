@@ -59,10 +59,11 @@ export async function uploadProfilePicture(
     false // Public access for profile pictures
   );
   
+  // The actual key in R2 includes the folder prefix (uploadToR2 adds it)
   const fullKey = `${R2_FOLDERS.PROFILE_PICTURES}/${key}`;
   
   return {
-    key: fullKey,
+    key: fullKey, // This is the actual key in R2
     url,
   };
 }
@@ -82,13 +83,14 @@ export async function uploadOrganizationLogo(
     key,
     file.type,
     R2_FOLDERS.ORGANIZATION_LOGOS,
-    false // Public access for organization logos
+    false // Public access for logos
   );
   
+  // The actual key in R2 includes the folder prefix (uploadToR2 adds it)
   const fullKey = `${R2_FOLDERS.ORGANIZATION_LOGOS}/${key}`;
   
   return {
-    key: fullKey,
+    key: fullKey, // This is the actual key in R2
     url,
   };
 }

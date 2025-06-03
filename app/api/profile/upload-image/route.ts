@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireOwnershipOrAdmin } from '@/utils/roles';
 import { uploadProfilePicture, uploadOrganizationLogo } from '@/database/r2/uploads';
 import { deleteFromR2, getR2KeyFromUrl } from '@/database/r2/config';
-import { coachOperations, athleteOperations, recruitingOperations } from '@/database/db-utils';
+import { coachOperations, athleteOperations, recruitingOperations, userOperations } from '@/database/db-utils';
 
 export const runtime = 'nodejs';
 
@@ -53,33 +53,46 @@ export async function POST(request: NextRequest) {
 
       // Update database to remove image reference
       try {
+        // First, get the user's role from their profile
+        const userWithProfile = await userOperations.getUserWithProfile(userId);
+        
+        if (!userWithProfile) {
+          return NextResponse.json(
+            { success: false, error: 'User not found' },
+            { status: 404 }
+          );
+        }
+
+        const userRole = userWithProfile.role;
+        
         if (imageType === 'profile') {
-          // Try to update athlete, coach, or recruiter profiles (two will fail silently)
-          try {
+          if (userRole === 'athlete') {
             await athleteOperations.updateAthleteProfile(userId, {
               profileImageR3Key: null
             });
-          } catch {
-            try {
-              await coachOperations.updateCoachProfile(userId, {
-                profileImageR3Key: null
-              });
-            } catch {
-              await recruitingOperations.updateRecruitingProfile(userId, {
-                profileImageR3Key: null
-              });
-            }
+          } else if (userRole === 'coach') {
+            await coachOperations.updateCoachProfile(userId, {
+              profileImageR3Key: null
+            });
+          } else if (userRole === 'recruiter') {
+            await recruitingOperations.updateRecruitingProfile(userId, {
+              profileImageR3Key: null
+            });
+          } else {
+            throw new Error(`Unsupported user role: ${userRole}`);
           }
         } else if (imageType === 'organization') {
-          // Both coaches and recruiters can have organization logos
-          try {
+          // Organization logos are only for coaches and recruiters
+          if (userRole === 'coach') {
             await coachOperations.updateCoachProfile(userId, {
               organizationLogoR3Key: null
             });
-          } catch {
+          } else if (userRole === 'recruiter') {
             await recruitingOperations.updateRecruitingProfile(userId, {
               organizationLogoR3Key: null
             });
+          } else {
+            throw new Error(`Organization logos are not supported for role: ${userRole}`);
           }
         }
       } catch (error) {
@@ -143,33 +156,46 @@ export async function POST(request: NextRequest) {
 
     // Update database with new image key
     try {
+      // First, get the user's role from their profile
+      const userWithProfile = await userOperations.getUserWithProfile(userId);
+      
+      if (!userWithProfile) {
+        return NextResponse.json(
+          { success: false, error: 'User not found' },
+          { status: 404 }
+        );
+      }
+
+      const userRole = userWithProfile.role;
+      
       if (imageType === 'profile') {
-        // Try to update athlete, coach, or recruiter profiles (two will fail silently)
-        try {
+        if (userRole === 'athlete') {
           await athleteOperations.updateAthleteProfile(userId, {
             profileImageR3Key: uploadResult.key
           });
-        } catch {
-          try {
-            await coachOperations.updateCoachProfile(userId, {
-              profileImageR3Key: uploadResult.key
-            });
-          } catch {
-            await recruitingOperations.updateRecruitingProfile(userId, {
-              profileImageR3Key: uploadResult.key
-            });
-          }
+        } else if (userRole === 'coach') {
+          await coachOperations.updateCoachProfile(userId, {
+            profileImageR3Key: uploadResult.key
+          });
+        } else if (userRole === 'recruiter') {
+          await recruitingOperations.updateRecruitingProfile(userId, {
+            profileImageR3Key: uploadResult.key
+          });
+        } else {
+          throw new Error(`Unsupported user role: ${userRole}`);
         }
       } else if (imageType === 'organization') {
-        // Both coaches and recruiters can have organization logos
-        try {
+        // Organization logos are only for coaches and recruiters
+        if (userRole === 'coach') {
           await coachOperations.updateCoachProfile(userId, {
             organizationLogoR3Key: uploadResult.key
           });
-        } catch {
+        } else if (userRole === 'recruiter') {
           await recruitingOperations.updateRecruitingProfile(userId, {
             organizationLogoR3Key: uploadResult.key
           });
+        } else {
+          throw new Error(`Organization logos are not supported for role: ${userRole}`);
         }
       }
     } catch (error) {
