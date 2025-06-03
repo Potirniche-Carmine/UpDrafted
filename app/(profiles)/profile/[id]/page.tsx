@@ -333,6 +333,8 @@ function ProfileContent({ profileId }: { profileId: string }) {
         <RecruiterProfileWrapper
           data={profileData.profile as RecruitingProfileData}
           isOwnProfile={profileData.isOwnProfile}
+          hasPendingVerification={profileData.hasPendingVerification}
+          pendingSubmittedAt={profileData.pendingSubmittedAt}
         />
       )}
     </>

@@ -1,24 +1,26 @@
 "use client";
 
 import React from 'react';
-import { RecruiterProfile } from './recruiter-profile';
-import type { RecruitingProfileData } from '../lib/base-profile-types';
+import { RecruiterProfile } from './recruiter/recruiter-profile-main';
+import type { RecruiterProfileData } from './recruiter/recruiter-profile-types';
 
 interface RecruiterProfileWrapperProps {
-  data: RecruitingProfileData;
+  data: RecruiterProfileData;
   isOwnProfile?: boolean;
-  currentUserRole?: string | null;
+  hasPendingVerification?: boolean;
+  pendingSubmittedAt?: string;
 }
 
-export function RecruiterProfileWrapper({ data, isOwnProfile = false, currentUserRole }: RecruiterProfileWrapperProps) {
+export function RecruiterProfileWrapper({ 
+  data, 
+  isOwnProfile = false, 
+  hasPendingVerification,
+  pendingSubmittedAt 
+}: RecruiterProfileWrapperProps) {
   const handleShowInterest = () => {
     console.log('Show interest in recruiter clicked');
     // TODO: Implement show interest logic
     // This could make an API call to express interest in getting recruited
-  };
-
-  const handleConnect = () => {
-    console.log('Connect clicked');
   };
 
   const handleShare = () => {
@@ -29,10 +31,10 @@ export function RecruiterProfileWrapper({ data, isOwnProfile = false, currentUse
     <RecruiterProfile
       data={data}
       isOwnProfile={isOwnProfile}
-      currentUserRole={currentUserRole}
-      onShowInterest={handleShowInterest}
-      onConnect={handleConnect}
+      onConnect={handleShowInterest}
       onShare={handleShare}
+      hasPendingVerification={hasPendingVerification}
+      pendingSubmittedAt={pendingSubmittedAt}
     />
   );
 } 

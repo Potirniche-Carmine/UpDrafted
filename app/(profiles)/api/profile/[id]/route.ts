@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireAnyRole, requireOwnershipOrAdmin } from '@/utils/roles';
 import { userOperations, athleteOperations, coachOperations, recruitingOperations, recruitingNeedsOperations } from '@/database/db-utils';
 import { R2_PUBLIC_URL } from '@/database/r2';
-import { NewAthleteProfile, NewAthleteMeasurable, NewAthleteVideo, NewCoachProfile, verificationRequests } from '@/database/schema';
+import { NewAthleteProfile, NewAthleteMeasurable, NewAthleteVideo, NewCoachProfile, NewRecruitingProfile, verificationRequests } from '@/database/schema';
 import { db } from '@/database/db';
 import { eq } from 'drizzle-orm';
 
@@ -631,11 +631,57 @@ export async function PUT(
         );
       }
     } else if (userWithProfile.role === 'recruiter') {
-      // Update recruiting profile - implement similar logic if needed
-      return NextResponse.json(
-        { error: 'Recruiter profile updates not implemented yet' },
-        { status: 501 }
-      );
+      // Update recruiting profile
+      try {
+        // Transform the update data to match database schema
+        const profileUpdateData: Partial<NewRecruitingProfile> = {};
+        
+        // Map common fields
+        if (updateData.fullName !== undefined) profileUpdateData.fullName = updateData.fullName;
+        if (updateData.title !== undefined) profileUpdateData.title = updateData.title;
+        if (updateData.sportRecruiting !== undefined) profileUpdateData.sportRecruiting = updateData.sportRecruiting;
+        if (updateData.organizationName !== undefined) profileUpdateData.organizationName = updateData.organizationName;
+        if (updateData.city !== undefined) profileUpdateData.city = updateData.city;
+        if (updateData.state !== undefined) profileUpdateData.state = updateData.state;
+        if (updateData.division !== undefined) profileUpdateData.division = updateData.division;
+        if (updateData.conference !== undefined) profileUpdateData.conference = updateData.conference;
+        if (updateData.personalStatement !== undefined) profileUpdateData.personalStatement = updateData.personalStatement;
+        if (updateData.programWebsite !== undefined) profileUpdateData.programWebsite = updateData.programWebsite;
+        if (updateData.schoolWebsite !== undefined) profileUpdateData.schoolWebsite = updateData.schoolWebsite;
+        if (updateData.instagramHandle !== undefined) profileUpdateData.instagramHandle = updateData.instagramHandle;
+        if (updateData.twitterHandle !== undefined) profileUpdateData.twitterHandle = updateData.twitterHandle;
+        if (updateData.showcaseVideoTitle !== undefined) profileUpdateData.showcaseVideoTitle = updateData.showcaseVideoTitle;
+        if (updateData.showcaseVideoUrl !== undefined) profileUpdateData.showcaseVideoUrl = updateData.showcaseVideoUrl;
+        if (updateData.showcaseVideoEmbedUrl !== undefined) profileUpdateData.showcaseVideoEmbedUrl = updateData.showcaseVideoEmbedUrl;
+
+        // Update the recruiting profile in the database
+        updatedProfile = await recruitingOperations.updateRecruitingProfile(profileUserId, profileUpdateData);
+        
+        // Handle recruiting needs updates if provided
+        if (updateData.recruitingNeeds !== undefined && updatedProfile?.id) {
+          const recruitingNeedsData = {
+            graduationYears: updateData.recruitingNeeds.graduationYears || [],
+            positions: updateData.recruitingNeeds.positions || [],
+            scholarshipsAvailable: updateData.recruitingNeeds.scholarshipsAvailable || null,
+            recruitingPhilosophy: updateData.recruitingNeeds.recruitingPhilosophy || null
+          };
+          
+          // Use recruitingProfileNeeds instead of recruitingNeeds for recruiting profiles
+          if (recruitingNeedsOperations.updateRecruitingProfileNeeds) {
+            await recruitingNeedsOperations.updateRecruitingProfileNeeds(updatedProfile.id, recruitingNeedsData);
+          }
+        }
+        
+        // Re-fetch the complete profile with all related data to ensure consistency
+        updatedProfile = await recruitingOperations.getRecruitingProfile(profileUserId);
+        
+      } catch (dbError) {
+        console.error('Database error updating recruiting profile:', dbError);
+        return NextResponse.json(
+          { error: 'Failed to update recruiting profile' },
+          { status: 500 }
+        );
+      }
     }
 
     if (!updatedProfile) {

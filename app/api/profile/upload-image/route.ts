@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireOwnershipOrAdmin } from '@/utils/roles';
 import { uploadProfilePicture, uploadOrganizationLogo } from '@/database/r2/uploads';
 import { deleteFromR2, getR2KeyFromUrl } from '@/database/r2/config';
-import { coachOperations, athleteOperations } from '@/database/db-utils';
+import { coachOperations, athleteOperations, recruitingOperations } from '@/database/db-utils';
 
 export const runtime = 'nodejs';
 
@@ -54,22 +54,33 @@ export async function POST(request: NextRequest) {
       // Update database to remove image reference
       try {
         if (imageType === 'profile') {
-          // Try to update both athlete and coach profiles (one will fail silently)
+          // Try to update athlete, coach, or recruiter profiles (two will fail silently)
           try {
             await athleteOperations.updateAthleteProfile(userId, {
               profileImageR3Key: null
             });
           } catch {
-            // If athlete update fails, try coach
-            await coachOperations.updateCoachProfile(userId, {
-              profileImageR3Key: null
-            });
+            try {
+              await coachOperations.updateCoachProfile(userId, {
+                profileImageR3Key: null
+              });
+            } catch {
+              await recruitingOperations.updateRecruitingProfile(userId, {
+                profileImageR3Key: null
+              });
+            }
           }
         } else if (imageType === 'organization') {
-          // Only coaches have organization logos
-          await coachOperations.updateCoachProfile(userId, {
-            organizationLogoR3Key: null
-          });
+          // Both coaches and recruiters can have organization logos
+          try {
+            await coachOperations.updateCoachProfile(userId, {
+              organizationLogoR3Key: null
+            });
+          } catch {
+            await recruitingOperations.updateRecruitingProfile(userId, {
+              organizationLogoR3Key: null
+            });
+          }
         }
       } catch (error) {
         console.error('Database update error during removal:', error);
@@ -133,22 +144,33 @@ export async function POST(request: NextRequest) {
     // Update database with new image key
     try {
       if (imageType === 'profile') {
-        // Try to update both athlete and coach profiles (one will fail silently)
+        // Try to update athlete, coach, or recruiter profiles (two will fail silently)
         try {
           await athleteOperations.updateAthleteProfile(userId, {
             profileImageR3Key: uploadResult.key
           });
         } catch {
-          // If athlete update fails, try coach
-          await coachOperations.updateCoachProfile(userId, {
-            profileImageR3Key: uploadResult.key
-          });
+          try {
+            await coachOperations.updateCoachProfile(userId, {
+              profileImageR3Key: uploadResult.key
+            });
+          } catch {
+            await recruitingOperations.updateRecruitingProfile(userId, {
+              profileImageR3Key: uploadResult.key
+            });
+          }
         }
       } else if (imageType === 'organization') {
-        // Only coaches have organization logos
-        await coachOperations.updateCoachProfile(userId, {
-          organizationLogoR3Key: uploadResult.key
-        });
+        // Both coaches and recruiters can have organization logos
+        try {
+          await coachOperations.updateCoachProfile(userId, {
+            organizationLogoR3Key: uploadResult.key
+          });
+        } catch {
+          await recruitingOperations.updateRecruitingProfile(userId, {
+            organizationLogoR3Key: uploadResult.key
+          });
+        }
       }
     } catch (error) {
       console.error('Database update error:', error);
