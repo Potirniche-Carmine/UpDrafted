@@ -133,6 +133,9 @@ export function AthleteEditDialogs({
   const [tempVideos, setTempVideos] = useState<typeof profileData.youtubeVideos>([]);
   const [validationErrors, setValidationErrors] = useState<{[key: string]: string}>({});
   const [measurableToEdit, setMeasurableToEdit] = useState<Measurable | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const [profileImagePreview, setProfileImagePreview] = useState<string | null>(null);
+  const [selectedProfileFile, setSelectedProfileFile] = useState<File | null>(null);
 
   // Set measurable to edit when measurableIdToEdit changes
   useEffect(() => {
@@ -146,7 +149,13 @@ export function AthleteEditDialogs({
 
   // Initialize edit data when dialog opens
   useEffect(() => {
-    if (!dialogType) return;
+    if (!dialogType) {
+      // Clean up preview state when dialog is closed
+      setProfileImagePreview(null);
+      setSelectedProfileFile(null);
+      setValidationErrors({});
+      return;
+    }
 
     switch (dialogType) {
       case 'basic-info':
@@ -198,43 +207,34 @@ export function AthleteEditDialogs({
         break;
       case 'video-highlights':
         setTempVideos(profileData.youtubeVideos || []);
-        setEditData({
-          youtubeUrl: '',
-          title: ''
-        });
         break;
-      case 'add-measurables':
-        const today = new Date();
-        setEditData({
-          label: '',
-          value: '',
-          customLabel: '',
-          isCustom: false,
-          measurementMonth: String(today.getMonth() + 1).padStart(2, '0'),
-          measurementYear: today.getFullYear().toString()
-        });
-        break;
-      case 'edit-measurable':
+      case 'measurable':
         if (measurableToEdit) {
-          const measurementDate = new Date(measurableToEdit.measurementDate);
-          // Check if it's a custom measurable (not in suggested list)
-          const suggestedMeasurables = getMeasurablesForSport(selectedSport);
-          const isCustom = !suggestedMeasurables.includes(measurableToEdit.label);
-          
+          const dateParts = measurableToEdit.measurementDate.split('-');
           setEditData({
-            label: isCustom ? '' : measurableToEdit.label,
+            sport: measurableToEdit.sport,
+            label: measurableToEdit.label,
             value: measurableToEdit.value,
-            customLabel: isCustom ? measurableToEdit.label : '',
-            isCustom: isCustom,
-            measurementMonth: String(measurementDate.getMonth() + 1).padStart(2, '0'),
-            measurementYear: measurementDate.getFullYear().toString()
+            month: dateParts[1] || '',
+            year: dateParts[0] || ''
+          });
+        } else {
+          setEditData({
+            sport: selectedSport,
+            label: '',
+            value: '',
+            month: '',
+            year: ''
           });
         }
         break;
-      default:
+      case 'profile-image':
         setEditData({});
+        // Always start fresh for image editing
+        setProfileImagePreview(null);
+        setSelectedProfileFile(null);
+        break;
     }
-    setValidationErrors({});
   }, [dialogType, profileData, measurableToEdit, selectedSport]);
 
   // Validation function
@@ -411,6 +411,115 @@ export function AthleteEditDialogs({
     setTempVideos(prev => (prev || []).filter((_, i) => i !== index));
   };
 
+  const handleImageUpload = async (file: File) => {
+    setIsUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('userId', profileData.userId || profileData.id);
+      formData.append('imageType', 'profile');
+      
+      // Add current image URL for deletion
+      const currentImageUrl = profileData.profileImage;
+      if (currentImageUrl) {
+        // Remove any existing cache-busting parameters before sending for deletion
+        const cleanUrl = currentImageUrl.split('?')[0];
+        formData.append('currentImageUrl', cleanUrl);
+      }
+
+      // Get auth token
+      const windowWithClerk = window as unknown as {
+        Clerk?: {
+          session?: {
+            getToken: () => Promise<string>;
+          };
+        };
+      };
+      const token = await windowWithClerk.Clerk?.session?.getToken();
+
+      const response = await fetch('/api/profile/upload-image', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+        body: formData,
+      });
+
+      if (!response.ok) {
+        throw new Error('Upload failed');
+      }
+
+      const result = await response.json();
+      
+      // Update profile data immediately with cache-busting parameter
+      const updates: Partial<AthleteProfileData> = {
+        // Add timestamp to force browser refresh
+        profileImage: `${result.imageUrl}?t=${Date.now()}`
+      };
+      
+      onSave(updates);
+      
+      // Reset state and close dialog
+      setProfileImagePreview(null);
+      setSelectedProfileFile(null);
+      onClose();
+    } catch (error) {
+      console.error('Error uploading image:', error);
+      setValidationErrors({ upload: 'Failed to upload image. Please try again.' });
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    
+    if (file) {
+      // Validate file type
+      const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+      if (!allowedTypes.includes(file.type)) {
+        setValidationErrors({ upload: 'Please select a valid image file (JPEG, PNG, or WebP)' });
+        return;
+      }
+
+      // Validate file size (5MB limit)
+      const maxSize = 5 * 1024 * 1024; // 5MB in bytes
+      if (file.size > maxSize) {
+        setValidationErrors({ upload: 'File size must be less than 5MB' });
+        return;
+      }
+
+      // Clear any previous errors
+      setValidationErrors({});
+      
+      // Store the selected file
+      setSelectedProfileFile(file);
+      
+      // Create preview URL
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setProfileImagePreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const removeImagePreview = () => {
+    setProfileImagePreview(null);
+    setSelectedProfileFile(null);
+    setValidationErrors({});
+    // Reset file input
+    const fileInput = document.getElementById('profileImageUpload') as HTMLInputElement;
+    if (fileInput) {
+      fileInput.value = '';
+    }
+  };
+
+  const handleManualUpload = async () => {
+    if (!selectedProfileFile) return;
+    await handleImageUpload(selectedProfileFile);
+  };
+
   const handleSave = () => {
     const updates: Partial<AthleteProfileData> = {};
 
@@ -484,32 +593,7 @@ export function AthleteEditDialogs({
         updates.youtubeVideos = tempVideos || [];
         break;
 
-      case 'add-measurables':
-        const label = editData.isCustom 
-          ? String(editData.customLabel).trim() 
-          : String(editData.label).trim();
-          
-        if (label && String(editData.value).trim()) {
-          let measurementDate = new Date().toISOString();
-          if (editData.measurementMonth && editData.measurementYear) {
-            const month = parseInt(editData.measurementMonth);
-            const year = parseInt(editData.measurementYear);
-            measurementDate = new Date(year, month - 1, 1).toISOString();
-          }
-          
-          const newMeasurable: Measurable = {
-            id: `temp-${Date.now()}`,
-            sport: selectedSport,
-            label: label,
-            value: editData.value.trim(),
-            measurementDate: measurementDate
-          };
-          
-          updates.measurables = [...(profileData.measurables || []), newMeasurable];
-        }
-        break;
-
-      case 'edit-measurable':
+      case 'measurable':
         if (measurableToEdit) {
           const label = editData.isCustom 
             ? String(editData.customLabel).trim() 
@@ -523,21 +607,35 @@ export function AthleteEditDialogs({
               measurementDate = new Date(year, month - 1, 1).toISOString();
             }
             
-            const updatedMeasurables = (profileData.measurables || []).map(m => 
-              m.id === measurableToEdit.id 
-                ? { ...m, label, value: editData.value.trim(), measurementDate }
-                : m
-            );
+            const newMeasurable: Measurable = {
+              id: `temp-${Date.now()}`,
+              sport: selectedSport,
+              label: label,
+              value: editData.value.trim(),
+              measurementDate: measurementDate
+            };
             
-            updates.measurables = updatedMeasurables;
+            updates.measurables = [...(profileData.measurables || []), newMeasurable];
           }
         }
         break;
 
       case 'profile-image':
-        // Profile image upload would be handled here
-        console.log('Profile image upload functionality would be implemented here');
-        break;
+        // Image uploads handle their own saving
+        return;
+
+      default:
+        return (
+          <>
+            <DialogHeader>
+              <DialogTitle>Edit {dialogType}</DialogTitle>
+              <DialogDescription>Edit functionality for this section.</DialogDescription>
+            </DialogHeader>
+            <div className="space-y-6">
+              <p>Edit functionality for {dialogType} coming soon!</p>
+            </div>
+          </>
+        );
     }
 
     onSave(updates);
@@ -1059,7 +1157,7 @@ export function AthleteEditDialogs({
           </>
         );
 
-      case 'add-measurables':
+      case 'measurable':
         const suggestedMeasurables = getMeasurablesForSport(selectedSport);
         
         return (
@@ -1265,36 +1363,85 @@ export function AthleteEditDialogs({
         return (
           <>
             <DialogHeader>
-              <DialogTitle>Update Profile Image</DialogTitle>
+              <DialogTitle>Change Profile Picture</DialogTitle>
               <DialogDescription>Upload a professional headshot or action photo to represent yourself.</DialogDescription>
             </DialogHeader>
-            <div className="space-y-6">
-              <div className="text-center">
-                <div className="relative w-24 h-24 md:w-32 md:h-32 mx-auto mb-4">
-                  {profileData.profileImage ? (
+            <div className="space-y-4">
+              <div className="space-y-4">
+                {profileImagePreview ? (
+                  <div className="relative w-32 h-32 mx-auto">
                     <Image
-                      src={profileData.profileImage}
-                      alt={profileData.fullName || "Profile picture"}
+                      src={profileImagePreview}
+                      alt="Profile preview"
                       fill
-                      className="rounded-full object-cover"
-                      sizes="(max-width: 768px) 96px, 128px"
+                      className="rounded-lg object-cover"
                     />
-                  ) : (
-                    <div className="w-full h-full bg-muted rounded-full flex items-center justify-center">
-                      <span className="text-lg md:text-xl font-semibold text-muted-foreground">
-                        {profileData.fullName.split(' ').map((n: string) => n[0]).join('')}
-                      </span>
+                    <Button
+                      type="button"
+                      variant="destructive"
+                      size="sm"
+                      onClick={removeImagePreview}
+                      className="absolute -top-2 -right-2 w-6 h-6 rounded-full p-0"
+                      disabled={isUploading}
+                    >
+                      <X className="w-4 h-4" />
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-6">
+                    <div className="text-center">
+                      <Upload className="mx-auto h-12 w-12 text-gray-400" />
+                      <div className="mt-4">
+                        <label htmlFor="profileImageUpload" className="cursor-pointer">
+                          <span className="mt-2 block text-sm font-medium text-gray-900">
+                            Upload a profile picture
+                          </span>
+                          <span className="mt-1 block text-xs text-gray-500">
+                            Choose a new profile picture
+                          </span>
+                        </label>
+                        <input
+                          id="profileImageUpload"
+                          type="file"
+                          accept="image/jpeg,image/jpg,image/png,image/webp"
+                          onChange={handleFileChange}
+                          disabled={isUploading}
+                          className="sr-only"
+                        />
+                      </div>
                     </div>
-                  )}
-                </div>
-                <Button variant="outline" className="h-12">
-                  <Upload className="w-4 h-4 mr-2" />
-                  Upload New Image
-                </Button>
-                <p className="text-sm text-muted-foreground mt-2">
-                  Upload a professional headshot or action photo
-                </p>
+                  </div>
+                )}
+                {!profileImagePreview && (
+                  <div>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => document.getElementById('profileImageUpload')?.click()}
+                      className="w-full"
+                      disabled={isUploading}
+                    >
+                      Choose Photo
+                    </Button>
+                  </div>
+                )}
+                {selectedProfileFile && profileImagePreview && (
+                  <div>
+                    <Button
+                      type="button"
+                      onClick={handleManualUpload}
+                      className="w-full"
+                      disabled={isUploading}
+                    >
+                      {isUploading ? 'Uploading...' : 'Upload Photo'}
+                    </Button>
+                  </div>
+                )}
               </div>
+              <p className="text-xs text-muted-foreground">
+                Supported formats: JPG, PNG, WebP. Max size: 5MB
+              </p>
+              {validationErrors.upload && <p className="text-red-500 text-sm">{validationErrors.upload}</p>}
             </div>
           </>
         );
@@ -1319,14 +1466,16 @@ export function AthleteEditDialogs({
       <DialogContent className={dialogType === 'basic-info' ? "sm:max-w-2xl max-w-lg" : "sm:max-w-md max-w-lg"}>
         {getDialogContent()}
         <DialogFooter>
-          <Button variant="outline" onClick={onClose}>Cancel</Button>
-          <Button 
-            onClick={handleSave}
-            disabled={Object.keys(validationErrors).length > 0}
-          >
-            <Save className="w-4 h-4 mr-2" />
-            Save Changes
-          </Button>
+          <Button variant="outline" onClick={onClose} disabled={isUploading}>Cancel</Button>
+          {dialogType !== 'profile-image' && (
+            <Button 
+              onClick={handleSave}
+              disabled={Object.keys(validationErrors).length > 0 || isUploading}
+            >
+              <Save className="w-4 h-4 mr-2" />
+              Save Changes
+            </Button>
+          )}
         </DialogFooter>
       </DialogContent>
     </Dialog>

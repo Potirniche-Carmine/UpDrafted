@@ -1,15 +1,21 @@
 "use client";
 
-import { CoachProfile } from './coach-profile';
-import type { CoachProfileData } from '../lib/base-profile-types';
+import { CoachProfile } from './coach/coach-profile-main';
+import type { CoachProfileData } from './coach/coach-profile-types';
 
 interface CoachProfileWrapperProps {
   data: CoachProfileData;
   isOwnProfile?: boolean;
-  currentUserRole?: string | null;
+  hasPendingVerification?: boolean;
+  pendingSubmittedAt?: string;
 }
 
-export function CoachProfileWrapper({ data, isOwnProfile = false, currentUserRole }: CoachProfileWrapperProps) {
+export function CoachProfileWrapper({ 
+  data, 
+  isOwnProfile = false, 
+  hasPendingVerification,
+  pendingSubmittedAt 
+}: CoachProfileWrapperProps) {
   const handleConnect = () => {
     console.log('Connect clicked');
   };
@@ -22,9 +28,10 @@ export function CoachProfileWrapper({ data, isOwnProfile = false, currentUserRol
     <CoachProfile
       data={data}
       isOwnProfile={isOwnProfile}
-      currentUserRole={currentUserRole}
       onConnect={handleConnect}
       onShare={handleShare}
+      hasPendingVerification={hasPendingVerification}
+      pendingSubmittedAt={pendingSubmittedAt}
     />
   );
 } 

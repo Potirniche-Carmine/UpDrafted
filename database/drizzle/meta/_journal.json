@@ -134,6 +134,13 @@
       "when": 1748843067647,
       "tag": "0018_loving_celestials",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1748903927802,
+      "tag": "0019_chubby_silhouette",
+      "breakpoints": true
     }
   ]
 }

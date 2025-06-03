@@ -178,7 +178,8 @@ export default function OnboardingForm({ role, onBack }: OnboardingFormProps) {
 
       return baseRequirements && academicRequirements;
     } else {
-      return !!(
+      // Base requirements for coaches and recruiters
+      const baseRequirements = !!(
         data.title && 
         data.organizationName && 
         data.sportCoaching && 
@@ -186,11 +187,13 @@ export default function OnboardingForm({ role, onBack }: OnboardingFormProps) {
         data.city && 
         data.state &&
         (data.orgInstagramHandle || data.orgTwitterHandle || data.programWebsite || data.schoolWebsite) &&
-        data.recruitingPhilosophy &&
+        data.personalStatement &&
         data.recruitingGraduationYears.length > 0 &&
         data.recruitingPositions.length > 0 &&
-        data.whatLookingFor
+        data.recruitingPhilosophy
       );
+
+      return baseRequirements;
     }
   };
 

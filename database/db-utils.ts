@@ -556,7 +556,6 @@ export const onboardingOperations = {
       userId,
       fullName: profileData.fullName,
       title: profileData.title!,
-      role: 'coach',
       sportCoaching: profileData.sportCoaching!,
       organizationName: profileData.organizationName!,
       profileImageR3Key,
@@ -568,7 +567,8 @@ export const onboardingOperations = {
       programWebsite: profileData.programWebsite || undefined,
       schoolWebsite: profileData.schoolWebsite || undefined,
       instagramHandle: profileData.orgInstagramHandle || undefined,
-      twitterHandle: profileData.orgTwitterHandle || undefined
+      twitterHandle: profileData.orgTwitterHandle || undefined,
+      personalStatement: profileData.personalStatement || undefined
     });
 
     // Create recruiting needs if provided
@@ -612,7 +612,7 @@ export const onboardingOperations = {
       schoolWebsite: profileData.schoolWebsite || undefined,
       instagramHandle: profileData.orgInstagramHandle || undefined,
       twitterHandle: profileData.orgTwitterHandle || undefined,
-      recruitingPhilosophy: profileData.recruitingPhilosophy || undefined
+      personalStatement: profileData.personalStatement || undefined
     });
 
     // Create recruiting profile needs if provided
@@ -623,7 +623,7 @@ export const onboardingOperations = {
         graduationYears: profileData.recruitingGraduationYears,
         positions: profileData.recruitingPositions,
         scholarshipsAvailable: profileData.scholarshipsAvailable || undefined,
-        recruitingPhilosophy: profileData.whatLookingFor || undefined
+        recruitingPhilosophy: profileData.recruitingPhilosophy || undefined
       });
     }
 

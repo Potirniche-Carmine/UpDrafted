@@ -2,8 +2,10 @@
 
 import { useEffect, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { Loader2, CheckCircle, User, Shield, Sparkles } from "lucide-react";
 import { UserRole } from "../lib/types";
+import { useRouter } from "next/navigation";
 
 interface LoadingScreenProps {
   role: UserRole;
@@ -18,6 +20,8 @@ const loadingSteps = [
 export function LoadingScreen({ role }: LoadingScreenProps) {
   const [currentStep, setCurrentStep] = useState(0);
   const [completedSteps, setCompletedSteps] = useState<number[]>([]);
+  const [showFallbackButton, setShowFallbackButton] = useState(false);
+  const router = useRouter();
 
   // Scroll to top when component mounts
   useEffect(() => {
@@ -41,6 +45,29 @@ export function LoadingScreen({ role }: LoadingScreenProps) {
 
     return () => clearInterval(stepInterval);
   }, []);
+
+  // Auto-redirect after steps complete
+  useEffect(() => {
+    if (completedSteps.length === loadingSteps.length) {
+      const redirectTimer = setTimeout(() => {
+        router.push('/profile');
+      }, 1000); // Redirect 1 second after all steps complete
+
+      // Show fallback button after 7-8 seconds
+      const fallbackTimer = setTimeout(() => {
+        setShowFallbackButton(true);
+      }, 8000);
+
+      return () => {
+        clearTimeout(redirectTimer);
+        clearTimeout(fallbackTimer);
+      };
+    }
+  }, [completedSteps.length, router]);
+
+  const handleManualRedirect = () => {
+    router.push('/profile');
+  };
 
   const getRoleDisplayName = (role: UserRole) => {
     switch (role) {
@@ -130,12 +157,29 @@ export function LoadingScreen({ role }: LoadingScreenProps) {
             })}
           </div>
 
+          {/* Fallback Button */}
+          {showFallbackButton && (
+            <div className="pt-4 border-t border-border space-y-3">
+              <p className="text-sm text-muted-foreground">
+                Not automatically redirected?
+              </p>
+              <Button 
+                onClick={handleManualRedirect}
+                className="w-full bg-[#01ae79] hover:bg-[#01ae79]/90"
+              >
+                Go to Profile
+              </Button>
+            </div>
+          )}
+
           {/* Bottom Message */}
-          <div className="pt-4 border-t border-border">
-            <p className="text-xs text-muted-foreground">
-              This may take a few moments. Please don&apos;t close this window.
-            </p>
-          </div>
+          {!showFallbackButton && (
+            <div className="pt-4 border-t border-border">
+              <p className="text-xs text-muted-foreground">
+                This may take a few moments. Please don&apos;t close this window.
+              </p>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

@@ -2,8 +2,7 @@
 
 import { notFound } from 'next/navigation';
 import { useEffect, useState, useCallback, useRef } from 'react';
-import { useUser, useAuth } from '@clerk/nextjs';
-import { Suspense } from 'react';
+import { useAuth } from '@clerk/nextjs';
 import { AthleteProfileWrapper } from '../../components/athlete-profile-wrapper';
 import { CoachProfileWrapper } from '../../components/coach-profile-wrapper';
 import { RecruiterProfileWrapper } from '../../components/recruiter-profile-wrapper';
@@ -31,11 +30,9 @@ const getCachedProfile = (profileId: string) => {
     // Update last accessed time for LRU cleanup
     cached.lastAccessed = Date.now();
     globalProfileCache.set(cacheKey, cached);
-    console.log(`Profile cache HIT for ${profileId}`);
     return cached.data;
   }
   
-  console.log(`Profile cache MISS for ${profileId}${cached ? ' (expired)' : ' (not found)'}`);
   return null;
 };
 
@@ -49,8 +46,6 @@ const setCachedProfile = (profileId: string, data: ProfileApiResponse) => {
     lastAccessed: now
   });
   
-  console.log(`Profile cached for ${profileId}, cache size: ${globalProfileCache.size}`);
-  
   // Clean up old cache entries using LRU strategy
   if (globalProfileCache.size > MAX_CACHE_SIZE) {
     const entries = Array.from(globalProfileCache.entries());
@@ -61,8 +56,6 @@ const setCachedProfile = (profileId: string, data: ProfileApiResponse) => {
     for (let i = 0; i < entriesToRemove; i++) {
       globalProfileCache.delete(sortedByAccess[i][0]);
     }
-    
-    console.log(`Profile cache cleanup: removed ${entriesToRemove} entries, ${globalProfileCache.size} remaining`);
   }
 };
 
@@ -85,68 +78,44 @@ interface ProfileApiResponse {
   pendingSubmittedAt?: string;
 }
 
-// Enhanced loading component for better UX
-function ProfileSkeleton() {
-  return (
-    <div className="min-h-screen bg-background">
-      {/* Header Skeleton */}
-      <div className="border-b bg-card/50 animate-pulse">
-        <div className="container py-4">
-          <div className="flex items-center justify-between">
-            <div className="h-8 bg-muted rounded w-32"></div>
-            <div className="flex gap-2">
-              <div className="h-8 w-16 bg-muted rounded"></div>
-              <div className="h-8 w-16 bg-muted rounded"></div>
-            </div>
-          </div>
-        </div>
-      </div>
+export default function ProfilePage({ params }: ProfilePageProps) {
+  const [profileId, setProfileId] = useState<string | null>(null);
+  const [paramsReady, setParamsReady] = useState(false);
 
-      {/* Profile Content Skeleton */}
-      <div className="container py-4 md:py-8 animate-pulse">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8">
-          <div className="space-y-4 md:space-y-6">
-            <div className="bg-card rounded-lg p-6">
-              <div className="w-32 h-32 md:w-36 md:h-36 mx-auto rounded-full bg-muted"></div>
-              <div className="mt-4 space-y-2">
-                <div className="h-6 bg-muted rounded mx-auto w-48"></div>
-                <div className="h-4 bg-muted rounded mx-auto w-32"></div>
-                <div className="h-4 bg-muted rounded mx-auto w-40"></div>
-              </div>
-            </div>
-            <div className="bg-card rounded-lg p-6 space-y-3">
-              <div className="h-5 bg-muted rounded w-24"></div>
-              <div className="space-y-2">
-                <div className="h-4 bg-muted rounded"></div>
-                <div className="h-4 bg-muted rounded w-3/4"></div>
-              </div>
-            </div>
-          </div>
-          <div className="lg:col-span-2 space-y-6">
-            <div className="bg-card rounded-lg p-6">
-              <div className="h-6 bg-muted rounded w-32 mb-4"></div>
-              <div className="space-y-2">
-                <div className="h-4 bg-muted rounded"></div>
-                <div className="h-4 bg-muted rounded"></div>
-                <div className="h-4 bg-muted rounded w-3/4"></div>
-              </div>
-            </div>
-            <div className="bg-card rounded-lg p-6">
-              <div className="h-6 bg-muted rounded w-40 mb-4"></div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="h-20 bg-muted rounded"></div>
-                <div className="h-20 bg-muted rounded"></div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
+  useEffect(() => {
+    async function getParams() {
+      try {
+        const resolvedParams = await params;
+        setProfileId(resolvedParams.id);
+        setParamsReady(true);
+      } catch (error) {
+        console.error('Error resolving params:', error);
+        setParamsReady(true); // Set to true even on error to prevent infinite loading
+      }
+    }
+    getParams();
+  }, [params]);
+
+  // Don't show anything until params are resolved - let AuthWrapper handle loading
+  if (!paramsReady || !profileId) {
+    return null;
+  }
+
+  return (
+    <AuthWrapper 
+      requireAuth={true}
+    >
+      <ProfileContentWrapper profileId={profileId} />
+    </AuthWrapper>
   );
 }
 
+// New wrapper component that only loads after authentication passes
+function ProfileContentWrapper({ profileId }: { profileId: string }) {
+  return <ProfileContent profileId={profileId} />;
+}
+
 function ProfileContent({ profileId }: { profileId: string }) {
-  const { isSignedIn, isLoaded } = useUser();
   const { getToken } = useAuth();
   const [profileData, setProfileData] = useState<ProfileApiResponse | null>(null);
   const [loading, setLoading] = useState(true);
@@ -155,16 +124,6 @@ function ProfileContent({ profileId }: { profileId: string }) {
   const retryTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const fetchProfile = useCallback(async (retryCount = 0, forceFresh = false) => {
-    // Don't make requests until auth is fully loaded
-    if (!isLoaded) return;
-    
-    // If not signed in after auth is loaded, redirect or show error
-    if (!isSignedIn) {
-      setError('You must be signed in to view profiles');
-      setLoading(false);
-      return;
-    }
-
     // Cancel any existing request and retry timeout
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
@@ -191,7 +150,7 @@ function ProfileContent({ profileId }: { profileId: string }) {
       const abortController = new AbortController();
       abortControllerRef.current = abortController;
 
-      // Wait for auth to be fully ready, with progressive delays
+      // Get auth token - AuthWrapper already verified user is authenticated
       let token = await getToken();
       
       // If no token on first try, wait progressively longer and try again
@@ -277,26 +236,23 @@ function ProfileContent({ profileId }: { profileId: string }) {
     } finally {
       setLoading(false);
     }
-  }, [profileId, isSignedIn, isLoaded, getToken]);
+  }, [profileId, getToken]);
 
   useEffect(() => {
-    // Only fetch when auth is loaded
-    if (isLoaded) {
-      // Get navigation source from the global state manager
-      const navigationSource = navigationStateManager.getNavigationSource();
-      
-      // Determine if we should use cache or force fresh based on navigation source
-      const shouldForceFresh = navigationSource === 'refresh' || navigationSource === 'direct';
-      
-      // Small delay to allow for better auth context stability, but only if forcing fresh
-      const delay = shouldForceFresh ? 100 : 0;
-      
-      const timer = setTimeout(() => {
-        fetchProfile(0, shouldForceFresh);
-      }, delay);
-      
-      return () => clearTimeout(timer);
-    }
+    // Get navigation source from the global state manager
+    const navigationSource = navigationStateManager.getNavigationSource();
+    
+    // Determine if we should use cache or force fresh based on navigation source
+    const shouldForceFresh = navigationSource === 'refresh' || navigationSource === 'direct';
+    
+    // Small delay to allow for better auth context stability, but only if forcing fresh
+    const delay = shouldForceFresh ? 100 : 0;
+    
+    const timer = setTimeout(() => {
+      fetchProfile(0, shouldForceFresh);
+    }, delay);
+    
+    return () => clearTimeout(timer);
     
     // Cleanup function to abort request if component unmounts
     return () => {
@@ -307,7 +263,7 @@ function ProfileContent({ profileId }: { profileId: string }) {
         clearTimeout(retryTimeoutRef.current);
       }
     };
-  }, [fetchProfile, isLoaded]);
+  }, [fetchProfile]);
 
   // Cleanup navigation state on unmount to prevent leaking between page navigations
   useEffect(() => {
@@ -326,9 +282,9 @@ function ProfileContent({ profileId }: { profileId: string }) {
     setLoading(true);
   }, [profileId]);
 
-  // Show loading until auth is loaded or while fetching
-  if (!isLoaded || loading) {
-    return <ProfileSkeleton />;
+  // Don't show skeleton while loading - let AuthWrapper handle all loading
+  if (loading) {
+    return null;
   }
 
   if (error) {
@@ -354,69 +310,31 @@ function ProfileContent({ profileId }: { profileId: string }) {
   }
 
   return (
-    <Suspense fallback={<ProfileSkeleton />}>
-      <AuthWrapper 
-        requireAuth={true}
-        requireRole={['athlete', 'coach', 'recruiter', 'admin']}
-        loadingComponent={<ProfileSkeleton />}
-      >
-        {profileData.profileType === 'athlete' && (
-          <AthleteProfileWrapper
-            data={profileData.profile as AthleteProfileData}
-            isOwnProfile={profileData.isOwnProfile}
-            hasPendingVerification={profileData.hasPendingVerification}
-            pendingSubmittedAt={profileData.pendingSubmittedAt}
-          />
-        )}
+    <>
+      {profileData.profileType === 'athlete' && (
+        <AthleteProfileWrapper
+          data={profileData.profile as AthleteProfileData}
+          isOwnProfile={profileData.isOwnProfile}
+          hasPendingVerification={profileData.hasPendingVerification}
+          pendingSubmittedAt={profileData.pendingSubmittedAt}
+        />
+      )}
 
-        {profileData.profileType === 'coach' && (
-          <CoachProfileWrapper
-            data={profileData.profile as CoachProfileData}
-            isOwnProfile={profileData.isOwnProfile}
-          />
-        )}
+      {profileData.profileType === 'coach' && (
+        <CoachProfileWrapper
+          data={profileData.profile as CoachProfileData}
+          isOwnProfile={profileData.isOwnProfile}
+          hasPendingVerification={profileData.hasPendingVerification}
+          pendingSubmittedAt={profileData.pendingSubmittedAt}
+        />
+      )}
 
-        {profileData.profileType === 'recruiter' && (
-          <RecruiterProfileWrapper
-            data={profileData.profile as RecruitingProfileData}
-            isOwnProfile={profileData.isOwnProfile}
-          />
-        )}
-      </AuthWrapper>
-    </Suspense>
-  );
-}
-
-export default function ProfilePage({ params }: ProfilePageProps) {
-  const [profileId, setProfileId] = useState<string | null>(null);
-  const [paramsReady, setParamsReady] = useState(false);
-
-  useEffect(() => {
-    async function getParams() {
-      try {
-        const resolvedParams = await params;
-        setProfileId(resolvedParams.id);
-        setParamsReady(true);
-      } catch (error) {
-        console.error('Error resolving params:', error);
-        setParamsReady(true); // Set to true even on error to prevent infinite loading
-      }
-    }
-    getParams();
-  }, [params]);
-
-  // Show loading until params are resolved
-  if (!paramsReady || !profileId) {
-    return <ProfileSkeleton />;
-  }
-
-  return (
-    <AuthWrapper 
-      requireAuth={true}
-      requireRole={['athlete', 'coach', 'recruiter', 'admin']}
-      loadingComponent={<ProfileSkeleton />}
-    >
-      <ProfileContent profileId={profileId} />
-    </AuthWrapper>
+      {profileData.profileType === 'recruiter' && (
+        <RecruiterProfileWrapper
+          data={profileData.profile as RecruitingProfileData}
+          isOwnProfile={profileData.isOwnProfile}
+        />
+      )}
+    </>
   );
 } 

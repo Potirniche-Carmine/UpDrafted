@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAnyRole, requireOwnershipOrAdmin } from '@/utils/roles';
-import { userOperations, athleteOperations, coachOperations, recruitingOperations } from '@/database/db-utils';
+import { userOperations, athleteOperations, coachOperations, recruitingOperations, recruitingNeedsOperations } from '@/database/db-utils';
 import { R2_PUBLIC_URL } from '@/database/r2';
-import { NewAthleteProfile, NewAthleteMeasurable, NewAthleteVideo, verificationRequests } from '@/database/schema';
+import { NewAthleteProfile, NewAthleteMeasurable, NewAthleteVideo, NewCoachProfile, verificationRequests } from '@/database/schema';
 import { db } from '@/database/db';
 import { eq } from 'drizzle-orm';
 
@@ -326,11 +326,49 @@ export async function GET(
         // Get full coach profile with related data
         const coachProfile = await coachOperations.getCoachProfile(profileUserId);
         profileData = coachProfile;
+
+        // Check for pending verification request if it's the user's own profile
+        if (isOwnProfile) {
+          const pendingVerification = await db
+            .select({
+              status: verificationRequests.status,
+              submittedAt: verificationRequests.submittedAt
+            })
+            .from(verificationRequests)
+            .where(eq(verificationRequests.userId, profileUserId))
+            .limit(1);
+
+          if (pendingVerification.length > 0 && (pendingVerification[0].status === 'pending' || pendingVerification[0].status === 'under_review')) {
+            verificationStatus = {
+              hasPendingVerification: true,
+              pendingSubmittedAt: pendingVerification[0].submittedAt.toISOString()
+            };
+          }
+        }
       } else if (userWithProfile.role === 'recruiter' && userWithProfile.recruitingProfile) {
         profileType = 'recruiter';
         // Get full recruiting profile with related data
         const recruitingProfile = await recruitingOperations.getRecruitingProfile(profileUserId);
         profileData = recruitingProfile;
+
+        // Check for pending verification request if it's the user's own profile
+        if (isOwnProfile) {
+          const pendingVerification = await db
+            .select({
+              status: verificationRequests.status,
+              submittedAt: verificationRequests.submittedAt
+            })
+            .from(verificationRequests)
+            .where(eq(verificationRequests.userId, profileUserId))
+            .limit(1);
+
+          if (pendingVerification.length > 0 && (pendingVerification[0].status === 'pending' || pendingVerification[0].status === 'under_review')) {
+            verificationStatus = {
+              hasPendingVerification: true,
+              pendingSubmittedAt: pendingVerification[0].submittedAt.toISOString()
+            };
+          }
+        }
       }
     } catch (dbError) {
       console.error('Database error fetching profile:', dbError);
@@ -544,11 +582,54 @@ export async function PUT(
         );
       }
     } else if (userWithProfile.role === 'coach') {
-      // Update coach profile - implement similar logic if needed
-      return NextResponse.json(
-        { error: 'Coach profile updates not implemented yet' },
-        { status: 501 }
-      );
+      // Update coach profile
+      try {
+        // Transform the update data to match database schema
+        const profileUpdateData: Partial<NewCoachProfile> = {};
+        
+        // Map common fields
+        if (updateData.fullName !== undefined) profileUpdateData.fullName = updateData.fullName;
+        if (updateData.title !== undefined) profileUpdateData.title = updateData.title;
+        if (updateData.sportCoaching !== undefined) profileUpdateData.sportCoaching = updateData.sportCoaching;
+        if (updateData.organizationName !== undefined) profileUpdateData.organizationName = updateData.organizationName;
+        if (updateData.city !== undefined) profileUpdateData.city = updateData.city;
+        if (updateData.state !== undefined) profileUpdateData.state = updateData.state;
+        if (updateData.division !== undefined) profileUpdateData.division = updateData.division;
+        if (updateData.conference !== undefined) profileUpdateData.conference = updateData.conference;
+        if (updateData.personalStatement !== undefined) profileUpdateData.personalStatement = updateData.personalStatement;
+        if (updateData.programWebsite !== undefined) profileUpdateData.programWebsite = updateData.programWebsite;
+        if (updateData.schoolWebsite !== undefined) profileUpdateData.schoolWebsite = updateData.schoolWebsite;
+        if (updateData.instagramHandle !== undefined) profileUpdateData.instagramHandle = updateData.instagramHandle;
+        if (updateData.twitterHandle !== undefined) profileUpdateData.twitterHandle = updateData.twitterHandle;
+        if (updateData.showcaseVideoTitle !== undefined) profileUpdateData.showcaseVideoTitle = updateData.showcaseVideoTitle;
+        if (updateData.showcaseVideoUrl !== undefined) profileUpdateData.showcaseVideoUrl = updateData.showcaseVideoUrl;
+        if (updateData.showcaseVideoEmbedUrl !== undefined) profileUpdateData.showcaseVideoEmbedUrl = updateData.showcaseVideoEmbedUrl;
+
+        // Update the coach profile in the database
+        updatedProfile = await coachOperations.updateCoachProfile(profileUserId, profileUpdateData);
+        
+        // Handle recruiting needs updates if provided
+        if (updateData.recruitingNeeds !== undefined && updatedProfile?.id) {
+          const recruitingNeedsData = {
+            graduationYears: updateData.recruitingNeeds.graduationYears || [],
+            positions: updateData.recruitingNeeds.positions || [],
+            scholarshipsAvailable: updateData.recruitingNeeds.scholarshipsAvailable || null,
+            recruitingPhilosophy: updateData.recruitingNeeds.recruitingPhilosophy || null
+          };
+          
+          await recruitingNeedsOperations.updateRecruitingNeeds(updatedProfile.id, recruitingNeedsData);
+        }
+        
+        // Re-fetch the complete profile with all related data to ensure consistency
+        updatedProfile = await coachOperations.getCoachProfile(profileUserId);
+        
+      } catch (dbError) {
+        console.error('Database error updating coach profile:', dbError);
+        return NextResponse.json(
+          { error: 'Failed to update coach profile' },
+          { status: 500 }
+        );
+      }
     } else if (userWithProfile.role === 'recruiter') {
       // Update recruiting profile - implement similar logic if needed
       return NextResponse.json(

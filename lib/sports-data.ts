@@ -209,7 +209,9 @@ export const DIVISIONS = [
   'NJCAA Division II',
   'NJCAA Division III',
   'Junior College',
-  'Community College'
+  'Community College',
+  'High School',
+  'Club Sports'
 ];
 
 export const US_STATES = [

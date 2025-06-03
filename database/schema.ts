@@ -99,7 +99,6 @@ export const coachProfiles = pgTable('coach_profiles', {
   userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
   fullName: text('full_name').notNull(),
   title: text('title').notNull(),
-  role: coachRoleEnum('role').notNull(),
   sportCoaching: text('sport_coaching').notNull(),
   organizationName: text('organization_name').notNull(),
   profileImageR3Key: text('profile_image_r3_key'),
@@ -115,12 +114,12 @@ export const coachProfiles = pgTable('coach_profiles', {
   twitterHandle: text('twitter_handle'),
   showcaseVideoTitle: text('showcase_video_title'),
   showcaseVideoUrl: text('showcase_video_url'),
+  personalStatement: text('personal_statement'),
   showcaseVideoEmbedUrl: text('showcase_video_embed_url'),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
 }, (table) => [
   index('idx_coach_profiles_user_id').on(table.userId),
-  index('idx_coach_profiles_role').on(table.role),
   unique('coach_profiles_user_id_unique').on(table.userId),
 ]);
 
@@ -145,7 +144,7 @@ export const recruitingProfiles = pgTable('recruiting_profiles', {
   showcaseVideoTitle: text('showcase_video_title'),
   showcaseVideoUrl: text('showcase_video_url'),
   showcaseVideoEmbedUrl: text('showcase_video_embed_url'),
-  recruitingPhilosophy: text('recruiting_philosophy'),
+  personalStatement: text('personal_statement'),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
 }, (table) => [

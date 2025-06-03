@@ -220,6 +220,23 @@ const SocialMediaSection = memo(({ socialMedia, isOwnProfile, onEdit }: {
 }) => {
   if (!socialMedia && !isOwnProfile) return null;
 
+  // Helper function to get responsive text size based on handle length
+  const getTextSizeClass = (handle: string) => {
+    const cleanHandle = handle.replace('@', '');
+    if (cleanHandle.length > 20) return 'text-xs';
+    if (cleanHandle.length > 15) return 'text-sm';
+    return 'text-sm';
+  };
+
+  // Helper function to truncate very long handles
+  const formatHandle = (handle: string) => {
+    const cleanHandle = handle.replace('@', '');
+    if (cleanHandle.length > 22) {
+      return `@${cleanHandle.substring(0, 19)}...`;
+    }
+    return `@${cleanHandle}`;
+  };
+
   return (
     <div className="pt-2 relative">
       <div className="flex items-center justify-between mb-2">
@@ -236,16 +253,19 @@ const SocialMediaSection = memo(({ socialMedia, isOwnProfile, onEdit }: {
       </div>
       
       {socialMedia?.instagram || socialMedia?.twitter ? (
-        <div className="flex justify-center gap-3">
+        <div className="flex flex-col sm:flex-row justify-center gap-2 sm:gap-3">
           {socialMedia.instagram && (
             <a
               href={`https://instagram.com/${socialMedia.instagram.replace('@', '')}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-lg hover:opacity-90 transition-opacity"
+              className="flex items-center justify-center gap-2 px-2 sm:px-3 py-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-lg hover:opacity-90 transition-opacity min-w-0"
+              title={`@${socialMedia.instagram.replace('@', '')}`}
             >
-              <Instagram className="w-4 h-4" />
-              <span className="text-sm font-medium">{socialMedia.instagram}</span>
+              <Instagram className="w-4 h-4 flex-shrink-0" />
+              <span className={`${getTextSizeClass(socialMedia.instagram)} font-medium truncate max-w-[120px] sm:max-w-none`}>
+                {formatHandle(socialMedia.instagram)}
+              </span>
             </a>
           )}
           {socialMedia.twitter && (
@@ -253,10 +273,13 @@ const SocialMediaSection = memo(({ socialMedia, isOwnProfile, onEdit }: {
               href={`https://twitter.com/${socialMedia.twitter.replace('@', '')}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center gap-2 px-3 py-2 bg-blue-500 text-white rounded-lg hover:opacity-90 transition-opacity"
+              className="flex items-center justify-center gap-2 px-2 sm:px-3 py-2 bg-blue-500 text-white rounded-lg hover:opacity-90 transition-opacity min-w-0"
+              title={`@${socialMedia.twitter.replace('@', '')}`}
             >
-              <Twitter className="w-4 h-4" />
-              <span className="text-sm font-medium">{socialMedia.twitter}</span>
+              <Twitter className="w-4 h-4 flex-shrink-0" />
+              <span className={`${getTextSizeClass(socialMedia.twitter)} font-medium truncate max-w-[120px] sm:max-w-none`}>
+                {formatHandle(socialMedia.twitter)}
+              </span>
             </a>
           )}
         </div>
@@ -407,6 +430,67 @@ export function AthleteProfile({
     }
   };
 
+  const handleRemoveImage = async () => {
+    const confirmed = window.confirm('Are you sure you want to remove your profile picture? This action cannot be undone.');
+    
+    if (!confirmed) return;
+
+    setIsSaving(true);
+    try {
+      // Get auth token
+      const windowWithClerk = window as unknown as {
+        Clerk?: {
+          session?: {
+            getToken: () => Promise<string>;
+          };
+        };
+      };
+      const token = await windowWithClerk.Clerk?.session?.getToken();
+
+      // Get current image URL for deletion
+      const currentImageUrl = profileData.profileImage;
+
+      if (!currentImageUrl) {
+        alert('No image to remove');
+        return;
+      }
+
+      const formData = new FormData();
+      formData.append('userId', profileData.userId || profileData.id);
+      formData.append('imageType', 'profile');
+      // Remove any existing cache-busting parameters before sending for deletion
+      const cleanUrl = currentImageUrl.split('?')[0];
+      formData.append('currentImageUrl', cleanUrl);
+      formData.append('removeOnly', 'true'); // Flag to only remove, not replace
+
+      const response = await fetch('/api/profile/upload-image', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+        body: formData,
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to remove image');
+      }
+
+      // Update profile data immediately
+      const updates: Partial<AthleteProfileData> = {
+        profileImage: undefined
+      };
+      
+      updateProfileData(updates);
+      console.log('Profile picture removed successfully');
+      
+    } catch (error) {
+      console.error('Error removing profile picture:', error);
+      alert('Failed to remove profile picture. Please try again.');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background">
       {/* Header Actions */}
@@ -474,13 +558,26 @@ export function AthleteProfile({
                       </div>
                     )}
                     {isOwnProfile && (
-                      <Button
-                        size="sm"
-                        className="absolute -bottom-2 -right-2 rounded-full p-2 h-8 w-8"
-                        onClick={() => handleEditSection('profile-image')}
-                      >
-                        <Edit className="w-3 h-3" />
-                      </Button>
+                      <>
+                        <Button
+                          size="sm"
+                          className="absolute -bottom-2 -right-2 rounded-full p-2 h-8 w-8"
+                          onClick={() => handleEditSection('profile-image')}
+                        >
+                          <Edit className="w-3 h-3" />
+                        </Button>
+                        {profileData.profileImage && (
+                          <Button
+                            size="sm"
+                            variant="destructive"
+                            className="absolute -top-2 -right-2 rounded-full p-1 h-6 w-6"
+                            onClick={handleRemoveImage}
+                            disabled={isSaving}
+                          >
+                            <X className="w-3 h-3" />
+                          </Button>
+                        )}
+                      </>
                     )}
                   </div>
 

@@ -382,13 +382,13 @@ export class FormValidator {
       errors.contact = 'Please provide at least one: website or social media handle';
     }
 
-    // Recruiting philosophy validation
-    const philosophyResult = this.validateText(data.recruitingPhilosophy, 'About your program', FIELD_LIMITS.RECRUITING_PHILOSOPHY, true);
-    if (!philosophyResult.isValid) errors.recruitingPhilosophy = philosophyResult.error!;
+    // Personal statement validation
+    const personalResult = this.validateText(data.personalStatement, 'About yourself', FIELD_LIMITS.PERSONAL_STATEMENT, true);
+    if (!personalResult.isValid) errors.personalStatement = personalResult.error!;
 
-    // What looking for validation
-    const lookingForResult = this.validateText(data.whatLookingFor, 'What you are looking for', FIELD_LIMITS.WHAT_LOOKING_FOR, true);
-    if (!lookingForResult.isValid) errors.whatLookingFor = lookingForResult.error!;
+    // Recruiting philosophy validation (required for both coaches and recruiters)
+    const philosophyResult = this.validateText(data.recruitingPhilosophy, 'Recruiting philosophy', FIELD_LIMITS.RECRUITING_PHILOSOPHY, true);
+    if (!philosophyResult.isValid) errors.recruitingPhilosophy = philosophyResult.error!;
 
     return errors;
   }

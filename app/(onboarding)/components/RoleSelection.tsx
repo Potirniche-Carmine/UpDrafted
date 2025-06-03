@@ -58,7 +58,7 @@ export default function RoleSelection({ onRoleSelect }: RoleSelectionProps) {
             </CardHeader>
             <CardContent>
               <p className="text-center text-muted-foreground mb-4">
-                I&apos;m a college coach looking to recruit talented student-athletes.
+                I&apos;m a coach looking to recruit talented student-athletes for my program.
               </p>
               <div className="space-y-2">
                 <Badge variant="outline" className="w-full justify-center">Program Showcase</Badge>

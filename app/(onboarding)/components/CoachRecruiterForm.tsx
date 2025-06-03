@@ -130,20 +130,20 @@ export default function CoachRecruiterForm({ data, onInputChange }: CoachRecruit
           delete newErrors.orgTwitterHandle;
         }
         break;
+      case 'personalStatement':
+        const personalResult = FormValidator.validateText(value as string, 'About yourself', FIELD_LIMITS.PERSONAL_STATEMENT, true);
+        if (personalResult.isValid) {
+          delete newErrors.personalStatement;
+        } else {
+          newErrors.personalStatement = personalResult.error!;
+        }
+        break;
       case 'recruitingPhilosophy':
-        const philosophyResult = FormValidator.validateText(value as string, 'About your program', FIELD_LIMITS.RECRUITING_PHILOSOPHY, true);
+        const philosophyResult = FormValidator.validateText(value as string, 'Recruiting philosophy', FIELD_LIMITS.RECRUITING_PHILOSOPHY, true);
         if (philosophyResult.isValid) {
           delete newErrors.recruitingPhilosophy;
         } else {
           newErrors.recruitingPhilosophy = philosophyResult.error!;
-        }
-        break;
-      case 'whatLookingFor':
-        const lookingForResult = FormValidator.validateText(value as string, 'What you are looking for', FIELD_LIMITS.WHAT_LOOKING_FOR, true);
-        if (lookingForResult.isValid) {
-          delete newErrors.whatLookingFor;
-        } else {
-          newErrors.whatLookingFor = lookingForResult.error!;
         }
         break;
       case 'scholarshipsAvailable':
@@ -437,20 +437,20 @@ export default function CoachRecruiterForm({ data, onInputChange }: CoachRecruit
       <p className="text-sm text-muted-foreground">* Provide at least one: website or social media</p>
 
       <div className="space-y-3">
-        <Label htmlFor="recruitingPhilosophy" className="text-base font-medium">About Your Program *</Label>
+        <Label htmlFor="personalStatement" className="text-base font-medium">About Yourself *</Label>
         <Textarea
-          id="recruitingPhilosophy"
-          placeholder="Describe your program, coaching philosophy, and what makes your team special..."
+          id="personalStatement"
+          placeholder="Tell us about yourself, your coaching background, and your approach to the sport..."
           rows={4}
-          value={data.recruitingPhilosophy}
-          onChange={(e) => validateAndUpdateField('recruitingPhilosophy', e.target.value)}
-          className={`resize-none bg-background ${validationErrors.recruitingPhilosophy ? 'border-red-500' : ''}`}
-          maxLength={FIELD_LIMITS.RECRUITING_PHILOSOPHY}
+          value={data.personalStatement}
+          onChange={(e) => validateAndUpdateField('personalStatement', e.target.value)}
+          className={`resize-none bg-background ${validationErrors.personalStatement ? 'border-red-500' : ''}`}
+          maxLength={FIELD_LIMITS.PERSONAL_STATEMENT}
         />
-        {validationErrors.recruitingPhilosophy && (
-          <p className="text-sm text-red-500">{validationErrors.recruitingPhilosophy}</p>
+        {validationErrors.personalStatement && (
+          <p className="text-sm text-red-500">{validationErrors.personalStatement}</p>
         )}
-        <p className="text-xs text-muted-foreground">{data.recruitingPhilosophy.length}/{FIELD_LIMITS.RECRUITING_PHILOSOPHY} characters</p>
+        <p className="text-xs text-muted-foreground">{data.personalStatement.length}/{FIELD_LIMITS.PERSONAL_STATEMENT} characters</p>
       </div>
 
       {/* Recruiting Needs */}
@@ -510,20 +510,20 @@ export default function CoachRecruiterForm({ data, onInputChange }: CoachRecruit
         </div>
 
         <div className="space-y-3">
-          <Label htmlFor="whatLookingFor" className="text-base font-medium">What You&apos;re Looking For *</Label>
+          <Label htmlFor="recruitingPhilosophy" className="text-base font-medium">Recruiting Philosophy *</Label>
           <Textarea
-            id="whatLookingFor"
-            placeholder="Describe the type of athletes you're looking for, their characteristics, playing style, academic requirements, etc..."
+            id="recruitingPhilosophy"
+            placeholder="Describe your recruiting philosophy and approach..."
             rows={3}
-            value={data.whatLookingFor}
-            onChange={(e) => validateAndUpdateField('whatLookingFor', e.target.value)}
-            className={`resize-none bg-background ${validationErrors.whatLookingFor ? 'border-red-500' : ''}`}
-            maxLength={FIELD_LIMITS.WHAT_LOOKING_FOR}
+            value={data.recruitingPhilosophy}
+            onChange={(e) => validateAndUpdateField('recruitingPhilosophy', e.target.value)}
+            className={`resize-none bg-background ${validationErrors.recruitingPhilosophy ? 'border-red-500' : ''}`}
+            maxLength={FIELD_LIMITS.RECRUITING_PHILOSOPHY}
           />
-          {validationErrors.whatLookingFor && (
-            <p className="text-sm text-red-500">{validationErrors.whatLookingFor}</p>
+          {validationErrors.recruitingPhilosophy && (
+            <p className="text-sm text-red-500">{validationErrors.recruitingPhilosophy}</p>
           )}
-          <p className="text-xs text-muted-foreground">{data.whatLookingFor.length}/{FIELD_LIMITS.WHAT_LOOKING_FOR} characters</p>
+          <p className="text-xs text-muted-foreground">{data.recruitingPhilosophy.length}/{FIELD_LIMITS.RECRUITING_PHILOSOPHY} characters</p>
         </div>
       </div>
     </>
