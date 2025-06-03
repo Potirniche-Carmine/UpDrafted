@@ -46,7 +46,7 @@ export function ProfileHeader({
   const [showReportDialog, setShowReportDialog] = useState(false);
 
   const handleBackClick = () => {
-    router.push('/search');
+    router.push('/dashboard');
   };
 
   const handleReportProfile = () => {
@@ -60,7 +60,6 @@ export function ProfileHeader({
     switch (method) {
       case 'copy':
         navigator.clipboard.writeText(profileUrl);
-        console.log('Link copied to clipboard');
         break;
       case 'email':
         const subject = `Check out this profile on UpDrafted`;
@@ -68,7 +67,6 @@ export function ProfileHeader({
         window.location.href = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
         break;
       case 'chat':
-        console.log('Share via chat');
         onShare?.();
         break;
       default:
@@ -84,7 +82,7 @@ export function ProfileHeader({
           <div className="hidden sm:flex items-center justify-between">
             <Button variant="ghost" size="sm" onClick={handleBackClick}>
               <ChevronLeft className="w-4 h-4 mr-1" />
-              Back to Search
+              Back to Dashboard
             </Button>
             
             {/* Right side actions */}
