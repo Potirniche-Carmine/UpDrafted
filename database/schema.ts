@@ -129,6 +129,7 @@ export const recruitingProfiles = pgTable('recruiting_profiles', {
   fullName: text('full_name').notNull(),
   title: text('title').notNull(),
   sportRecruiting: text('sport_recruiting').notNull(),
+  secondarySports: text('secondary_sports').array(),
   organizationName: text('organization_name').notNull(),
   profileImageR3Key: text('profile_image_r3_key'),
   organizationLogoR3Key: text('organization_logo_r3_key'),
@@ -165,9 +166,16 @@ export const recruitingNeeds = pgTable('recruiting_needs', {
   unique('recruiting_needs_coach_id_unique').on(table.coachId),
 ]);
 
+// Recruiting Profile Needs Table
+// This table stores sport-specific recruiting needs for recruiters who handle multiple sports.
+// Each row represents the recruiting needs for one specific sport for a recruiter.
+// The 'sport' column is ESSENTIAL - it allows a recruiter to have different graduation years,
+// positions, scholarships, and recruiting philosophy for each sport they recruit for.
+// Example: A recruiter might recruit for both Football and Basketball with different needs for each.
 export const recruitingProfileNeeds = pgTable('recruiting_profile_needs', {
   id: serial('id').primaryKey(),
   recruitingProfileId: integer('recruiting_profile_id').notNull().references(() => recruitingProfiles.id, { onDelete: 'cascade' }),
+  sport: text('sport').notNull(), // CRITICAL: This stores which sport these recruiting needs apply to
   graduationYears: integer('graduation_years').array().notNull(),
   positions: text('positions').array().notNull(),
   scholarshipsAvailable: integer('scholarships_available'),
@@ -175,7 +183,8 @@ export const recruitingProfileNeeds = pgTable('recruiting_profile_needs', {
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
 }, (table) => [
-  unique('recruiting_profile_needs_recruiting_profile_id_unique').on(table.recruitingProfileId),
+  index('idx_recruiting_profile_needs_recruiting_profile_id').on(table.recruitingProfileId),
+  unique('recruiting_profile_needs_recruiting_profile_sport_unique').on(table.recruitingProfileId, table.sport),
 ]);
 
 export const connections = pgTable('connections', {
@@ -183,6 +192,7 @@ export const connections = pgTable('connections', {
   athleteId: integer('athlete_id').notNull().references(() => athleteProfiles.id, { onDelete: 'cascade' }),
   coachId: integer('coach_id').notNull().references(() => coachProfiles.id, { onDelete: 'cascade' }),
   status: connectionStatusEnum('status').default('viewed').notNull(),
+  notes: text('notes'),
   initiatedBy: initiatedByEnum('initiated_by').notNull(),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
 }, (table) => [

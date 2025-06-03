@@ -7,7 +7,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { OnboardingData, UserRole } from "../lib/types";
 import CommonFields from "./CommonFields";
 import AthleteForm from "./AthleteForm";
-import CoachRecruiterForm from "./CoachRecruiterForm";
+import CoachForm from "./CoachForm";
+import RecruiterForm from "./RecruiterForm";
 import TermsAndConditions from "./TermsAndConditions";
 import { LoadingScreen } from "./LoadingScreen";
 
@@ -44,6 +45,7 @@ const initialData: OnboardingData = {
   personalStatement: "",
   title: "",
   sportCoaching: "",
+  secondarySportsRecruiting: [],
   organizationLogo: undefined,
   organizationLogoPreview: "",
   division: "",
@@ -56,6 +58,7 @@ const initialData: OnboardingData = {
   recruitingGraduationYears: [],
   recruitingPositions: [],
   scholarshipsAvailable: null,
+  sportSpecificNeeds: {},
   whatLookingFor: "",
   agreeToTerms: false,
   ageConfirmation: false
@@ -71,7 +74,7 @@ export default function OnboardingForm({ role, onBack }: OnboardingFormProps) {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, []);
 
-  const handleInputChange = (field: keyof OnboardingData, value: string | number | string[] | number[] | File | null | boolean) => {
+  const handleInputChange = (field: keyof OnboardingData, value: string | number | string[] | number[] | File | null | boolean | { [sport: string]: { graduationYears: number[]; positions: string[]; scholarshipsAvailable: number | null; recruitingPhilosophy: string; } }) => {
     setData((prevData) => ({ ...prevData, [field]: value }));
   };
 
@@ -176,8 +179,8 @@ export default function OnboardingForm({ role, onBack }: OnboardingFormProps) {
       }
 
       return baseRequirements && academicRequirements;
-    } else {
-      // Base requirements for coaches and recruiters
+    } else if (data.role === 'coach') {
+      // Base requirements for coaches
       const baseRequirements = !!(
         data.title && 
         data.organizationName && 
@@ -186,13 +189,44 @@ export default function OnboardingForm({ role, onBack }: OnboardingFormProps) {
         data.city && 
         data.state &&
         (data.orgInstagramHandle || data.orgTwitterHandle || data.programWebsite || data.schoolWebsite) &&
-        data.personalStatement &&
+        data.personalStatement
+      );
+
+      // Only require recruiting needs for non-high school coaches
+      const recruitingRequirements = data.division === 'High School' || !!(
         data.recruitingGraduationYears.length > 0 &&
         data.recruitingPositions.length > 0 &&
         data.recruitingPhilosophy
       );
 
-      return baseRequirements;
+      return baseRequirements && recruitingRequirements;
+    } else {
+      // Requirements for recruiters
+      const baseRequirements = !!(
+        data.title && 
+        data.organizationName && 
+        data.sportCoaching && 
+        data.division && 
+        data.city && 
+        data.state &&
+        (data.orgInstagramHandle || data.orgTwitterHandle || data.programWebsite || data.schoolWebsite) &&
+        data.personalStatement
+      );
+
+      // For high school recruiters, don't require recruiting needs
+      if (data.division === 'High School') {
+        return baseRequirements;
+      }
+
+      // Only require recruiting needs for the main sport during onboarding
+      // Secondary sports and their needs can be added later on the profile
+      const mainSportNeeds = data.sportSpecificNeeds[data.sportCoaching];
+      const mainSportRequirements = mainSportNeeds && 
+             mainSportNeeds.graduationYears.length > 0 && 
+             mainSportNeeds.positions.length > 0 && 
+             mainSportNeeds.recruitingPhilosophy.trim().length > 0;
+
+      return baseRequirements && mainSportRequirements;
     }
   };
 
@@ -209,7 +243,10 @@ export default function OnboardingForm({ role, onBack }: OnboardingFormProps) {
             Complete Your {data.role === 'athlete' ? 'Athletic' : data.role === 'coach' ? 'Coaching' : 'Recruiting'} Profile
           </h1>
           <p className="text-muted-foreground">
-            Tell us about yourself to get the most out of UpDrafted. You can add highlights and videos later!
+            {data.role === 'recruiter' 
+              ? "Tell us about yourself and the sports you recruit for to get the most out of UpDrafted. You can recruit for multiple sports and set specific needs for each. You can add highlights and videos later!"
+              : "Tell us about yourself to get the most out of UpDrafted. You can add highlights and videos later!"
+            }
           </p>
         </div>
 
@@ -228,8 +265,13 @@ export default function OnboardingForm({ role, onBack }: OnboardingFormProps) {
                 data={data} 
                 onInputChange={(field, value) => handleInputChange(field as keyof OnboardingData, value)} 
               />
+            ) : data.role === 'coach' ? (
+              <CoachForm 
+                data={data} 
+                onInputChange={(field, value) => handleInputChange(field as keyof OnboardingData, value)}
+              />
             ) : (
-              <CoachRecruiterForm 
+              <RecruiterForm 
                 data={data} 
                 onInputChange={(field, value) => handleInputChange(field as keyof OnboardingData, value)}
               />

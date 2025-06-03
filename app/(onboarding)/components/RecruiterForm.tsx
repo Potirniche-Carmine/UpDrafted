@@ -1,0 +1,651 @@
+"use client";
+
+import { useState, useEffect } from "react";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Button } from "@/components/ui/button";
+import { Upload, X } from "lucide-react";
+import Image from "next/image";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { 
+  DIVISIONS,
+  US_STATES, 
+  GRADUATION_YEARS, 
+  getPositionsForSport, 
+  getSportsList 
+} from "@/lib/sports-data";
+import { FormValidator, FIELD_LIMITS } from "@/app/(onboarding)/lib/form-validation";
+import { OnboardingData } from "../lib/types";
+
+interface RecruiterFormProps {
+  data: OnboardingData;
+  onInputChange: (field: keyof OnboardingData, value: string | number | string[] | number[] | File | null | boolean | { [sport: string]: { graduationYears: number[]; positions: string[]; scholarshipsAvailable: number | null; recruitingPhilosophy: string; } }) => void;
+}
+
+export default function RecruiterForm({ data, onInputChange }: RecruiterFormProps) {
+  const [validationErrors, setValidationErrors] = useState<{[key: string]: string}>({});
+  const [activeSportForNeeds, setActiveSportForNeeds] = useState<string>("");
+
+  // Initialize sport-specific needs when main sport or secondary sports change
+  useEffect(() => {
+    const allSports = [data.sportCoaching, ...data.secondarySportsRecruiting].filter(Boolean);
+    const newSportSpecificNeeds = { ...data.sportSpecificNeeds };
+    
+    // Add missing sports
+    allSports.forEach(sport => {
+      if (!newSportSpecificNeeds[sport]) {
+        newSportSpecificNeeds[sport] = {
+          graduationYears: [],
+          positions: [],
+          scholarshipsAvailable: null,
+          recruitingPhilosophy: ""
+        };
+      }
+    });
+    
+    // Remove sports that are no longer selected
+    Object.keys(newSportSpecificNeeds).forEach(sport => {
+      if (!allSports.includes(sport)) {
+        delete newSportSpecificNeeds[sport];
+      }
+    });
+    
+    onInputChange('sportSpecificNeeds', newSportSpecificNeeds);
+    
+    // Set active sport for needs if not set
+    if (!activeSportForNeeds && allSports.length > 0) {
+      setActiveSportForNeeds(allSports[0]);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [data.sportCoaching, data.secondarySportsRecruiting]);
+
+  const toggleSecondarySport = (sport: string) => {
+    const sports = data.secondarySportsRecruiting.includes(sport)
+      ? data.secondarySportsRecruiting.filter(s => s !== sport)
+      : [...data.secondarySportsRecruiting, sport];
+    onInputChange('secondarySportsRecruiting', sports);
+  };
+
+  const updateSportSpecificNeeds = (sport: string, field: 'graduationYears' | 'positions' | 'scholarshipsAvailable' | 'recruitingPhilosophy', value: number[] | string[] | number | null | string) => {
+    const newNeeds = {
+      ...data.sportSpecificNeeds,
+      [sport]: {
+        ...data.sportSpecificNeeds[sport],
+        [field]: value
+      }
+    };
+    onInputChange('sportSpecificNeeds', newNeeds);
+  };
+
+  const toggleNeedsYear = (sport: string, year: number) => {
+    const currentYears = data.sportSpecificNeeds[sport]?.graduationYears || [];
+    const newYears = currentYears.includes(year)
+      ? currentYears.filter(y => y !== year)
+      : [...currentYears, year];
+    updateSportSpecificNeeds(sport, 'graduationYears', newYears);
+  };
+
+  const toggleNeedsPosition = (sport: string, position: string) => {
+    const currentPositions = data.sportSpecificNeeds[sport]?.positions || [];
+    const newPositions = currentPositions.includes(position)
+      ? currentPositions.filter(p => p !== position)
+      : [...currentPositions, position];
+    updateSportSpecificNeeds(sport, 'positions', newPositions);
+  };
+
+  // Validate field and update errors
+  const validateAndUpdateField = (field: keyof OnboardingData, value: string | number | null) => {
+    const newErrors = { ...validationErrors };
+    
+    switch (field) {
+      case 'title':
+        const titleResult = FormValidator.validateText(value as string, 'Title', FIELD_LIMITS.TITLE, true);
+        if (titleResult.isValid) {
+          delete newErrors.title;
+        } else {
+          newErrors.title = titleResult.error!;
+        }
+        break;
+      case 'organizationName':
+        const orgResult = FormValidator.validateText(value as string, 'Organization name', FIELD_LIMITS.ORGANIZATION_NAME, true);
+        if (orgResult.isValid) {
+          delete newErrors.organizationName;
+        } else {
+          newErrors.organizationName = orgResult.error!;
+        }
+        break;
+      case 'city':
+        const cityResult = FormValidator.validateText(value as string, 'City', FIELD_LIMITS.CITY, true);
+        if (cityResult.isValid) {
+          delete newErrors.city;
+        } else {
+          newErrors.city = cityResult.error!;
+        }
+        break;
+      case 'conference':
+        if (value) {
+          const confResult = FormValidator.validateText(value as string, 'Conference', FIELD_LIMITS.CONFERENCE);
+          if (confResult.isValid) {
+            delete newErrors.conference;
+          } else {
+            newErrors.conference = confResult.error!;
+          }
+        } else {
+          delete newErrors.conference;
+        }
+        break;
+      case 'programWebsite':
+        if (value) {
+          const programWebResult = FormValidator.validateURL(value as string);
+          if (programWebResult.isValid) {
+            delete newErrors.programWebsite;
+          } else {
+            newErrors.programWebsite = programWebResult.error!;
+          }
+        } else {
+          delete newErrors.programWebsite;
+        }
+        break;
+      case 'schoolWebsite':
+        if (value) {
+          const schoolWebResult = FormValidator.validateURL(value as string);
+          if (schoolWebResult.isValid) {
+            delete newErrors.schoolWebsite;
+          } else {
+            newErrors.schoolWebsite = schoolWebResult.error!;
+          }
+        } else {
+          delete newErrors.schoolWebsite;
+        }
+        break;
+      case 'orgInstagramHandle':
+        if (value) {
+          const igResult = FormValidator.validateSocialHandle(value as string, 'instagram');
+          if (igResult.isValid) {
+            delete newErrors.orgInstagramHandle;
+          } else {
+            newErrors.orgInstagramHandle = igResult.error!;
+          }
+        } else {
+          delete newErrors.orgInstagramHandle;
+        }
+        break;
+      case 'orgTwitterHandle':
+        if (value) {
+          const twitterResult = FormValidator.validateSocialHandle(value as string, 'twitter');
+          if (twitterResult.isValid) {
+            delete newErrors.orgTwitterHandle;
+          } else {
+            newErrors.orgTwitterHandle = twitterResult.error!;
+          }
+        } else {
+          delete newErrors.orgTwitterHandle;
+        }
+        break;
+      case 'personalStatement':
+        const personalResult = FormValidator.validateText(value as string, 'About yourself', FIELD_LIMITS.PERSONAL_STATEMENT, true);
+        if (personalResult.isValid) {
+          delete newErrors.personalStatement;
+        } else {
+          newErrors.personalStatement = personalResult.error!;
+        }
+        break;
+    }
+    
+    setValidationErrors(newErrors);
+    onInputChange(field, value);
+  };
+
+  const handleOrganizationLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    
+    if (file) {
+      // Validate file type
+      const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+      if (!allowedTypes.includes(file.type)) {
+        alert('Please select a valid image file (JPEG, PNG, or WebP)');
+        return;
+      }
+
+      // Validate file size (5MB limit)
+      const maxSize = 5 * 1024 * 1024; // 5MB in bytes
+      if (file.size > maxSize) {
+        alert('File size must be less than 5MB');
+        return;
+      }
+
+      onInputChange('organizationLogo', file);
+      
+      // Create preview URL
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        onInputChange('organizationLogoPreview', reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const removeOrganizationLogo = () => {
+    onInputChange('organizationLogo', null);
+    onInputChange('organizationLogoPreview', '');
+  };
+
+  const handleURLBlur = (field: 'programWebsite' | 'schoolWebsite', value: string) => {
+    if (value && !value.match(/^https?:\/\//i)) {
+      // Add https:// if it looks like a domain
+      if (value.includes('.') && !value.includes(' ')) {
+        const processedURL = `https://${value}`;
+        onInputChange(field, processedURL);
+      }
+    }
+  };
+
+  const allSelectedSports = [data.sportCoaching, ...data.secondarySportsRecruiting].filter(Boolean);
+
+  return (
+    <>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="space-y-3">
+          <Label htmlFor="title" className="text-base font-medium">Title *</Label>
+          <Input
+            id="title"
+            placeholder="e.g., Recruiting Coordinator, Assistant Coach"
+            value={data.title}
+            onChange={(e) => validateAndUpdateField('title', e.target.value)}
+            className={`h-11 bg-background ${validationErrors.title ? 'border-red-500' : ''}`}
+            maxLength={FIELD_LIMITS.TITLE}
+          />
+          {validationErrors.title && (
+            <p className="text-sm text-red-500">{validationErrors.title}</p>
+          )}
+          <p className="text-xs text-muted-foreground">{data.title.length}/{FIELD_LIMITS.TITLE} characters</p>
+        </div>
+        <div className="space-y-3">
+          <Label htmlFor="organizationName" className="text-base font-medium">School/Organization *</Label>
+          <Input
+            id="organizationName"
+            placeholder="e.g., University of Texas"
+            value={data.organizationName}
+            onChange={(e) => validateAndUpdateField('organizationName', e.target.value)}
+            className={`h-11 bg-background ${validationErrors.organizationName ? 'border-red-500' : ''}`}
+            maxLength={FIELD_LIMITS.ORGANIZATION_NAME}
+          />
+          {validationErrors.organizationName && (
+            <p className="text-sm text-red-500">{validationErrors.organizationName}</p>
+          )}
+          <p className="text-xs text-muted-foreground">{data.organizationName.length}/{FIELD_LIMITS.ORGANIZATION_NAME} characters</p>
+        </div>
+      </div>
+
+      {/* Organization Logo Upload */}
+      <div className="space-y-4">
+        <Label className="text-base font-medium">Organization Logo</Label>
+        <div className="space-y-4">
+          {data.organizationLogoPreview ? (
+            <div className="relative w-32 h-24 mx-auto">
+              <Image
+                src={data.organizationLogoPreview}
+                alt="Organization logo preview"
+                width={128}
+                height={96}
+                className="rounded-lg object-contain border border-border/50"
+              />
+              <Button
+                type="button"
+                variant="destructive"
+                size="sm"
+                className="absolute -top-2 -right-2 w-6 h-6 p-0 rounded-full"
+                onClick={removeOrganizationLogo}
+              >
+                <X className="w-3 h-3" />
+              </Button>
+            </div>
+          ) : (
+            <label
+              htmlFor="organizationLogo"
+              className="border-2 border-dashed border-border rounded-lg p-8 text-center cursor-pointer hover:border-border/80 transition-colors block"
+            >
+              <Upload className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+              <div className="space-y-2">
+                <p className="text-sm font-medium">Click to upload organization logo</p>
+                <p className="text-xs text-muted-foreground">PNG, JPG, or WebP (max 5MB)</p>
+              </div>
+              <Input
+                id="organizationLogo"
+                type="file"
+                className="sr-only"
+                accept="image/*"
+                onChange={handleOrganizationLogoChange}
+              />
+            </label>
+          )}
+        </div>
+      </div>
+
+      {/* Primary Sport */}
+      <div className="space-y-3">
+        <Label htmlFor="sportCoaching" className="text-base font-medium">Primary Sport *</Label>
+        <Select
+          value={data.sportCoaching}
+          onValueChange={(value) => onInputChange('sportCoaching', value)}
+        >
+          <SelectTrigger className="h-11 bg-background" style={{ height: '2.75rem' }}>
+            <SelectValue placeholder="Select primary sport" />
+          </SelectTrigger>
+          <SelectContent>
+            {getSportsList().map(sport => (
+              <SelectItem key={sport} value={sport}>{sport}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <p className="text-xs text-muted-foreground">
+          This will be your main recruiting sport and will appear prominently on your profile.
+        </p>
+      </div>
+
+      {/* Secondary Sports */}
+      <div className="space-y-4">
+        <div className="space-y-3">
+          <Label className="text-base font-medium">Additional Sports You Recruit For (Optional)</Label>
+          <p className="text-sm text-muted-foreground">
+            Select additional sports you actively recruit for. You can add more sports and set specific recruiting needs later in your profile.
+          </p>
+        </div>
+        
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+          {getSportsList().filter(sport => sport !== data.sportCoaching).map(sport => (
+            <div key={sport} className="flex items-center space-x-2">
+              <Checkbox
+                id={`secondary-sport-${sport}`}
+                checked={data.secondarySportsRecruiting.includes(sport)}
+                onCheckedChange={() => toggleSecondarySport(sport)}
+              />
+              <Label 
+                htmlFor={`secondary-sport-${sport}`} 
+                className="text-sm cursor-pointer leading-tight"
+              >
+                {sport}
+              </Label>
+            </div>
+          ))}
+        </div>
+        
+        {data.secondarySportsRecruiting.length > 0 && (
+          <div className="flex flex-wrap gap-2 mt-3">
+            {data.secondarySportsRecruiting.map(sport => (
+              <Badge key={sport} variant="secondary" className="cursor-pointer" onClick={() => toggleSecondarySport(sport)}>
+                {sport} <X className="w-3 h-3 ml-1" />
+              </Badge>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Division and Conference */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="space-y-3">
+          <Label htmlFor="division" className="text-base font-medium">Division *</Label>
+          <Select
+            value={data.division}
+            onValueChange={(value) => onInputChange('division', value)}
+          >
+            <SelectTrigger className="h-11 bg-background" style={{ height: '2.75rem' }}>
+              <SelectValue placeholder="Select division" />
+            </SelectTrigger>
+            <SelectContent>
+              {DIVISIONS.map(division => (
+                <SelectItem key={division} value={division}>{division}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-3">
+          <Label htmlFor="conference" className="text-base font-medium">Conference</Label>
+          <Input
+            id="conference"
+            placeholder="e.g., Big 12, SEC"
+            value={data.conference}
+            onChange={(e) => validateAndUpdateField('conference', e.target.value)}
+            className={`h-11 bg-background ${validationErrors.conference ? 'border-red-500' : ''}`}
+            maxLength={FIELD_LIMITS.CONFERENCE}
+          />
+          {validationErrors.conference && (
+            <p className="text-sm text-red-500">{validationErrors.conference}</p>
+          )}
+          <p className="text-xs text-muted-foreground">{data.conference.length}/{FIELD_LIMITS.CONFERENCE} characters</p>
+        </div>
+      </div>
+
+      {/* Location */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="space-y-3">
+          <Label htmlFor="city" className="text-base font-medium">City *</Label>
+          <Input
+            id="city"
+            placeholder="e.g., Austin"
+            value={data.city}
+            onChange={(e) => validateAndUpdateField('city', e.target.value)}
+            className={`h-11 bg-background ${validationErrors.city ? 'border-red-500' : ''}`}
+            maxLength={FIELD_LIMITS.CITY}
+          />
+          {validationErrors.city && (
+            <p className="text-sm text-red-500">{validationErrors.city}</p>
+          )}
+          <p className="text-xs text-muted-foreground">{data.city.length}/{FIELD_LIMITS.CITY} characters</p>
+        </div>
+        <div className="space-y-3">
+          <Label htmlFor="state" className="text-base font-medium">State *</Label>
+          <Select
+            value={data.state}
+            onValueChange={(value) => onInputChange('state', value)}
+          >
+            <SelectTrigger className="h-11 bg-background" style={{ height: '2.75rem' }}>
+              <SelectValue placeholder="Select state" />
+            </SelectTrigger>
+            <SelectContent>
+              {US_STATES.map(state => (
+                <SelectItem key={state} value={state}>{state}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      {/* Online Presence */}
+      <div className="space-y-6">
+        <div className="space-y-2">
+          <Label className="text-base font-medium">Online Presence *</Label>
+          <p className="text-sm text-muted-foreground">
+            Provide at least one of the following to help athletes learn more about your program.
+          </p>
+        </div>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="space-y-3">
+            <Label htmlFor="programWebsite" className="text-sm font-medium">Program Website</Label>
+            <Input
+              id="programWebsite"
+              placeholder="athletics.university.edu/football"
+              value={data.programWebsite}
+              onChange={(e) => validateAndUpdateField('programWebsite', e.target.value)}
+              className={`h-11 bg-background ${validationErrors.programWebsite ? 'border-red-500' : ''}`}
+              onBlur={(e) => handleURLBlur('programWebsite', e.target.value)}
+            />
+            {validationErrors.programWebsite && (
+              <p className="text-sm text-red-500">{validationErrors.programWebsite}</p>
+            )}
+          </div>
+          <div className="space-y-3">
+            <Label htmlFor="schoolWebsite" className="text-sm font-medium">School Website</Label>
+            <Input
+              id="schoolWebsite"
+              placeholder="www.university.edu"
+              value={data.schoolWebsite}
+              onChange={(e) => validateAndUpdateField('schoolWebsite', e.target.value)}
+              className={`h-11 bg-background ${validationErrors.schoolWebsite ? 'border-red-500' : ''}`}
+              onBlur={(e) => handleURLBlur('schoolWebsite', e.target.value)}
+            />
+            {validationErrors.schoolWebsite && (
+              <p className="text-sm text-red-500">{validationErrors.schoolWebsite}</p>
+            )}
+          </div>
+          <div className="space-y-3">
+            <Label htmlFor="orgInstagramHandle" className="text-sm font-medium">Program Instagram</Label>
+            <Input
+              id="orgInstagramHandle"
+              placeholder="@universityfootball"
+              value={data.orgInstagramHandle}
+              onChange={(e) => validateAndUpdateField('orgInstagramHandle', e.target.value)}
+              className={`h-11 bg-background ${validationErrors.orgInstagramHandle ? 'border-red-500' : ''}`}
+            />
+            {validationErrors.orgInstagramHandle && (
+              <p className="text-sm text-red-500">{validationErrors.orgInstagramHandle}</p>
+            )}
+          </div>
+          <div className="space-y-3">
+            <Label htmlFor="orgTwitterHandle" className="text-sm font-medium">Program Twitter</Label>
+            <Input
+              id="orgTwitterHandle"
+              placeholder="@UniversityFB"
+              value={data.orgTwitterHandle}
+              onChange={(e) => validateAndUpdateField('orgTwitterHandle', e.target.value)}
+              className={`h-11 bg-background ${validationErrors.orgTwitterHandle ? 'border-red-500' : ''}`}
+            />
+            {validationErrors.orgTwitterHandle && (
+              <p className="text-sm text-red-500">{validationErrors.orgTwitterHandle}</p>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* About Section */}
+      <div className="space-y-3">
+        <Label htmlFor="personalStatement" className="text-base font-medium">About Yourself *</Label>
+        <Textarea
+          id="personalStatement"
+          placeholder="Tell athletes about yourself, your coaching experience, and what makes your program special. This will be displayed on your profile to help athletes understand your background and coaching philosophy."
+          value={data.personalStatement}
+          onChange={(e) => validateAndUpdateField('personalStatement', e.target.value)}
+          className={`min-h-32 bg-background resize-none ${validationErrors.personalStatement ? 'border-red-500' : ''}`}
+          maxLength={FIELD_LIMITS.PERSONAL_STATEMENT}
+        />
+        {validationErrors.personalStatement && (
+          <p className="text-sm text-red-500">{validationErrors.personalStatement}</p>
+        )}
+        <p className="text-xs text-muted-foreground">{data.personalStatement.length}/{FIELD_LIMITS.PERSONAL_STATEMENT} characters</p>
+      </div>
+
+      {/* Sport-Specific Recruiting Needs */}
+      {data.division !== 'High School' && allSelectedSports.length > 0 && (
+        <div className="space-y-6">
+          <div className="space-y-3">
+            <Label className="text-base font-medium">Sport-Specific Recruiting Needs *</Label>
+            <p className="text-sm text-muted-foreground">
+              Set specific recruiting criteria for each sport you coach. This helps athletes understand what you&apos;re looking for in each sport.
+            </p>
+            
+            {/* Sport Tabs */}
+            <div className="flex flex-wrap gap-2">
+              {allSelectedSports.map(sport => (
+                <Button
+                  key={sport}
+                  type="button"
+                  variant={activeSportForNeeds === sport ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setActiveSportForNeeds(sport)}
+                >
+                  {sport}
+                </Button>
+              ))}
+            </div>
+          </div>
+
+          {activeSportForNeeds && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">Recruiting Needs for {activeSportForNeeds}</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                {/* Graduation Years */}
+                <div className="space-y-3">
+                  <Label className="text-base font-medium">Graduation Years Currently Recruiting *</Label>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    {GRADUATION_YEARS.map(year => (
+                      <div key={year} className="flex items-center space-x-2">
+                        <Checkbox
+                          id={`${activeSportForNeeds}-year-${year}`}
+                          checked={data.sportSpecificNeeds[activeSportForNeeds]?.graduationYears?.includes(year) || false}
+                          onCheckedChange={() => toggleNeedsYear(activeSportForNeeds, year)}
+                        />
+                        <Label htmlFor={`${activeSportForNeeds}-year-${year}`} className="text-sm cursor-pointer">
+                          {year}
+                        </Label>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Positions */}
+                <div className="space-y-3">
+                  <Label className="text-base font-medium">Positions Currently Recruiting *</Label>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {getPositionsForSport(activeSportForNeeds).map(position => (
+                      <div key={position} className="flex items-center space-x-2">
+                        <Checkbox
+                          id={`${activeSportForNeeds}-position-${position}`}
+                          checked={data.sportSpecificNeeds[activeSportForNeeds]?.positions?.includes(position) || false}
+                          onCheckedChange={() => toggleNeedsPosition(activeSportForNeeds, position)}
+                        />
+                        <Label htmlFor={`${activeSportForNeeds}-position-${position}`} className="text-sm cursor-pointer">
+                          {position}
+                        </Label>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Scholarships Available */}
+                <div className="space-y-3">
+                  <Label htmlFor={`${activeSportForNeeds}-scholarships`} className="text-base font-medium">Scholarships Available (Optional)</Label>
+                  <Input
+                    id={`${activeSportForNeeds}-scholarships`}
+                    type="number"
+                    min="0"
+                    max="100"
+                    placeholder="e.g., 5"
+                    value={data.sportSpecificNeeds[activeSportForNeeds]?.scholarshipsAvailable || ''}
+                    onChange={(e) => updateSportSpecificNeeds(activeSportForNeeds, 'scholarshipsAvailable', e.target.value ? parseInt(e.target.value) : null)}
+                    className="h-11 bg-background"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Number of scholarships or spots available for this sport (leave blank if not applicable)
+                  </p>
+                </div>
+
+                {/* Sport-Specific Recruiting Philosophy */}
+                <div className="space-y-3">
+                  <Label htmlFor={`${activeSportForNeeds}-philosophy`} className="text-base font-medium">Recruiting Philosophy for {activeSportForNeeds} *</Label>
+                  <Textarea
+                    id={`${activeSportForNeeds}-philosophy`}
+                    placeholder={`Describe what you look for in ${activeSportForNeeds} athletes, your coaching style for this sport, and what makes your ${activeSportForNeeds} program unique.`}
+                    value={data.sportSpecificNeeds[activeSportForNeeds]?.recruitingPhilosophy || ''}
+                    onChange={(e) => updateSportSpecificNeeds(activeSportForNeeds, 'recruitingPhilosophy', e.target.value)}
+                    className="min-h-24 bg-background resize-none"
+                    maxLength={FIELD_LIMITS.RECRUITING_PHILOSOPHY}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    {(data.sportSpecificNeeds[activeSportForNeeds]?.recruitingPhilosophy?.length || 0)}/{FIELD_LIMITS.RECRUITING_PHILOSOPHY} characters
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+      )}
+    </>
+  );
+} 

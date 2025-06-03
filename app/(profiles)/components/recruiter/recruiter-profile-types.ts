@@ -6,6 +6,7 @@ export interface RecruiterProfileData {
   profileImage?: string;
   title: string;
   sportRecruiting: string;
+  secondarySports?: string[];
   organizationName: string;
   organizationLogo?: string;
   organizationLogoR3Key?: string;
@@ -35,13 +36,13 @@ export interface RecruiterProfileData {
   showcaseVideoUrl?: string;
   showcaseVideoEmbedUrl?: string;
 
-  // Recruiting Information
-  recruitingNeeds?: {
+  // Sport-specific recruiting information (matches database structure)
+  sportSpecificNeeds?: { [sport: string]: {
     graduationYears: number[];
     positions: string[];
     scholarshipsAvailable?: number;
     recruitingPhilosophy?: string;
-  };
+  } };
 }
 
 export interface RecruiterProfileProps {

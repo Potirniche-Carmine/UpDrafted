@@ -39,13 +39,58 @@ export const NUMERIC_LIMITS = {
 const URL_PATTERNS = {
   MAXPREPS: /^https?:\/\/(www\.)?maxpreps\.com\/.+/i,
   HUDL: /^https?:\/\/(www\.)?hudl\.com\/.+/i,
-  GENERAL_URL: /^https?:\/\/.+\..+/i
+  GENERAL_URL: /^https?:\/\/.+\..+/i,
+  DOMAIN_ONLY: /^[a-zA-Z0-9][a-zA-Z0-9-]*[a-zA-Z0-9]*\.([a-zA-Z]{2,}|[a-zA-Z]{2,}\.[a-zA-Z]{2,})([\/].*)?$/
 };
 
 // Social media handle patterns (allowing @ prefix or not)
 const SOCIAL_PATTERNS = {
   INSTAGRAM: /^@?[a-zA-Z0-9_.]{1,30}$/,
   TWITTER: /^@?[a-zA-Z0-9_]{1,15}$/
+};
+
+// URL processing functions
+export const URLUtils = {
+  // Convert domain-only input to proper URL
+  processURL(input: string): string {
+    if (!input.trim()) return input;
+    
+    const trimmed = input.trim();
+    
+    // If already has protocol, return as-is
+    if (trimmed.match(/^https?:\/\//i)) {
+      return trimmed;
+    }
+    
+    // If it looks like a domain, add https://
+    if (URL_PATTERNS.DOMAIN_ONLY.test(trimmed)) {
+      return `https://${trimmed}`;
+    }
+    
+    // Return as-is if it doesn't look like a domain
+    return trimmed;
+  },
+
+  // Clean URL input for display (remove protocol for simpler display)
+  cleanForDisplay(url: string): string {
+    if (!url) return url;
+    return url.replace(/^https?:\/\//i, '');
+  },
+
+  // Validate URL format (accepts both with and without protocol)
+  isValidURL(input: string): boolean {
+    if (!input.trim()) return true;
+    
+    const trimmed = input.trim();
+    
+    // Check if it already has protocol
+    if (trimmed.match(/^https?:\/\//i)) {
+      return URL_PATTERNS.GENERAL_URL.test(trimmed);
+    }
+    
+    // Check if it's a valid domain
+    return URL_PATTERNS.DOMAIN_ONLY.test(trimmed);
+  }
 };
 
 export class FormValidator {
@@ -207,25 +252,31 @@ export class FormValidator {
     if (value.length > FIELD_LIMITS.URL) {
       return { isValid: false, error: `URL must be ${FIELD_LIMITS.URL} characters or less` };
     }
+
+    // Process URL to add https:// if needed
+    const processedURL = URLUtils.processURL(value);
     
     let pattern;
-    let errorMessage = 'Please enter a valid URL';
+    let errorMessage = 'Please enter a valid URL or domain (e.g., example.com or https://example.com)';
     
     switch (type) {
       case 'maxpreps':
         pattern = URL_PATTERNS.MAXPREPS;
-        errorMessage = 'Please enter a valid MaxPreps URL (e.g., https://www.maxpreps.com/athlete/...)';
+        errorMessage = 'Please enter a valid MaxPreps URL (e.g., maxpreps.com/athlete/... or https://www.maxpreps.com/athlete/...)';
         break;
       case 'hudl':
         pattern = URL_PATTERNS.HUDL;
-        errorMessage = 'Please enter a valid Hudl URL (e.g., https://www.hudl.com/profile/...)';
+        errorMessage = 'Please enter a valid Hudl URL (e.g., hudl.com/profile/... or https://www.hudl.com/profile/...)';
         break;
       default:
-        pattern = URL_PATTERNS.GENERAL_URL;
-        break;
+        // For general URLs, use the utility function
+        if (!URLUtils.isValidURL(value)) {
+          return { isValid: false, error: errorMessage };
+        }
+        return { isValid: true };
     }
     
-    if (!pattern.test(value)) {
+    if (!pattern.test(processedURL)) {
       return { isValid: false, error: errorMessage };
     }
     
@@ -386,9 +437,55 @@ export class FormValidator {
     const personalResult = this.validateText(data.personalStatement, 'About yourself', FIELD_LIMITS.PERSONAL_STATEMENT, true);
     if (!personalResult.isValid) errors.personalStatement = personalResult.error!;
 
-    // Recruiting philosophy validation (required for both coaches and recruiters)
-    const philosophyResult = this.validateText(data.recruitingPhilosophy, 'Recruiting philosophy', FIELD_LIMITS.RECRUITING_PHILOSOPHY, true);
-    if (!philosophyResult.isValid) errors.recruitingPhilosophy = philosophyResult.error!;
+    // Determine if this is a recruiter (has secondary sports or sport-specific needs) or coach
+    const isRecruiter = data.secondarySportsRecruiting && data.secondarySportsRecruiting.length > 0 || 
+                       (data.sportSpecificNeeds && Object.keys(data.sportSpecificNeeds).length > 0);
+
+    if (isRecruiter) {
+      // For recruiters, validate sport-specific needs for main sport only during onboarding
+      // Secondary sports can be added later on the profile
+      if (data.division !== 'High School') {
+        const mainSport = data.sportCoaching;
+        const mainSportNeeds = data.sportSpecificNeeds?.[mainSport];
+        
+        if (!mainSportNeeds) {
+          errors.sportSpecificNeeds = `Recruiting needs are required for your main sport (${mainSport})`;
+        } else {
+          // Validate main sport recruiting needs
+          if (!mainSportNeeds.graduationYears || mainSportNeeds.graduationYears.length === 0) {
+            errors[`sportSpecificNeeds_${mainSport}_graduationYears`] = `Graduation years for ${mainSport} are required`;
+          }
+          
+          if (!mainSportNeeds.positions || mainSportNeeds.positions.length === 0) {
+            errors[`sportSpecificNeeds_${mainSport}_positions`] = `Positions for ${mainSport} are required`;
+          }
+          
+          if (!mainSportNeeds.recruitingPhilosophy || !mainSportNeeds.recruitingPhilosophy.trim()) {
+            errors[`sportSpecificNeeds_${mainSport}_philosophy`] = `Recruiting philosophy for ${mainSport} is required`;
+          } else {
+            const philosophyResult = this.validateText(mainSportNeeds.recruitingPhilosophy, `${mainSport} recruiting philosophy`, FIELD_LIMITS.RECRUITING_PHILOSOPHY, true);
+            if (!philosophyResult.isValid) {
+              errors[`sportSpecificNeeds_${mainSport}_philosophy`] = philosophyResult.error!;
+            }
+          }
+        }
+      }
+    } else {
+      // For coaches, validate single recruiting philosophy and needs (only required if not high school)
+      if (data.division !== 'High School') {
+        const philosophyResult = this.validateText(data.recruitingPhilosophy, 'Recruiting philosophy', FIELD_LIMITS.RECRUITING_PHILOSOPHY, true);
+        if (!philosophyResult.isValid) errors.recruitingPhilosophy = philosophyResult.error!;
+        
+        // Validate recruiting needs for coaches
+        if (!data.recruitingGraduationYears || data.recruitingGraduationYears.length === 0) {
+          errors.recruitingGraduationYears = 'Graduation years are required';
+        }
+        
+        if (!data.recruitingPositions || data.recruitingPositions.length === 0) {
+          errors.recruitingPositions = 'Positions are required';
+        }
+      }
+    }
 
     return errors;
   }

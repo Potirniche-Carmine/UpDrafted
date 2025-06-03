@@ -96,59 +96,41 @@ export default function CommonFields({
               <Image
                 src={profileImagePreview}
                 alt="Profile preview"
-                fill
-                className="rounded-lg object-cover"
+                width={128}
+                height={128}
+                className="rounded-lg object-cover border border-border/50"
               />
               <Button
                 type="button"
                 variant="destructive"
                 size="sm"
+                className="absolute -top-2 -right-2 w-6 h-6 p-0 rounded-full"
                 onClick={removeImage}
-                className="absolute -top-2 -right-2 w-6 h-6 rounded-full p-0"
               >
-                <X className="w-4 h-4" />
+                <X className="w-3 h-3" />
               </Button>
             </div>
           ) : (
-            <div className="border-2 border-dashed border-gray-300 rounded-lg p-6">
-              <div className="text-center">
-                <Upload className="mx-auto h-12 w-12 text-gray-400" />
-                <div className="mt-4">
-                  <label htmlFor="profileImage" className="cursor-pointer">
-                    <span className="mt-2 block text-sm font-medium text-gray-900">
-                      Upload a profile picture
-                    </span>
-                    <span className="mt-1 block text-xs text-gray-500">
-                      Optional - A default image will be selected if none provided
-                    </span>
-                  </label>
-                  <input
-                    id="profileImage"
-                    type="file"
-                    accept="image/jpeg,image/jpg,image/png,image/webp"
-                    onChange={handleFileChange}
-                    className="sr-only"
-                  />
-                </div>
+            <label
+              htmlFor="profileImage"
+              className="border-2 border-dashed border-border rounded-lg p-8 text-center cursor-pointer hover:border-border/80 transition-colors block"
+            >
+              <Upload className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+              <div className="space-y-2">
+                <p className="text-sm font-medium">Click to upload profile picture</p>
+                <p className="text-xs text-muted-foreground">PNG, JPG, or WebP (max 5MB)</p>
+                <p className="text-xs text-muted-foreground">Optional - A default image will be selected if none provided</p>
               </div>
-            </div>
-          )}
-          {!profileImagePreview && (
-            <div>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => document.getElementById('profileImage')?.click()}
-                className="w-full"
-              >
-                Choose Photo
-              </Button>
-            </div>
+              <Input
+                id="profileImage"
+                type="file"
+                accept="image/jpeg,image/jpg,image/png,image/webp"
+                onChange={handleFileChange}
+                className="sr-only"
+              />
+            </label>
           )}
         </div>
-        <p className="text-xs text-muted-foreground">
-          Accepted formats: JPEG, PNG, WebP. Max size: 5MB.
-        </p>
       </div>
     </>
   );

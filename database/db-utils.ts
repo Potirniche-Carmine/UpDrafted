@@ -313,13 +313,36 @@ export const coachOperations = {
 export const recruitingOperations = {
   // Get recruiting profile with all related data
   async getRecruitingProfile(userId: string) {
-    return await db.query.recruitingProfiles.findFirst({
+    const profile = await db.query.recruitingProfiles.findFirst({
       where: eq(recruitingProfiles.userId, userId),
       with: {
         user: true,
-        recruitingNeeds: true,
       }
     });
+
+    if (!profile) return null;
+
+    // Get all recruiting needs for this profile
+    const recruitingNeeds = await db.query.recruitingProfileNeeds.findMany({
+      where: eq(recruitingProfileNeeds.recruitingProfileId, profile.id)
+    });
+
+    // Transform recruiting needs into sportSpecificNeeds object
+    const sportSpecificNeeds: { [sport: string]: { graduationYears: number[]; positions: string[]; scholarshipsAvailable?: number; recruitingPhilosophy?: string; } } = {};
+    
+    recruitingNeeds.forEach(need => {
+      sportSpecificNeeds[need.sport] = {
+        graduationYears: need.graduationYears,
+        positions: need.positions,
+        scholarshipsAvailable: need.scholarshipsAvailable || undefined,
+        recruitingPhilosophy: need.recruitingPhilosophy || undefined
+      };
+    });
+
+    return {
+      ...profile,
+      sportSpecificNeeds
+    };
   },
 
   // Create recruiting profile
@@ -365,7 +388,6 @@ export const recruitingOperations = {
       where: whereConditions.length > 0 ? and(...whereConditions) : undefined,
       with: {
         user: true,
-        recruitingNeeds: true,
       },
       limit,
       offset,
@@ -405,21 +427,45 @@ export const recruitingNeedsOperations = {
     return needs;
   },
 
-  // Update recruiting profile needs for recruiter
-  async updateRecruitingProfileNeeds(recruitingProfileId: number, needsData: Partial<NewRecruitingProfileNeeds>) {
+  // Update recruiting profile needs for recruiter (single sport)
+  async updateRecruitingProfileNeeds(recruitingProfileId: number, sport: string, needsData: Partial<NewRecruitingProfileNeeds>) {
     const [needs] = await db
       .update(recruitingProfileNeeds)
       .set({ ...needsData, updatedAt: new Date() })
-      .where(eq(recruitingProfileNeeds.recruitingProfileId, recruitingProfileId))
+      .where(and(
+        eq(recruitingProfileNeeds.recruitingProfileId, recruitingProfileId),
+        eq(recruitingProfileNeeds.sport, sport)
+      ))
       .returning();
     return needs;
   },
 
-  // Get recruiting profile needs for recruiter
-  async getRecruitingProfileNeedsByProfileId(recruitingProfileId: number) {
-    return await db.query.recruitingProfileNeeds.findFirst({
+  // Get all recruiting profile needs for recruiter
+  async getAllRecruitingProfileNeeds(recruitingProfileId: number) {
+    return await db.query.recruitingProfileNeeds.findMany({
       where: eq(recruitingProfileNeeds.recruitingProfileId, recruitingProfileId)
     });
+  },
+
+  // Get recruiting profile needs for specific sport
+  async getRecruitingProfileNeedsBySport(recruitingProfileId: number, sport: string) {
+    return await db.query.recruitingProfileNeeds.findFirst({
+      where: and(
+        eq(recruitingProfileNeeds.recruitingProfileId, recruitingProfileId),
+        eq(recruitingProfileNeeds.sport, sport)
+      )
+    });
+  },
+
+  // Delete recruiting profile needs for specific sport
+  async deleteRecruitingProfileNeedsBySport(recruitingProfileId: number, sport: string) {
+    return await db
+      .delete(recruitingProfileNeeds)
+      .where(and(
+        eq(recruitingProfileNeeds.recruitingProfileId, recruitingProfileId),
+        eq(recruitingProfileNeeds.sport, sport)
+      ))
+      .returning();
   }
 };
 
@@ -603,6 +649,7 @@ export const onboardingOperations = {
       fullName: profileData.fullName,
       title: profileData.title!,
       sportRecruiting: profileData.sportCoaching!,
+      secondarySports: profileData.secondarySportsRecruiting || [],
       organizationName: profileData.organizationName!,
       profileImageR3Key,
       organizationLogoR3Key,
@@ -617,16 +664,22 @@ export const onboardingOperations = {
       personalStatement: profileData.personalStatement || undefined
     });
 
-    // Create recruiting profile needs if provided
-    let recruitingProfileNeeds = null;
-    if (profileData.recruitingGraduationYears && profileData.recruitingPositions) {
-      recruitingProfileNeeds = await recruitingNeedsOperations.createRecruitingProfileNeeds({
-        recruitingProfileId: recruiterProfile.id,
-        graduationYears: profileData.recruitingGraduationYears,
-        positions: profileData.recruitingPositions,
-        scholarshipsAvailable: profileData.scholarshipsAvailable || undefined,
-        recruitingPhilosophy: profileData.recruitingPhilosophy || undefined
-      });
+    // Create sport-specific recruiting needs if provided
+    const recruitingProfileNeeds = [];
+    if (profileData.sportSpecificNeeds) {
+      for (const [sport, needs] of Object.entries(profileData.sportSpecificNeeds)) {
+        if (needs.graduationYears && needs.positions) {
+          const profileNeeds = await recruitingNeedsOperations.createRecruitingProfileNeeds({
+            recruitingProfileId: recruiterProfile.id,
+            sport: sport,
+            graduationYears: needs.graduationYears,
+            positions: needs.positions,
+            scholarshipsAvailable: needs.scholarshipsAvailable || undefined,
+            recruitingPhilosophy: needs.recruitingPhilosophy || undefined
+          });
+          recruitingProfileNeeds.push(profileNeeds);
+        }
+      }
     }
 
     return { user, profile: recruiterProfile, recruitingProfileNeeds };

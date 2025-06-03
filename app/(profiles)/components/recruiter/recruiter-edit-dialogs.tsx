@@ -38,6 +38,7 @@ interface RecruiterEditDialogsProps {
   isOpen: boolean;
   dialogType: string | null;
   profileData: RecruiterProfileData;
+  selectedSport?: string;
   onClose: () => void;
   onSave: (updates: Partial<RecruiterProfileData>) => void;
 }
@@ -46,6 +47,7 @@ export function RecruiterEditDialogs({
   isOpen,
   dialogType,
   profileData,
+  selectedSport,
   onClose,
   onSave
 }: RecruiterEditDialogsProps) {
@@ -89,11 +91,14 @@ export function RecruiterEditDialogs({
         });
         break;
       case 'recruiting-needs':
+        const currentSport = selectedSport || profileData.sportRecruiting;
+        const currentNeeds = profileData.sportSpecificNeeds?.[currentSport];
         setEditData({
-          graduationYears: profileData.recruitingNeeds?.graduationYears || [],
-          positions: profileData.recruitingNeeds?.positions || [],
-          scholarshipsAvailable: profileData.recruitingNeeds?.scholarshipsAvailable || '',
-          recruitingPhilosophy: profileData.recruitingNeeds?.recruitingPhilosophy || ''
+          graduationYears: currentNeeds?.graduationYears || [],
+          positions: currentNeeds?.positions || [],
+          scholarshipsAvailable: currentNeeds?.scholarshipsAvailable || '',
+          recruitingPhilosophy: currentNeeds?.recruitingPhilosophy || '',
+          sport: currentSport
         });
         break;
       case 'social-media':
@@ -127,7 +132,7 @@ export function RecruiterEditDialogs({
         setSelectedOrganizationFile(null);
         break;
     }
-  }, [dialogType, profileData]);
+  }, [dialogType, profileData, selectedSport]);
 
   const validateField = (field: string, value: string | number): string | null => {
     // Required field validation
@@ -383,13 +388,16 @@ export function RecruiterEditDialogs({
         };
         break;
       case 'recruiting-needs':
+        const currentSportToUpdate = selectedSport || profileData.sportRecruiting;
         updates = {
-          recruitingNeeds: {
-            ...profileData.recruitingNeeds,
-            graduationYears: editData.graduationYears,
-            positions: editData.positions,
-            scholarshipsAvailable: editData.scholarshipsAvailable ? Number(editData.scholarshipsAvailable) : undefined,
-            recruitingPhilosophy: editData.recruitingPhilosophy
+          sportSpecificNeeds: {
+            ...profileData.sportSpecificNeeds,
+            [currentSportToUpdate]: {
+              graduationYears: editData.graduationYears,
+              positions: editData.positions,
+              scholarshipsAvailable: editData.scholarshipsAvailable === '' ? undefined : Number(editData.scholarshipsAvailable),
+              recruitingPhilosophy: editData.recruitingPhilosophy
+            }
           }
         };
         break;
@@ -591,7 +599,8 @@ export function RecruiterEditDialogs({
         );
 
       case 'recruiting-needs':
-        const availablePositions = getPositionsForSport(editData.sportRecruiting || profileData.sportRecruiting);
+        const currentSport = selectedSport || profileData.sportRecruiting;
+        const availablePositions = getPositionsForSport(currentSport);
         
         return (
           <div className="space-y-6">
@@ -953,15 +962,25 @@ export function RecruiterEditDialogs({
 
   const getDialogTitle = () => {
     switch (dialogType) {
-      case 'basic-info': return 'Edit Basic Information';
-      case 'personal-statement': return 'Edit About Recruiter';
-      case 'recruiting-needs': return 'Edit Recruiting Needs';
-      case 'social-media': return 'Edit Social Media';
-      case 'program-links': return 'Edit Program Links';
-      case 'showcase-video': return 'Edit Showcase Video';
-      case 'profile-image': return 'Change Profile Picture';
-      case 'organization-logo': return 'Change Organization Logo';
-      default: return 'Edit Profile';
+      case 'basic-info':
+        return 'Edit Basic Information';
+      case 'personal-statement':
+        return 'Edit Personal Statement';
+      case 'recruiting-needs':
+        const sportName = selectedSport || profileData.sportRecruiting;
+        return `Edit ${sportName} Recruiting Needs`;
+      case 'social-media':
+        return 'Edit Social Media';
+      case 'program-links':
+        return 'Edit Program Links';
+      case 'showcase-video':
+        return 'Edit Showcase Video';
+      case 'profile-image':
+        return 'Edit Profile Picture';
+      case 'organization-logo':
+        return 'Edit Organization Logo';
+      default:
+        return 'Edit Profile';
     }
   };
 

@@ -35,6 +35,7 @@ export interface OnboardingFormData {
   // Coach/Recruiter fields
   title: string;
   sportCoaching: string;
+  secondarySportsRecruiting: string[];
   organizationLogo?: File | string;
   organizationLogoPreview?: string;
   division: string;
@@ -45,10 +46,14 @@ export interface OnboardingFormData {
   orgTwitterHandle: string;
   recruitingPhilosophy: string;
   
-  // Recruiting needs
+  // Recruiting needs (now sport-specific for recruiters)
   recruitingGraduationYears: number[];
   recruitingPositions: string[];
   scholarshipsAvailable: number | null;
+  
+  // Sport-specific recruiting needs for recruiters
+  sportSpecificNeeds: { [sport: string]: { graduationYears: number[]; positions: string[]; scholarshipsAvailable: number | null; recruitingPhilosophy: string; } };
+  
   whatLookingFor: string;
   
   // Terms agreement
@@ -85,6 +90,7 @@ export interface OnboardingProfileData {
   // Coach/Recruiter specific
   title?: string;
   sportCoaching?: string;
+  secondarySportsRecruiting?: string[];
   division?: string;
   conference?: string;
   programWebsite?: string;
@@ -93,10 +99,14 @@ export interface OnboardingProfileData {
   orgTwitterHandle?: string;
   recruitingPhilosophy?: string;
   
-  // Recruiting needs
+  // Recruiting needs (for coaches - single sport)
   recruitingGraduationYears?: number[];
   recruitingPositions?: string[];
   scholarshipsAvailable?: number | null;
+  
+  // Sport-specific recruiting needs (for recruiters - multi-sport)
+  sportSpecificNeeds?: { [sport: string]: { graduationYears: number[]; positions: string[]; scholarshipsAvailable: number | null; recruitingPhilosophy: string; } };
+  
   whatLookingFor?: string;
 }
 
@@ -128,6 +138,7 @@ export function convertFormDataToProfileData(formData: OnboardingFormData): Onbo
     personalStatement: formData.personalStatement.trim(),
     title: formData.title.trim(),
     sportCoaching: formData.sportCoaching,
+    secondarySportsRecruiting: formData.secondarySportsRecruiting,
     division: formData.division,
     conference: formData.conference.trim(),
     programWebsite: formData.programWebsite.trim(),
@@ -138,6 +149,7 @@ export function convertFormDataToProfileData(formData: OnboardingFormData): Onbo
     recruitingGraduationYears: formData.recruitingGraduationYears,
     recruitingPositions: formData.recruitingPositions,
     scholarshipsAvailable: formData.scholarshipsAvailable || undefined,
+    sportSpecificNeeds: formData.sportSpecificNeeds,
     whatLookingFor: formData.whatLookingFor.trim(),
   };
 } 

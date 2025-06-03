@@ -23,7 +23,7 @@ export default function RoleSelection({ onRoleSelect }: RoleSelectionProps) {
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {/* Athlete Card */}
-          <Card 
+          <Card
             className="cursor-pointer hover:shadow-lg transition-all border-2 hover:border-blue-500"
             onClick={() => onRoleSelect("athlete")}
           >
@@ -46,7 +46,7 @@ export default function RoleSelection({ onRoleSelect }: RoleSelectionProps) {
           </Card>
 
           {/* Coach Card */}
-          <Card 
+          <Card
             className="cursor-pointer hover:shadow-lg transition-all border-2 hover:border-green-500"
             onClick={() => onRoleSelect("coach")}
           >
@@ -58,7 +58,7 @@ export default function RoleSelection({ onRoleSelect }: RoleSelectionProps) {
             </CardHeader>
             <CardContent>
               <p className="text-center text-muted-foreground mb-4">
-                I&apos;m a coach looking to recruit talented student-athletes for my program.
+                I&apos;m a coach looking to connect with other coaches and discover athletes.
               </p>
               <div className="space-y-2">
                 <Badge variant="outline" className="w-full justify-center">Program Showcase</Badge>
@@ -69,7 +69,7 @@ export default function RoleSelection({ onRoleSelect }: RoleSelectionProps) {
           </Card>
 
           {/* Recruiter Card */}
-          <Card 
+          <Card
             className="cursor-pointer hover:shadow-lg transition-all border-2 hover:border-orange-500"
             onClick={() => onRoleSelect("recruiter")}
           >
@@ -81,12 +81,12 @@ export default function RoleSelection({ onRoleSelect }: RoleSelectionProps) {
             </CardHeader>
             <CardContent>
               <p className="text-center text-muted-foreground mb-4">
-                I&apos;m a recruiting coordinator looking to find the best athletes for my program.
+                I&apos;m a recruiting specialist helping connect athletes with college opportunities.
               </p>
               <div className="space-y-2">
-                <Badge variant="outline" className="w-full justify-center">Profile Showcase</Badge>
+                <Badge variant="outline" className="w-full justify-center">Multi-Sport Recruiting</Badge>
                 <Badge variant="outline" className="w-full justify-center">Athlete Discovery</Badge>
-                <Badge variant="outline" className="w-full justify-center">Recruitment Tools</Badge>
+                <Badge variant="outline" className="w-full justify-center">Profile Showcase</Badge>
               </div>
             </CardContent>
           </Card>

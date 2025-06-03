@@ -726,25 +726,45 @@ export async function PUT(
       // Update the recruiting profile in the database
       updatedProfile = await recruitingOperations.updateRecruitingProfile(profileUserId, profileUpdateData);
       
-      // Handle recruiting needs updates if provided
-      if (sanitizedData.recruitingNeeds !== undefined && updatedProfile?.id) {
-        const recruitingNeeds = sanitizedData.recruitingNeeds as {
-          graduationYears?: number[];
-          positions?: string[];
+      // Handle sport-specific recruiting needs updates if provided
+      if (sanitizedData.sportSpecificNeeds !== undefined && updatedProfile?.id) {
+        const sportSpecificNeeds = sanitizedData.sportSpecificNeeds as { [sport: string]: {
+          graduationYears: number[];
+          positions: string[];
           scholarshipsAvailable?: number;
           recruitingPhilosophy?: string;
-        };
+        } };
         
-        const recruitingNeedsData = {
-          graduationYears: recruitingNeeds.graduationYears || [],
-          positions: recruitingNeeds.positions || [],
-          scholarshipsAvailable: recruitingNeeds.scholarshipsAvailable || null,
-          recruitingPhilosophy: recruitingNeeds.recruitingPhilosophy || null
-        };
+        // Get existing recruiting needs for this profile
+        const existingNeeds = await recruitingNeedsOperations.getAllRecruitingProfileNeeds(updatedProfile.id);
+        const existingSports = new Set(existingNeeds.map(need => need.sport));
+        const newSports = new Set(Object.keys(sportSpecificNeeds));
         
-        // Use recruitingProfileNeeds instead of recruitingNeeds for recruiting profiles
-        if (recruitingNeedsOperations.updateRecruitingProfileNeeds) {
-          await recruitingNeedsOperations.updateRecruitingProfileNeeds(updatedProfile.id, recruitingNeedsData);
+        // Delete recruiting needs for sports that are no longer included
+        for (const sport of existingSports) {
+          if (!newSports.has(sport)) {
+            await recruitingNeedsOperations.deleteRecruitingProfileNeedsBySport(updatedProfile.id, sport);
+          }
+        }
+        
+        // Create or update recruiting needs for each sport
+        for (const [sport, needs] of Object.entries(sportSpecificNeeds)) {
+          const needsData = {
+            recruitingProfileId: updatedProfile.id,
+            sport: sport,
+            graduationYears: needs.graduationYears || [],
+            positions: needs.positions || [],
+            scholarshipsAvailable: needs.scholarshipsAvailable || null,
+            recruitingPhilosophy: needs.recruitingPhilosophy || null
+          };
+          
+          if (existingSports.has(sport)) {
+            // Update existing recruiting needs
+            await recruitingNeedsOperations.updateRecruitingProfileNeeds(updatedProfile.id, sport, needsData);
+          } else {
+            // Create new recruiting needs
+            await recruitingNeedsOperations.createRecruitingProfileNeeds(needsData);
+          }
         }
       }
       
