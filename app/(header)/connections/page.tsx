@@ -2,7 +2,7 @@
 
 import React, { useState, useMemo, useEffect, Suspense, useRef } from 'react';
 import { Users, Search, MessageSquare, Shield, CheckCircle, X, Clock, MoreHorizontal, MapPin, User, UserCheck, Users2, Send } from 'lucide-react';
-import { Card, CardContent} from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -210,16 +210,16 @@ const UserCard: React.FC<UserCardProps> = ({ connection, onRemove, isRemoving = 
                 <MoreHorizontal size={14} />
               </Button>
               {showMenu && (
-                <div className="absolute right-0 mt-2 w-40 bg-card rounded-lg shadow-lg border border-border py-1 z-10">
+                <div className="absolute right-0 top-full mt-1 w-32 bg-card rounded-lg shadow-lg border border-border py-1 z-10">
                   <Button
                     variant="ghost"
                     size="sm"
                     onClick={handleRemove}
                     disabled={isRemoving}
-                    className="w-full justify-start text-destructive hover:text-destructive hover:bg-destructive/10 px-3 py-2 h-auto text-xs"
+                    className="w-full justify-start text-destructive hover:text-destructive hover:bg-destructive/10 px-2 py-2 h-auto text-xs"
                   >
-                    <X size={14} className="mr-2" />
-                    {isRemoving ? 'Removing...' : 'Remove Connection'}
+                    <X size={12} className="mr-1" />
+                    {isRemoving ? 'Removing...' : 'Remove'}
                   </Button>
                 </div>
               )}
@@ -230,8 +230,8 @@ const UserCard: React.FC<UserCardProps> = ({ connection, onRemove, isRemoving = 
             <div className="text-xs text-muted-foreground">
               <span className="text-foreground">Connected</span> • {new Date(connection.createdAt).toLocaleDateString()}
             </div>
-            <Button 
-              className="w-full h-8 bg-[#01ae79] hover:bg-[#01ae79]/90 text-white text-xs" 
+            <Button
+              className="w-full h-8 bg-[#01ae79] hover:bg-[#01ae79]/90 text-white text-xs"
               size="sm"
               onClick={handleSendMessageClick}
             >
@@ -250,130 +250,151 @@ const PendingRequestCard: React.FC<PendingRequestCardProps> = ({ request, onAcce
   const sanitizedNotes = request.notes ? sanitizeText(request.notes) : null;
 
   return (
-    <div className="flex items-start gap-3 p-4 rounded-lg border border-border/50 bg-card hover:bg-muted/30 transition-colors">
-      <Link href={`/profile/${otherUser.userId}`} className="flex-shrink-0 cursor-pointer">
-        <div className="relative">
-          <Avatar className="h-12 w-12 ring-2 ring-amber-100 dark:ring-amber-900 hover:ring-amber-200 dark:hover:ring-amber-800 transition-colors">
-            <AvatarImage src={otherUser.profileImage || undefined} alt={otherUser.fullName} />
-            <AvatarFallback className="text-sm font-medium">
-              {otherUser.fullName.split(' ').map(n => n[0]).join('')}
-            </AvatarFallback>
-          </Avatar>
-          {/* Verification indicator */}
-          {otherUser.isVerified && (
-            <div className="absolute -top-1 -right-1 w-4 h-4 bg-green-500 rounded-full flex items-center justify-center">
-              <Shield className="w-2.5 h-2.5 text-white" />
-            </div>
-          )}
-        </div>
-      </Link>
-      <div className="flex-grow min-w-0">
-        <Link href={`/profile/${otherUser.userId}`} className="cursor-pointer block hover:opacity-80 transition-opacity">
-          <div className="flex items-start justify-between gap-2 mb-2">
-            <div className="min-w-0 flex-1">
-              <h4 className="font-medium text-foreground leading-tight truncate">{otherUser.fullName}</h4>
-              <div className="flex items-center gap-2 mt-1">
-                {getRoleBadge(otherUser.role, otherUser.division, otherUser.educationLevel)}
+    <Link href={`/profile/${otherUser.userId}`} className="block h-full">
+      <Card className="group transition-all duration-300 hover:shadow-md hover:shadow-amber-500/5 border-border/50 hover:border-amber-500/20 dark:hover:border-amber-500/30 h-full cursor-pointer">
+        <CardContent className="p-3 flex flex-col h-full">
+          <div className="flex items-start space-x-3 mb-3">
+            <div className="flex-shrink-0">
+              <div className="relative">
+                <Avatar className="w-12 h-12 ring-2 ring-amber-100 dark:ring-amber-900 group-hover:ring-amber-200 dark:group-hover:ring-amber-800 transition-colors">
+                  <AvatarImage src={otherUser.profileImage || undefined} alt={otherUser.fullName} />
+                  <AvatarFallback className="text-xs font-medium">
+                    {otherUser.fullName.split(' ').map(n => n[0]).join('')}
+                  </AvatarFallback>
+                </Avatar>
+                {/* Verification indicator */}
+                {otherUser.isVerified && (
+                  <div className="absolute -top-1 -right-1 w-4 h-4 bg-green-500 rounded-full flex items-center justify-center">
+                    <Shield className="w-2.5 h-2.5 text-white" />
+                  </div>
+                )}
               </div>
             </div>
-            <span className="text-xs text-muted-foreground whitespace-nowrap">
-              {new Date(request.createdAt).toLocaleDateString()}
-            </span>
-          </div>
-        </Link>
-        <div className="space-y-2">
-          <div className="text-sm text-muted-foreground">
-            <p className="truncate">{otherUser.organizationName}</p>
-            <div className="flex items-center gap-1 text-xs">
-              <MapPin className="w-3 h-3" />
-              <span>{otherUser.city}, {otherUser.state}</span>
+            <div className="flex-1 min-w-0">
+              <h3 className="text-sm font-semibold text-foreground leading-tight mb-1 truncate">{otherUser.fullName}</h3>
+              <div className="space-y-1">
+                {getRoleBadge(otherUser.role, otherUser.division, otherUser.educationLevel)}
+                <p className="text-xs text-amber-600 font-medium truncate">
+                  {otherUser.role === 'athlete' ? otherUser.sport : otherUser.title}
+                </p>
+                <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                  <MapPin className="w-3 h-3" />
+                  <span className="truncate">{otherUser.city}, {otherUser.state}</span>
+                </div>
+                <p className="text-xs text-muted-foreground truncate">{otherUser.organizationName}</p>
+              </div>
+            </div>
+            <div className="flex-shrink-0">
+              <span className="text-xs text-muted-foreground">
+                {new Date(request.createdAt).toLocaleDateString()}
+              </span>
             </div>
           </div>
-          
+
           {sanitizedNotes && (
-            <div className="bg-muted/50 rounded p-2">
+            <div className="bg-muted/50 rounded p-2 mb-3 flex-shrink-0">
               <p className="text-xs text-muted-foreground mb-1">Message:</p>
-              <p className="text-sm text-foreground break-words">{sanitizedNotes}</p>
+              <p className="text-xs text-foreground break-words line-clamp-2">{sanitizedNotes}</p>
             </div>
           )}
-          
-          <div className="flex gap-2">
-            <Button 
-              size="sm" 
-              className="bg-[#01ae79] hover:bg-[#01ae79]/90 text-white flex-1 h-8 text-xs"
-              onClick={() => onAccept(request.id)}
-            >
-              <CheckCircle size={14} className="mr-1" />
-              Accept
-            </Button>
-            <Button 
-              variant="outline" 
-              size="sm" 
-              className="flex-1 h-8 text-xs"
-              onClick={() => onDecline(request.id)}
-            >
-              <X size={14} className="mr-1" />
-              Decline
-            </Button>
+
+          <div className="flex-1 flex flex-col justify-end space-y-2">
+            <div className="text-xs text-muted-foreground">
+              <span className="text-amber-600">Pending Request</span> • {new Date(request.createdAt).toLocaleDateString()}
+            </div>
+            <div className="flex gap-2">
+              <Button
+                size="sm"
+                className="bg-[#01ae79] hover:bg-[#01ae79]/90 text-white flex-1 h-8 text-xs"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  onAccept(request.id);
+                }}
+              >
+                <CheckCircle size={14} className="mr-1" />
+                Accept
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="flex-1 h-8 text-xs"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  onDecline(request.id);
+                }}
+              >
+                <X size={14} className="mr-1" />
+                Decline
+              </Button>
+            </div>
           </div>
-        </div>
-      </div>
-    </div>
+        </CardContent>
+      </Card>
+    </Link>
   );
 };
 
 const SentRequestCard: React.FC<SentRequestCardProps> = ({ request, onWithdraw, isWithdrawing = false }) => {
   const { otherUser } = request;
 
-  const handleWithdraw = () => {
+  const handleWithdraw = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
     onWithdraw(request.id, otherUser.userId);
   };
 
   return (
-    <div className="flex items-start gap-3 p-4 rounded-lg border border-border/50 bg-card hover:bg-muted/30 transition-colors">
-      <Link href={`/profile/${otherUser.userId}`} className="flex-shrink-0 cursor-pointer">
-        <div className="relative">
-          <Avatar className="h-12 w-12 ring-2 ring-amber-100 dark:ring-amber-900 hover:ring-amber-200 dark:hover:ring-amber-800 transition-colors">
-            <AvatarImage src={otherUser.profileImage || undefined} alt={otherUser.fullName} />
-            <AvatarFallback className="text-sm font-medium">
-              {otherUser.fullName.split(' ').map(n => n[0]).join('')}
-            </AvatarFallback>
-          </Avatar>
-          {/* Verification indicator */}
-          {otherUser.isVerified && (
-            <div className="absolute -top-1 -right-1 w-4 h-4 bg-green-500 rounded-full flex items-center justify-center">
-              <Shield className="w-2.5 h-2.5 text-white" />
-            </div>
-          )}
-        </div>
-      </Link>
-      <div className="flex-grow min-w-0">
-        <Link href={`/profile/${otherUser.userId}`} className="cursor-pointer block hover:opacity-80 transition-opacity">
-          <div className="flex items-start justify-between gap-2 mb-2">
-            <div className="min-w-0 flex-1">
-              <h4 className="font-medium text-foreground leading-tight truncate">{otherUser.fullName}</h4>
-              <div className="flex items-center gap-2 mt-1">
-                {getRoleBadge(otherUser.role, otherUser.division, otherUser.educationLevel)}
+    <Link href={`/profile/${otherUser.userId}`} className="block h-full">
+      <Card className="group transition-all duration-300 hover:shadow-md hover:shadow-blue-500/5 border-border/50 hover:border-blue-500/20 dark:hover:border-blue-500/30 h-full cursor-pointer">
+        <CardContent className="p-3 flex flex-col h-full">
+          <div className="flex items-start space-x-3 mb-3">
+            <div className="flex-shrink-0">
+              <div className="relative">
+                <Avatar className="w-12 h-12 ring-2 ring-blue-100 dark:ring-blue-900 group-hover:ring-blue-200 dark:group-hover:ring-blue-800 transition-colors">
+                  <AvatarImage src={otherUser.profileImage || undefined} alt={otherUser.fullName} />
+                  <AvatarFallback className="text-xs font-medium">
+                    {otherUser.fullName.split(' ').map(n => n[0]).join('')}
+                  </AvatarFallback>
+                </Avatar>
+                {/* Verification indicator */}
+                {otherUser.isVerified && (
+                  <div className="absolute -top-1 -right-1 w-4 h-4 bg-green-500 rounded-full flex items-center justify-center">
+                    <Shield className="w-2.5 h-2.5 text-white" />
+                  </div>
+                )}
               </div>
             </div>
-            <span className="text-xs text-muted-foreground whitespace-nowrap">
-              {new Date(request.createdAt).toLocaleDateString()}
-            </span>
-          </div>
-        </Link>
-        <div className="space-y-2">
-          <div className="text-sm text-muted-foreground">
-            <p className="truncate">{otherUser.organizationName}</p>
-            <div className="flex items-center gap-1 text-xs">
-              <MapPin className="w-3 h-3" />
-              <span>{otherUser.city}, {otherUser.state}</span>
+            <div className="flex-1 min-w-0">
+              <h3 className="text-sm font-semibold text-foreground leading-tight mb-1 truncate">{otherUser.fullName}</h3>
+              <div className="space-y-1">
+                {getRoleBadge(otherUser.role, otherUser.division, otherUser.educationLevel)}
+                <p className="text-xs text-blue-600 font-medium truncate">
+                  {otherUser.role === 'athlete' ? otherUser.sport : otherUser.title}
+                </p>
+                <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                  <MapPin className="w-3 h-3" />
+                  <span className="truncate">{otherUser.city}, {otherUser.state}</span>
+                </div>
+                <p className="text-xs text-muted-foreground truncate">{otherUser.organizationName}</p>
+              </div>
+            </div>
+            <div className="flex-shrink-0">
+              <span className="text-xs text-muted-foreground">
+                {new Date(request.createdAt).toLocaleDateString()}
+              </span>
             </div>
           </div>
-          
-          <div className="flex gap-2">
-            <Button 
-              size="sm" 
-              className="bg-[#01ae79] hover:bg-[#01ae79]/90 text-white flex-1 h-8 text-xs"
+
+          <div className="flex-1 flex flex-col justify-end space-y-2">
+            <div className="text-xs text-muted-foreground">
+              <span className="text-blue-600">Request Sent</span> • {new Date(request.createdAt).toLocaleDateString()}
+            </div>
+            <Button
+              size="sm"
+              variant="outline"
+              className="w-full h-8 text-xs hover:bg-destructive hover:text-destructive-foreground"
               onClick={handleWithdraw}
               disabled={isWithdrawing}
             >
@@ -390,9 +411,9 @@ const SentRequestCard: React.FC<SentRequestCardProps> = ({ request, onWithdraw, 
               )}
             </Button>
           </div>
-        </div>
-      </div>
-    </div>
+        </CardContent>
+      </Card>
+    </Link>
   );
 };
 
@@ -461,7 +482,7 @@ function App() {
         };
       };
       const token = await windowWithClerk.Clerk?.session?.getToken();
-      
+
       const response = await fetch('/api/connections', {
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -504,7 +525,7 @@ function App() {
         };
       };
       const token = await windowWithClerk.Clerk?.session?.getToken();
-      
+
       const response = await fetch('/api/connections', {
         method: 'DELETE',
         headers: {
@@ -534,8 +555,6 @@ function App() {
   };
 
   const handleAcceptRequest = async (requestId: number) => {
-    console.log('Accept request:', requestId);
-    
     // Find the request to get the fromUserId
     const request = pendingRequests.find(r => r.id === requestId);
     if (!request) {
@@ -553,7 +572,7 @@ function App() {
         };
       };
       const token = await windowWithClerk.Clerk?.session?.getToken();
-      
+
       const response = await fetch('/api/connections', {
         method: 'PUT',
         headers: {
@@ -571,7 +590,7 @@ function App() {
       if (result.success) {
         // Remove from pending requests and add to connections
         setPendingRequests(prev => prev.filter(r => r.id !== requestId));
-        
+
         // Create a connected connection object
         const newConnection: Connection = {
           id: result.connection.id,
@@ -582,9 +601,9 @@ function App() {
           isInitiator: false, // This user didn't initiate, they accepted
           otherUser: request.otherUser
         };
-        
+
         setConnections(prev => [...prev, newConnection]);
-        
+
         // Show success notification
         const notification = document.createElement('div');
         notification.className = 'fixed top-4 right-4 bg-green-500 text-white px-4 py-2 rounded-lg shadow-lg z-50';
@@ -603,8 +622,6 @@ function App() {
   };
 
   const handleDeclineRequest = async (requestId: number) => {
-    console.log('Decline request:', requestId);
-    
     // Find the request to get the fromUserId
     const request = pendingRequests.find(r => r.id === requestId);
     if (!request) {
@@ -622,7 +639,7 @@ function App() {
         };
       };
       const token = await windowWithClerk.Clerk?.session?.getToken();
-      
+
       const response = await fetch('/api/connections', {
         method: 'DELETE',
         headers: {
@@ -640,7 +657,7 @@ function App() {
       if (result.success) {
         // Remove from pending requests
         setPendingRequests(prev => prev.filter(r => r.id !== requestId));
-        
+
         // Show success notification
         const notification = document.createElement('div');
         notification.className = 'fixed top-4 right-4 bg-red-500 text-white px-4 py-2 rounded-lg shadow-lg z-50';
@@ -670,7 +687,7 @@ function App() {
         };
       };
       const token = await windowWithClerk.Clerk?.session?.getToken();
-      
+
       const response = await fetch('/api/connections', {
         method: 'DELETE',
         headers: {
@@ -709,7 +726,7 @@ function App() {
 
   const filteredConnections = useMemo(() => {
     let filtered = connections;
-    
+
     if (filter !== 'all') {
       filtered = filtered.filter(connection => {
         if (filter === 'athletes') return connection.otherUser.role === 'athlete';
@@ -718,7 +735,7 @@ function App() {
         return true;
       });
     }
-    
+
     if (searchTerm) {
       filtered = filtered.filter(connection =>
         connection.otherUser.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -726,13 +743,22 @@ function App() {
         (connection.otherUser.sport && connection.otherUser.sport.toLowerCase().includes(searchTerm.toLowerCase()))
       );
     }
-    
+
     return filtered;
   }, [connections, filter, searchTerm]);
 
   const filteredPendingRequests = useMemo(() => {
     let filtered = pendingRequests;
-    
+
+    if (filter !== 'all') {
+      filtered = filtered.filter(request => {
+        if (filter === 'athletes') return request.otherUser.role === 'athlete';
+        if (filter === 'coaches') return request.otherUser.role === 'coach';
+        if (filter === 'recruiters') return request.otherUser.role === 'recruiter';
+        return true;
+      });
+    }
+
     if (searchTerm) {
       filtered = filtered.filter(request =>
         request.otherUser.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -740,13 +766,22 @@ function App() {
         (request.otherUser.sport && request.otherUser.sport.toLowerCase().includes(searchTerm.toLowerCase()))
       );
     }
-    
+
     return filtered;
-  }, [pendingRequests, searchTerm]);
+  }, [pendingRequests, filter, searchTerm]);
 
   const filteredSentRequests = useMemo(() => {
     let filtered = sentRequests;
-    
+
+    if (filter !== 'all') {
+      filtered = filtered.filter(request => {
+        if (filter === 'athletes') return request.otherUser.role === 'athlete';
+        if (filter === 'coaches') return request.otherUser.role === 'coach';
+        if (filter === 'recruiters') return request.otherUser.role === 'recruiter';
+        return true;
+      });
+    }
+
     if (searchTerm) {
       filtered = filtered.filter(request =>
         request.otherUser.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -754,9 +789,9 @@ function App() {
         (request.otherUser.sport && request.otherUser.sport.toLowerCase().includes(searchTerm.toLowerCase()))
       );
     }
-    
+
     return filtered;
-  }, [sentRequests, searchTerm]);
+  }, [sentRequests, filter, searchTerm]);
 
   if (loading) {
     return (
@@ -768,6 +803,7 @@ function App() {
       </div>
     );
   }
+
 
   return (
     <div className="container py-8">
@@ -792,63 +828,106 @@ function App() {
 
         {/* Tabs */}
         <Tabs defaultValue={activeTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-3 max-w-lg mx-auto">
-            <TabsTrigger value="connections" className="relative text-xs sm:text-sm px-2 sm:px-4">
-              <Users size={14} className="mr-1 sm:mr-2" />
-              <span className="hidden sm:inline">Connections</span>
-              <span className="sm:hidden">Connections</span>
-              {connections.length > 0 && (
-                <Badge variant="secondary" className="absolute -top-2 left-1/2 transform -translate-x-1/2 h-4 w-4 text-xs p-0 flex items-center justify-center rounded-full z-10">
-                  {connections.length}
-                </Badge>
-              )}
-            </TabsTrigger>
-            <TabsTrigger value="requests" className="relative text-xs sm:text-sm px-2 sm:px-4">
-              <Clock size={14} className="mr-1 sm:mr-2" />
-              <span className="hidden sm:inline">Requests</span>
-              <span className="sm:hidden">Incoming</span>
-              {pendingRequests.length > 0 && (
-                <Badge variant="destructive" className="absolute -top-2 left-1/2 transform -translate-x-1/2 h-4 w-4 text-xs p-0 flex items-center justify-center rounded-full z-10">
-                  {pendingRequests.length}
-                </Badge>
-              )}
-            </TabsTrigger>
-            <TabsTrigger value="sent-requests" className="relative text-xs sm:text-sm px-2 sm:px-4">
-              <Send size={14} className="mr-1 sm:mr-2" />
-              <span className="hidden sm:inline">Sent Requests</span>
-              <span className="sm:hidden">Sent</span>
-              {sentRequests.length > 0 && (
-                <Badge variant="secondary" className="absolute -top-2 left-1/2 transform -translate-x-1/2 h-4 w-4 text-xs p-0 flex items-center justify-center rounded-full z-10">
-                  {sentRequests.length}
-                </Badge>
-              )}
-            </TabsTrigger>
-          </TabsList>
+          <div className='relative'>
+            <TabsList className="inline-flex h-12 items-center justify-center rounded-xl bg-muted/30 p-1 text-muted-foreground w-full max-w-2xl mx-auto backdrop-blur-sm border border-border/50">
+              <TabsTrigger
+                value="connections"
+                className="group relative inline-flex items-center justify-center whitespace-nowrap rounded-lg px-4 py-2.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm hover:bg-muted/50 data-[state=active]:hover:bg-background min-w-0 flex-1"
+              >
+                <div className="flex items-center gap-2">
+                  <div className="relative">
+                    <Users size={16} className="transition-colors group-data-[state=active]:text-[#01ae79]" />
+                    {connections.length > 0 && (
+                      <div className="absolute -top-2 -right-2 flex items-center justify-center min-w-[16px] h-4 bg-[#01ae79] text-white text-[10px] font-semibold rounded-full px-1 border border-background shadow-sm">
+                        {connections.length > 99 ? '99+' : connections.length}
+                      </div>
+                    )}
+                  </div>
+                  <span className="hidden sm:inline transition-colors group-data-[state=active]:text-[#01ae79] group-data-[state=active]:font-semibold">
+                    Connections
+                  </span>
+                  <span className="sm:hidden transition-colors group-data-[state=active]:text-[#01ae79] group-data-[state=active]:font-semibold">
+                    Connections
+                  </span>
+                </div>
+                {/* Active indicator line */}
+                <div className="absolute bottom-0 left-1/2 h-0.5 w-0 bg-[#01ae79] transition-all duration-300 group-data-[state=active]:w-8 group-data-[state=active]:-translate-x-1/2 rounded-full"></div>
+              </TabsTrigger>
+
+              <TabsTrigger
+                value="requests"
+                className="group relative inline-flex items-center justify-center whitespace-nowrap rounded-lg px-4 py-2.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm hover:bg-muted/50 data-[state=active]:hover:bg-background min-w-0 flex-1"
+              >
+                <div className="flex items-center gap-2">
+                  <div className="relative">
+                    <Clock size={16} className="transition-colors group-data-[state=active]:text-[#01ae79]" />
+                    {pendingRequests.length > 0 && (
+                      <div className="absolute -top-2 -right-2 flex items-center justify-center min-w-[16px] h-4 bg-red-500 text-white text-[10px] font-semibold rounded-full px-1 border border-background shadow-sm animate-pulse">
+                        {pendingRequests.length > 99 ? '99+' : pendingRequests.length}
+                      </div>
+                    )}
+                  </div>
+                  <span className="hidden sm:inline transition-colors group-data-[state=active]:text-[#01ae79] group-data-[state=active]:font-semibold">
+                    Requests
+                  </span>
+                  <span className="sm:hidden transition-colors group-data-[state=active]:text-[#01ae79] group-data-[state=active]:font-semibold">
+                    Requests
+                  </span>
+                </div>
+                {/* Active indicator line */}
+                <div className="absolute bottom-0 left-1/2 h-0.5 w-0 bg-[#01ae79] transition-all duration-300 group-data-[state=active]:w-8 group-data-[state=active]:-translate-x-1/2 rounded-full"></div>
+              </TabsTrigger>
+
+              <TabsTrigger
+                value="sent-requests"
+                className="group relative inline-flex items-center justify-center whitespace-nowrap rounded-lg px-4 py-2.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm hover:bg-muted/50 data-[state=active]:hover:bg-background min-w-0 flex-1"
+              >
+                <div className="flex items-center gap-2">
+                  <div className="relative">
+                    <Send size={16} className="transition-colors group-data-[state=active]:text-[#01ae79]" />
+                    {sentRequests.length > 0 && (
+                      <div className="absolute -top-2 -right-2 flex items-center justify-center min-w-[16px] h-4 bg-blue-500 text-white text-[10px] font-semibold rounded-full px-1 border border-background shadow-sm">
+                        {sentRequests.length > 99 ? '99+' : sentRequests.length}
+                      </div>
+                    )}
+                  </div>
+                  <span className="hidden sm:inline transition-colors group-data-[state=active]:text-[#01ae79] group-data-[state=active]:font-semibold">
+                    Sent Requests
+                  </span>
+                  <span className="sm:hidden transition-colors group-data-[state=active]:text-[#01ae79] group-data-[state=active]:font-semibold">
+                    Sent
+                  </span>
+                </div>
+                {/* Active indicator line */}
+                <div className="absolute bottom-0 left-1/2 h-0.5 w-0 bg-[#01ae79] transition-all duration-300 group-data-[state=active]:w-8 group-data-[state=active]:-translate-x-1/2 rounded-full"></div>
+              </TabsTrigger>
+            </TabsList>
+          </div>
 
           <TabsContent value="connections" className="space-y-6">
             <FilterButtons currentFilter={filter} onFilterChange={setFilter} />
-            
+
             {filteredConnections.length === 0 ? (
               <div className="text-center py-12">
-                <div className="w-24 h-24 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
+                <div className="w-24 h-24 bg-gradient-to-br from-muted to-muted/60 rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm">
                   <Users className="w-12 h-12 text-muted-foreground" />
                 </div>
                 <h3 className="text-lg font-semibold text-foreground mb-2">
                   {searchTerm ? 'No connections found' : 'No connections yet'}
                 </h3>
                 <p className="text-muted-foreground max-w-md mx-auto">
-                  {searchTerm 
-                    ? 'Try adjusting your search terms or filters' 
+                  {searchTerm
+                    ? 'Try adjusting your search terms or filters'
                     : 'Start building your network by connecting with athletes, coaches, and recruiters'
                   }
                 </p>
               </div>
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                 {filteredConnections.map(connection => (
-                  <UserCard 
-                    key={connection.id} 
-                    connection={connection} 
+                  <UserCard
+                    key={connection.id}
+                    connection={connection}
                     onRemove={handleRemoveConnection}
                     isRemoving={removingConnection === connection.id}
                   />
@@ -858,24 +937,31 @@ function App() {
           </TabsContent>
 
           <TabsContent value="requests" className="space-y-6">
+            <FilterButtons currentFilter={filter} onFilterChange={setFilter} />
+
             {filteredPendingRequests.length === 0 ? (
               <div className="text-center py-12">
-                <div className="w-24 h-24 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Clock className="w-12 h-12 text-muted-foreground" />
+                <div className="w-24 h-24 bg-gradient-to-br from-red-50 to-red-100 dark:from-red-900/20 dark:to-red-800/20 rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm">
+                  <Clock className="w-12 h-12 text-red-500" />
                 </div>
-                <h3 className="text-lg font-semibold text-foreground mb-2">No pending requests</h3>
+                <h3 className="text-lg font-semibold text-foreground mb-2">
+                  {searchTerm || filter !== 'all' ? 'No pending requests found' : 'No pending requests'}
+                </h3>
                 <p className="text-muted-foreground">
-                  You&apos;ll see connection requests from other users here
+                  {searchTerm || filter !== 'all'
+                    ? 'Try adjusting your search terms or filters'
+                    : 'You\'ll see connection requests from other users here'
+                  }
                 </p>
               </div>
             ) : (
-              <div className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                 {filteredPendingRequests.map(request => (
-                  <PendingRequestCard 
-                    key={request.id} 
-                    request={request} 
-                    onAccept={handleAcceptRequest} 
-                    onDecline={handleDeclineRequest} 
+                  <PendingRequestCard
+                    key={request.id}
+                    request={request}
+                    onAccept={handleAcceptRequest}
+                    onDecline={handleDeclineRequest}
                   />
                 ))}
               </div>
@@ -883,22 +969,29 @@ function App() {
           </TabsContent>
 
           <TabsContent value="sent-requests" className="space-y-6">
+            <FilterButtons currentFilter={filter} onFilterChange={setFilter} />
+
             {filteredSentRequests.length === 0 ? (
               <div className="text-center py-12">
-                <div className="w-24 h-24 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Send className="w-12 h-12 text-muted-foreground" />
+                <div className="w-24 h-24 bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm">
+                  <Send className="w-12 h-12 text-blue-500" />
                 </div>
-                <h3 className="text-lg font-semibold text-foreground mb-2">No sent requests</h3>
+                <h3 className="text-lg font-semibold text-foreground mb-2">
+                  {searchTerm || filter !== 'all' ? 'No sent requests found' : 'No sent requests'}
+                </h3>
                 <p className="text-muted-foreground">
-                  You&apos;ll see sent requests here
+                  {searchTerm || filter !== 'all'
+                    ? 'Try adjusting your search terms or filters'
+                    : 'You\'ll see sent requests here'
+                  }
                 </p>
               </div>
             ) : (
-              <div className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                 {filteredSentRequests.map(request => (
-                  <SentRequestCard 
-                    key={request.id} 
-                    request={request} 
+                  <SentRequestCard
+                    key={request.id}
+                    request={request}
                     onWithdraw={handleWithdrawRequest}
                     isWithdrawing={removingConnection === request.id}
                   />

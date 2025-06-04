@@ -568,11 +568,52 @@ export async function PUT(
 
     // SECURITY: Prevent privilege escalation attacks
     // Never allow these critical security fields to be updated via profile API
-    delete sanitizedData.isVerified; // Only admins should set verification via separate process
     delete sanitizedData.role; // Roles should never be changeable via profile API
     delete sanitizedData.userId; // User ID should never be changeable
     delete sanitizedData.createdAt; // Creation date should never be changeable
     delete sanitizedData.updatedAt; // Update date is managed by database
+
+    // Special handling for verification: Only allow setting isVerified to true if MaxPreps URL is provided and valid
+    if (sanitizedData.isVerified === true && sanitizedData.maxPrepsUrl) {
+      // Validate the MaxPreps URL before allowing verification
+      const maxPrepsUrl = sanitizedData.maxPrepsUrl as string;
+      if (typeof maxPrepsUrl === 'string' && maxPrepsUrl.trim()) {
+        const url = maxPrepsUrl.trim();
+        // Check if it's a valid MaxPreps URL
+        if (url.includes('maxpreps.com')) {
+          // Allow verification to be set
+          console.log('Auto-verifying user due to valid MaxPreps URL:', maxPrepsUrl);
+        } else {
+          // Invalid MaxPreps URL, don't allow verification
+          delete sanitizedData.isVerified;
+        }
+      } else {
+        // No MaxPreps URL provided, don't allow verification
+        delete sanitizedData.isVerified;
+      }
+    } else {
+      // Don't allow isVerified to be set without MaxPreps URL or if setting to false
+      delete sanitizedData.isVerified;
+    }
+
+    // SECURITY: Prevent changing MaxPreps URL for verified users to prevent impersonation
+    if (sanitizedData.maxPrepsUrl !== undefined) {
+      // Get the current athlete profile to check verification status
+      const currentProfile = await athleteOperations.getAthleteProfile(currentUserId);
+      if (currentProfile?.isVerified && currentProfile.maxprepsUrl) {
+        // If the user is already verified and trying to change/remove MaxPreps URL, reject the request
+        const newMaxPrepsUrl = sanitizedData.maxPrepsUrl as string;
+        const currentMaxPrepsUrl = currentProfile.maxprepsUrl;
+        
+        // Block both changing to a different URL and removing/clearing the URL
+        if (newMaxPrepsUrl !== currentMaxPrepsUrl) {
+          return NextResponse.json(
+            { error: 'Cannot modify or remove MaxPreps URL for verified accounts. This protects against impersonation.' },
+            { status: 403 }
+          );
+        }
+      }
+    }
 
     // Get the current user to determine their role
     const userWithProfile = await userOperations.getUserWithProfile(currentUserId);
@@ -612,6 +653,9 @@ export async function PUT(
       if (sanitizedData.hudlUrl !== undefined) profileUpdateData.hudlUrl = sanitizedData.hudlUrl as string;
       if (sanitizedData.hudlEmbedUrl !== undefined) profileUpdateData.hudlEmbedUrl = sanitizedData.hudlEmbedUrl as string;
       
+      // Handle verification status
+      if (sanitizedData.isVerified !== undefined) profileUpdateData.isVerified = sanitizedData.isVerified as boolean;
+      
       // Handle social media - extract from socialMedia object
       if (sanitizedData.socialMedia !== undefined) {
         const socialMedia = sanitizedData.socialMedia as { instagram?: string; twitter?: string };
@@ -624,8 +668,9 @@ export async function PUT(
       
       // Handle measurables updates if provided
       if (sanitizedData.measurables !== undefined && Array.isArray(sanitizedData.measurables)) {
-        // Transform client measurables data to database format
-        const measurablesData: NewAthleteMeasurable[] = sanitizedData.measurables.map((measurable: {
+        // Transform client measurables data to database format, preserving client IDs as clientId
+        const measurablesData: (NewAthleteMeasurable & { clientId?: string })[] = sanitizedData.measurables.map((measurable: {
+          id: string | number;
           sport: string;
           label: string;
           value: string;
@@ -635,7 +680,9 @@ export async function PUT(
           sport: measurable.sport,
           label: measurable.label,
           value: measurable.value,
-          measurementDate: measurable.measurementDate
+          measurementDate: measurable.measurementDate,
+          // Store client ID for reference (if it's a temp ID)
+          ...(typeof measurable.id === 'string' ? { clientId: measurable.id } : {})
         }));
         
         // Replace all existing measurables with new ones

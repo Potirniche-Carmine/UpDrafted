@@ -390,6 +390,8 @@ export function RecruiterProfile({
     if (!isOwnProfile || !hasUnsavedChanges) return;
     
     setIsSaving(true);
+    const startTime = Date.now();
+    
     try {
       // Get the current user's auth token
       const windowWithClerk = window as unknown as {
@@ -419,15 +421,28 @@ export function RecruiterProfile({
 
       const result = await response.json();
       if (result.success) {
-        setHasUnsavedChanges(false);
+        // Update the original data to match saved data
+        setProfileData(result.profile);
+        setHasUnsavedChanges(false);        
+        // Update the page data reference so changes are permanent
+        Object.assign(data, result.profile);
+        
+        // Ensure minimum loading time of 1.5 seconds for better UX
+        const elapsedTime = Date.now() - startTime;
+        const minLoadingTime = 1500; // 1.5 seconds
+        const remainingTime = Math.max(0, minLoadingTime - elapsedTime);
+        
+        // Refresh the page after showing loading for minimum duration
+        setTimeout(() => {
+          window.location.reload();
+        }, remainingTime);
       } else {
         throw new Error(result.error || 'Failed to update profile');
       }
     } catch (error) {
       console.error('Failed to save profile:', error);
-      // Show error to user
-    } finally {
-      setIsSaving(false);
+      alert('Failed to save profile. Please try again.');
+      setIsSaving(false); // Only turn off loading on error
     }
   };
 
@@ -611,7 +626,23 @@ export function RecruiterProfile({
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-gradient-to-br from-background to-muted/20 relative">
+      {/* Loading Overlay */}
+      {isSaving && (
+        <div className="fixed inset-0 bg-background/80 backdrop-blur-md z-50 flex items-center justify-center">
+          <div className="bg-card border rounded-lg p-8 shadow-2xl flex flex-col items-center space-y-4 mx-4 max-w-sm w-full">
+            <div className="animate-spin rounded-full h-16 w-16 border-4 border-muted border-t-[#01ae79]"></div>
+            <div className="text-center">
+              <h3 className="font-semibold text-xl text-foreground">Saving Profile</h3>
+              <p className="text-muted-foreground mt-2">Please wait while we update your information...</p>
+              <div className="mt-4 w-full bg-muted rounded-full h-2">
+                <div className="bg-[#01ae79] h-2 rounded-full animate-pulse" style={{ width: '70%' }}></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+      
       {/* Header Actions */}
       <ProfileHeader
         isOwnProfile={isOwnProfile}

@@ -51,7 +51,7 @@ const mockUsers: SearchUser[] = [
     graduationYear: 2025
   },
   {
-    id: '2', 
+    id: '2',
     name: 'Sarah Williams',
     role: 'coach',
     sport: 'Soccer',
@@ -144,6 +144,53 @@ interface NavItem {
   onClick?: () => void;
 }
 
+// Professional notification badge component
+function NotificationBadge({ count, className = "" }: { count: number; className?: string }) {
+  if (count === 0) return null;
+  
+  return (
+    <div className={`absolute -top-2 -right-2 z-10 ${className}`}>
+      <div className="relative">
+        <div className="flex items-center justify-center min-w-[18px] h-[18px] bg-red-500 text-white text-xs font-medium rounded-full px-1 border-2 border-white dark:border-gray-950 shadow-sm">
+          {count > 99 ? '99+' : count}
+        </div>
+        {/* Subtle pulse animation for new notifications */}
+        <div className="absolute inset-0 bg-red-500 rounded-full animate-ping opacity-20"></div>
+      </div>
+    </div>
+  );
+}
+
+// Professional navigation item with notification support
+function NavItem({ 
+  item, 
+  notificationCount = 0, 
+  className = "",
+  onClick 
+}: { 
+  item: NavItem; 
+  notificationCount?: number;
+  className?: string;
+  onClick?: () => void;
+}) {
+  return (
+    <Link
+      href={item.href}
+      onClick={onClick}
+      className={`transition-colors flex items-center px-3 py-2 group rounded-lg text-muted-foreground hover:text-[#01ae79] hover:bg-[#01ae79]/5 dark:hover:bg-[#01ae79]/10 relative ${className}`}
+      title={item.label}
+    >
+      <div className="relative">
+        {item.icon}
+        <NotificationBadge count={notificationCount} />
+      </div>
+      <span className="ml-2 text-sm font-medium hidden lg:inline">
+        {item.label}
+      </span>
+    </Link>
+  );
+}
+
 function ThemeToggle() {
   const { setTheme } = useTheme();
 
@@ -179,10 +226,10 @@ function SearchBar() {
   // Filter users based on search term (min 2 characters for header)
   const filteredUsers = useMemo(() => {
     if (searchTerm.length < 2) return [];
-    
+
     const term = searchTerm.toLowerCase();
     return mockUsers
-      .filter(user => 
+      .filter(user =>
         user.name.toLowerCase().includes(term) ||
         user.sport.toLowerCase().includes(term) ||
         user.role.toLowerCase().includes(term) ||
@@ -227,14 +274,14 @@ function SearchBar() {
         value={searchTerm}
         onChange={(e) => setSearchTerm(e.target.value)}
       />
-      
+
       {/* Search Results Dropdown */}
       {isOpen && (
         <div className="absolute top-full left-0 right-0 mt-2 bg-card border border-[#01ae79]/20 dark:border-[#01ae79]/30 rounded-lg shadow-lg z-50 max-h-80 overflow-y-auto">
           <div className="p-2">
             {filteredUsers.map((user) => (
-              <Link 
-                key={user.id} 
+              <Link
+                key={user.id}
                 href={`/profile/${user.id}`}
                 onClick={handleUserClick}
                 className="block"
@@ -254,7 +301,7 @@ function SearchBar() {
                       </div>
                     )}
                   </div>
-                  
+
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">
                       <h4 className="font-medium text-sm text-foreground truncate">
@@ -265,7 +312,7 @@ function SearchBar() {
                         {user.role.charAt(0).toUpperCase() + user.role.slice(1)}
                       </Badge>
                     </div>
-                    
+
                     <div className="flex items-center gap-2 text-xs text-muted-foreground">
                       <span className="font-medium text-[#01ae79]">{user.sport}</span>
                       <span>•</span>
@@ -275,10 +322,10 @@ function SearchBar() {
                 </div>
               </Link>
             ))}
-            
+
             {/* View All Results Link */}
             <div className="pt-2 border-t border-border/30">
-              <button 
+              <button
                 onClick={handleViewAll}
                 className="block w-full p-3 text-center text-sm text-[#01ae79] hover:text-[#01ae79]/80 font-medium hover:bg-[#01ae79]/5 dark:hover:bg-[#01ae79]/10 rounded-lg transition-colors"
               >
@@ -293,7 +340,7 @@ function SearchBar() {
 }
 
 export function Header() {
-  const {isSignedIn, user } = useUser();
+  const { isSignedIn, user } = useUser();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { navigateToProfile, isNavigating: profileNavigating } = useProfileNavigation();
   const { pendingRequestsCount } = useConnections();
@@ -317,7 +364,7 @@ export function Header() {
 
   const userButtonAppearance = {
     elements: {
-      userButtonAvatarBox: "w-9 h-9 ring-2 ring-[#01ae79]/20 dark:ring-[#01ae79]/30", 
+      userButtonAvatarBox: "w-9 h-9 ring-2 ring-[#01ae79]/20 dark:ring-[#01ae79]/30",
       userButtonPopoverActionButton: "text-primary hover:bg-[#01ae79]/5 dark:hover:bg-[#01ae79]/10 hover:text-[#01ae79] rounded-md",
       userButtonPopoverActionButton__signOut: "text-destructive hover:!bg-destructive/20 hover:!text-destructive-foreground rounded-md",
     },
@@ -332,20 +379,20 @@ export function Header() {
       <div className="container mx-auto flex h-16 max-w-screen-2xl items-center justify-between px-4 sm:px-6 lg:px-8">
         {/* Logo */}
         <Link href={homeUrl} className="flex items-center space-x-2 flex-shrink-0">
-          <Image 
-            src="/logo.png" 
-            alt="UpDrafted Logo" 
-            width={150} 
-            height={50} 
+          <Image
+            src="/logo.png"
+            alt="UpDrafted Logo"
+            width={150}
+            height={50}
             priority
             quality={90}
             placeholder="blur"
             blurDataURL="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAhEAACAQMDBQAAAAAAAAAAAAABAgMABAUGIWGRkqGxwf/EABUBAQEAAAAAAAAAAAAAAAAAAAMF/8QAGhEAAgIDAAAAAAAAAAAAAAAAAAECEgMRkf/aAAwDAQACEQMRAD8AltJagyeH0AthI5xdrLcNM91BF5pX2HaH9bcfaSXWGaRmknyJckliyjqTzSlT54b6bk+h0R//2Q=="
             sizes="(max-width: 768px) 110px, 150px"
-            className="mr-3 w-[110px] md:w-[150px] h-auto" 
+            className="mr-3 w-[110px] md:w-[150px] h-auto"
           />
         </Link>
-        
+
         {/* Desktop Search Bar - Only show when signed in and onboarded */}
         {isSignedIn && hasCompletedOnboarding && (
           <div className="hidden md:flex flex-1 justify-center px-6 max-w-md">
@@ -354,31 +401,20 @@ export function Header() {
         )}
 
         {/* Desktop Navigation */}
-        <nav className="hidden md:flex items-center space-x-2"> 
+        <nav className="hidden md:flex items-center space-x-2">
           {navItemsToDisplay.map((item) => (
-            <Link
+            <NavItem
               key={item.key}
-              href={item.href}
-              className="transition-colors flex items-center px-3 py-2 group rounded-lg text-muted-foreground hover:text-[#01ae79] hover:bg-[#01ae79]/5 dark:hover:bg-[#01ae79]/10 relative"
-              title={item.label}
-            >
-              {item.icon}
-              <span className="ml-2 text-sm font-medium hidden lg:inline">
-                {item.label}
-              </span>
-              {item.key === "connections" && pendingRequestsCount > 0 && (
-                <Badge variant="destructive" className="absolute -top-2 left-1/2 transform -translate-x-1/2 h-4 w-4 text-xs p-0 flex items-center justify-center rounded-full z-10">
-                  {pendingRequestsCount}
-                </Badge>
-              )}
-            </Link>
+              item={item}
+              notificationCount={item.key === "connections" ? pendingRequestsCount : 0}
+            />
           ))}
 
           {/* Theme Toggle */}
           <ThemeToggle />
 
           <SignedIn>
-            <div className="relative flex items-center ml-2"> 
+            <div className="relative flex items-center ml-2">
               <UserButton
                 appearance={userButtonAppearance}
               >
@@ -387,10 +423,10 @@ export function Header() {
                     <UserButton.Action
                       label={profileNavigating ? "Loading..." : "View Profile"}
                       labelIcon={<Users className="mr-2 h-4 w-4" />}
-                      onClick={profileNavigating ? () => {} : handleViewProfile}
+                      onClick={profileNavigating ? () => { } : handleViewProfile}
                     >
                       <div className="flex items-center">
-                        <Users className="mr-2 h-4 w-4" /> 
+                        <Users className="mr-2 h-4 w-4" />
                         <span>{profileNavigating ? "Loading..." : "View Profile"}</span>
                       </div>
                     </UserButton.Action>
@@ -410,7 +446,7 @@ export function Header() {
               )}
             </div>
           </SignedIn>
-          
+
           <SignedOut>
             <SignInButton mode="modal">
               <Button variant="default" size="sm" className="flex items-center space-x-2 ml-2 bg-[#01ae79] hover:bg-[#01ae79]/90 text-white">
@@ -429,13 +465,17 @@ export function Header() {
         {/* Mobile Navigation */}
         <div className="md:hidden flex items-center space-x-2">
           <ThemeToggle />
-          
+
           <SignedIn>
             {hasCompletedOnboarding && (
               <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
                 <SheetTrigger asChild>
-                  <Button variant="ghost" size="sm" className="h-9 w-9 p-0">
+                  <Button variant="ghost" size="sm" className="h-9 w-9 p-0 relative">
                     <Menu className="h-5 w-5" />
+                    <NotificationBadge 
+                      count={pendingRequestsCount} 
+                      className="-top-1 -right-1"
+                    />
                     <span className="sr-only">Toggle menu</span>
                   </Button>
                 </SheetTrigger>
@@ -446,7 +486,7 @@ export function Header() {
                       Navigate to different sections of UpDrafted
                     </SheetDescription>
                   </SheetHeader>
-                  
+
                   <div className="mt-6 space-y-4">
                     {/* Mobile Search */}
                     <div className="pb-4 border-b border-border">
@@ -454,7 +494,7 @@ export function Header() {
                         <SearchBar />
                       </div>
                     </div>
-                    
+
                     {/* Mobile Navigation Links */}
                     <div className="space-y-2">
                       {navItemsToDisplay.map((item) => (
@@ -462,19 +502,21 @@ export function Header() {
                           key={item.key}
                           href={item.href}
                           onClick={() => setMobileMenuOpen(false)}
-                          className="flex items-center space-x-3 rounded-lg px-3 py-3 text-sm font-medium transition-colors hover:bg-[#01ae79]/5 dark:hover:bg-[#01ae79]/10 hover:text-[#01ae79] relative"
+                          className="flex items-center justify-between rounded-lg px-3 py-3 text-sm font-medium transition-colors hover:bg-[#01ae79]/5 dark:hover:bg-[#01ae79]/10 hover:text-[#01ae79]"
                         >
-                          {item.icon}
-                          <span>{item.label}</span>
+                          <div className="flex items-center space-x-3">
+                            {item.icon}
+                            <span>{item.label}</span>
+                          </div>
                           {item.key === "connections" && pendingRequestsCount > 0 && (
-                            <Badge variant="destructive" className="ml-auto h-4 w-4 text-xs p-0 flex items-center justify-center rounded-full">
-                              {pendingRequestsCount}
-                            </Badge>
+                            <div className="flex items-center justify-center min-w-[20px] h-5 bg-red-500 text-white text-xs font-medium rounded-full px-1.5">
+                              {pendingRequestsCount > 99 ? '99+' : pendingRequestsCount}
+                            </div>
                           )}
                         </Link>
                       ))}
                     </div>
-                    
+
                     {/* User Profile Link */}
                     <div className="pt-4 border-t border-border">
                       <button
@@ -493,12 +535,12 @@ export function Header() {
                 </SheetContent>
               </Sheet>
             )}
-            
+
             <UserButton
               appearance={userButtonAppearance}
             />
           </SignedIn>
-          
+
           <SignedOut>
             <SignInButton mode="modal">
               <Button variant="default" size="sm" className="bg-[#01ae79] hover:bg-[#01ae79]/90 text-white">

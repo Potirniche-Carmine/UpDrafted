@@ -11,7 +11,7 @@ import { AthleteProfileData } from "./athlete-profile-types";
 interface VerificationSectionProps {
   profileData: AthleteProfileData;
   isOwnProfile: boolean;
-  onEditMaxPreps: () => void;
+  onEditMaxPreps?: () => void;
   onShowVerificationDialog: () => void;
   hasPendingVerification?: boolean;
   pendingSubmittedAt?: string;
@@ -39,6 +39,9 @@ export function VerificationSection({
   // Show pending verification status
   const shouldShowPendingVerification = hasPendingVerification;
 
+  // Determine if MaxPreps editing should be allowed
+  const canEditMaxPreps = isOwnProfile && onEditMaxPreps && !profileData.isVerified;
+
   return (
     <Card>
       <CardHeader>
@@ -47,7 +50,7 @@ export function VerificationSection({
             <Shield className="w-5 h-5 text-blue-600" />
             Athlete Verification
           </CardTitle>
-          {isOwnProfile && (
+          {canEditMaxPreps && (
             <Button 
               size="sm" 
               variant="ghost"
@@ -77,6 +80,11 @@ export function VerificationSection({
                   </div>
                   <p className="text-sm text-muted-foreground">
                     Official high school stats, game logs, and team roster verification
+                    {profileData.isVerified && (
+                      <span className="block text-green-600 dark:text-green-400 font-medium mt-1">
+                        ✓ Profile verified and locked for security
+                      </span>
+                    )}
                   </p>
                 </div>
                 <div className="flex-shrink-0 w-full sm:w-auto">
@@ -96,6 +104,14 @@ export function VerificationSection({
                   </p>
                 </div>
               )}
+              {profileData.isVerified && (
+                <div className="mt-3 bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800 rounded-lg p-3">
+                  <p className="text-sm text-green-700 dark:text-green-200">
+                    <strong>Verified:</strong> Your MaxPreps profile has been verified and is locked for security. 
+                    This prevents impersonation and maintains the integrity of your athletic credentials.
+                  </p>
+                </div>
+              )}
             </div>
           ) : (
             <div className="bg-blue-50 dark:bg-blue-950/20 rounded-lg p-4">
@@ -108,7 +124,7 @@ export function VerificationSection({
                   MaxPreps is the official source for high school sports stats and verification. 
                   Link your MaxPreps profile to showcase official stats and get verified instantly.
                 </p>
-                {isOwnProfile && (
+                {canEditMaxPreps && (
                   <Button 
                     variant="outline"
                     className="border-blue-300 text-blue-700 hover:bg-blue-100 dark:border-blue-700 dark:text-blue-200 dark:hover:bg-blue-900"

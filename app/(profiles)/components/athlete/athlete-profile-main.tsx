@@ -112,7 +112,7 @@ const MeasurablesSection = memo(({ measurables, allSports, selectedSport, onSpor
         {sportMeasurables.length === 0 ? (
           <div className="space-y-4">
             {/* Empty State */}
-            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/30 dark:to-indigo-950/30 rounded-lg p-6 text-center">
+            <div key="empty-state" className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/30 dark:to-indigo-950/30 rounded-lg p-6 text-center">
               <div className="w-16 h-16 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center mx-auto mb-4">
                 <Trophy className="w-8 h-8 text-blue-600" />
               </div>
@@ -147,12 +147,13 @@ const MeasurablesSection = memo(({ measurables, allSports, selectedSport, onSpor
         ) : (
           <div className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {sportMeasurables.map((measurable) => {
+              {sportMeasurables.map((measurable, index) => {
                 const Icon = getMeasurableIcon(measurable.label);
+                
                 return (
-                  <div key={measurable.id} className="bg-gradient-to-br from-muted/30 to-muted/50 rounded-lg p-4 border border-muted/50 relative group">
+                  <div key={`${measurable.id}-${index}`} className="bg-gradient-to-br from-muted/30 to-muted/50 rounded-lg p-4 border border-muted/50 relative group">
                     {isOwnProfile && (
-                      <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <div key="actions" className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
                         <div className="flex gap-1">
                           <Button
                             size="sm"
@@ -321,8 +322,30 @@ export function AthleteProfile({
   const [isConnecting, setIsConnecting] = useState(false);
   const [currentConnectionStatus, setCurrentConnectionStatus] = useState(connectionStatus);
   
+  // Safety check: if profileData becomes undefined during save operations, use original data
+  const safeProfileData = profileData || data;
+  
   // Memoize computed values
-  const allSports = useMemo(() => [profileData.sport, ...(profileData.secondarySports || [])], [profileData.sport, profileData.secondarySports]);
+  const allSports = useMemo(() => {
+    if (!safeProfileData) return [];
+    return [safeProfileData.sport, ...(safeProfileData.secondarySports || [])];
+  }, [safeProfileData]);
+  
+  // Ensure measurables have stable IDs for deletion
+  const measurablesWithStableIds = useMemo(() => {
+    if (!safeProfileData || !safeProfileData.measurables) return [];
+    
+    return safeProfileData.measurables.map((measurable, index) => {
+      // Ensure each measurable has a stable ID
+      const stableId = measurable.id || `stable-${measurable.sport}-${measurable.label}-${index}`;
+      
+      return {
+        ...measurable,
+        id: stableId
+      };
+    });
+  }, [safeProfileData]);
+  
   const canDraft = useMemo(() => 
     !isOwnProfile && (effectiveRole === 'coach' || effectiveRole === 'recruiter'),
     [isOwnProfile, effectiveRole]
@@ -336,7 +359,7 @@ export function AthleteProfile({
 
   // Update profile data and track changes
   const updateProfileData = (updates: Partial<AthleteProfileData>) => {
-    const newData = { ...profileData, ...updates };
+    const newData = { ...safeProfileData, ...updates };
     setProfileData(newData);
     checkForChanges(newData);
   };
@@ -355,15 +378,6 @@ export function AthleteProfile({
   }, [hasUnsavedChanges]);
 
   const handleEditSection = (section: string, measurableId?: string) => {
-    if (section === 'delete-measurable' && measurableId) {
-      const confirmed = window.confirm('Are you sure you want to delete this performance metric? This action cannot be undone.');
-      if (confirmed) {
-        const updatedMeasurables = (profileData.measurables || []).filter(m => m.id !== measurableId);
-        updateProfileData({ measurables: updatedMeasurables });
-      }
-      return;
-    }
-    
     if (section === 'manual-verification') {
       setVerificationDialogOpen(true);
       return;
@@ -371,14 +385,23 @@ export function AthleteProfile({
     
     if (measurableId) {
       setMeasurableIdToEdit(measurableId);
+      // Use setTimeout to ensure state update completes before opening dialog
+      setTimeout(() => {
+        setEditDialogOpen(section);
+      }, 0);
+    } else {
+      // Clear any existing measurable ID if none provided
+      setMeasurableIdToEdit(null);
+      setEditDialogOpen(section);
     }
-    setEditDialogOpen(section);
   };
 
   const saveProfile = async () => {
     if (!isOwnProfile || !hasUnsavedChanges) return;
     
     setIsSaving(true);
+    const startTime = Date.now();
+    
     try {
       // Get the current user's auth token with proper type definition
       const windowWithClerk = window as unknown as {
@@ -391,7 +414,7 @@ export function AthleteProfile({
       const token = await windowWithClerk.Clerk?.session?.getToken();
       
       // Use userId (Clerk user ID) instead of id (database primary key)
-      const userIdForApi = profileData.userId || profileData.id;
+      const userIdForApi = safeProfileData.userId || safeProfileData.id;
       
       const response = await fetch(`/api/profile/${userIdForApi}`, {
         method: 'PUT',
@@ -399,7 +422,7 @@ export function AthleteProfile({
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`,
         },
-        body: JSON.stringify(profileData),
+        body: JSON.stringify(safeProfileData),
       });
 
       if (!response.ok) {
@@ -413,14 +436,23 @@ export function AthleteProfile({
         setHasUnsavedChanges(false);        
         // Update the page data reference so changes are permanent
         Object.assign(data, result.profile);
+        
+        // Ensure minimum loading time of 1.5 seconds for better UX
+        const elapsedTime = Date.now() - startTime;
+        const minLoadingTime = 1500; // 1.5 seconds
+        const remainingTime = Math.max(0, minLoadingTime - elapsedTime);
+        
+        // Refresh the page after showing loading for minimum duration
+        setTimeout(() => {
+          window.location.reload();
+        }, remainingTime);
       } else {
         throw new Error(result.error || 'Failed to update profile');
       }
     } catch (error) {
       console.error('Error saving profile:', error);
       alert('Failed to save profile. Please try again.');
-    } finally {
-      setIsSaving(false);
+      setIsSaving(false); // Only turn off loading on error
     }
   };
 
@@ -452,7 +484,7 @@ export function AthleteProfile({
       const token = await windowWithClerk.Clerk?.session?.getToken();
 
       // Get current image URL for deletion
-      const currentImageUrl = profileData.profileImage;
+      const currentImageUrl = safeProfileData.profileImage;
 
       if (!currentImageUrl) {
         alert('No image to remove');
@@ -460,7 +492,7 @@ export function AthleteProfile({
       }
 
       const formData = new FormData();
-      formData.append('userId', profileData.userId || profileData.id);
+      formData.append('userId', safeProfileData.userId || safeProfileData.id);
       formData.append('imageType', 'profile');
       // Remove any existing cache-busting parameters before sending for deletion
       const cleanUrl = currentImageUrl.split('?')[0];
@@ -518,7 +550,7 @@ export function AthleteProfile({
           'Authorization': `Bearer ${token}`,
         },
         body: JSON.stringify({
-          targetUserId: profileData.userId
+          targetUserId: safeProfileData.userId
         }),
       });
 
@@ -568,7 +600,7 @@ export function AthleteProfile({
           'Authorization': `Bearer ${token}`,
         },
         body: JSON.stringify({
-          fromUserId: profileData.userId
+          fromUserId: safeProfileData.userId
         }),
       });
 
@@ -618,7 +650,7 @@ export function AthleteProfile({
           'Authorization': `Bearer ${token}`,
         },
         body: JSON.stringify({
-          targetUserId: profileData.userId
+          targetUserId: safeProfileData.userId
         }),
       });
 
@@ -669,7 +701,7 @@ export function AthleteProfile({
           'Authorization': `Bearer ${token}`,
         },
         body: JSON.stringify({
-          targetUserId: profileData.userId,
+          targetUserId: safeProfileData.userId,
           note: note
         }),
       });
@@ -697,9 +729,29 @@ export function AthleteProfile({
     }
   };
 
+  if (!safeProfileData) {
+    return null;
+  }
+
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header Actions */}
+    <div className="min-h-screen bg-gradient-to-br from-background to-muted/20 relative">
+      {/* Loading Overlay */}
+      {isSaving && (
+        <div className="fixed inset-0 bg-background/80 backdrop-blur-md z-50 flex items-center justify-center">
+          <div className="bg-card border rounded-lg p-8 shadow-2xl flex flex-col items-center space-y-4 mx-4 max-w-sm w-full">
+            <div className="animate-spin rounded-full h-16 w-16 border-4 border-muted border-t-[#01ae79]"></div>
+            <div className="text-center">
+              <h3 className="font-semibold text-xl text-foreground">Saving Profile</h3>
+              <p className="text-muted-foreground mt-2">Please wait while we update your information...</p>
+              <div className="mt-4 w-full bg-muted rounded-full h-2">
+                <div className="bg-[#01ae79] h-2 rounded-full animate-pulse" style={{ width: '70%' }}></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {/* Header with Profile Actions */}
       <ProfileHeader
         isOwnProfile={isOwnProfile}
         onConnect={handleConnectClick}
@@ -709,9 +761,9 @@ export function AthleteProfile({
         onReport={() => {}}
         onShare={onShare}
         connectLabel="Draft"
-        profileName={profileData.fullName}
+        profileName={safeProfileData.fullName}
         profileType="athlete"
-        reportedUserId={profileData.userId}
+        reportedUserId={safeProfileData.userId}
         connectionStatus={currentConnectionStatus}
         connectionDirection={connectionDirection}
         isConnecting={isConnecting}
@@ -725,7 +777,7 @@ export function AthleteProfile({
       <ConnectionDialog
         open={connectionDialogOpen}
         onOpenChange={setConnectionDialogOpen}
-        profileName={profileData.fullName}
+        profileName={safeProfileData.fullName}
         profileType="athlete"
         onConfirm={handleConnectionConfirm}
         isConnecting={isConnecting}
@@ -742,7 +794,10 @@ export function AthleteProfile({
       <AthleteEditDialogs
         isOpen={!!editDialogOpen}
         dialogType={editDialogOpen}
-        profileData={profileData}
+        profileData={{
+          ...safeProfileData,
+          measurables: measurablesWithStableIds
+        }}
         measurableIdToEdit={measurableIdToEdit}
         onClose={() => {
           setEditDialogOpen(null);
@@ -754,6 +809,7 @@ export function AthleteProfile({
             // Use setTimeout to ensure state update completes before closing dialog
             setTimeout(() => {
               setEditDialogOpen(null);
+              setMeasurableIdToEdit(null);
             }, 0);
           } catch (error) {
             console.error('Error updating profile data:', error);
@@ -772,10 +828,10 @@ export function AthleteProfile({
               <CardContent className="p-4 md:p-6">
                 <div className="text-center">
                   <div className="relative w-24 h-24 md:w-32 md:h-32 mx-auto mb-4">
-                    {profileData.profileImage ? (
+                    {safeProfileData.profileImage ? (
                       <Image
-                        src={profileData.profileImage}
-                        alt={profileData.fullName || "Profile picture"}
+                        src={safeProfileData.profileImage}
+                        alt={safeProfileData.fullName || "Profile picture"}
                         fill
                         className="rounded-full object-cover"
                         sizes="(max-width: 768px) 96px, 128px"
@@ -783,7 +839,7 @@ export function AthleteProfile({
                     ) : (
                       <div className="w-full h-full bg-muted rounded-full flex items-center justify-center">
                         <span className="text-lg md:text-xl font-semibold text-muted-foreground">
-                          {profileData.fullName.split(' ').map((n: string) => n[0]).join('')}
+                          {safeProfileData.fullName.split(' ').map((n: string) => n[0]).join('')}
                         </span>
                       </div>
                     )}
@@ -796,7 +852,7 @@ export function AthleteProfile({
                         >
                           <Edit className="w-3 h-3" />
                         </Button>
-                        {profileData.profileImage && (
+                        {safeProfileData.profileImage && (
                           <Button
                             size="sm"
                             variant="destructive"
@@ -813,8 +869,8 @@ export function AthleteProfile({
 
                   <div className="space-y-2">
                     <div className="flex items-center justify-center gap-2">
-                      <h1 className="text-lg md:text-xl font-bold">{profileData.fullName}</h1>
-                      {profileData.isVerified && (
+                      <h1 className="text-lg md:text-xl font-bold">{safeProfileData.fullName}</h1>
+                      {safeProfileData.isVerified && (
                         <Badge className="bg-green-600 text-white text-xs">
                           <Shield className="w-3 h-3 mr-1" />
                           Verified
@@ -834,9 +890,9 @@ export function AthleteProfile({
 
                     <div className="flex flex-wrap justify-center gap-2 mb-3">
                       <Badge className="bg-[#01ae79] text-white hover:bg-[#01ae79]/90 text-xs">
-                        {profileData.sport}
+                        {safeProfileData.sport}
                       </Badge>
-                      {profileData.secondarySports?.map(sport => (
+                      {safeProfileData.secondarySports?.map(sport => (
                         <Badge key={sport} variant="outline" className="text-xs">
                           {sport}
                         </Badge>
@@ -846,27 +902,27 @@ export function AthleteProfile({
                     <div className="text-sm text-muted-foreground space-y-1">
                       <div className="flex items-center justify-center gap-1 min-w-0">
                         <MapPin className="w-3 h-3 flex-shrink-0" />
-                        <span className="text-center break-words whitespace-normal">{profileData.city}, {profileData.state}</span>
+                        <span className="text-center break-words whitespace-normal">{safeProfileData.city}, {safeProfileData.state}</span>
                       </div>
-                      <p className="text-center break-words">{profileData.organizationName}</p>
-                      <p className="text-center">Class of {profileData.graduationYear}</p>
+                      <p className="text-center break-words">{safeProfileData.organizationName}</p>
+                      <p className="text-center">Class of {safeProfileData.graduationYear}</p>
                       
                       {/* Education Level Badge */}
                       <div className="flex items-center justify-center pt-2">
                         <div className="flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-lg shadow-md">
                           <GraduationCap className="w-4 h-4" />
                           <span className="text-sm font-medium">
-                            {profileData.educationLevel === 'high_school' && 'High School Student'}
-                            {profileData.educationLevel === 'undergraduate' && 'College Student'}
-                            {profileData.educationLevel === 'graduate' && 'Graduate Student'}
-                            {profileData.educationLevel === 'associate' && 'Community College Student'}
+                            {safeProfileData.educationLevel === 'high_school' && 'High School Student'}
+                            {safeProfileData.educationLevel === 'undergraduate' && 'College Student'}
+                            {safeProfileData.educationLevel === 'graduate' && 'Graduate Student'}
+                            {safeProfileData.educationLevel === 'associate' && 'Community College Student'}
                           </span>
                         </div>
                       </div>
                     </div>
 
                     <div className="flex flex-wrap justify-center gap-1 text-xs text-muted-foreground">
-                      {profileData.positions.map(position => (
+                      {safeProfileData.positions.map(position => (
                         <span key={position} className="px-2 py-1 bg-muted rounded text-center break-words max-w-full">
                           {position}
                         </span>
@@ -876,11 +932,11 @@ export function AthleteProfile({
                     <div className="grid grid-cols-2 gap-4 pt-2 text-sm">
                       <div>
                         <p className="text-muted-foreground">Height</p>
-                        <p className="font-semibold">{profileData.height}</p>
+                        <p className="font-semibold">{safeProfileData.height}</p>
                       </div>
                       <div>
                         <p className="text-muted-foreground">Weight</p>
-                        <p className="font-semibold">{profileData.weight}</p>
+                        <p className="font-semibold">{safeProfileData.weight}</p>
                       </div>
                     </div>
                   </div>
@@ -888,7 +944,7 @@ export function AthleteProfile({
 
                 {/* Social Media Links */}
                 <SocialMediaSection 
-                  socialMedia={profileData.socialMedia} 
+                  socialMedia={safeProfileData.socialMedia} 
                   isOwnProfile={isOwnProfile}
                   onEdit={() => handleEditSection('social-media')}
                 />
@@ -897,11 +953,11 @@ export function AthleteProfile({
 
             {/* Academic Summary Card */}
             <AcademicSummaryCard
-              gpa={profileData.gpa}
-              satScore={profileData.satScore}
-              actScore={profileData.actScore}
-              intendedMajor={profileData.intendedMajor}
-              educationLevel={profileData.educationLevel}
+              gpa={safeProfileData.gpa}
+              satScore={safeProfileData.satScore}
+              actScore={safeProfileData.actScore}
+              intendedMajor={safeProfileData.intendedMajor}
+              educationLevel={safeProfileData.educationLevel}
               isOwnProfile={isOwnProfile}
               onEditSection={handleEditSection}
             />
@@ -910,11 +966,11 @@ export function AthleteProfile({
           {/* Main Content */}
           <div className="lg:col-span-2 space-y-6 md:space-y-8">
             {/* Personal Statement */}
-            {profileData.personalStatement ? (
+            {safeProfileData.personalStatement ? (
               <Card>
                 <CardHeader>
                   <div className="flex items-center justify-between">
-                    <CardTitle>About {profileData.fullName.split(' ')[0]}</CardTitle>
+                    <CardTitle>About {safeProfileData.fullName.split(' ')[0]}</CardTitle>
                     {isOwnProfile && (
                       <Button 
                         size="sm" 
@@ -928,14 +984,14 @@ export function AthleteProfile({
                   </div>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-muted-foreground leading-relaxed">{profileData.personalStatement}</p>
+                  <p className="text-muted-foreground leading-relaxed">{safeProfileData.personalStatement}</p>
                 </CardContent>
               </Card>
             ) : isOwnProfile && (
               <Card>
                 <CardHeader>
                   <div className="flex items-center justify-between">
-                    <CardTitle>About {profileData.fullName.split(' ')[0]}</CardTitle>
+                    <CardTitle>About {safeProfileData.fullName.split(' ')[0]}</CardTitle>
                     <Button 
                       size="sm" 
                       variant="ghost"
@@ -968,7 +1024,7 @@ export function AthleteProfile({
 
             {/* Measurements - Combined with sport selector */}
             <MeasurablesSection
-              measurables={profileData.measurables || []}
+              measurables={measurablesWithStableIds}
               allSports={allSports}
               selectedSport={selectedSport}
               onSportChange={setSelectedSport}
@@ -979,9 +1035,9 @@ export function AthleteProfile({
             {/* Verification Section */}
             {isOwnProfile && (
               <VerificationSection
-                profileData={profileData}
+                profileData={safeProfileData}
                 isOwnProfile={isOwnProfile}
-                onEditMaxPreps={() => handleEditSection('maxpreps-verification')}
+                onEditMaxPreps={safeProfileData.isVerified ? undefined : () => handleEditSection('maxpreps-verification')}
                 onShowVerificationDialog={() => handleEditSection('manual-verification')}
                 hasPendingVerification={hasPendingVerification}
                 pendingSubmittedAt={pendingSubmittedAt}
@@ -989,7 +1045,7 @@ export function AthleteProfile({
             )}
             
             {/* Hudl Highlights */}
-            {(profileData.hudlUrl || isOwnProfile) && (
+            {(safeProfileData.hudlUrl || isOwnProfile) && (
               <Card>
                 <CardHeader>
                   <div className="flex items-center justify-between">
@@ -1007,13 +1063,13 @@ export function AthleteProfile({
                   </div>
                 </CardHeader>
                 <CardContent>
-                  {profileData.hudlUrl ? (
+                  {safeProfileData.hudlUrl ? (
                     (() => {
                       // Generate embed URL from Hudl URL if embed URL is not provided
-                      let embedUrl = profileData.hudlEmbedUrl;
-                      if (!embedUrl && profileData.hudlUrl) {
+                      let embedUrl = safeProfileData.hudlEmbedUrl;
+                      if (!embedUrl && safeProfileData.hudlUrl) {
                         // Extract Hudl video ID from various Hudl URL formats
-                        const hudlUrlMatch = profileData.hudlUrl.match(/hudl\.com\/(?:video\/)?([^\/\?]+)/);
+                        const hudlUrlMatch = safeProfileData.hudlUrl.match(/hudl\.com\/(?:video\/)?([^\/\?]+)/);
                         if (hudlUrlMatch) {
                           embedUrl = `https://www.hudl.com/embed/video/${hudlUrlMatch[1]}`;
                         }
@@ -1032,7 +1088,7 @@ export function AthleteProfile({
                           </div>
                           <div className="flex justify-between items-center">
                             <p className="text-sm text-muted-foreground">Game film and highlight reels</p>
-                            <Link href={profileData.hudlUrl} target="_blank">
+                            <Link href={safeProfileData.hudlUrl} target="_blank">
                               <Button variant="outline" size="sm">
                                 <ExternalLink className="w-4 h-4 mr-1" />
                                 View Full Hudl
@@ -1046,7 +1102,7 @@ export function AthleteProfile({
                             <p className="font-medium">Hudl Profile</p>
                             <p className="text-sm text-muted-foreground">Game film and highlight reels</p>
                           </div>
-                          <Link href={profileData.hudlUrl} target="_blank">
+                          <Link href={safeProfileData.hudlUrl} target="_blank">
                             <Button variant="outline" size="sm">
                               <ExternalLink className="w-4 h-4 mr-1" />
                               View Hudl
@@ -1077,7 +1133,7 @@ export function AthleteProfile({
             )}
 
             {/* YouTube Videos */}
-            {(profileData.youtubeVideos && profileData.youtubeVideos.length > 0) || isOwnProfile ? (
+            {(safeProfileData.youtubeVideos && safeProfileData.youtubeVideos.length > 0) || isOwnProfile ? (
               <Card>
                 <CardHeader>
                   <div className="flex items-center justify-between">
@@ -1095,9 +1151,9 @@ export function AthleteProfile({
                   </div>
                 </CardHeader>
                 <CardContent>
-                  {profileData.youtubeVideos && profileData.youtubeVideos.length > 0 ? (
+                  {safeProfileData.youtubeVideos && safeProfileData.youtubeVideos.length > 0 ? (
                     <div className="space-y-4">
-                      {profileData.youtubeVideos.sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0)).map((video, index) => (
+                      {safeProfileData.youtubeVideos.sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0)).map((video, index) => (
                         <div key={video.id || index} className="space-y-2">
                           <h4 className="font-medium break-words">{video.title}</h4>
                           <div className="relative aspect-video bg-black rounded-lg overflow-hidden">

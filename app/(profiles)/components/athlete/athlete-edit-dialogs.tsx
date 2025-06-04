@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
-import { Save, X, Plus, Upload } from "lucide-react";
+import { Save, X, Plus, Upload, Shield } from "lucide-react";
 import { getSportsList, US_STATES, GRADUATION_YEARS, getPositionsForSport, getMeasurablesForSport } from '@/lib/sports-data';
 import { EducationLevel } from '@/app/(onboarding)/lib/onboarding';
 import Image from "next/image";
@@ -196,6 +196,10 @@ export function AthleteEditDialogs({
         });
         break;
       case 'maxpreps-verification':
+        // SECURITY: Prevent editing MaxPreps URL for verified users
+        if (profileData.isVerified && profileData.maxPrepsUrl) {
+          return; // Don't initialize edit data for verified users
+        }
         setEditData({
           maxPrepsUrl: profileData.maxPrepsUrl || ''
         });
@@ -210,6 +214,10 @@ export function AthleteEditDialogs({
         setTempVideos(profileData.youtubeVideos || []);
         break;
       case 'measurable':
+      case 'edit-measurable':
+      case 'measurables':
+      case 'edit-measurables':
+      case 'add-measurables':
         if (measurableToEdit) {
           const dateParts = measurableToEdit.measurementDate.split('-');
           setEditData({
@@ -217,15 +225,24 @@ export function AthleteEditDialogs({
             label: measurableToEdit.label,
             value: measurableToEdit.value,
             month: dateParts[1] || '',
-            year: dateParts[0] || ''
+            year: dateParts[0] || '',
+            isCustom: !getMeasurablesForSport(measurableToEdit.sport).includes(measurableToEdit.label),
+            customLabel: !getMeasurablesForSport(measurableToEdit.sport).includes(measurableToEdit.label) ? measurableToEdit.label : ''
           });
         } else {
+          // Set default month to current month
+          const currentDate = new Date();
+          const currentMonth = String(currentDate.getMonth() + 1).padStart(2, '0');
+          const currentYear = currentDate.getFullYear();
+          
           setEditData({
             sport: selectedSport,
             label: '',
             value: '',
-            month: '',
-            year: ''
+            month: currentMonth,
+            year: currentYear.toString(),
+            isCustom: false,
+            customLabel: ''
           });
         }
         break;
@@ -521,104 +538,196 @@ export function AthleteEditDialogs({
     await handleImageUpload(selectedProfileFile);
   };
 
+  const handleDeleteMeasurable = () => {
+    if (!measurableIdToEdit) return;
+    
+    const currentMeasurables = profileData.measurables || [];
+    
+    // Handle both database IDs (numbers) and stable IDs (strings)
+    let updatedMeasurables;
+    if (typeof measurableIdToEdit === 'number') {
+      // Database ID - filter by exact match
+      updatedMeasurables = currentMeasurables.filter(m => m.id !== measurableIdToEdit);
+    } else if (typeof measurableIdToEdit === 'string' && measurableIdToEdit.startsWith('stable-')) {
+      // Stable ID - parse the components and find matching measurable
+      const stableIdParts = measurableIdToEdit.split('-');
+      const index = parseInt(stableIdParts[stableIdParts.length - 1]);
+      
+      if (!isNaN(index) && index >= 0 && index < currentMeasurables.length) {
+        // Remove by index
+        updatedMeasurables = currentMeasurables.filter((_, i) => i !== index);
+      } else {
+        console.error('Could not parse stable ID for deletion:', measurableIdToEdit);
+        return;
+      }
+    } else {
+      // Unknown ID format
+      console.error('Unknown measurable ID format for deletion:', measurableIdToEdit);
+      return;
+    }
+    
+    // Update the state with the new measurables array
+    onSave({ measurables: updatedMeasurables });
+    
+    // Clear any validation errors
+    setValidationErrors({});
+    
+    // Reset the measurable being edited
+    setMeasurableToEdit(null);
+    
+    // Close the dialog
+    onClose();
+  };
+
+  // Check if the current dialog can be saved
+  const canSave = () => {
+    // Delete dialogs don't use the save button
+    if (dialogType === 'delete-measurable' || dialogType === 'profile-image') {
+      return false;
+    }
+    
+    // SECURITY: Prevent saving MaxPreps changes for verified users
+    if (dialogType === 'maxpreps-verification' && profileData.isVerified && profileData.maxPrepsUrl) {
+      return false;
+    }
+    
+    // Check for validation errors
+    if (Object.keys(validationErrors).length > 0) {
+      return false;
+    }
+    
+    // For measurable dialogs, check required fields
+    if (dialogType?.includes('measurable')) {
+      const hasLabel = editData.isCustom ? editData.customLabel?.trim() : editData.label;
+      const hasValue = editData.value?.trim();
+      return !!(hasLabel && hasValue);
+    }
+    
+    return true;
+  };
+
   const handleSave = () => {
     const updates: Partial<AthleteProfileData> = {};
+    const tempVideos = [...(editData.youtubeVideos || [])];
 
     switch (dialogType) {
       case 'basic-info':
-        if (editData.fullName !== undefined) updates.fullName = editData.fullName as string;
-        if (editData.sport !== undefined) updates.sport = editData.sport as string;
-        if (editData.secondarySports !== undefined) updates.secondarySports = editData.secondarySports as string[];
-        if (editData.graduationYear !== undefined) updates.graduationYear = editData.graduationYear as number;
-        if (editData.educationLevel !== undefined) updates.educationLevel = editData.educationLevel as EducationLevel;
-        if (editData.organizationName !== undefined) updates.organizationName = editData.organizationName as string;
-        if (editData.city !== undefined) updates.city = editData.city as string;
-        if (editData.state !== undefined) updates.state = editData.state as string;
-        if (editData.positions !== undefined) updates.positions = editData.positions as string[];
-        
-        if (editData.heightFeet !== undefined && editData.heightInches !== undefined) {
-          updates.height = `${editData.heightFeet}'${editData.heightInches}"`;
-        }
-        
-        if (editData.weight !== undefined) {
-          const cleanWeight = String(editData.weight).replace(/\s*lbs?\s*/gi, '').trim();
-          updates.weight = cleanWeight ? `${cleanWeight} lbs` : '';
-        }
+        updates.fullName = editData.fullName;
+        updates.sport = editData.sport;
+        updates.secondarySports = editData.secondarySports;
+        updates.educationLevel = editData.educationLevel;
+        updates.positions = editData.positions;
+        updates.city = editData.city;
+        updates.state = editData.state;
+        updates.gpa = editData.gpa;
+        updates.satScore = editData.satScore;
+        updates.actScore = editData.actScore;
+        updates.height = editData.height;
+        updates.weight = editData.weight;
         break;
 
       case 'academic-info':
-        updates.gpa = editData.gpa === '' ? undefined : editData.gpa as number;
-        updates.satScore = editData.satScore === '' ? undefined : editData.satScore as number;
-        updates.actScore = editData.actScore === '' ? undefined : editData.actScore as number;
-        updates.intendedMajor = editData.intendedMajor === '' ? undefined : editData.intendedMajor as string;
+        updates.gpa = editData.gpa;
+        updates.satScore = editData.satScore;
+        updates.actScore = editData.actScore;
+        updates.intendedMajor = editData.intendedMajor;
         break;
 
       case 'personal-statement':
-        updates.personalStatement = editData.personalStatement === '' ? undefined : editData.personalStatement as string;
+        updates.personalStatement = editData.personalStatement;
         break;
 
       case 'social-media':
-        const newSocial: { instagram?: string; twitter?: string } = {};
-        if (editData.instagram !== undefined) {
-          const instagramValue = String(editData.instagram).trim();
-          if (instagramValue) newSocial.instagram = instagramValue;
-        }
-        if (editData.twitter !== undefined) {
-          const twitterValue = String(editData.twitter).trim();
-          if (twitterValue) newSocial.twitter = twitterValue;
-        }
-        updates.socialMedia = Object.keys(newSocial).length > 0 ? newSocial : undefined;
+        updates.socialMedia = {
+          instagram: editData.instagram,
+          twitter: editData.twitter
+        };
         break;
 
       case 'maxpreps-verification':
-        const maxPrepsUrl = String(editData.maxPrepsUrl).trim();
-        if (maxPrepsUrl) {
-          // If we have a MaxPreps URL and validation passed, set as verified
-          updates.maxPrepsUrl = maxPrepsUrl;
+        updates.maxPrepsUrl = editData.maxPrepsUrl;
+        // If MaxPreps URL is valid and passes validation, mark user as verified
+        if (editData.maxPrepsUrl && !validateField('maxPrepsUrl', editData.maxPrepsUrl)) {
           updates.isVerified = true;
-        } else {
-          // If MaxPreps URL is removed, remove verification
-          updates.maxPrepsUrl = undefined;
-          updates.isVerified = false;
         }
         break;
 
       case 'hudl-highlights':
-        const hudlUrl = String(editData.hudlUrl).trim();
-        const hudlEmbedUrl = String(editData.hudlEmbedUrl).trim();
-        updates.hudlUrl = hudlUrl === '' ? undefined : hudlUrl;
-        updates.hudlEmbedUrl = hudlEmbedUrl === '' ? undefined : hudlEmbedUrl;
-        break;
-
-      case 'video-highlights':
-        updates.youtubeVideos = tempVideos || [];
+        updates.hudlUrl = editData.hudlUrl;
+        updates.hudlEmbedUrl = editData.hudlEmbedUrl;
         break;
 
       case 'measurable':
-        if (measurableToEdit) {
-          const label = editData.isCustom 
-            ? String(editData.customLabel).trim() 
-            : String(editData.label).trim();
-            
-          if (label && String(editData.value).trim()) {
-            let measurementDate = new Date().toISOString();
-            if (editData.measurementMonth && editData.measurementYear) {
-              const month = parseInt(editData.measurementMonth);
-              const year = parseInt(editData.measurementYear);
-              measurementDate = new Date(year, month - 1, 1).toISOString();
-            }
-            
+      case 'edit-measurable':
+      case 'measurables':
+      case 'edit-measurables':
+      case 'add-measurables': {
+        const label = editData.isCustom 
+          ? String(editData.customLabel).trim() 
+          : String(editData.label).trim();
+          
+        if (label && String(editData.value).trim()) {
+          let measurementDate = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
+          if (editData.month && editData.year) {
+            const month = String(editData.month).padStart(2, '0');
+            const year = String(editData.year);
+            measurementDate = `${year}-${month}-01`;
+          }
+          
+          const currentMeasurables = profileData.measurables || [];
+          
+          // Check for duplicate measurable
+          const isDuplicate = currentMeasurables.some(m => 
+            m.label === label && 
+            m.sport === selectedSport && 
+            (!measurableToEdit || m.id !== measurableToEdit.id)
+          );
+
+          if (isDuplicate) {
+            setValidationErrors({ 
+              label: 'This metric already exists for this sport. Please edit the existing one instead.' 
+            });
+            return;
+          }
+          
+          if (measurableToEdit) {
+            // Editing existing measurable
+            const updatedMeasurables = currentMeasurables.map(m => 
+              m.id === measurableToEdit.id 
+                ? {
+                    ...m,
+                    sport: selectedSport,
+                    label: label,
+                    value: String(editData.value).trim(),
+                    measurementDate: measurementDate
+                  }
+                : m
+            );
+            updates.measurables = updatedMeasurables;
+          } else {
+            // Adding new measurable - ensure existing measurables keep their IDs
             const newMeasurable: Measurable = {
-              id: `temp-${Date.now()}`,
+              id: `measurable-${Date.now()}`,
               sport: selectedSport,
               label: label,
-              value: editData.value.trim(),
+              value: String(editData.value).trim(),
               measurementDate: measurementDate
             };
             
-            updates.measurables = [...(profileData.measurables || []), newMeasurable];
+            // Make sure existing measurables have IDs - assign temp IDs if missing
+            const measurablesWithIds = currentMeasurables.map(m => ({
+              ...m,
+              id: m.id || `existing-${Date.now()}-${Math.random()}`
+            }));
+            
+            updates.measurables = [...measurablesWithIds, newMeasurable];
           }
         }
+        break;
+      }
+
+      case 'video-highlights':
+        updates.youtubeVideos = tempVideos;
         break;
 
       case 'profile-image':
@@ -626,17 +735,7 @@ export function AthleteEditDialogs({
         return;
 
       default:
-        return (
-          <>
-            <DialogHeader>
-              <DialogTitle>Edit {dialogType}</DialogTitle>
-              <DialogDescription>Edit functionality for this section.</DialogDescription>
-            </DialogHeader>
-            <div className="space-y-6">
-              <p>Edit functionality for {dialogType} coming soon!</p>
-            </div>
-          </>
-        );
+        return;
     }
 
     // SECURITY: Sanitize all user input to prevent XSS attacks
@@ -1024,23 +1123,40 @@ export function AthleteEditDialogs({
               <DialogDescription>Connect your MaxPreps profile to showcase official stats and verification.</DialogDescription>
             </DialogHeader>
             <div className="space-y-6">
-              <div className="space-y-2">
-                <Label htmlFor="edit-maxPrepsUrl">MaxPreps Profile URL</Label>
-                <Input
-                  id="edit-maxPrepsUrl"
-                  placeholder="https://www.maxpreps.com/..."
-                  value={editData.maxPrepsUrl || ''}
-                  onChange={(e) => handleFieldChange('maxPrepsUrl', e.target.value)}
-                  className={`h-12 ${validationErrors.maxPrepsUrl ? 'border-red-500' : ''}`}
-                  maxLength={FIELD_LIMITS.URL}
-                />
-                {validationErrors.maxPrepsUrl && (
-                  <p className="text-sm text-red-500">{validationErrors.maxPrepsUrl}</p>
-                )}
-                <p className="text-sm text-muted-foreground">
-                  Add your MaxPreps profile to showcase official stats and verification. The URL should contain your name to verify it&apos;s your profile.
-                </p>
-              </div>
+              {/* SECURITY: Show warning for verified users */}
+              {profileData.isVerified && profileData.maxPrepsUrl ? (
+                <div className="bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
+                  <div className="flex items-center gap-2 text-red-700 dark:text-red-300">
+                    <Shield className="w-5 h-5" />
+                    <h4 className="font-medium">MaxPreps URL Locked</h4>
+                  </div>
+                  <p className="text-sm text-red-600 dark:text-red-400 mt-2">
+                    Your MaxPreps profile has been verified and is locked for security. 
+                    This prevents impersonation and maintains the integrity of your athletic credentials.
+                  </p>
+                  <p className="text-sm text-red-600 dark:text-red-400 mt-2">
+                    Current verified MaxPreps URL: <span className="font-mono text-xs break-all">{profileData.maxPrepsUrl}</span>
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <Label htmlFor="edit-maxPrepsUrl">MaxPreps Profile URL</Label>
+                  <Input
+                    id="edit-maxPrepsUrl"
+                    placeholder="https://www.maxpreps.com/..."
+                    value={editData.maxPrepsUrl || ''}
+                    onChange={(e) => handleFieldChange('maxPrepsUrl', e.target.value)}
+                    className={`h-12 ${validationErrors.maxPrepsUrl ? 'border-red-500' : ''}`}
+                    maxLength={FIELD_LIMITS.URL}
+                  />
+                  {validationErrors.maxPrepsUrl && (
+                    <p className="text-sm text-red-500">{validationErrors.maxPrepsUrl}</p>
+                  )}
+                  <p className="text-sm text-muted-foreground">
+                    Add your MaxPreps profile to showcase official stats and verification. The URL should contain your name to verify it&apos;s your profile.
+                  </p>
+                </div>
+              )}
             </div>
           </>
         );
@@ -1162,37 +1278,69 @@ export function AthleteEditDialogs({
         );
 
       case 'measurable':
+      case 'edit-measurable':
+      case 'measurables':
+      case 'edit-measurables':
+      case 'add-measurables': {
         const suggestedMeasurables = getMeasurablesForSport(selectedSport);
+        const isEditingExisting = !!measurableToEdit;
+        
+        // Filter out existing measurables from suggestions unless editing
+        const availableMeasurables = suggestedMeasurables.filter(metric => {
+          if (isEditingExisting) return true;
+          return !profileData.measurables?.some(m => 
+            m.label === metric && 
+            m.sport === selectedSport
+          );
+        });
         
         return (
           <>
             <DialogHeader>
-              <DialogTitle>Add Performance Metric - {selectedSport}</DialogTitle>
-              <DialogDescription>Add your athletic performance data to showcase your abilities.</DialogDescription>
+              <DialogTitle>
+                {isEditingExisting ? 'Edit' : 'Add'} Performance Metric - {selectedSport}
+              </DialogTitle>
+              <DialogDescription>
+                {isEditingExisting 
+                  ? 'Update your athletic performance data to showcase your abilities.'
+                  : 'Add your athletic performance data to showcase your abilities.'
+                }
+              </DialogDescription>
             </DialogHeader>
             <div className="space-y-6">
               <div className="space-y-2">
                 <Label htmlFor="edit-measurableType">Metric Type</Label>
                 <Select
-                  value={editData.isCustom ? 'custom' : editData.label}
+                  value={editData.isCustom ? 'custom' : editData.label || ''}
                   onValueChange={(value) => {
                     if (value === 'custom') {
                       setEditData(prev => ({ ...prev, isCustom: true, label: '' }));
                     } else {
                       setEditData(prev => ({ ...prev, isCustom: false, label: value }));
                     }
+                    // Clear label validation error when changing
+                    if (validationErrors.label) {
+                      setValidationErrors(prev => {
+                        const newErrors = { ...prev };
+                        delete newErrors.label;
+                        return newErrors;
+                      });
+                    }
                   }}
                 >
-                  <SelectTrigger className="h-12" id="edit-measurableType">
+                  <SelectTrigger className={`h-12 ${validationErrors.label ? 'border-red-500' : ''}`} id="edit-measurableType">
                     <SelectValue placeholder="Choose a metric" />
                   </SelectTrigger>
                   <SelectContent>
-                    {suggestedMeasurables.map((metric: string) => (
+                    {availableMeasurables.map((metric: string) => (
                       <SelectItem key={metric} value={metric}>{metric}</SelectItem>
                     ))}
                     <SelectItem value="custom">Custom Metric</SelectItem>
                   </SelectContent>
                 </Select>
+                {validationErrors.label && (
+                  <p className="text-sm text-red-500">{validationErrors.label}</p>
+                )}
               </div>
               
               {editData.isCustom && (
@@ -1202,10 +1350,23 @@ export function AthleteEditDialogs({
                     id="edit-customMetricName"
                     placeholder="Enter name of metric"
                     value={editData.customLabel || ''}
-                    onChange={(e) => setEditData(prev => ({ ...prev, customLabel: e.target.value }))}
-                    className="h-12"
+                    onChange={(e) => {
+                      setEditData(prev => ({ ...prev, customLabel: e.target.value }));
+                      // Clear validation error when typing
+                      if (validationErrors.label) {
+                        setValidationErrors(prev => {
+                          const newErrors = { ...prev };
+                          delete newErrors.label;
+                          return newErrors;
+                        });
+                      }
+                    }}
+                    className={`h-12 ${validationErrors.label ? 'border-red-500' : ''}`}
                     maxLength={50}
                   />
+                  {validationErrors.label && (
+                    <p className="text-sm text-red-500">{validationErrors.label}</p>
+                  )}
                 </div>
               )}
               
@@ -1214,11 +1375,24 @@ export function AthleteEditDialogs({
                 <Input
                   id="edit-measurableValue"
                   placeholder="e.g., 4.4s, 34 inches, 225 lbs"
-                  value={editData.value}
-                  onChange={(e) => setEditData(prev => ({ ...prev, value: e.target.value }))}
-                  className="h-12"
+                  value={editData.value || ''}
+                  onChange={(e) => {
+                    setEditData(prev => ({ ...prev, value: e.target.value }));
+                    // Clear validation error when typing
+                    if (validationErrors.value) {
+                      setValidationErrors(prev => {
+                        const newErrors = { ...prev };
+                        delete newErrors.value;
+                        return newErrors;
+                      });
+                    }
+                  }}
+                  className={`h-12 ${validationErrors.value ? 'border-red-500' : ''}`}
                   maxLength={20}
                 />
+                {validationErrors.value && (
+                  <p className="text-sm text-red-500">{validationErrors.value}</p>
+                )}
               </div>
 
               <div className="space-y-2">
@@ -1227,8 +1401,8 @@ export function AthleteEditDialogs({
                   <div className="space-y-2">
                     <Label htmlFor="edit-measurementMonth" className="text-sm">Month</Label>
                     <Select
-                      value={editData.measurementMonth}
-                      onValueChange={(value) => setEditData(prev => ({ ...prev, measurementMonth: value }))}
+                      value={editData.month || ''}
+                      onValueChange={(value) => setEditData(prev => ({ ...prev, month: value }))}
                     >
                       <SelectTrigger className="h-12" id="edit-measurementMonth">
                         <SelectValue placeholder="Select month" />
@@ -1243,8 +1417,8 @@ export function AthleteEditDialogs({
                   <div className="space-y-2">
                     <Label htmlFor="edit-measurementYear" className="text-sm">Year</Label>
                     <Select
-                      value={editData.measurementYear}
-                      onValueChange={(value) => setEditData(prev => ({ ...prev, measurementYear: value }))}
+                      value={editData.year || ''}
+                      onValueChange={(value) => setEditData(prev => ({ ...prev, year: value }))}
                     >
                       <SelectTrigger className="h-12" id="edit-measurementYear">
                         <SelectValue placeholder="Select year" />
@@ -1261,107 +1435,7 @@ export function AthleteEditDialogs({
             </div>
           </>
         );
-
-      case 'edit-measurable':
-        const suggestedMeasurablesEdit = getMeasurablesForSport(selectedSport);
-        
-        return (
-          <>
-            <DialogHeader>
-              <DialogTitle>Edit Performance Metric - {selectedSport}</DialogTitle>
-              <DialogDescription>Update your athletic performance data.</DialogDescription>
-            </DialogHeader>
-            <div className="space-y-6">
-              <div className="space-y-2">
-                <Label htmlFor="edit-measurableTypeEdit">Metric Type</Label>
-                <Select
-                  value={editData.isCustom ? 'custom' : editData.label}
-                  onValueChange={(value) => {
-                    if (value === 'custom') {
-                      setEditData(prev => ({ ...prev, isCustom: true, label: '' }));
-                    } else {
-                      setEditData(prev => ({ ...prev, isCustom: false, label: value }));
-                    }
-                  }}
-                >
-                  <SelectTrigger className="h-12" id="edit-measurableTypeEdit">
-                    <SelectValue placeholder="Choose a metric" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {suggestedMeasurablesEdit.map((metric: string) => (
-                      <SelectItem key={metric} value={metric}>{metric}</SelectItem>
-                    ))}
-                    <SelectItem value="custom">Custom Metric</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              {editData.isCustom && (
-                <div className="space-y-2">
-                  <Label htmlFor="edit-customMetricNameEdit">Custom Metric Name</Label>
-                  <Input
-                    id="edit-customMetricNameEdit"
-                    placeholder="Enter name of metric"
-                    value={editData.customLabel || ''}
-                    onChange={(e) => setEditData(prev => ({ ...prev, customLabel: e.target.value }))}
-                    className="h-12"
-                    maxLength={50}
-                  />
-                </div>
-              )}
-              
-              <div className="space-y-2">
-                <Label htmlFor="edit-measurableValueEdit">Value</Label>
-                <Input
-                  id="edit-measurableValueEdit"
-                  placeholder="e.g., 4.4s, 34 inches, 225 lbs"
-                  value={editData.value || ''}
-                  onChange={(e) => setEditData(prev => ({ ...prev, value: e.target.value }))}
-                  className="h-12"
-                  maxLength={20}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label>Measurement Date</Label>
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-2">
-                    <Label htmlFor="edit-measurementMonthEdit" className="text-sm">Month</Label>
-                    <Select
-                      value={editData.measurementMonth}
-                      onValueChange={(value) => setEditData(prev => ({ ...prev, measurementMonth: value }))}
-                    >
-                      <SelectTrigger className="h-12" id="edit-measurementMonthEdit">
-                        <SelectValue placeholder="Select month" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {MONTH_OPTIONS.map((option) => (
-                          <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="edit-measurementYearEdit" className="text-sm">Year</Label>
-                    <Select
-                      value={editData.measurementYear}
-                      onValueChange={(value) => setEditData(prev => ({ ...prev, measurementYear: value }))}
-                    >
-                      <SelectTrigger className="h-12" id="edit-measurementYearEdit">
-                        <SelectValue placeholder="Select year" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {YEAR_OPTIONS.map((option) => (
-                          <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </>
-        );
+      }
 
       case 'profile-image':
         return (
@@ -1397,7 +1471,7 @@ export function AthleteEditDialogs({
                       <Upload className="mx-auto h-12 w-12 text-gray-400" />
                       <div className="mt-4">
                         <label htmlFor="profileImageUpload" className="cursor-pointer">
-                          <span className="mt-2 block text-sm font-medium text-gray-900">
+                          <span className="mt-2 block text-sm font-medium text-gray-100">
                             Upload a profile picture
                           </span>
                           <span className="mt-1 block text-xs text-gray-500">
@@ -1450,6 +1524,66 @@ export function AthleteEditDialogs({
           </>
         );
 
+      case 'delete-measurable': {
+        // Safety check: if no measurableIdToEdit, don't render the dialog content yet
+        if (!measurableIdToEdit) {
+          return (
+            <>
+              <DialogHeader>
+                <DialogTitle>Delete Performance Metric</DialogTitle>
+                <DialogDescription>
+                  Loading metric details...
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-6">
+                <div className="text-center py-8">
+                  <p className="text-muted-foreground">Loading...</p>
+                </div>
+              </div>
+            </>
+          );
+        }
+        
+        const measurableToDelete = profileData.measurables?.find(m => m.id === measurableIdToEdit);
+        
+        return (
+          <>
+            <DialogHeader>
+              <DialogTitle>Delete Performance Metric</DialogTitle>
+              <DialogDescription>
+                Are you sure you want to delete this performance metric? This action cannot be undone.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-6">
+              {measurableToDelete ? (
+                <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-4">
+                  <div className="flex items-start gap-3">
+                    <div className="flex-shrink-0 w-8 h-8 bg-destructive/20 rounded-full flex items-center justify-center">
+                      <X className="w-4 h-4 text-destructive" />
+                    </div>
+                    <div className="flex-1">
+                      <h4 className="font-medium text-foreground mb-1">{measurableToDelete.label}</h4>
+                      <p className="text-lg font-semibold text-foreground mb-1">{measurableToDelete.value}</p>
+                      <p className="text-sm text-muted-foreground">
+                        Recorded in {new Date(measurableToDelete.measurementDate).toLocaleDateString('en-US', {
+                          month: 'long',
+                          year: 'numeric'
+                        })}
+                      </p>
+                      <p className="text-sm text-muted-foreground">Sport: {measurableToDelete.sport}</p>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  <p className="text-muted-foreground">Measurable not found</p>
+                </div>
+              )}
+            </div>
+          </>
+        );
+      }
+
       default:
         return (
           <>
@@ -1469,18 +1603,29 @@ export function AthleteEditDialogs({
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className={dialogType === 'basic-info' ? "sm:max-w-2xl max-w-lg" : "sm:max-w-md max-w-lg"}>
         {getDialogContent()}
-        <DialogFooter>
-          <Button variant="outline" onClick={onClose} disabled={isUploading}>Cancel</Button>
-          {dialogType !== 'profile-image' && (
+        {dialogType === 'delete-measurable' ? (
+          <DialogFooter className="sm:justify-start">
+            <Button variant="outline" onClick={onClose}>Cancel</Button>
+            <Button 
+              variant="destructive" 
+              onClick={handleDeleteMeasurable}
+              disabled={!measurableIdToEdit}
+            >
+              Delete Metric
+            </Button>
+          </DialogFooter>
+        ) : dialogType !== 'profile-image' ? (
+          <DialogFooter>
+            <Button variant="outline" onClick={onClose}>Cancel</Button>
             <Button 
               onClick={handleSave}
-              disabled={Object.keys(validationErrors).length > 0 || isUploading}
+              disabled={!canSave() || isUploading}
             >
               <Save className="w-4 h-4 mr-2" />
               Save Changes
             </Button>
-          )}
-        </DialogFooter>
+          </DialogFooter>
+        ) : null}
       </DialogContent>
     </Dialog>
   );
