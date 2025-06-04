@@ -533,14 +533,129 @@ function App() {
     }
   };
 
-  const handleAcceptRequest = (requestId: number) => {
-    // TODO: Implement accept request
+  const handleAcceptRequest = async (requestId: number) => {
     console.log('Accept request:', requestId);
+    
+    // Find the request to get the fromUserId
+    const request = pendingRequests.find(r => r.id === requestId);
+    if (!request) {
+      console.error('Request not found');
+      return;
+    }
+
+    try {
+      // Get auth token
+      const windowWithClerk = window as unknown as {
+        Clerk?: {
+          session?: {
+            getToken: () => Promise<string>;
+          };
+        };
+      };
+      const token = await windowWithClerk.Clerk?.session?.getToken();
+      
+      const response = await fetch('/api/connections', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({ fromUserId: request.otherUser.userId }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to accept connection request');
+      }
+
+      const result = await response.json();
+      if (result.success) {
+        // Remove from pending requests and add to connections
+        setPendingRequests(prev => prev.filter(r => r.id !== requestId));
+        
+        // Create a connected connection object
+        const newConnection: Connection = {
+          id: result.connection.id,
+          status: 'connected',
+          initiatedBy: request.initiatedBy,
+          createdAt: request.createdAt,
+          notes: request.notes,
+          isInitiator: false, // This user didn't initiate, they accepted
+          otherUser: request.otherUser
+        };
+        
+        setConnections(prev => [...prev, newConnection]);
+        
+        // Show success notification
+        const notification = document.createElement('div');
+        notification.className = 'fixed top-4 right-4 bg-green-500 text-white px-4 py-2 rounded-lg shadow-lg z-50';
+        notification.textContent = 'Connection request accepted successfully!';
+        document.body.appendChild(notification);
+        setTimeout(() => {
+          document.body.removeChild(notification);
+        }, 3000);
+      } else {
+        throw new Error(result.error || 'Failed to accept connection request');
+      }
+    } catch (error) {
+      console.error('Error accepting connection request:', error);
+      alert('Failed to accept connection request. Please try again.');
+    }
   };
 
-  const handleDeclineRequest = (requestId: number) => {
-    // TODO: Implement decline request
+  const handleDeclineRequest = async (requestId: number) => {
     console.log('Decline request:', requestId);
+    
+    // Find the request to get the fromUserId
+    const request = pendingRequests.find(r => r.id === requestId);
+    if (!request) {
+      console.error('Request not found');
+      return;
+    }
+
+    try {
+      // Get auth token
+      const windowWithClerk = window as unknown as {
+        Clerk?: {
+          session?: {
+            getToken: () => Promise<string>;
+          };
+        };
+      };
+      const token = await windowWithClerk.Clerk?.session?.getToken();
+      
+      const response = await fetch('/api/connections', {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({ targetUserId: request.otherUser.userId }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to decline connection request');
+      }
+
+      const result = await response.json();
+      if (result.success) {
+        // Remove from pending requests
+        setPendingRequests(prev => prev.filter(r => r.id !== requestId));
+        
+        // Show success notification
+        const notification = document.createElement('div');
+        notification.className = 'fixed top-4 right-4 bg-red-500 text-white px-4 py-2 rounded-lg shadow-lg z-50';
+        notification.textContent = 'Connection request declined.';
+        document.body.appendChild(notification);
+        setTimeout(() => {
+          document.body.removeChild(notification);
+        }, 3000);
+      } else {
+        throw new Error(result.error || 'Failed to decline connection request');
+      }
+    } catch (error) {
+      console.error('Error declining connection request:', error);
+      alert('Failed to decline connection request. Please try again.');
+    }
   };
 
   const handleWithdrawRequest = async (requestId: number, targetUserId: string) => {
@@ -681,9 +796,9 @@ function App() {
             <TabsTrigger value="connections" className="relative text-xs sm:text-sm px-2 sm:px-4">
               <Users size={14} className="mr-1 sm:mr-2" />
               <span className="hidden sm:inline">Connections</span>
-              <span className="sm:hidden">Connected</span>
+              <span className="sm:hidden">Connections</span>
               {connections.length > 0 && (
-                <Badge variant="secondary" className="ml-1 sm:ml-2 h-4 w-4 text-xs p-0 flex items-center justify-center rounded-full">
+                <Badge variant="secondary" className="absolute -top-2 left-1/2 transform -translate-x-1/2 h-4 w-4 text-xs p-0 flex items-center justify-center rounded-full z-10">
                   {connections.length}
                 </Badge>
               )}
@@ -693,7 +808,7 @@ function App() {
               <span className="hidden sm:inline">Requests</span>
               <span className="sm:hidden">Incoming</span>
               {pendingRequests.length > 0 && (
-                <Badge variant="destructive" className="ml-1 sm:ml-2 h-4 w-4 text-xs p-0 flex items-center justify-center rounded-full">
+                <Badge variant="destructive" className="absolute -top-2 left-1/2 transform -translate-x-1/2 h-4 w-4 text-xs p-0 flex items-center justify-center rounded-full z-10">
                   {pendingRequests.length}
                 </Badge>
               )}
@@ -703,7 +818,7 @@ function App() {
               <span className="hidden sm:inline">Sent Requests</span>
               <span className="sm:hidden">Sent</span>
               {sentRequests.length > 0 && (
-                <Badge variant="secondary" className="ml-1 sm:ml-2 h-4 w-4 text-xs p-0 flex items-center justify-center rounded-full">
+                <Badge variant="secondary" className="absolute -top-2 left-1/2 transform -translate-x-1/2 h-4 w-4 text-xs p-0 flex items-center justify-center rounded-full z-10">
                   {sentRequests.length}
                 </Badge>
               )}

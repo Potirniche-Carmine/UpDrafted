@@ -260,12 +260,20 @@ export function CoachEditDialogs({
       
       onSave(updates);
       
-      // Reset state and close dialog
-      setProfileImagePreview(null);
-      setOrganizationLogoPreview(null);
-      setSelectedProfileFile(null);
-      setSelectedOrganizationFile(null);
-      onClose();
+      // Reset state and close dialog with error handling
+      try {
+        setProfileImagePreview(null);
+        setOrganizationLogoPreview(null);
+        setSelectedProfileFile(null);
+        setSelectedOrganizationFile(null);
+        // Use setTimeout to ensure state updates complete before closing dialog
+        setTimeout(() => {
+          onClose();
+        }, 0);
+      } catch (error) {
+        console.error('Error cleaning up dialog state:', error);
+        onClose(); // Still try to close even if cleanup fails
+      }
     } catch (error) {
       console.error('Error uploading image:', error);
       setValidationErrors({ upload: 'Failed to upload image. Please try again.' });
@@ -346,80 +354,85 @@ export function CoachEditDialogs({
       return;
     }
 
-    const errors: {[key: string]: string} = {};
-    
-    // Validate all fields
-    Object.entries(editData).forEach(([field, value]) => {
-      const error = validateField(field, value);
-      if (error) {
-        errors[field] = error;
+    try {
+      const errors: {[key: string]: string} = {};
+      
+      // Validate all fields
+      Object.entries(editData).forEach(([field, value]) => {
+        const error = validateField(field, value);
+        if (error) {
+          errors[field] = error;
+        }
+      });
+
+      if (Object.keys(errors).length > 0) {
+        setValidationErrors(errors);
+        return;
       }
-    });
 
-    if (Object.keys(errors).length > 0) {
-      setValidationErrors(errors);
-      return;
+      // Prepare updates based on dialog type
+      let updates: Partial<CoachProfileData> = {};
+
+      switch (dialogType) {
+        case 'basic-info':
+          updates = {
+            fullName: editData.fullName,
+            title: editData.title,
+            sportCoaching: editData.sportCoaching,
+            organizationName: editData.organizationName,
+            city: editData.city,
+            state: editData.state,
+            division: editData.division || undefined,
+            conference: editData.conference || undefined
+          };
+          break;
+        case 'personal-statement':
+          updates = {
+            personalStatement: editData.personalStatement || undefined
+          };
+          break;
+        case 'recruiting-needs':
+          updates = {
+            recruitingNeeds: {
+              ...profileData.recruitingNeeds,
+              graduationYears: editData.graduationYears,
+              positions: editData.positions,
+              scholarshipsAvailable: editData.scholarshipsAvailable ? Number(editData.scholarshipsAvailable) : undefined,
+              recruitingPhilosophy: editData.recruitingPhilosophy
+            }
+          };
+          break;
+        case 'social-media':
+          updates = {
+            instagramHandle: editData.instagram ? editData.instagram.replace('@', '') : undefined,
+            twitterHandle: editData.twitter ? editData.twitter.replace('@', '') : undefined
+          };
+          break;
+        case 'program-links':
+          updates = {
+            programWebsite: editData.programWebsite || undefined,
+            schoolWebsite: editData.schoolWebsite || undefined
+          };
+          break;
+        case 'showcase-video':
+          updates = {
+            showcaseVideoTitle: editData.showcaseVideoTitle || undefined,
+            showcaseVideoUrl: editData.showcaseVideoUrl || undefined,
+            showcaseVideoEmbedUrl: editData.showcaseVideoUrl ? 
+              editData.showcaseVideoUrl.replace('watch?v=', 'embed/').replace('youtu.be/', 'youtube.com/embed/') : 
+              undefined
+          };
+          break;
+      }
+
+      // SECURITY: Sanitize all user input to prevent XSS attacks
+      const sanitizedUpdates = sanitizeProfileData(updates) as Partial<CoachProfileData>;
+
+      onSave(sanitizedUpdates);
+    } catch (error) {
+      console.error('Error saving profile data:', error);
+      setValidationErrors({ general: 'An error occurred while saving. Please try again.' });
     }
-
-    // Prepare updates based on dialog type
-    let updates: Partial<CoachProfileData> = {};
-
-    switch (dialogType) {
-      case 'basic-info':
-        updates = {
-          fullName: editData.fullName,
-          title: editData.title,
-          sportCoaching: editData.sportCoaching,
-          organizationName: editData.organizationName,
-          city: editData.city,
-          state: editData.state,
-          division: editData.division || undefined,
-          conference: editData.conference || undefined
-        };
-        break;
-      case 'personal-statement':
-        updates = {
-          personalStatement: editData.personalStatement || undefined
-        };
-        break;
-      case 'recruiting-needs':
-        updates = {
-          recruitingNeeds: {
-            ...profileData.recruitingNeeds,
-            graduationYears: editData.graduationYears,
-            positions: editData.positions,
-            scholarshipsAvailable: editData.scholarshipsAvailable ? Number(editData.scholarshipsAvailable) : undefined,
-            recruitingPhilosophy: editData.recruitingPhilosophy
-          }
-        };
-        break;
-      case 'social-media':
-        updates = {
-          instagramHandle: editData.instagram ? editData.instagram.replace('@', '') : undefined,
-          twitterHandle: editData.twitter ? editData.twitter.replace('@', '') : undefined
-        };
-        break;
-      case 'program-links':
-        updates = {
-          programWebsite: editData.programWebsite || undefined,
-          schoolWebsite: editData.schoolWebsite || undefined
-        };
-        break;
-      case 'showcase-video':
-        updates = {
-          showcaseVideoTitle: editData.showcaseVideoTitle || undefined,
-          showcaseVideoUrl: editData.showcaseVideoUrl || undefined,
-          showcaseVideoEmbedUrl: editData.showcaseVideoUrl ? 
-            editData.showcaseVideoUrl.replace('watch?v=', 'embed/').replace('youtu.be/', 'youtube.com/embed/') : 
-            undefined
-        };
-        break;
-    }
-
-    // SECURITY: Sanitize all user input to prevent XSS attacks
-    const sanitizedUpdates = sanitizeProfileData(updates) as Partial<CoachProfileData>;
-
-    onSave(sanitizedUpdates);
   };
 
   const getDialogContent = () => {
@@ -921,6 +934,9 @@ export function CoachEditDialogs({
         {getDialogContent()}
         
         <DialogFooter className="gap-2">
+          {validationErrors.general && (
+            <p className="text-red-500 text-sm w-full text-center">{validationErrors.general}</p>
+          )}
           <Button variant="outline" onClick={onClose} disabled={isUploading}>
             Cancel
           </Button>

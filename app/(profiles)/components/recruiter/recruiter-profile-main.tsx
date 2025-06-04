@@ -1028,7 +1028,18 @@ export function RecruiterProfile({
         profileData={profileData}
         selectedSport={selectedSport}
         onClose={() => setEditDialogOpen(null)}
-        onSave={updateProfileData}
+        onSave={(updates: Partial<RecruiterProfileData>) => {
+          try {
+            updateProfileData(updates);
+            // Use setTimeout to ensure state update completes before closing dialog
+            setTimeout(() => {
+              setEditDialogOpen(null);
+            }, 0);
+          } catch (error) {
+            console.error('Error updating profile data:', error);
+            // Keep dialog open if there's an error
+          }
+        }}
       />
 
       {/* Verification Dialog */}

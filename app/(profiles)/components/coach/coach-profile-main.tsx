@@ -145,15 +145,35 @@ export function CoachProfile({
 
   // Track if profile data has changed from original
   const checkForChanges = (newData: CoachProfileData) => {
-    const hasChanges = JSON.stringify(newData) !== JSON.stringify(data);
-    setHasUnsavedChanges(hasChanges);
+    try {
+      const hasChanges = JSON.stringify(newData) !== JSON.stringify(data);
+      setHasUnsavedChanges(hasChanges);
+    } catch (error) {
+      console.error('Error checking for changes:', error);
+      // If we can't compare, assume there are changes to be safe
+      setHasUnsavedChanges(true);
+    }
   };
 
   // Update profile data and track changes
   const updateProfileData = (updates: Partial<CoachProfileData>) => {
-    const newData = { ...profileData, ...updates };
-    setProfileData(newData);
-    checkForChanges(newData);
+    try {
+      const newData = { ...profileData, ...updates };
+      setProfileData(newData);
+      checkForChanges(newData);
+    } catch (error) {
+      console.error('Error updating profile data:', error);
+      // Optionally show a user-friendly error message
+      const notification = document.createElement('div');
+      notification.className = 'fixed top-4 right-4 bg-red-500 text-white px-4 py-2 rounded-lg shadow-lg z-50';
+      notification.textContent = 'Error updating profile. Please try again.';
+      document.body.appendChild(notification);
+      setTimeout(() => {
+        if (document.body.contains(notification)) {
+          document.body.removeChild(notification);
+        }
+      }, 3000);
+    }
   };
 
   // Warn user about unsaved changes when leaving page
@@ -451,8 +471,16 @@ export function CoachProfile({
         profileData={profileData}
         onClose={() => setEditDialogOpen(null)}
         onSave={(updates: Partial<CoachProfileData>) => {
-          updateProfileData(updates);
-          setEditDialogOpen(null);
+          try {
+            updateProfileData(updates);
+            // Use setTimeout to ensure state update completes before closing dialog
+            setTimeout(() => {
+              setEditDialogOpen(null);
+            }, 0);
+          } catch (error) {
+            console.error('Error updating profile data:', error);
+            // Keep dialog open if there's an error
+          }
         }}
       />
 

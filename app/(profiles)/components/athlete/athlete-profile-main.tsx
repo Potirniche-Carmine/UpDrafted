@@ -749,9 +749,16 @@ export function AthleteProfile({
           setMeasurableIdToEdit(null);
         }}
         onSave={(updates: Partial<AthleteProfileData>) => {
-          updateProfileData(updates);
-          setEditDialogOpen(null);
-          setMeasurableIdToEdit(null);
+          try {
+            updateProfileData(updates);
+            // Use setTimeout to ensure state update completes before closing dialog
+            setTimeout(() => {
+              setEditDialogOpen(null);
+            }, 0);
+          } catch (error) {
+            console.error('Error updating profile data:', error);
+            // Keep dialog open if there's an error
+          }
         }}
         selectedSport={selectedSport}
       />

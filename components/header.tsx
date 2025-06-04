@@ -24,6 +24,7 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { useProfileNavigation } from '@/hooks/use-profile-navigation';
+import { useConnections } from '@/hooks/use-connections';
 
 // Mock user data for search - same as in search-bar.tsx
 interface SearchUser {
@@ -295,6 +296,7 @@ export function Header() {
   const {isSignedIn, user } = useUser();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { navigateToProfile, isNavigating: profileNavigating } = useProfileNavigation();
+  const { pendingRequestsCount } = useConnections();
 
   // Check if user has completed onboarding (has a role)
   const userRole = user?.publicMetadata?.role as string;
@@ -357,13 +359,18 @@ export function Header() {
             <Link
               key={item.key}
               href={item.href}
-              className="transition-colors flex items-center px-3 py-2 group rounded-lg text-muted-foreground hover:text-[#01ae79] hover:bg-[#01ae79]/5 dark:hover:bg-[#01ae79]/10"
+              className="transition-colors flex items-center px-3 py-2 group rounded-lg text-muted-foreground hover:text-[#01ae79] hover:bg-[#01ae79]/5 dark:hover:bg-[#01ae79]/10 relative"
               title={item.label}
             >
               {item.icon}
               <span className="ml-2 text-sm font-medium hidden lg:inline">
                 {item.label}
               </span>
+              {item.key === "connections" && pendingRequestsCount > 0 && (
+                <Badge variant="destructive" className="absolute -top-2 left-1/2 transform -translate-x-1/2 h-4 w-4 text-xs p-0 flex items-center justify-center rounded-full z-10">
+                  {pendingRequestsCount}
+                </Badge>
+              )}
             </Link>
           ))}
 
@@ -455,10 +462,15 @@ export function Header() {
                           key={item.key}
                           href={item.href}
                           onClick={() => setMobileMenuOpen(false)}
-                          className="flex items-center space-x-3 rounded-lg px-3 py-3 text-sm font-medium transition-colors hover:bg-[#01ae79]/5 dark:hover:bg-[#01ae79]/10 hover:text-[#01ae79]"
+                          className="flex items-center space-x-3 rounded-lg px-3 py-3 text-sm font-medium transition-colors hover:bg-[#01ae79]/5 dark:hover:bg-[#01ae79]/10 hover:text-[#01ae79] relative"
                         >
                           {item.icon}
                           <span>{item.label}</span>
+                          {item.key === "connections" && pendingRequestsCount > 0 && (
+                            <Badge variant="destructive" className="ml-auto h-4 w-4 text-xs p-0 flex items-center justify-center rounded-full">
+                              {pendingRequestsCount}
+                            </Badge>
+                          )}
                         </Link>
                       ))}
                     </div>
