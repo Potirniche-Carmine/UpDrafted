@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useMemo, useEffect, Suspense } from "react";
-import { useSearchParams } from "next/navigation";
-import { Search, Filter, User, Users, Target, MapPin, Calendar, School } from "lucide-react";
+import { useState, useEffect, Suspense, useCallback } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
+import { Search, MapPin, Calendar, School, Shield, Users } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
@@ -11,217 +11,257 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent } from "@/components/ui/card";
 import { AuthWrapper } from '../../../components/auth-wrapper';
+import { useAuth } from "@clerk/nextjs";
+import { getSportsList } from "@/lib/sports-data";
 
-// Same interface and mock data as search-bar component
-interface SearchUser {
+interface SearchResult {
   id: string;
-  name: string;
+  fullName: string;
   role: 'athlete' | 'coach' | 'recruiter';
   sport: string;
-  profilePicture: string;
-  location: string;
-  verified?: boolean;
+  profileImage: string | null;
+  organizationName: string;
+  city: string;
+  state: string;
+  isVerified: boolean;
+  title?: string;
+  division?: string;
   graduationYear?: number;
-  school?: string;
+  educationLevel?: string;
 }
 
-const mockUsers: SearchUser[] = [
-  {
-    id: '1',
-    name: 'Marcus Johnson',
-    role: 'athlete',
-    sport: 'Basketball',
-    profilePicture: 'https://placehold.co/80x80/E0E0E0/B0B0B0?text=MJ',
-    location: 'Chicago, IL',
-    verified: true,
-    graduationYear: 2025
-  },
-  {
-    id: '2', 
-    name: 'Sarah Williams',
-    role: 'coach',
-    sport: 'Soccer',
-    profilePicture: 'https://placehold.co/80x80/D1C4E9/7E57C2?text=SW',
-    location: 'Austin, TX',
-    verified: true,
-    school: 'University of Texas'
-  },
-  {
-    id: '3',
-    name: 'David Chen',
-    role: 'athlete',
-    sport: 'Swimming',
-    profilePicture: 'https://placehold.co/80x80/C8E6C9/66BB6A?text=DC',
-    location: 'San Diego, CA',
-    graduationYear: 2025
-  },
-  {
-    id: '4',
-    name: 'Emily Rodriguez',
-    role: 'recruiter',
-    sport: 'Track & Field',
-    profilePicture: 'https://placehold.co/80x80/FFCDD2/E57373?text=ER',
-    location: 'Durham, NC',
-    verified: true,
-    school: 'Duke University'
-  },
-  {
-    id: '5',
-    name: 'Michael Thompson',
-    role: 'athlete',
-    sport: 'Football',
-    profilePicture: 'https://placehold.co/80x80/F8BBD9/E91E63?text=MT',
-    location: 'Miami, FL',
-    graduationYear: 2024
-  },
-  {
-    id: '6',
-    name: 'Coach Lisa Brown',
-    role: 'coach',
-    sport: 'Tennis',
-    profilePicture: 'https://placehold.co/80x80/B39DDB/673AB7?text=LB',
-    location: 'Stanford, CA',
-    verified: true,
-    school: 'Stanford University'
-  },
-  {
-    id: '7',
-    name: 'Jordan Parker',
-    role: 'athlete',
-    sport: 'Volleyball',
-    profilePicture: 'https://placehold.co/80x80/81C784/4CAF50?text=JP',
-    location: 'Seattle, WA',
-    graduationYear: 2026
-  },
-  {
-    id: '8',
-    name: 'Alex Martinez',
-    role: 'recruiter',
-    sport: 'Baseball',
-    profilePicture: 'https://placehold.co/80x80/FFB74D/FF9800?text=AM',
-    location: 'Los Angeles, CA',
-    school: 'UCLA'
-  },
-  {
-    id: '9',
-    name: 'Samantha Davis',
-    role: 'athlete',
-    sport: 'Basketball',
-    profilePicture: 'https://placehold.co/80x80/FFE0B2/FF9800?text=SD',
-    location: 'New York, NY',
-    graduationYear: 2025
-  },
-  {
-    id: '10',
-    name: 'Coach Robert Wilson',
-    role: 'coach',
-    sport: 'Baseball',
-    profilePicture: 'https://placehold.co/80x80/C5E1A5/8BC34A?text=RW',
-    location: 'Boston, MA',
-    verified: true,
-    school: 'Harvard University'
-  },
-  {
-    id: '11',
-    name: 'Isabella Garcia',
-    role: 'athlete',
-    sport: 'Soccer',
-    profilePicture: 'https://placehold.co/80x80/F8BBD9/E91E63?text=IG',
-    location: 'Phoenix, AZ',
-    graduationYear: 2024
-  },
-  {
-    id: '12',
-    name: 'James Anderson',
-    role: 'recruiter',
-    sport: 'Swimming',
-    profilePicture: 'https://placehold.co/80x80/DCEDC8/8BC34A?text=JA',
-    location: 'Atlanta, GA',
-    school: 'Georgia Tech'
-  }
-];
+// Helper function to get role badge with descriptive text and improved styling (same as connections page)
+const getRoleBadge = (role: string, division?: string, educationLevel?: string) => {
+  let roleText = '';
+  let roleColor = '';
 
-const getRoleIcon = (role: SearchUser['role']) => {
-  switch (role) {
-    case 'athlete': return <User className="h-4 w-4" />;
-    case 'coach': return <Users className="h-4 w-4" />;
-    case 'recruiter': return <Target className="h-4 w-4" />;
+  if (role === 'athlete') {
+    if (educationLevel === 'high_school') {
+      roleText = 'HS Athlete';
+      roleColor = 'bg-blue-500/10 text-blue-700 border-blue-200 dark:bg-blue-500/20 dark:text-blue-300 dark:border-blue-700';
+    } else if (educationLevel === 'undergraduate') {
+      roleText = 'College Athlete';
+      roleColor = 'bg-purple-500/10 text-purple-700 border-purple-200 dark:bg-purple-500/20 dark:text-purple-300 dark:border-purple-700';
+    } else if (educationLevel === 'associate') {
+      roleText = 'JC Athlete';
+      roleColor = 'bg-orange-500/10 text-orange-700 border-orange-200 dark:bg-orange-500/20 dark:text-orange-300 dark:border-orange-700';
+    } else if (educationLevel === 'graduate') {
+      roleText = 'Grad Athlete';
+      roleColor = 'bg-indigo-500/10 text-indigo-700 border-indigo-200 dark:bg-indigo-500/20 dark:text-indigo-300 dark:border-indigo-700';
+    } else {
+      roleText = 'Athlete';
+      roleColor = 'bg-blue-500/10 text-blue-700 border-blue-200 dark:bg-blue-500/20 dark:text-blue-300 dark:border-blue-700';
+    }
+  } else if (role === 'coach') {
+    if (division === 'High School') {
+      roleText = 'HS Coach';
+      roleColor = 'bg-blue-500/10 text-blue-700 border-blue-200 dark:bg-blue-500/20 dark:text-blue-300 dark:border-blue-700';
+    } else if (division === 'Club Sports') {
+      roleText = 'Club Coach';
+      roleColor = 'bg-green-500/10 text-green-700 border-green-200 dark:bg-green-500/20 dark:text-green-300 dark:border-green-700';
+    } else if (division === 'Community College' || division === 'Junior College' || division?.includes('NJCAA')) {
+      roleText = 'JC Coach';
+      roleColor = 'bg-orange-500/10 text-orange-700 border-orange-200 dark:bg-orange-500/20 dark:text-orange-300 dark:border-orange-700';
+    } else if (division?.includes('NCAA') || division === 'NAIA') {
+      roleText = 'College Coach';
+      roleColor = 'bg-purple-500/10 text-purple-700 border-purple-200 dark:bg-purple-500/20 dark:text-purple-300 dark:border-purple-700';
+    } else {
+      roleText = 'Coach';
+      roleColor = 'bg-gray-500/10 text-gray-700 border-gray-200 dark:bg-gray-500/20 dark:text-gray-300 dark:border-gray-700';
+    }
+  } else if (role === 'recruiter') {
+    if (division === 'High School') {
+      roleText = 'HS Recruiter';
+      roleColor = 'bg-blue-500/10 text-blue-700 border-blue-200 dark:bg-blue-500/20 dark:text-blue-300 dark:border-blue-700';
+    } else if (division === 'Club Sports') {
+      roleText = 'Club Recruiter';
+      roleColor = 'bg-green-500/10 text-green-700 border-green-200 dark:bg-green-500/20 dark:text-green-300 dark:border-green-700';
+    } else if (division === 'Community College' || division === 'Junior College' || division?.includes('NJCAA')) {
+      roleText = 'JC Recruiter';
+      roleColor = 'bg-orange-500/10 text-orange-700 border-orange-200 dark:bg-orange-500/20 dark:text-orange-300 dark:border-orange-700';
+    } else if (division?.includes('NCAA') || division === 'NAIA') {
+      roleText = 'College Recruiter';
+      roleColor = 'bg-purple-500/10 text-purple-700 border-purple-200 dark:bg-purple-500/20 dark:text-purple-300 dark:border-purple-700';
+    } else {
+      roleText = 'Recruiter';
+      roleColor = 'bg-gray-500/10 text-gray-700 border-gray-200 dark:bg-gray-500/20 dark:text-gray-300 dark:border-gray-700';
+    }
   }
+
+  return <Badge variant="outline" className={`text-xs font-medium px-2 py-0.5 border ${roleColor} whitespace-nowrap`}>{roleText}</Badge>;
 };
 
-const getRoleBadgeColor = (role: SearchUser['role']) => {
-  switch (role) {
-    case 'athlete': return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200';
-    case 'coach': return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200';
-    case 'recruiter': return 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200';
-  }
-};
+const RESULTS_PER_PAGE = 20;
+const PAGES_TO_LOAD = 2;
 
-const ITEMS_PER_PAGE = 12;
+// Get sports list from sports-data.ts
+const SPORTS = getSportsList();
 
 function SearchPageContent() {
   const searchParams = useSearchParams();
+  const router = useRouter();
   const initialQuery = searchParams.get('q') || '';
+  const initialPage = parseInt(searchParams.get('page') || '1');
+  const initialRole = searchParams.get('role') || 'all';
+  const initialSport = searchParams.get('sport') || 'all';
   
+  const [inputValue, setInputValue] = useState(initialQuery);
   const [searchTerm, setSearchTerm] = useState(initialQuery);
-  const [roleFilter, setRoleFilter] = useState<string>('all');
-  const [sportFilter, setSportFilter] = useState<string>('all');
-  const [currentPage, setCurrentPage] = useState(1);
-  const [showFilters, setShowFilters] = useState(false);
+  const [roleFilter, setRoleFilter] = useState<string>(initialRole);
+  const [sportFilter, setSportFilter] = useState<string>(initialSport);
+  const [currentPage, setCurrentPage] = useState(initialPage);
+  const [allResults, setAllResults] = useState<SearchResult[]>([]);
+  const [filteredResults, setFilteredResults] = useState<SearchResult[]>([]);
+  const [totalResults, setTotalResults] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
+  const [isLoading, setIsLoading] = useState(false);
+  const [lastLoadedPage, setLastLoadedPage] = useState(0);
+  const { getToken } = useAuth();
 
-  // Update search term when URL changes
-  useEffect(() => {
-    setSearchTerm(initialQuery);
-  }, [initialQuery]);
-
-  // Filter users based on search term and filters
-  const filteredUsers = useMemo(() => {
-    let results = mockUsers;
-
-    // Apply search term filter
-    if (searchTerm) {
-      const term = searchTerm.toLowerCase();
-      results = results.filter(user => 
-        user.name.toLowerCase().includes(term) ||
-        user.sport.toLowerCase().includes(term) ||
-        user.role.toLowerCase().includes(term) ||
-        user.location.toLowerCase().includes(term) ||
-        (user.school && user.school.toLowerCase().includes(term))
-      );
+  // Fetch search results from API
+  const searchUsers = useCallback(async (query: string, page: number) => {
+    if (!query || query.length < 4) {
+      setAllResults([]);
+      setFilteredResults([]);
+      setTotalResults(0);
+      setTotalPages(1);
+      return;
     }
+
+    setIsLoading(true);
+    try {
+      const token = await getToken();
+      const params = new URLSearchParams({
+        q: query,
+        page: Math.ceil(page / PAGES_TO_LOAD).toString(),
+        pageSize: (RESULTS_PER_PAGE * PAGES_TO_LOAD).toString()
+      });
+
+      const response = await fetch(`/api/search?${params.toString()}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        // Append new results to existing ones
+        setAllResults(prev => {
+          const newResults = [...prev];
+          const startIndex = (Math.ceil(page / PAGES_TO_LOAD) - 1) * RESULTS_PER_PAGE * PAGES_TO_LOAD;
+          data.results.forEach((result: SearchResult, index: number) => {
+            newResults[startIndex + index] = result;
+          });
+          return newResults;
+        });
+        setTotalResults(data.total);
+        setTotalPages(Math.ceil(data.total / RESULTS_PER_PAGE));
+        setLastLoadedPage(Math.ceil(page / PAGES_TO_LOAD) * PAGES_TO_LOAD);
+      } else {
+        console.error('Search API error:', response.status, response.statusText);
+      }
+    } catch (error) {
+      console.error('Search error:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [getToken]);
+
+  // Initial load when coming from header search
+  useEffect(() => {
+    if (initialQuery && initialQuery.length >= 4) {
+      searchUsers(initialQuery, 1);
+    }
+  }, [initialQuery, searchUsers]); // Empty dependency array - only runs once on mount
+
+  // Load more results if needed when page changes
+  useEffect(() => {
+    if (currentPage > lastLoadedPage - PAGES_TO_LOAD && searchTerm.length >= 4) {
+      searchUsers(searchTerm, currentPage);
+    }
+  }, [currentPage, lastLoadedPage, searchTerm, searchUsers]);
+
+  // Apply filters client-side
+  useEffect(() => {
+    let filtered = [...allResults];
 
     // Apply role filter
     if (roleFilter !== 'all') {
-      results = results.filter(user => user.role === roleFilter);
+      filtered = filtered.filter(result => result.role === roleFilter);
     }
 
     // Apply sport filter
     if (sportFilter !== 'all') {
-      results = results.filter(user => user.sport === sportFilter);
+      filtered = filtered.filter(result => result.sport.toLowerCase() === sportFilter.toLowerCase());
     }
 
-    return results;
-  }, [searchTerm, roleFilter, sportFilter]);
-
-  // Pagination
-  const totalPages = Math.ceil(filteredUsers.length / ITEMS_PER_PAGE);
-  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
-  const paginatedUsers = filteredUsers.slice(startIndex, startIndex + ITEMS_PER_PAGE);
-
-  // Get unique sports for filter dropdown
-  const uniqueSports = useMemo(() => {
-    return Array.from(new Set(mockUsers.map(user => user.sport))).sort();
-  }, []);
+    // Update filtered results
+    setFilteredResults(filtered.filter(Boolean));
+    
+    // Update pagination for filtered results
+    const totalFilteredResults = filtered.filter(Boolean).length;
+    setTotalResults(totalFilteredResults);
+    setTotalPages(Math.ceil(totalFilteredResults / RESULTS_PER_PAGE));
+    
+    // Reset to first page when filters change
+    setCurrentPage(1);
+  }, [allResults, roleFilter, sportFilter]);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    setCurrentPage(1);
+    if (inputValue.length >= 4) {
+      // Update the actual search term
+      setSearchTerm(inputValue);
+      
+      // Update URL with current search parameters and filters
+      const params = new URLSearchParams();
+      params.set('q', inputValue);
+      if (roleFilter !== 'all') params.set('role', roleFilter);
+      if (sportFilter !== 'all') params.set('sport', sportFilter);
+      
+      // Reset page to 1 and perform search
+      setCurrentPage(1);
+      router.replace(`/search?${params.toString()}`);
+      searchUsers(inputValue, 1);
+    }
+  };
+
+  const handleFilterChange = (type: 'role' | 'sport', value: string) => {
+    // Just update the filter state - no URL updates
+    if (type === 'role') {
+      setRoleFilter(value);
+    } else {
+      setSportFilter(value);
+    }
   };
 
   const clearFilters = () => {
+    // Just reset filters - no URL updates
     setRoleFilter('all');
     setSportFilter('all');
-    setCurrentPage(1);
+  };
+
+  // Process profile image URL to ensure it works with R2/CloudFlare
+  const getProfileImageUrl = (profileImage: string | null) => {
+    if (!profileImage) {
+      return null;
+    }
+    
+    // If it's already a full URL, return as is
+    if (profileImage.startsWith('http')) {
+      return profileImage;
+    }
+    
+    // Construct the full R2 URL using environment variable or fallback to known R2 domain
+    const baseUrl = process.env.NEXT_PUBLIC_R2_PUBLIC_URL || 'https://pub-19c0754937db426497ca014f0e2a297c.r2.dev';
+    return `${baseUrl}/${profileImage}`;
+  };
+
+  // Get current page results
+  const getCurrentPageResults = () => {
+    const startIndex = (currentPage - 1) * RESULTS_PER_PAGE;
+    const endIndex = startIndex + RESULTS_PER_PAGE;
+    return filteredResults.slice(startIndex, endIndex);
   };
 
   return (
@@ -229,88 +269,73 @@ function SearchPageContent() {
       {/* Header */}
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-foreground mb-2">Search Results</h1>
-        {searchTerm && (
-          <p className="text-muted-foreground">
-            Showing results for &ldquo;<span className="font-medium text-foreground">{searchTerm}</span>&rdquo;
-          </p>
-        )}
+        <p className="text-muted-foreground h-6">
+          {searchTerm ? (
+            <>Showing results for &ldquo;<span className="font-medium text-foreground">{searchTerm}</span>&rdquo;</>
+          ) : (
+            <>&nbsp;</>
+          )}
+        </p>
       </div>
 
       {/* Search Bar */}
       <Card className="mb-6">
         <CardContent className="p-6">
-          <form onSubmit={handleSearch} className="space-y-4">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                type="search"
-                placeholder="Search athletes, coaches, recruiters..."
-                className="pl-10 h-12"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
+          <form onSubmit={handleSearch} className="space-y-6">
+            <div className="flex gap-4">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  type="search"
+                  placeholder="Search athletes, coaches, recruiters... (minimum 4 characters)"
+                  className="pl-10 h-12"
+                  value={inputValue}
+                  onChange={(e) => setInputValue(e.target.value)}
+                />
+              </div>
+              <Button 
+                type="submit" 
+                className="h-12 px-6 bg-[#01ae79] hover:bg-[#01ae79]/90 text-white"
+                disabled={inputValue.length < 4}
+              >
+                Search
+              </Button>
             </div>
             
-            {/* Filters Toggle */}
-            <div className="flex items-center justify-between">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setShowFilters(!showFilters)}
-                className="flex items-center gap-2"
-              >
-                <Filter className="h-4 w-4" />
-                Filters
-                {(roleFilter !== 'all' || sportFilter !== 'all') && (
-                  <Badge variant="secondary" className="ml-1">
-                    {[roleFilter !== 'all' ? 1 : 0, sportFilter !== 'all' ? 1 : 0].reduce((a, b) => a + b, 0)}
-                  </Badge>
-                )}
-              </Button>
-              
-              {(roleFilter !== 'all' || sportFilter !== 'all') && (
-                <Button type="button" variant="ghost" onClick={clearFilters}>
-                  Clear Filters
-                </Button>
-              )}
-            </div>
-
-            {/* Filters */}
-            {showFilters && (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t">
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Role</label>
-                  <Select value={roleFilter} onValueChange={setRoleFilter}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="All roles" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All roles</SelectItem>
-                      <SelectItem value="athlete">Athletes</SelectItem>
-                      <SelectItem value="coach">Coaches</SelectItem>
-                      <SelectItem value="recruiter">Recruiters</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Sport</label>
-                  <Select value={sportFilter} onValueChange={setSportFilter}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="All sports" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All sports</SelectItem>
-                      {uniqueSports.map((sport) => (
-                        <SelectItem key={sport} value={sport}>
-                          {sport}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+            {/* Always visible filters */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium mb-2">Role</label>
+                <Select value={roleFilter} onValueChange={(value) => handleFilterChange('role', value)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="All roles" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All roles</SelectItem>
+                    <SelectItem value="athlete">Athletes</SelectItem>
+                    <SelectItem value="coach">Coaches</SelectItem>
+                    <SelectItem value="recruiter">Recruiters</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
-            )}
+              
+              <div>
+                <label className="block text-sm font-medium mb-2">Sport</label>
+                <Select value={sportFilter} onValueChange={(value) => handleFilterChange('sport', value)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="All sports" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All sports</SelectItem>
+                    {SPORTS.map((sport) => (
+                      <SelectItem key={sport} value={sport}>
+                        {sport}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
           </form>
         </CardContent>
       </Card>
@@ -318,69 +343,99 @@ function SearchPageContent() {
       {/* Results Count */}
       <div className="flex items-center justify-between mb-6">
         <p className="text-muted-foreground">
-          {filteredUsers.length} {filteredUsers.length === 1 ? 'result' : 'results'} found
-          {filteredUsers.length > ITEMS_PER_PAGE && (
-            <span> • Page {currentPage} of {totalPages}</span>
+          {isLoading ? (
+            'Searching...'
+          ) : searchTerm.length < 4 ? (
+            'Enter at least 4 characters to search'
+          ) : (
+            <>
+              {totalResults} {totalResults === 1 ? 'result' : 'results'} found
+              {totalResults > 0 && (
+                <span> • Page {currentPage} of {totalPages}</span>
+              )}
+            </>
           )}
         </p>
       </div>
 
       {/* Results Grid */}
-      {paginatedUsers.length > 0 ? (
+      {searchTerm.length < 4 ? (
+        <div className="text-center py-16">
+          <Search className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
+          <h3 className="text-xl font-semibold text-foreground mb-2">Start your search</h3>
+          <p className="text-muted-foreground">
+            Enter at least 4 characters to search for athletes, coaches, and recruiters
+          </p>
+        </div>
+      ) : isLoading && allResults.length === 0 ? (
+        <div className="text-center py-16">
+          <div className="animate-spin h-8 w-8 border-4 border-green-500 border-t-transparent rounded-full mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Searching...</p>
+        </div>
+      ) : getCurrentPageResults().length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-          {paginatedUsers.map((user) => (
+          {getCurrentPageResults().map((user) => (
             <Link key={user.id} href={`/profile/${user.id}`}>
-              <Card className="hover:shadow-lg transition-shadow duration-200 hover:border-green-200 dark:hover:border-green-800">
-                <CardContent className="p-6">
-                  <div className="flex items-start gap-4">
+              <Card className="hover:shadow-lg transition-all duration-200 hover:border-green-200 dark:hover:border-green-800 group">
+                <CardContent className="p-4 md:p-6">
+                  <div className="flex items-start gap-3 md:gap-4">
                     <div className="relative flex-shrink-0">
-                      <Image
-                        src={user.profilePicture}
-                        alt={user.name}
-                        width={60}
-                        height={60}
-                        className="rounded-full object-cover ring-2 ring-green-100 dark:ring-green-900"
-                      />
-                      {user.verified && (
-                        <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-green-500 rounded-full flex items-center justify-center">
-                          <div className="w-2.5 h-2.5 bg-white rounded-full"></div>
+                      {user.profileImage ? (
+                        <Image
+                          src={getProfileImageUrl(user.profileImage)!}
+                          alt={user.fullName}
+                          width={60}
+                          height={60}
+                          className="rounded-full object-cover ring-2 ring-green-100 dark:ring-green-900 group-hover:ring-green-200 dark:group-hover:ring-green-800 transition-colors"
+                        />
+                      ) : (
+                        <div className="w-[60px] h-[60px] rounded-full bg-muted flex items-center justify-center ring-2 ring-green-100 dark:ring-green-900 group-hover:ring-green-200 dark:group-hover:ring-green-800 transition-colors">
+                          <Users className="w-6 h-6 text-muted-foreground" />
+                        </div>
+                      )}
+                      {user.isVerified && (
+                        <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-green-500 rounded-full flex items-center justify-center ring-2 ring-background">
+                          <Shield className="h-3 w-3 text-white stroke-[4]" />
                         </div>
                       )}
                     </div>
                     
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-2">
-                        <h3 className="font-semibold text-foreground truncate">
-                          {user.name}
+                      <div className="flex items-start justify-between mb-2">
+                        <h3 className="font-semibold text-foreground truncate text-sm md:text-base">
+                          {user.fullName}
                         </h3>
-                        <Badge className={`text-xs px-2 py-1 flex items-center gap-1 ${getRoleBadgeColor(user.role)}`}>
-                          {getRoleIcon(user.role)}
-                          {user.role}
-                        </Badge>
+                      </div>
+                      
+                      <div className="flex items-center gap-2 mb-2 flex-wrap">
+                        {getRoleBadge(user.role, user.division, user.educationLevel)}
                       </div>
                       
                       <div className="space-y-1">
-                        <div className="flex items-center gap-1 text-sm">
-                          <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                          <span className="font-medium text-green-600 dark:text-green-400">{user.sport}</span>
+                        <div className="flex items-center gap-2 text-xs md:text-sm text-green-600 dark:text-green-400">
+                          <span className="font-medium">{user.sport}</span>
                         </div>
                         
-                        <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                          <MapPin className="h-3 w-3" />
-                          <span>{user.location}</span>
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                          <MapPin className="w-3 h-3 flex-shrink-0" />
+                          <span>{user.city}, {user.state}</span>
                         </div>
+                        
+                        <p className="text-xs text-muted-foreground truncate">
+                          {user.organizationName}
+                        </p>
                         
                         {user.graduationYear && (
-                          <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                            <Calendar className="h-3 w-3" />
+                          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                            <Calendar className="w-3 h-3 flex-shrink-0" />
                             <span>Class of {user.graduationYear}</span>
                           </div>
                         )}
                         
-                        {user.school && (
-                          <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                            <School className="h-3 w-3" />
-                            <span className="truncate">{user.school}</span>
+                        {user.title && (
+                          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                            <School className="w-3 h-3 flex-shrink-0" />
+                            <span className="truncate">{user.title}</span>
                           </div>
                         )}
                       </div>
@@ -398,9 +453,11 @@ function SearchPageContent() {
           <p className="text-muted-foreground mb-4">
             Try adjusting your search terms or clearing filters
           </p>
-          <Button onClick={clearFilters} variant="outline">
-            Clear Filters
-          </Button>
+          {roleFilter !== 'all' && (
+            <Button onClick={clearFilters} variant="outline">
+              Clear Filters
+            </Button>
+          )}
         </div>
       )}
 
