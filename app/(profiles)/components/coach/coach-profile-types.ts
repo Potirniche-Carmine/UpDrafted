@@ -51,4 +51,5 @@ export interface CoachProfileProps {
   onShare?: () => void;
   hasPendingVerification?: boolean;
   pendingSubmittedAt?: string;
+  connectionStatus?: "none" | "pending" | "connected";
 } 

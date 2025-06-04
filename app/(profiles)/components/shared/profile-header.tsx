@@ -3,24 +3,39 @@
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useRouter } from "next/navigation";
-import { ChevronLeft, Flag, Star, Share2, Copy, Mail, MessageCircle, Save } from "lucide-react";
+import { ChevronLeft, Flag, Star, Share2, Copy, Mail, MessageCircle, Save, Clock, CheckCircle, X } from "lucide-react";
 import { ReportDialog } from "./report-dialog";
 
 interface ProfileHeaderProps {
   isOwnProfile?: boolean;
   onConnect?: () => void;
+  onWithdrawConnection?: () => void;
+  onAcceptConnection?: () => void;
+  onDeclineConnection?: () => void;
   onReport?: () => void;
   onShare?: () => void;
   connectLabel?: string;
   profileName?: string;
   profileType?: "athlete" | "coach" | "recruiter";
   reportedUserId?: string;
+  // Connection state props
+  connectionStatus?: "none" | "pending" | "connected";
+  connectionDirection?: "incoming" | "outgoing" | null;
+  isConnecting?: boolean;
   // Save functionality props
   hasUnsavedChanges?: boolean;
   isSaving?: boolean;
@@ -31,12 +46,18 @@ interface ProfileHeaderProps {
 export function ProfileHeader({ 
   isOwnProfile = false, 
   onConnect, 
+  onWithdrawConnection,
+  onAcceptConnection,
+  onDeclineConnection,
   onReport,
   onShare,
   connectLabel = "Connect",
   profileName = "this profile",
   profileType = "coach",
   reportedUserId,
+  connectionStatus = "none",
+  connectionDirection,
+  isConnecting = false,
   hasUnsavedChanges = false,
   isSaving = false,
   onSaveChanges,
@@ -44,6 +65,7 @@ export function ProfileHeader({
 }: ProfileHeaderProps) {
   const router = useRouter();
   const [showReportDialog, setShowReportDialog] = useState(false);
+  const [showWithdrawDialog, setShowWithdrawDialog] = useState(false);
 
   const handleBackClick = () => {
     router.push('/dashboard');
@@ -52,6 +74,119 @@ export function ProfileHeader({
   const handleReportProfile = () => {
     setShowReportDialog(true);
     onReport?.();
+  };
+
+  const handleConnectionAction = () => {
+    if (connectionStatus === "pending") {
+      // Show withdrawal confirmation dialog
+      setShowWithdrawDialog(true);
+    } else {
+      onConnect?.();
+    }
+  };
+
+  const handleWithdrawConfirm = () => {
+    setShowWithdrawDialog(false);
+    onWithdrawConnection?.();
+  };
+
+  const getConnectionButton = () => {
+    if (connectionStatus === "connected") {
+      return (
+        <Button 
+          size="sm" 
+          variant="outline"
+          disabled
+          className="text-green-600 border-green-600"
+        >
+          <Star className="w-4 h-4 mr-1" />
+          Connected
+        </Button>
+      );
+    }
+
+    if (connectionStatus === "pending") {
+      if (connectionDirection === "incoming") {
+        // Show Accept/Decline buttons for incoming requests
+        return (
+          <div className="flex gap-2">
+            <Button 
+              size="sm" 
+              className="bg-[#01ae79] hover:bg-[#01ae79]/90 text-white"
+              onClick={() => onAcceptConnection?.()}
+              disabled={isConnecting}
+            >
+              {isConnecting ? (
+                <>
+                  <Clock className="w-4 h-4 mr-1 animate-spin" />
+                  Accepting...
+                </>
+              ) : (
+                <>
+                  <CheckCircle className="w-4 h-4 mr-1" />
+                  Accept
+                </>
+              )}
+            </Button>
+            <Button 
+              size="sm" 
+              variant="outline"
+              onClick={() => onDeclineConnection?.()}
+              disabled={isConnecting}
+              className="border-red-300 text-red-600 hover:bg-red-50"
+            >
+              <X className="w-4 h-4 mr-1" />
+              Decline
+            </Button>
+          </div>
+        );
+      } else {
+        // Show withdraw button for outgoing requests
+        return (
+          <Button 
+            size="sm" 
+            variant="outline"
+            onClick={handleConnectionAction}
+            disabled={isConnecting}
+            className="text-orange-600 border-orange-600 hover:bg-orange-50"
+          >
+            {isConnecting ? (
+              <>
+                <Clock className="w-4 h-4 mr-1 animate-spin" />
+                Withdrawing...
+              </>
+            ) : (
+              <>
+                <Clock className="w-4 h-4 mr-1" />
+                Request Pending
+              </>
+            )}
+          </Button>
+        );
+      }
+    }
+
+    // Default connect button
+    return (
+      <Button 
+        size="sm" 
+        className="bg-[#01ae79] hover:bg-[#01ae79]/90 text-white"
+        onClick={handleConnectionAction}
+        disabled={isConnecting}
+      >
+        {isConnecting ? (
+          <>
+            <Clock className="w-4 h-4 mr-1 animate-spin" />
+            Connecting...
+          </>
+        ) : (
+          <>
+            <Star className="w-4 h-4 mr-1" />
+            {connectLabel}
+          </>
+        )}
+      </Button>
+    );
   };
 
   const handleShareAction = (method: string) => {
@@ -150,14 +285,9 @@ export function ProfileHeader({
                     </DropdownMenuContent>
                   </DropdownMenu>
                   
-                  <Button 
-                    size="sm" 
-                    className="bg-[#01ae79] hover:bg-[#01ae79]/90 text-white"
-                    onClick={onConnect}
-                  >
-                    <Star className="w-4 h-4 mr-1" />
-                    {connectLabel}
-                  </Button>
+                  {onConnect && (
+                    getConnectionButton()
+                  )}
                 </>
               )}
             </div>
@@ -236,16 +366,9 @@ export function ProfileHeader({
                 </div>
               )}
             </div>
-            {!isOwnProfile && (
+            {!isOwnProfile && onConnect && (
               <div className="flex justify-center">
-                <Button 
-                  size="sm" 
-                  className="bg-[#01ae79] hover:bg-[#01ae79]/90 text-white w-full"
-                  onClick={onConnect}
-                >
-                  <Star className="w-4 h-4 mr-1" />
-                  {connectLabel}
-                </Button>
+                {getConnectionButton()}
               </div>
             )}
           </div>
@@ -260,6 +383,23 @@ export function ProfileHeader({
         profileType={profileType}
         reportedUserId={reportedUserId || ""}
       />
+
+      {/* Withdrawal Confirmation Dialog */}
+      <Dialog open={showWithdrawDialog} onOpenChange={setShowWithdrawDialog}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Withdraw Connection Request</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to withdraw your connection request to {profileName}?
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button type="submit" onClick={handleWithdrawConfirm}>
+              Confirm
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 } 

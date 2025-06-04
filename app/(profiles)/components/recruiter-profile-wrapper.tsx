@@ -7,6 +7,7 @@ import type { RecruiterProfileData } from './recruiter/recruiter-profile-types';
 interface RecruiterProfileWrapperProps {
   data: RecruiterProfileData;
   isOwnProfile?: boolean;
+  connectionStatus?: "none" | "pending" | "connected";
   hasPendingVerification?: boolean;
   pendingSubmittedAt?: string;
   hasRejectedVerification?: boolean;
@@ -16,7 +17,8 @@ interface RecruiterProfileWrapperProps {
 
 export function RecruiterProfileWrapper({ 
   data, 
-  isOwnProfile = false, 
+  isOwnProfile = false,
+  connectionStatus,
   hasPendingVerification,
   pendingSubmittedAt,
   hasRejectedVerification,
@@ -44,6 +46,7 @@ export function RecruiterProfileWrapper({
       hasRejectedVerification={hasRejectedVerification}
       rejectionReason={rejectionReason}
       rejectedAt={rejectedAt}
+      connectionStatus={connectionStatus}
     />
   );
 } 

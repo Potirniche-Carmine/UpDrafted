@@ -1,90 +1,69 @@
 "use client";
 
-import React, { useState, useMemo, useEffect, Suspense } from 'react';
-import { Users, Search, MessageSquare, User, ShieldAlert, UserCheck, UserCog, UsersRound, CheckCircle, X, Clock, MoreHorizontal } from 'lucide-react';
+import React, { useState, useMemo, useEffect, Suspense, useRef } from 'react';
+import { Users, Search, MessageSquare, Shield, CheckCircle, X, Clock, MoreHorizontal, MapPin, User, UserCheck, Users2, Send } from 'lucide-react';
 import { Card, CardContent} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import Link from "next/link";
 import { useSearchParams } from 'next/navigation';
 import { AuthWrapper } from '../../../components/auth-wrapper';
+import { sanitizeText } from '@/utils/sanitization';
 
-const initialUsers: User[] = [
-  { id: 1, name: 'Alex Johnson', sport: 'Basketball', type: 'athlete', avatar: 'https://placehold.co/100x100/E2E8F0/4A5568?text=AJ', mutualConnections: 12 },
-  { id: 2, name: 'Maria Garcia', sport: 'Soccer', type: 'athlete', avatar: 'https://placehold.co/100x100/FEE2E2/B91C1C?text=MG', mutualConnections: 8 },
-  { id: 3, name: 'Coach David Lee', sport: 'Football', type: 'coach', avatar: 'https://placehold.co/100x100/D1FAE5/065F46?text=DL', mutualConnections: 25 },
-  { id: 4, name: 'Sarah Miller', sport: 'Tennis', type: 'athlete', avatar: 'https://placehold.co/100x100/FEF3C7/92400E?text=SM', mutualConnections: 5 },
-  { id: 5, name: 'Recruiter Emily White', sport: 'Various', type: 'recruiter', avatar: 'https://placehold.co/100x100/E0E7FF/3730A3?text=EW', mutualConnections: 50 },
-  { id: 6, name: 'John Davis', sport: 'Swimming', type: 'athlete', avatar: 'https://placehold.co/100x100/F3E8FF/5B21B6?text=JD', mutualConnections: 3 },
-  { id: 7, name: 'Coach Lisa Brown', sport: 'Volleyball', type: 'coach', avatar: 'https://placehold.co/100x100/FFE4E6/9F1239?text=LB', mutualConnections: 18 },
-  { id: 8, name: 'Michael Wilson', sport: 'Track & Field', type: 'athlete', avatar: 'https://placehold.co/100x100/E0F2FE/0E7490?text=MW', mutualConnections: 10 },
-  { id: 9, name: 'Recruiter Kevin Harris', sport: 'Basketball', type: 'recruiter', avatar: 'https://placehold.co/100x100/F0FDFA/0D9488?text=KH', mutualConnections: 33 },
-  { id: 10, name: 'Jessica Martinez', sport: 'Gymnastics', type: 'athlete', avatar: 'https://placehold.co/100x100/FFF7ED/C2410C?text=JM', mutualConnections: 7 },
-];
-
-const pendingRequests: PendingRequest[] = [
-  { 
-    id: 11, 
-    name: 'Coach Martinez Rodriguez', 
-    sport: 'Basketball', 
-    type: 'coach', 
-    avatar: 'https://placehold.co/100x100/D1FAE5/065F46?text=CM',
-    organization: 'UCLA Basketball',
-    requestedAt: '2 hours ago',
-    mutualConnections: 15
-  },
-  { 
-    id: 12, 
-    name: 'Sophia Chen', 
-    sport: 'Swimming', 
-    type: 'athlete', 
-    avatar: 'https://placehold.co/100x100/FEE2E2/B91C1C?text=SC',
-    organization: 'Stanford University',
-    requestedAt: '5 hours ago',
-    mutualConnections: 8
-  },
-  { 
-    id: 13, 
-    name: 'Recruiter Thompson Williams', 
-    sport: 'Football', 
-    type: 'recruiter', 
-    avatar: 'https://placehold.co/100x100/E0E7FF/3730A3?text=TW',
-    organization: 'Elite Sports Agency',
-    requestedAt: '1 day ago',
-    mutualConnections: 22
-  },
-  { 
-    id: 14, 
-    name: 'Coach Amanda Foster', 
-    sport: 'Soccer', 
-    type: 'coach', 
-    avatar: 'https://placehold.co/100x100/FFE4E6/9F1239?text=AF',
-    organization: 'Duke Soccer',
-    requestedAt: '2 days ago',
-    mutualConnections: 12
-  },
-];
-
-interface User {
+interface Connection {
   id: number;
-  name: string;
-  sport: string;
-  type: 'athlete' | 'coach' | 'recruiter' | 'Various';
-  avatar: string;
-  mutualConnections: number;
+  status: 'connected' | 'interested' | 'viewed';
+  initiatedBy: 'athlete' | 'coach' | 'recruiter';
+  createdAt: string;
+  notes: string | null;
+  isInitiator: boolean;
+  otherUser: {
+    userId: string;
+    fullName: string;
+    profileImage: string | null;
+    organizationName: string;
+    title?: string;
+    sport?: string;
+    city: string;
+    state: string;
+    division?: string;
+    graduationYear?: number;
+    educationLevel?: string;
+    isVerified: boolean;
+    role: 'athlete' | 'coach' | 'recruiter';
+  };
 }
 
-interface PendingRequest extends User {
-  organization: string;
-  requestedAt: string;
+interface PendingRequest {
+  id: number;
+  status: 'pending';
+  initiatedBy: 'athlete' | 'coach' | 'recruiter';
+  createdAt: string;
+  notes: string | null;
+  isInitiator: boolean;
+  otherUser: {
+    userId: string;
+    fullName: string;
+    profileImage: string | null;
+    organizationName: string;
+    title?: string;
+    sport?: string;
+    city: string;
+    state: string;
+    division?: string;
+    graduationYear?: number;
+    educationLevel?: string;
+    isVerified: boolean;
+    role: 'athlete' | 'coach' | 'recruiter';
+  };
 }
 
 interface UserCardProps {
-  user: User;
-  onRemove: (userId: number) => void;
+  connection: Connection;
+  onRemove: (connectionId: number, targetUserId: string) => void;
+  isRemoving?: boolean;
 }
 
 interface PendingRequestCardProps {
@@ -93,16 +72,84 @@ interface PendingRequestCardProps {
   onDecline: (requestId: number) => void;
 }
 
+interface SentRequestCardProps {
+  request: PendingRequest;
+  onWithdraw: (requestId: number, targetUserId: string) => void;
+  isWithdrawing?: boolean;
+}
+
 interface FilterButtonsProps {
   currentFilter: string;
   onFilterChange: (filter: string) => void;
 }
 
-const UserCard: React.FC<UserCardProps> = ({ user, onRemove }) => {
+// Helper function to get role badge with descriptive text
+const getRoleBadge = (role: string, division?: string, educationLevel?: string) => {
+  let roleText = '';
+  let roleColor = '';
+
+  if (role === 'athlete') {
+    if (educationLevel === 'high_school') {
+      roleText = 'High School Athlete';
+      roleColor = 'bg-blue-100 text-blue-800';
+    } else if (educationLevel === 'undergraduate') {
+      roleText = 'College Athlete';
+      roleColor = 'bg-purple-100 text-purple-800';
+    } else if (educationLevel === 'associate') {
+      roleText = 'Community College Athlete';
+      roleColor = 'bg-orange-100 text-orange-800';
+    } else if (educationLevel === 'graduate') {
+      roleText = 'Graduate Athlete';
+      roleColor = 'bg-indigo-100 text-indigo-800';
+    } else {
+      roleText = 'Athlete';
+      roleColor = 'bg-blue-100 text-blue-800';
+    }
+  } else if (role === 'coach') {
+    if (division === 'High School') {
+      roleText = 'High School Coach';
+      roleColor = 'bg-blue-100 text-blue-800';
+    } else if (division === 'Club Sports') {
+      roleText = 'Club Coach';
+      roleColor = 'bg-green-100 text-green-800';
+    } else if (division === 'Community College' || division === 'Junior College' || division?.includes('NJCAA')) {
+      roleText = division === 'Junior College' ? 'Junior College Coach' : 'Community College Coach';
+      roleColor = 'bg-orange-100 text-orange-800';
+    } else if (division?.includes('NCAA') || division === 'NAIA') {
+      roleText = 'College Coach';
+      roleColor = 'bg-purple-100 text-purple-800';
+    } else {
+      roleText = 'Coach';
+      roleColor = 'bg-gray-100 text-gray-800';
+    }
+  } else if (role === 'recruiter') {
+    if (division === 'High School') {
+      roleText = 'High School Recruiter';
+      roleColor = 'bg-blue-100 text-blue-800';
+    } else if (division === 'Club Sports') {
+      roleText = 'Club Recruiter';
+      roleColor = 'bg-green-100 text-green-800';
+    } else if (division === 'Community College' || division === 'Junior College' || division?.includes('NJCAA')) {
+      roleText = division === 'Junior College' ? 'Junior College Recruiter' : 'Community College Recruiter';
+      roleColor = 'bg-orange-100 text-orange-800';
+    } else if (division?.includes('NCAA') || division === 'NAIA') {
+      roleText = 'College Recruiter';
+      roleColor = 'bg-purple-100 text-purple-800';
+    } else {
+      roleText = 'Recruiter';
+      roleColor = 'bg-gray-100 text-gray-800';
+    }
+  }
+
+  return <Badge className={`text-xs ${roleColor}`}>{roleText}</Badge>;
+};
+
+const UserCard: React.FC<UserCardProps> = ({ connection, onRemove, isRemoving = false }) => {
   const [showMenu, setShowMenu] = useState(false);
+  const { otherUser } = connection;
 
   const handleRemove = () => {
-    onRemove(user.id);
+    onRemove(connection.id, otherUser.userId);
     setShowMenu(false);
   };
 
@@ -119,61 +166,77 @@ const UserCard: React.FC<UserCardProps> = ({ user, onRemove }) => {
   };
 
   return (
-    <Link href={`/profile/${user.id}`} className="block h-full">
-      <Card className="group transition-all duration-300 hover:shadow-lg hover:shadow-[#01ae79]/5 border-border/50 hover:border-[#01ae79]/20 dark:hover:border-[#01ae79]/30 h-full cursor-pointer">
-        <CardContent className="p-4 md:p-6 flex flex-col h-full">
-          <div className="flex items-start space-x-4 mb-4">
+    <Link href={`/profile/${otherUser.userId}`} className="block h-full">
+      <Card className="group transition-all duration-300 hover:shadow-md hover:shadow-[#01ae79]/5 border-border/50 hover:border-[#01ae79]/20 dark:hover:border-[#01ae79]/30 h-full cursor-pointer">
+        <CardContent className="p-3 flex flex-col h-full">
+          <div className="flex items-start space-x-3 mb-3">
             <div className="flex-shrink-0">
-              <Avatar className="w-16 h-16 md:w-20 md:h-20 ring-2 ring-[#01ae79]/20 dark:ring-[#01ae79]/30 group-hover:ring-[#01ae79]/30 dark:group-hover:ring-[#01ae79]/40 transition-colors hover:ring-[#01ae79]/40 dark:hover:ring-[#01ae79]/50">
-                <AvatarImage src={user.avatar} alt={user.name} />
-                <AvatarFallback className="text-sm font-medium">
-                  {user.name.split(' ').map(n => n[0]).join('')}
-                </AvatarFallback>
-              </Avatar>
+              <div className="relative">
+                <Avatar className="w-12 h-12 ring-2 ring-[#01ae79]/20 dark:ring-[#01ae79]/30 group-hover:ring-[#01ae79]/30 dark:group-hover:ring-[#01ae79]/40 transition-colors">
+                  <AvatarImage src={otherUser.profileImage || undefined} alt={otherUser.fullName} />
+                  <AvatarFallback className="text-xs font-medium">
+                    {otherUser.fullName.split(' ').map(n => n[0]).join('')}
+                  </AvatarFallback>
+                </Avatar>
+                {/* Verification indicator */}
+                {otherUser.isVerified && (
+                  <div className="absolute -top-1 -right-1 w-4 h-4 bg-green-500 rounded-full flex items-center justify-center">
+                    <Shield className="w-2.5 h-2.5 text-white" />
+                  </div>
+                )}
+              </div>
             </div>
             <div className="flex-1 min-w-0">
-              <h3 className="text-lg md:text-xl font-semibold text-foreground leading-tight mb-1">{user.name}</h3>
-              <p className="text-sm text-[#01ae79] font-medium mb-1">{user.sport}</p>
-              <Badge variant="outline" className="text-xs capitalize mb-2">
-                {user.type}
-              </Badge>
+              <h3 className="text-sm font-semibold text-foreground leading-tight mb-1 truncate">{otherUser.fullName}</h3>
+              <div className="space-y-1">
+                {getRoleBadge(otherUser.role, otherUser.division, otherUser.educationLevel)}
+                <p className="text-xs text-[#01ae79] font-medium truncate">
+                  {otherUser.role === 'athlete' ? otherUser.sport : otherUser.title}
+                </p>
+                <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                  <MapPin className="w-3 h-3" />
+                  <span className="truncate">{otherUser.city}, {otherUser.state}</span>
+                </div>
+                <p className="text-xs text-muted-foreground truncate">{otherUser.organizationName}</p>
+              </div>
             </div>
             <div className="relative flex-shrink-0">
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={handleMenuClick}
-                className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground"
+                className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground"
               >
-                <MoreHorizontal size={16} />
+                <MoreHorizontal size={14} />
               </Button>
               {showMenu && (
-                <div className="absolute right-0 mt-2 w-48 bg-card rounded-lg shadow-lg border border-border py-1 z-10">
+                <div className="absolute right-0 mt-2 w-40 bg-card rounded-lg shadow-lg border border-border py-1 z-10">
                   <Button
                     variant="ghost"
                     size="sm"
                     onClick={handleRemove}
-                    className="w-full justify-start text-destructive hover:text-destructive hover:bg-destructive/10 px-3 py-2 h-auto"
+                    disabled={isRemoving}
+                    className="w-full justify-start text-destructive hover:text-destructive hover:bg-destructive/10 px-3 py-2 h-auto text-xs"
                   >
-                    <X size={16} className="mr-2" />
-                    Remove Connection
+                    <X size={14} className="mr-2" />
+                    {isRemoving ? 'Removing...' : 'Remove Connection'}
                   </Button>
                 </div>
               )}
             </div>
           </div>
 
-          <div className="flex-1 flex flex-col justify-end">
-            <div className="text-sm text-muted-foreground mb-4">
-              <span className="font-medium text-foreground">{user.mutualConnections}</span> Mutual Connections
+          <div className="flex-1 flex flex-col justify-end space-y-2">
+            <div className="text-xs text-muted-foreground">
+              <span className="text-foreground">Connected</span> • {new Date(connection.createdAt).toLocaleDateString()}
             </div>
             <Button 
-              className="w-full h-10 bg-[#01ae79] hover:bg-[#01ae79]/90 text-white" 
+              className="w-full h-8 bg-[#01ae79] hover:bg-[#01ae79]/90 text-white text-xs" 
               size="sm"
               onClick={handleSendMessageClick}
             >
-              <MessageSquare size={18} className="mr-2" />
-              Send Message
+              <MessageSquare size={14} className="mr-1" />
+              Message
             </Button>
           </div>
         </CardContent>
@@ -183,32 +246,151 @@ const UserCard: React.FC<UserCardProps> = ({ user, onRemove }) => {
 };
 
 const PendingRequestCard: React.FC<PendingRequestCardProps> = ({ request, onAccept, onDecline }) => {
+  const { otherUser } = request;
+  const sanitizedNotes = request.notes ? sanitizeText(request.notes) : null;
+
   return (
-    <div className="flex items-center gap-3 p-4 rounded-lg border border-border/50 bg-card hover:bg-muted/30 transition-colors">
-      <Link href={`/profile/${request.id}`} className="flex-shrink-0 cursor-pointer">
-        <Avatar className="h-12 w-12 ring-2 ring-amber-100 dark:ring-amber-900 hover:ring-amber-200 dark:hover:ring-amber-800 transition-colors">
-          <AvatarImage src={request.avatar} alt={request.name} />
-          <AvatarFallback className="text-sm font-medium">
-            {request.name.split(' ').map(n => n[0]).join('')}
-          </AvatarFallback>
-        </Avatar>
+    <div className="flex items-start gap-3 p-4 rounded-lg border border-border/50 bg-card hover:bg-muted/30 transition-colors">
+      <Link href={`/profile/${otherUser.userId}`} className="flex-shrink-0 cursor-pointer">
+        <div className="relative">
+          <Avatar className="h-12 w-12 ring-2 ring-amber-100 dark:ring-amber-900 hover:ring-amber-200 dark:hover:ring-amber-800 transition-colors">
+            <AvatarImage src={otherUser.profileImage || undefined} alt={otherUser.fullName} />
+            <AvatarFallback className="text-sm font-medium">
+              {otherUser.fullName.split(' ').map(n => n[0]).join('')}
+            </AvatarFallback>
+          </Avatar>
+          {/* Verification indicator */}
+          {otherUser.isVerified && (
+            <div className="absolute -top-1 -right-1 w-4 h-4 bg-green-500 rounded-full flex items-center justify-center">
+              <Shield className="w-2.5 h-2.5 text-white" />
+            </div>
+          )}
+        </div>
       </Link>
       <div className="flex-grow min-w-0">
-        <Link href={`/profile/${request.id}`} className="cursor-pointer block hover:opacity-80 transition-opacity">
-          <h4 className="font-medium text-foreground leading-tight mb-1">{request.name}</h4>
+        <Link href={`/profile/${otherUser.userId}`} className="cursor-pointer block hover:opacity-80 transition-opacity">
+          <div className="flex items-start justify-between gap-2 mb-2">
+            <div className="min-w-0 flex-1">
+              <h4 className="font-medium text-foreground leading-tight truncate">{otherUser.fullName}</h4>
+              <div className="flex items-center gap-2 mt-1">
+                {getRoleBadge(otherUser.role, otherUser.division, otherUser.educationLevel)}
+              </div>
+            </div>
+            <span className="text-xs text-muted-foreground whitespace-nowrap">
+              {new Date(request.createdAt).toLocaleDateString()}
+            </span>
+          </div>
         </Link>
-        <p className="text-sm text-muted-foreground mb-1">{request.organization}</p>
-        <p className="text-xs text-muted-foreground">{request.requestedAt}</p>
+        <div className="space-y-2">
+          <div className="text-sm text-muted-foreground">
+            <p className="truncate">{otherUser.organizationName}</p>
+            <div className="flex items-center gap-1 text-xs">
+              <MapPin className="w-3 h-3" />
+              <span>{otherUser.city}, {otherUser.state}</span>
+            </div>
+          </div>
+          
+          {sanitizedNotes && (
+            <div className="bg-muted/50 rounded p-2">
+              <p className="text-xs text-muted-foreground mb-1">Message:</p>
+              <p className="text-sm text-foreground break-words">{sanitizedNotes}</p>
+            </div>
+          )}
+          
+          <div className="flex gap-2">
+            <Button 
+              size="sm" 
+              className="bg-[#01ae79] hover:bg-[#01ae79]/90 text-white flex-1 h-8 text-xs"
+              onClick={() => onAccept(request.id)}
+            >
+              <CheckCircle size={14} className="mr-1" />
+              Accept
+            </Button>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="flex-1 h-8 text-xs"
+              onClick={() => onDecline(request.id)}
+            >
+              <X size={14} className="mr-1" />
+              Decline
+            </Button>
+          </div>
+        </div>
       </div>
-      <div className="flex flex-col sm:flex-row gap-2 flex-shrink-0">
-        <Button size="sm" onClick={() => onAccept(request.id)} className="h-8 text-xs">
-          <CheckCircle size={14} className="mr-1" />
-          Accept
-        </Button>
-        <Button size="sm" variant="outline" onClick={() => onDecline(request.id)} className="h-8 text-xs">
-          <X size={14} className="mr-1" />
-          Decline
-        </Button>
+    </div>
+  );
+};
+
+const SentRequestCard: React.FC<SentRequestCardProps> = ({ request, onWithdraw, isWithdrawing = false }) => {
+  const { otherUser } = request;
+
+  const handleWithdraw = () => {
+    onWithdraw(request.id, otherUser.userId);
+  };
+
+  return (
+    <div className="flex items-start gap-3 p-4 rounded-lg border border-border/50 bg-card hover:bg-muted/30 transition-colors">
+      <Link href={`/profile/${otherUser.userId}`} className="flex-shrink-0 cursor-pointer">
+        <div className="relative">
+          <Avatar className="h-12 w-12 ring-2 ring-amber-100 dark:ring-amber-900 hover:ring-amber-200 dark:hover:ring-amber-800 transition-colors">
+            <AvatarImage src={otherUser.profileImage || undefined} alt={otherUser.fullName} />
+            <AvatarFallback className="text-sm font-medium">
+              {otherUser.fullName.split(' ').map(n => n[0]).join('')}
+            </AvatarFallback>
+          </Avatar>
+          {/* Verification indicator */}
+          {otherUser.isVerified && (
+            <div className="absolute -top-1 -right-1 w-4 h-4 bg-green-500 rounded-full flex items-center justify-center">
+              <Shield className="w-2.5 h-2.5 text-white" />
+            </div>
+          )}
+        </div>
+      </Link>
+      <div className="flex-grow min-w-0">
+        <Link href={`/profile/${otherUser.userId}`} className="cursor-pointer block hover:opacity-80 transition-opacity">
+          <div className="flex items-start justify-between gap-2 mb-2">
+            <div className="min-w-0 flex-1">
+              <h4 className="font-medium text-foreground leading-tight truncate">{otherUser.fullName}</h4>
+              <div className="flex items-center gap-2 mt-1">
+                {getRoleBadge(otherUser.role, otherUser.division, otherUser.educationLevel)}
+              </div>
+            </div>
+            <span className="text-xs text-muted-foreground whitespace-nowrap">
+              {new Date(request.createdAt).toLocaleDateString()}
+            </span>
+          </div>
+        </Link>
+        <div className="space-y-2">
+          <div className="text-sm text-muted-foreground">
+            <p className="truncate">{otherUser.organizationName}</p>
+            <div className="flex items-center gap-1 text-xs">
+              <MapPin className="w-3 h-3" />
+              <span>{otherUser.city}, {otherUser.state}</span>
+            </div>
+          </div>
+          
+          <div className="flex gap-2">
+            <Button 
+              size="sm" 
+              className="bg-[#01ae79] hover:bg-[#01ae79]/90 text-white flex-1 h-8 text-xs"
+              onClick={handleWithdraw}
+              disabled={isWithdrawing}
+            >
+              {isWithdrawing ? (
+                <>
+                  <Clock size={14} className="mr-1 animate-spin" />
+                  Withdrawing...
+                </>
+              ) : (
+                <>
+                  <X size={14} className="mr-1" />
+                  Withdraw Request
+                </>
+              )}
+            </Button>
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -216,30 +398,29 @@ const PendingRequestCard: React.FC<PendingRequestCardProps> = ({ request, onAcce
 
 const FilterButtons: React.FC<FilterButtonsProps> = ({ currentFilter, onFilterChange }) => {
   const filters = [
-    { label: 'All', value: 'all', icon: <UsersRound size={16} /> },
-    { label: 'Athletes', value: 'athlete', icon: <UserCheck size={16} /> },
-    { label: 'Coaches', value: 'coach', icon: <UserCog size={16} /> },
-    { label: 'Recruiters', value: 'recruiter', icon: <ShieldAlert size={16} /> },
+    { id: 'all', label: 'All', icon: Users },
+    { id: 'athletes', label: 'Athletes', icon: User },
+    { id: 'coaches', label: 'Coaches', icon: UserCheck },
+    { id: 'recruiters', label: 'Recruiters', icon: Users2 }
   ];
 
   return (
-    <div className="flex flex-wrap gap-2">
-      {filters.map((filter) => (
-        <Button
-          key={filter.value}
-          variant={currentFilter === filter.value ? "default" : "outline"}
-          size="sm"
-          onClick={() => onFilterChange(filter.value)}
-          className={`h-9 transition-all duration-200 ${
-            currentFilter === filter.value
-              ? 'bg-green-600 hover:bg-green-700 text-white'
-              : 'border-border/50 hover:border-green-200 dark:hover:border-green-800'
-          }`}
-        >
-          {filter.icon}
-          <span className="ml-2">{filter.label}</span>
-        </Button>
-      ))}
+    <div className="flex flex-wrap gap-2 mb-6">
+      {filters.map((filter) => {
+        const Icon = filter.icon;
+        return (
+          <Button
+            key={filter.id}
+            variant={currentFilter === filter.id ? "default" : "outline"}
+            size="sm"
+            onClick={() => onFilterChange(filter.id)}
+            className={`h-9 ${currentFilter === filter.id ? 'bg-[#01ae79] hover:bg-[#01ae79]/90 text-white' : ''}`}
+          >
+            <Icon size={16} className="mr-2" />
+            {filter.label}
+          </Button>
+        );
+      })}
     </div>
   );
 };
@@ -247,208 +428,370 @@ const FilterButtons: React.FC<FilterButtonsProps> = ({ currentFilter, onFilterCh
 function App() {
   const searchParams = useSearchParams();
   const [searchTerm, setSearchTerm] = useState('');
-  const [users, setUsers] = useState(initialUsers);
-  const [requests, setRequests] = useState(pendingRequests);
-  const [activeFilter, setActiveFilter] = useState('all');
-  const [activeTab, setActiveTab] = useState('connections');
+  const [filter, setFilter] = useState('all');
+  const [connections, setConnections] = useState<Connection[]>([]);
+  const [pendingRequests, setPendingRequests] = useState<PendingRequest[]>([]);
+  const [sentRequests, setSentRequests] = useState<PendingRequest[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [removingConnection, setRemovingConnection] = useState<number | null>(null);
+  const loadingRef = useRef(false); // Track if API call is in progress
 
-  // Check for tab parameter in URL and set active tab
+  const activeTab = searchParams?.get('tab') || 'connections';
+
+  // Load connections data
   useEffect(() => {
-    const tabParam = searchParams.get('tab');
-    if (tabParam === 'requests') {
-      setActiveTab('requests');
-    }
-  }, [searchParams]);
+    loadConnections();
+  }, []);
 
-  const handleRemoveUser = (userId: number) => {
-    setUsers(prevUsers => prevUsers.filter(user => user.id !== userId));
+  const loadConnections = async () => {
+    // Prevent duplicate API calls due to React Strict Mode
+    if (loadingRef.current) {
+      return;
+    }
+
+    try {
+      loadingRef.current = true;
+      setLoading(true);
+      // Get auth token
+      const windowWithClerk = window as unknown as {
+        Clerk?: {
+          session?: {
+            getToken: () => Promise<string>;
+          };
+        };
+      };
+      const token = await windowWithClerk.Clerk?.session?.getToken();
+      
+      const response = await fetch('/api/connections', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to load connections');
+      }
+
+      const data = await response.json();
+      if (data.success) {
+        // All connections from API are established connections
+        // Pending requests would be handled by a separate endpoint if needed
+        setConnections(data.connections);
+        setPendingRequests(data.pendingRequests);
+        setSentRequests(data.sentRequests);
+      }
+    } catch (error) {
+      console.error('Error loading connections:', error);
+    } finally {
+      setLoading(false);
+      loadingRef.current = false;
+    }
+  };
+
+  const handleRemoveConnection = async (connectionId: number, targetUserId: string) => {
+    if (!confirm('Are you sure you want to remove this connection? This action cannot be undone.')) {
+      return;
+    }
+
+    setRemovingConnection(connectionId);
+    try {
+      // Get auth token
+      const windowWithClerk = window as unknown as {
+        Clerk?: {
+          session?: {
+            getToken: () => Promise<string>;
+          };
+        };
+      };
+      const token = await windowWithClerk.Clerk?.session?.getToken();
+      
+      const response = await fetch('/api/connections', {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({ targetUserId }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to remove connection');
+      }
+
+      const result = await response.json();
+      if (result.success) {
+        // Remove from local state
+        setConnections(prev => prev.filter(c => c.id !== connectionId));
+      } else {
+        throw new Error(result.error || 'Failed to remove connection');
+      }
+    } catch (error) {
+      console.error('Error removing connection:', error);
+      alert('Failed to remove connection. Please try again.');
+    } finally {
+      setRemovingConnection(null);
+    }
   };
 
   const handleAcceptRequest = (requestId: number) => {
-    const request = requests.find(r => r.id === requestId);
-    if (request) {
-      // Move to connections
-      const newUser: User = {
-        id: request.id,
-        name: request.name,
-        sport: request.sport,
-        type: request.type,
-        avatar: request.avatar,
-        mutualConnections: request.mutualConnections
-      };
-      setUsers(prev => [...prev, newUser]);
-      setRequests(prev => prev.filter(r => r.id !== requestId));
-    }
+    // TODO: Implement accept request
+    console.log('Accept request:', requestId);
   };
 
   const handleDeclineRequest = (requestId: number) => {
-    setRequests(prev => prev.filter(r => r.id !== requestId));
+    // TODO: Implement decline request
+    console.log('Decline request:', requestId);
   };
 
-  const filteredUsers = useMemo(() => {
-    return users
-      .filter(user => {
-        const term = searchTerm.toLowerCase();
-        return user.name.toLowerCase().includes(term) ||
-               user.sport.toLowerCase().includes(term);
-      })
-      .filter(user => {
-        if (activeFilter === 'all') return true;
-        return user.type === activeFilter;
+  const handleWithdrawRequest = async (requestId: number, targetUserId: string) => {
+    setRemovingConnection(requestId);
+    try {
+      // Get auth token
+      const windowWithClerk = window as unknown as {
+        Clerk?: {
+          session?: {
+            getToken: () => Promise<string>;
+          };
+        };
+      };
+      const token = await windowWithClerk.Clerk?.session?.getToken();
+      
+      const response = await fetch('/api/connections', {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({ targetUserId }),
       });
-  }, [users, searchTerm, activeFilter]);
 
-  const filteredRequests = useMemo(() => {
-    return requests
-      .filter(request => {
-        const term = searchTerm.toLowerCase();
-        return request.name.toLowerCase().includes(term) ||
-               request.sport.toLowerCase().includes(term) ||
-               request.organization.toLowerCase().includes(term);
-      })
-      .filter(request => {
-        if (activeFilter === 'all') return true;
-        return request.type === activeFilter;
+      if (!response.ok) {
+        throw new Error('Failed to withdraw connection request');
+      }
+
+      const result = await response.json();
+      if (result.success) {
+        // Remove from local state
+        setSentRequests(prev => prev.filter(r => r.id !== requestId));
+        // Use a more user-friendly notification instead of alert
+        const notification = document.createElement('div');
+        notification.className = 'fixed top-4 right-4 bg-green-500 text-white px-4 py-2 rounded-lg shadow-lg z-50';
+        notification.textContent = 'Connection request withdrawn successfully!';
+        document.body.appendChild(notification);
+        setTimeout(() => {
+          document.body.removeChild(notification);
+        }, 3000);
+      } else {
+        throw new Error(result.error || 'Failed to withdraw connection request');
+      }
+    } catch (error) {
+      console.error('Error withdrawing connection request:', error);
+      alert('Failed to withdraw connection request. Please try again.');
+    } finally {
+      setRemovingConnection(null);
+    }
+  };
+
+  const filteredConnections = useMemo(() => {
+    let filtered = connections;
+    
+    if (filter !== 'all') {
+      filtered = filtered.filter(connection => {
+        if (filter === 'athletes') return connection.otherUser.role === 'athlete';
+        if (filter === 'coaches') return connection.otherUser.role === 'coach';
+        if (filter === 'recruiters') return connection.otherUser.role === 'recruiter';
+        return true;
       });
-  }, [requests, searchTerm, activeFilter]);
+    }
+    
+    if (searchTerm) {
+      filtered = filtered.filter(connection =>
+        connection.otherUser.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        connection.otherUser.organizationName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (connection.otherUser.sport && connection.otherUser.sport.toLowerCase().includes(searchTerm.toLowerCase()))
+      );
+    }
+    
+    return filtered;
+  }, [connections, filter, searchTerm]);
+
+  const filteredPendingRequests = useMemo(() => {
+    let filtered = pendingRequests;
+    
+    if (searchTerm) {
+      filtered = filtered.filter(request =>
+        request.otherUser.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        request.otherUser.organizationName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (request.otherUser.sport && request.otherUser.sport.toLowerCase().includes(searchTerm.toLowerCase()))
+      );
+    }
+    
+    return filtered;
+  }, [pendingRequests, searchTerm]);
+
+  const filteredSentRequests = useMemo(() => {
+    let filtered = sentRequests;
+    
+    if (searchTerm) {
+      filtered = filtered.filter(request =>
+        request.otherUser.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        request.otherUser.organizationName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (request.otherUser.sport && request.otherUser.sport.toLowerCase().includes(searchTerm.toLowerCase()))
+      );
+    }
+    
+    return filtered;
+  }, [sentRequests, searchTerm]);
+
+  if (loading) {
+    return (
+      <div className="container py-8">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#01ae79] mx-auto"></div>
+          <p className="mt-4 text-muted-foreground">Loading connections...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen bg-background p-4 md:p-6">
-      <div className="max-w-7xl mx-auto h-[calc(100vh-2rem)] md:h-[calc(100vh-3rem)]">
-        {/* Unified connections panel */}
-        <div className="h-full flex flex-col border border-border/50 rounded-xl shadow-lg bg-card overflow-hidden">
-          
-          {/* Integrated Header */}
-          <div className="p-4 md:p-6 border-b border-border/50 bg-gradient-to-r from-[#01ae79]/5 to-[#01ae79]/10 dark:from-[#01ae79]/2 dark:to-[#01ae79]/10">
-            <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-6">
-              <div>
-                <h1 className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-[#01ae79] via-[#01ae79]/90 to-[#01ae79]/80 bg-clip-text text-transparent mb-2">
-                  Your Network
-                </h1>
-                <div className="flex items-center gap-2 mt-1">
-                  {requests.length > 0 && (
-                    <Badge variant="secondary" className="bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200 text-xs">
-                      {requests.length} pending
-                    </Badge>
-                  )}
-                  <Badge variant="outline" className="text-xs">
-                    {users.length} connections
-                  </Badge>
-                </div>
-              </div>
-            </div>
-            
-            <div className="space-y-4">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <input
-                  type="text"
-                  placeholder="Search connections and requests..."
-                  className="w-full pl-9 pr-4 py-2.5 text-sm border border-border/50 bg-background/80 backdrop-blur-sm text-foreground rounded-lg focus:outline-none focus:ring-2 focus:ring-[#01ae79] focus:border-[#01ae79] transition-all"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                />
-              </div>
-              <FilterButtons currentFilter={activeFilter} onFilterChange={setActiveFilter} />
-            </div>
-          </div>
-
-          {/* Content Area with Tabs */}
-          <div className="flex-grow overflow-hidden">
-            <Tabs value={activeTab} onValueChange={setActiveTab} className="h-full flex flex-col">
-              <div className="border-b border-border/50 bg-card/50">
-                <TabsList className="grid w-full grid-cols-2 bg-transparent h-auto p-1">
-                  <TabsTrigger 
-                    value="connections" 
-                    className="flex items-center gap-2 data-[state=active]:bg-[#01ae79] data-[state=active]:text-white h-10"
-                  >
-                    <Users size={16} />
-                    <span>Connections</span>
-                    <Badge variant="secondary" className="ml-1 text-xs">
-                      {users.length}
-                    </Badge>
-                  </TabsTrigger>
-                  <TabsTrigger 
-                    value="requests" 
-                    className="flex items-center gap-2 data-[state=active]:bg-amber-600 data-[state=active]:text-white h-10"
-                  >
-                    <Clock size={16} />
-                    <span>Requests</span>
-                    {requests.length > 0 && (
-                      <Badge variant="secondary" className="ml-1 bg-amber-100 text-amber-800 text-xs">
-                        {requests.length}
-                      </Badge>
-                    )}
-                  </TabsTrigger>
-                </TabsList>
-              </div>
-
-              <div className="flex-grow overflow-y-auto bg-gradient-to-b from-transparent to-[#01ae79]/5 dark:to-[#01ae79]/10">
-                <TabsContent value="connections" className="p-4 h-full m-0">
-                  {filteredUsers.length > 0 ? (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
-                      {filteredUsers.map(user => (
-                        <UserCard key={user.id} user={user} onRemove={handleRemoveUser} />
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="flex flex-col items-center justify-center h-full text-center p-8">
-                      <div className="w-20 h-20 rounded-full bg-[#01ae79]/10 dark:bg-[#01ae79]/20 flex items-center justify-center mb-6">
-                        <Users className="h-10 w-10 text-[#01ae79]" />
-                      </div>
-                      <h3 className="text-xl font-semibold text-foreground mb-2">No connections found</h3>
-                      <p className="text-muted-foreground mb-4 max-w-md">
-                        {searchTerm || activeFilter !== 'all' 
-                          ? 'Try adjusting your search or filter.' 
-                          : 'Start building your network by connecting with athletes, coaches, and recruiters.'}
-                      </p>
-                      {!searchTerm && activeFilter === 'all' && (
-                        <Button className="mt-2 bg-[#01ae79] hover:bg-[#01ae79]/90 text-white">
-                          <Search size={16} className="mr-2" />
-                          Find People
-                        </Button>
-                      )}
-                    </div>
-                  )}
-                </TabsContent>
-
-                <TabsContent value="requests" className="p-4 h-full m-0">
-                  {filteredRequests.length > 0 ? (
-                    <div className="space-y-4">
-                      <div className="flex items-center justify-between mb-4">
-                        <h2 className="text-lg font-semibold">Pending Requests ({filteredRequests.length})</h2>
-                      </div>
-                      {filteredRequests.map((request, index) => (
-                        <div key={request.id}>
-                          <PendingRequestCard 
-                            request={request} 
-                            onAccept={handleAcceptRequest}
-                            onDecline={handleDeclineRequest}
-                          />
-                          {index < filteredRequests.length - 1 && (
-                            <Separator className="my-4" />
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="flex flex-col items-center justify-center h-full text-center p-8">
-                      <div className="w-20 h-20 rounded-full bg-amber-100 dark:bg-amber-900 flex items-center justify-center mb-6">
-                        <Clock className="h-10 w-10 text-amber-600 dark:text-amber-400" />
-                      </div>
-                      <h3 className="text-xl font-semibold text-foreground mb-2">No pending requests</h3>
-                      <p className="text-muted-foreground max-w-md">
-                        {searchTerm || activeFilter !== 'all' 
-                          ? 'No requests match your current search or filter.' 
-                          : 'New connection requests will appear here when received.'}
-                      </p>
-                    </div>
-                  )}
-                </TabsContent>
-              </div>
-            </Tabs>
-          </div>
+    <div className="container py-8">
+      <div className="max-w-6xl mx-auto">
+        {/* Header */}
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-foreground mb-2">Connections</h1>
+          <p className="text-muted-foreground">Manage your network of athletes, coaches, and recruiters</p>
         </div>
+
+        {/* Search */}
+        <div className="relative mb-6">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" size={20} />
+          <input
+            type="text"
+            placeholder="Search connections..."
+            className="w-full pl-10 pr-4 py-3 border border-border rounded-lg bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-[#01ae79]/20 focus:border-[#01ae79]"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
+        </div>
+
+        {/* Tabs */}
+        <Tabs defaultValue={activeTab} className="space-y-6">
+          <TabsList className="grid w-full grid-cols-3 max-w-lg mx-auto">
+            <TabsTrigger value="connections" className="relative text-xs sm:text-sm px-2 sm:px-4">
+              <Users size={14} className="mr-1 sm:mr-2" />
+              <span className="hidden sm:inline">Connections</span>
+              <span className="sm:hidden">Connected</span>
+              {connections.length > 0 && (
+                <Badge variant="secondary" className="ml-1 sm:ml-2 h-4 w-4 text-xs p-0 flex items-center justify-center rounded-full">
+                  {connections.length}
+                </Badge>
+              )}
+            </TabsTrigger>
+            <TabsTrigger value="requests" className="relative text-xs sm:text-sm px-2 sm:px-4">
+              <Clock size={14} className="mr-1 sm:mr-2" />
+              <span className="hidden sm:inline">Requests</span>
+              <span className="sm:hidden">Incoming</span>
+              {pendingRequests.length > 0 && (
+                <Badge variant="destructive" className="ml-1 sm:ml-2 h-4 w-4 text-xs p-0 flex items-center justify-center rounded-full">
+                  {pendingRequests.length}
+                </Badge>
+              )}
+            </TabsTrigger>
+            <TabsTrigger value="sent-requests" className="relative text-xs sm:text-sm px-2 sm:px-4">
+              <Send size={14} className="mr-1 sm:mr-2" />
+              <span className="hidden sm:inline">Sent Requests</span>
+              <span className="sm:hidden">Sent</span>
+              {sentRequests.length > 0 && (
+                <Badge variant="secondary" className="ml-1 sm:ml-2 h-4 w-4 text-xs p-0 flex items-center justify-center rounded-full">
+                  {sentRequests.length}
+                </Badge>
+              )}
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="connections" className="space-y-6">
+            <FilterButtons currentFilter={filter} onFilterChange={setFilter} />
+            
+            {filteredConnections.length === 0 ? (
+              <div className="text-center py-12">
+                <div className="w-24 h-24 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Users className="w-12 h-12 text-muted-foreground" />
+                </div>
+                <h3 className="text-lg font-semibold text-foreground mb-2">
+                  {searchTerm ? 'No connections found' : 'No connections yet'}
+                </h3>
+                <p className="text-muted-foreground max-w-md mx-auto">
+                  {searchTerm 
+                    ? 'Try adjusting your search terms or filters' 
+                    : 'Start building your network by connecting with athletes, coaches, and recruiters'
+                  }
+                </p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                {filteredConnections.map(connection => (
+                  <UserCard 
+                    key={connection.id} 
+                    connection={connection} 
+                    onRemove={handleRemoveConnection}
+                    isRemoving={removingConnection === connection.id}
+                  />
+                ))}
+              </div>
+            )}
+          </TabsContent>
+
+          <TabsContent value="requests" className="space-y-6">
+            {filteredPendingRequests.length === 0 ? (
+              <div className="text-center py-12">
+                <div className="w-24 h-24 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Clock className="w-12 h-12 text-muted-foreground" />
+                </div>
+                <h3 className="text-lg font-semibold text-foreground mb-2">No pending requests</h3>
+                <p className="text-muted-foreground">
+                  You&apos;ll see connection requests from other users here
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {filteredPendingRequests.map(request => (
+                  <PendingRequestCard 
+                    key={request.id} 
+                    request={request} 
+                    onAccept={handleAcceptRequest} 
+                    onDecline={handleDeclineRequest} 
+                  />
+                ))}
+              </div>
+            )}
+          </TabsContent>
+
+          <TabsContent value="sent-requests" className="space-y-6">
+            {filteredSentRequests.length === 0 ? (
+              <div className="text-center py-12">
+                <div className="w-24 h-24 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Send className="w-12 h-12 text-muted-foreground" />
+                </div>
+                <h3 className="text-lg font-semibold text-foreground mb-2">No sent requests</h3>
+                <p className="text-muted-foreground">
+                  You&apos;ll see sent requests here
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {filteredSentRequests.map(request => (
+                  <SentRequestCard 
+                    key={request.id} 
+                    request={request} 
+                    onWithdraw={handleWithdrawRequest}
+                    isWithdrawing={removingConnection === request.id}
+                  />
+                ))}
+              </div>
+            )}
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   );
@@ -457,7 +800,14 @@ function App() {
 export default function ConnectionsPage() {
   return (
     <AuthWrapper>
-      <Suspense fallback={<div>Loading...</div>}>
+      <Suspense fallback={
+        <div className="container py-8">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#01ae79] mx-auto"></div>
+            <p className="mt-4 text-muted-foreground">Loading...</p>
+          </div>
+        </div>
+      }>
         <App />
       </Suspense>
     </AuthWrapper>

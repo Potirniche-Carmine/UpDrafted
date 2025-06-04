@@ -16,8 +16,8 @@ import { relations } from 'drizzle-orm';
 
 export const userRoleEnum = pgEnum('user_role', ['athlete', 'coach', 'recruiter']);
 export const coachRoleEnum = pgEnum('coach_role', ['coach', 'recruiter']);
-export const connectionStatusEnum = pgEnum('connection_status', ['connected', 'interested', 'viewed']);
-export const initiatedByEnum = pgEnum('initiated_by', ['athlete', 'coach']);
+export const connectionStatusEnum = pgEnum('connection_status', ['connected', 'pending']);
+export const initiatedByEnum = pgEnum('initiated_by', ['athlete', 'coach', 'recruiter']);
 export const genderEnum = pgEnum('gender', ['male', 'female', 'coed']);
 export const reportStatusEnum = pgEnum('report_status', ['pending', 'under_review', 'resolved', 'dismissed']);
 export const verificationRequestStatusEnum = pgEnum('verification_request_status', ['pending', 'approved', 'rejected', 'under_review']);
@@ -166,16 +166,11 @@ export const recruitingNeeds = pgTable('recruiting_needs', {
   unique('recruiting_needs_coach_id_unique').on(table.coachId),
 ]);
 
-// Recruiting Profile Needs Table
-// This table stores sport-specific recruiting needs for recruiters who handle multiple sports.
-// Each row represents the recruiting needs for one specific sport for a recruiter.
-// The 'sport' column is ESSENTIAL - it allows a recruiter to have different graduation years,
-// positions, scholarships, and recruiting philosophy for each sport they recruit for.
-// Example: A recruiter might recruit for both Football and Basketball with different needs for each.
+
 export const recruitingProfileNeeds = pgTable('recruiting_profile_needs', {
   id: serial('id').primaryKey(),
   recruitingProfileId: integer('recruiting_profile_id').notNull().references(() => recruitingProfiles.id, { onDelete: 'cascade' }),
-  sport: text('sport').notNull(), // CRITICAL: This stores which sport these recruiting needs apply to
+  sport: text('sport').notNull(), 
   graduationYears: integer('graduation_years').array().notNull(),
   positions: text('positions').array().notNull(),
   scholarshipsAvailable: integer('scholarships_available'),
@@ -189,16 +184,16 @@ export const recruitingProfileNeeds = pgTable('recruiting_profile_needs', {
 
 export const connections = pgTable('connections', {
   id: serial('id').primaryKey(),
-  athleteId: integer('athlete_id').notNull().references(() => athleteProfiles.id, { onDelete: 'cascade' }),
-  coachId: integer('coach_id').notNull().references(() => coachProfiles.id, { onDelete: 'cascade' }),
-  status: connectionStatusEnum('status').default('viewed').notNull(),
+  fromUserId: text('from_user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  toUserId: text('to_user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  status: connectionStatusEnum('status').default('pending').notNull(),
   notes: text('notes'),
   initiatedBy: initiatedByEnum('initiated_by').notNull(),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
 }, (table) => [
-  index('idx_connections_athlete_id').on(table.athleteId),
-  index('idx_connections_coach_id').on(table.coachId),
-  unique('connections_athlete_coach_unique').on(table.athleteId, table.coachId),
+  index('idx_connections_from_user_id').on(table.fromUserId),
+  index('idx_connections_to_user_id').on(table.toUserId),
+  unique('connections_users_unique').on(table.fromUserId, table.toUserId),
 ]);
 
 export const activityLog = pgTable('activity_log', {
@@ -330,7 +325,6 @@ export const athleteProfilesRelations = relations(athleteProfiles, ({ one, many 
   }),
   measurables: many(athleteMeasurables),
   videos: many(athleteVideos),
-  connections: many(connections),
   conversations: many(conversations),
 }));
 
@@ -340,7 +334,6 @@ export const coachProfilesRelations = relations(coachProfiles, ({ one, many }) =
     references: [users.id],
   }),
   recruitingNeeds: one(recruitingNeeds),
-  connections: many(connections),
   conversations: many(conversations),
 }));
 
@@ -381,25 +374,17 @@ export const recruitingProfileNeedsRelations = relations(recruitingProfileNeeds,
 }));
 
 export const connectionsRelations = relations(connections, ({ one }) => ({
-  athlete: one(athleteProfiles, {
-    fields: [connections.athleteId],
-    references: [athleteProfiles.id],
+  fromUser: one(users, {
+    fields: [connections.fromUserId],
+    references: [users.id],
   }),
-  coach: one(coachProfiles, {
-    fields: [connections.coachId],
-    references: [coachProfiles.id],
+  toUser: one(users, {
+    fields: [connections.toUserId],
+    references: [users.id],
   }),
 }));
 
-export const conversationsRelations = relations(conversations, ({ one, many }) => ({
-  athlete: one(athleteProfiles, {
-    fields: [conversations.athleteId],
-    references: [athleteProfiles.id],
-  }),
-  coach: one(coachProfiles, {
-    fields: [conversations.coachId],
-    references: [coachProfiles.id],
-  }),
+export const conversationsRelations = relations(conversations, ({ many }) => ({
   messages: many(messages),
 }));
 

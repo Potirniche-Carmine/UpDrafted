@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, memo } from "react";
+import React, { useState, useEffect, memo, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -29,6 +29,8 @@ import { CoachLevelBanner } from "./coach-level-banner";
 import { VerificationDialog } from "../shared/verification-dialog";
 import { OptimizedOrgLogo } from "../shared/optimized-org-logo";
 import { CoachProfileData, CoachProfileProps } from './coach-profile-types';
+import { ConnectionDialog } from "../shared/connection-dialog";
+import { useRoleView } from '@/hooks/use-role-view';
 
 // Social Media Section Component (same as athlete profile)
 const SocialMediaSection = memo(({ socialMedia, isOwnProfile, onEdit }: { 
@@ -122,13 +124,24 @@ export function CoachProfile({
   onConnect, 
   onShare,
   hasPendingVerification,
-  pendingSubmittedAt 
+  pendingSubmittedAt,
+  connectionStatus = "none"
 }: CoachProfileProps) {
   const [profileData, setProfileData] = useState<CoachProfileData>(data);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState<string | null>(null);
   const [verificationDialogOpen, setVerificationDialogOpen] = useState(false);
+  const [connectionDialogOpen, setConnectionDialogOpen] = useState(false);
+  const [isConnecting, setIsConnecting] = useState(false);
+  const [currentConnectionStatus, setCurrentConnectionStatus] = useState(connectionStatus);
+  const { effectiveRole } = useRoleView();
+
+  // Determine if current user can connect to this coach
+  const canConnect = useMemo(() => 
+    !isOwnProfile && (effectiveRole === 'athlete' || effectiveRole === 'recruiter' || effectiveRole === 'coach'),
+    [isOwnProfile, effectiveRole]
+  );
 
   // Track if profile data has changed from original
   const checkForChanges = (newData: CoachProfileData) => {
@@ -289,22 +302,139 @@ export function CoachProfile({
     }
   };
 
+  const handleConnectClick = () => {
+    if (canConnect && currentConnectionStatus === "none") {
+      setConnectionDialogOpen(true);
+    }
+  };
+
+  const handleWithdrawConnection = async () => {
+    setIsConnecting(true);
+    try {
+      const windowWithClerk = window as unknown as {
+        Clerk?: {
+          session?: {
+            getToken: () => Promise<string>;
+          };
+        };
+      };
+      const token = await windowWithClerk.Clerk?.session?.getToken();
+      
+      const response = await fetch('/api/connections', {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          targetUserId: profileData.userId
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to withdraw connection request');
+      }
+
+      const result = await response.json();
+      if (result.success) {
+        setCurrentConnectionStatus("none");
+        // Use a more user-friendly notification instead of alert
+        const notification = document.createElement('div');
+        notification.className = 'fixed top-4 right-4 bg-green-500 text-white px-4 py-2 rounded-lg shadow-lg z-50';
+        notification.textContent = 'Connection request withdrawn successfully!';
+        document.body.appendChild(notification);
+        setTimeout(() => {
+          document.body.removeChild(notification);
+        }, 3000);
+      } else {
+        throw new Error(result.error || 'Failed to withdraw connection request');
+      }
+    } catch (error) {
+      console.error('Error withdrawing connection request:', error);
+      alert(error instanceof Error ? error.message : 'Failed to withdraw connection request. Please try again.');
+    } finally {
+      setIsConnecting(false);
+    }
+  };
+
+  const handleConnectionConfirm = async (note?: string) => {
+    setIsConnecting(true);
+    try {
+      // Get the current user's auth token
+      const windowWithClerk = window as unknown as {
+        Clerk?: {
+          session?: {
+            getToken: () => Promise<string>;
+          };
+        };
+      };
+      const token = await windowWithClerk.Clerk?.session?.getToken();
+      
+      const response = await fetch('/api/connections', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          targetUserId: profileData.userId,
+          note: note
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to send connection request');
+      }
+
+      const result = await response.json();
+      if (result.success) {
+        // Update connection status to pending
+        setCurrentConnectionStatus("pending");
+        setConnectionDialogOpen(false);
+        // Call the original onConnect if provided
+        onConnect?.();
+      } else {
+        throw new Error(result.error || 'Failed to send connection request');
+      }
+    } catch (error) {
+      console.error('Error sending connection request:', error);
+      alert(error instanceof Error ? error.message : 'Failed to send connection request. Please try again.');
+    } finally {
+      setIsConnecting(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background">
       {/* Header Actions */}
       <ProfileHeader
         isOwnProfile={isOwnProfile}
-        onConnect={onConnect}
+        onConnect={canConnect ? handleConnectClick : undefined}
+        onWithdrawConnection={handleWithdrawConnection}
         onReport={() => {}}
         onShare={onShare}
         connectLabel="Connect with Coach"
         profileName={profileData.fullName}
         profileType="coach"
         reportedUserId={profileData.userId}
+        connectionStatus={currentConnectionStatus}
+        isConnecting={isConnecting}
         hasUnsavedChanges={hasUnsavedChanges}
         isSaving={isSaving}
         onSaveChanges={saveProfile}
         onDiscardChanges={discardChanges}
+      />
+
+      {/* Connection Dialog */}
+      <ConnectionDialog
+        open={connectionDialogOpen}
+        onOpenChange={setConnectionDialogOpen}
+        profileName={profileData.fullName}
+        profileType="coach"
+        onConfirm={handleConnectionConfirm}
+        isConnecting={isConnecting}
       />
 
       {/* Verification Dialog */}

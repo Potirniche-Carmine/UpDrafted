@@ -389,6 +389,7 @@ export function RecruiterEditDialogs({
         break;
       case 'recruiting-needs':
         const currentSportToUpdate = selectedSport || profileData.sportRecruiting;
+        
         updates = {
           sportSpecificNeeds: {
             ...profileData.sportSpecificNeeds,
@@ -432,7 +433,7 @@ export function RecruiterEditDialogs({
         };
         break;
     }
-
+    
     // SECURITY: Sanitize all user input to prevent XSS attacks
     const sanitizedUpdates = sanitizeProfileData(updates) as Partial<RecruiterProfileData>;
 

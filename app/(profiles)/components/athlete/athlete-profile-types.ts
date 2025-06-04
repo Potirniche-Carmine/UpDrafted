@@ -69,6 +69,8 @@ export interface AthleteProfileProps {
   onShare?: () => void;
   hasPendingVerification?: boolean;
   pendingSubmittedAt?: string;
+  connectionStatus?: "none" | "pending" | "connected";
+  connectionDirection?: "incoming" | "outgoing" | null;
 }
 
 export interface MeasurableEditData {

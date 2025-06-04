@@ -231,6 +231,31 @@ export function sanitizeProfileData(data: Record<string, unknown>): Record<strin
         }
         break;
         
+      // Sport-specific recruiting needs for recruiters
+      case 'sportSpecificNeeds':
+        if (value && typeof value === 'object') {
+          const sportNeeds = value as Record<string, Record<string, unknown>>;
+          const sanitizedSportNeeds: Record<string, Record<string, unknown>> = {};
+          
+          Object.entries(sportNeeds).forEach(([sport, needs]) => {
+            if (needs && typeof needs === 'object') {
+              sanitizedSportNeeds[sanitizeText(sport)] = {
+                graduationYears: Array.isArray(needs.graduationYears) 
+                  ? needs.graduationYears
+                      .map(year => sanitizeNumber(year, 2000, 2050))
+                      .filter(year => year !== null)
+                  : [],
+                positions: sanitizeArray(needs.positions),
+                scholarshipsAvailable: sanitizeNumber(needs.scholarshipsAvailable, 0, 50),
+                recruitingPhilosophy: sanitizeDescription(needs.recruitingPhilosophy as string)
+              };
+            }
+          });
+          
+          sanitized[key] = sanitizedSportNeeds;
+        }
+        break;
+        
       // Arrays of objects (videos, measurables)
       case 'youtubeVideos':
         if (Array.isArray(value)) {

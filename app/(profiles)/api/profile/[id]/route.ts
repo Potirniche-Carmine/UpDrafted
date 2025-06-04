@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAnyRole, requireOwnershipOrAdmin } from '@/utils/roles';
-import { userOperations, athleteOperations, coachOperations, recruitingOperations, recruitingNeedsOperations } from '@/database/db-utils';
+import { userOperations, athleteOperations, coachOperations, recruitingOperations, recruitingNeedsOperations, connectionOperations } from '@/database/db-utils';
 import { R2_PUBLIC_URL } from '@/database/r2';
 import { NewAthleteProfile, NewAthleteMeasurable, NewAthleteVideo, NewCoachProfile, NewRecruitingProfile, verificationRequests, AthleteProfile, CoachProfile, RecruitingProfile } from '@/database/schema';
 import { db } from '@/database/db';
@@ -465,6 +465,25 @@ export async function GET(
     // Transform the profile data to match the component interface
     const transformedProfile = transformProfileData(sanitizedProfile, profileType);
 
+    // Check connection status if viewing another user's profile
+    let connectionStatus = "none";
+    let connectionDirection = null; // "outgoing" or "incoming" for pending requests
+    if (!isOwnProfile) {
+      try {
+        const existingConnection = await connectionOperations.getConnectionBetweenUsers(currentUserId, profileUserId);
+        if (existingConnection) {
+          connectionStatus = existingConnection.status;
+          if (existingConnection.status === 'pending') {
+            // Determine direction: if current user is fromUserId, it's outgoing; if toUserId, it's incoming
+            connectionDirection = existingConnection.fromUserId === currentUserId ? "outgoing" : "incoming";
+          }
+        }
+      } catch (connectionError) {
+        console.error('Error checking connection status:', connectionError);
+        // Don't fail the whole request if connection check fails
+      }
+    }
+
     // Add verification status to the response if applicable
     const responseData = {
       success: true,
@@ -474,6 +493,8 @@ export async function GET(
       isAdmin,
       canEdit: isOwnProfile || isAdmin,
       currentUserRole,
+      connectionStatus: !isOwnProfile ? connectionStatus : undefined,
+      connectionDirection: !isOwnProfile ? connectionDirection : undefined,
       ...(verificationStatus && verificationStatus)
     };
 

@@ -17,7 +17,6 @@ import {
   UserPlus,
   Users,
   X,
-  Target
 } from "lucide-react"
 import Link from "next/link"
 import { useRoleView } from '@/hooks/use-role-view'
@@ -121,7 +120,7 @@ const getUserTypeContent = (role: string, userId: string, handleViewProfile: () 
         primaryActions: [
           { label: "Discover Athletes", href: "/discover", icon: Search, description: "Find top prospects" },
           { label: profileNavigating ? "Loading..." : "View Profile", onClick: handleViewProfile, icon: Eye, description: "Check your current profile" },
-          { label: "View Notifications", href: "/notifications", icon: Bell, description: "Stay updated" },
+          { label: "My Connections", href: "/connections", icon: Users, description: "Manage your network" },
           { label: "Send Messages", href: "/messages", icon: MessageSquare, description: "Connect with prospects" }
         ],
         secondaryActions: []
@@ -134,7 +133,7 @@ const getUserTypeContent = (role: string, userId: string, handleViewProfile: () 
         primaryActions: [
           { label: "Discover Athletes", href: "/discover", icon: Search, description: "Find athletes & coaches" },
           { label: profileNavigating ? "Loading..." : "View Profile", onClick: handleViewProfile, icon: Eye, description: "Check your current profile" },
-          { label: "Manage Matches", href: "/recruiting/matches", icon: Target, description: "Track connections" },
+          { label: "My Connections", href: "/connections", icon: Users, description: "Manage your network" },
           { label: "Send Messages", href: "/messages", icon: MessageSquare, description: "Facilitate connections" }
         ],
         secondaryActions: []

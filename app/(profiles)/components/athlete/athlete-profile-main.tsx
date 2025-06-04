@@ -28,6 +28,7 @@ import { VerificationSection } from "./athlete-verification-section";
 import { VerificationDialog } from "../shared/verification-dialog";
 import { useRoleView } from '@/hooks/use-role-view';
 import { AthleteProfileData, AthleteProfileProps, Measurable } from './athlete-profile-types';
+import { ConnectionDialog } from "../shared/connection-dialog";
 
 // Memoize heavy components
 const MeasurablesSection = memo(({ measurables, allSports, selectedSport, onSportChange, isOwnProfile, onEditSection }: { 
@@ -304,7 +305,9 @@ export function AthleteProfile({
   onConnect, 
   onShare,
   hasPendingVerification,
-  pendingSubmittedAt 
+  pendingSubmittedAt,
+  connectionStatus = "none",
+  connectionDirection
 }: AthleteProfileProps) {
   const [selectedSport, setSelectedSport] = useState(data.sport);
   const [editDialogOpen, setEditDialogOpen] = useState<string | null>(null);
@@ -314,6 +317,9 @@ export function AthleteProfile({
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const { effectiveRole } = useRoleView();
+  const [connectionDialogOpen, setConnectionDialogOpen] = useState(false);
+  const [isConnecting, setIsConnecting] = useState(false);
+  const [currentConnectionStatus, setCurrentConnectionStatus] = useState(connectionStatus);
   
   // Memoize computed values
   const allSports = useMemo(() => [profileData.sport, ...(profileData.secondarySports || [])], [profileData.sport, profileData.secondarySports]);
@@ -487,22 +493,242 @@ export function AthleteProfile({
     }
   };
 
+  const handleConnectClick = () => {
+    if (!isOwnProfile && canDraft && currentConnectionStatus === "none") {
+      setConnectionDialogOpen(true);
+    }
+  };
+
+  const handleWithdrawConnection = async () => {
+    setIsConnecting(true);
+    try {
+      const windowWithClerk = window as unknown as {
+        Clerk?: {
+          session?: {
+            getToken: () => Promise<string>;
+          };
+        };
+      };
+      const token = await windowWithClerk.Clerk?.session?.getToken();
+      
+      const response = await fetch('/api/connections', {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          targetUserId: profileData.userId
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to withdraw connection request');
+      }
+
+      const result = await response.json();
+      if (result.success) {
+        setCurrentConnectionStatus("none");
+        // Use a more user-friendly notification instead of alert
+        const notification = document.createElement('div');
+        notification.className = 'fixed top-4 right-4 bg-green-500 text-white px-4 py-2 rounded-lg shadow-lg z-50';
+        notification.textContent = 'Connection request withdrawn successfully!';
+        document.body.appendChild(notification);
+        setTimeout(() => {
+          document.body.removeChild(notification);
+        }, 3000);
+      } else {
+        throw new Error(result.error || 'Failed to withdraw connection request');
+      }
+    } catch (error) {
+      console.error('Error withdrawing connection request:', error);
+      alert(error instanceof Error ? error.message : 'Failed to withdraw connection request. Please try again.');
+    } finally {
+      setIsConnecting(false);
+    }
+  };
+
+  const handleAcceptConnection = async () => {
+    setIsConnecting(true);
+    try {
+      const windowWithClerk = window as unknown as {
+        Clerk?: {
+          session?: {
+            getToken: () => Promise<string>;
+          };
+        };
+      };
+      const token = await windowWithClerk.Clerk?.session?.getToken();
+      
+      const response = await fetch('/api/connections', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          fromUserId: profileData.userId
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to accept connection request');
+      }
+
+      const result = await response.json();
+      if (result.success) {
+        setCurrentConnectionStatus("connected");
+        // Show success notification
+        const notification = document.createElement('div');
+        notification.className = 'fixed top-4 right-4 bg-green-500 text-white px-4 py-2 rounded-lg shadow-lg z-50';
+        notification.textContent = 'Connection request accepted!';
+        document.body.appendChild(notification);
+        setTimeout(() => {
+          document.body.removeChild(notification);
+        }, 3000);
+      } else {
+        throw new Error(result.error || 'Failed to accept connection request');
+      }
+    } catch (error) {
+      console.error('Error accepting connection request:', error);
+      alert(error instanceof Error ? error.message : 'Failed to accept connection request. Please try again.');
+    } finally {
+      setIsConnecting(false);
+    }
+  };
+
+  const handleDeclineConnection = async () => {
+    setIsConnecting(true);
+    try {
+      const windowWithClerk = window as unknown as {
+        Clerk?: {
+          session?: {
+            getToken: () => Promise<string>;
+          };
+        };
+      };
+      const token = await windowWithClerk.Clerk?.session?.getToken();
+      
+      const response = await fetch('/api/connections', {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          targetUserId: profileData.userId
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to decline connection request');
+      }
+
+      const result = await response.json();
+      if (result.success) {
+        setCurrentConnectionStatus("none");
+        // Show success notification
+        const notification = document.createElement('div');
+        notification.className = 'fixed top-4 right-4 bg-blue-500 text-white px-4 py-2 rounded-lg shadow-lg z-50';
+        notification.textContent = 'Connection request declined.';
+        document.body.appendChild(notification);
+        setTimeout(() => {
+          document.body.removeChild(notification);
+        }, 3000);
+      } else {
+        throw new Error(result.error || 'Failed to decline connection request');
+      }
+    } catch (error) {
+      console.error('Error declining connection request:', error);
+      alert(error instanceof Error ? error.message : 'Failed to decline connection request. Please try again.');
+    } finally {
+      setIsConnecting(false);
+    }
+  };
+
+  const handleConnectionConfirm = async (note?: string) => {
+    setIsConnecting(true);
+    try {
+      // Get the current user's auth token
+      const windowWithClerk = window as unknown as {
+        Clerk?: {
+          session?: {
+            getToken: () => Promise<string>;
+          };
+        };
+      };
+      const token = await windowWithClerk.Clerk?.session?.getToken();
+      
+      const response = await fetch('/api/connections', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          targetUserId: profileData.userId,
+          note: note
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to send connection request');
+      }
+
+      const result = await response.json();
+      if (result.success) {
+        // Update connection status to pending
+        setCurrentConnectionStatus("pending");
+        setConnectionDialogOpen(false);
+        // Call the original onConnect if provided
+        onConnect?.();
+      } else {
+        throw new Error(result.error || 'Failed to send connection request');
+      }
+    } catch (error) {
+      console.error('Error sending connection request:', error);
+      alert(error instanceof Error ? error.message : 'Failed to send connection request. Please try again.');
+    } finally {
+      setIsConnecting(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background">
       {/* Header Actions */}
       <ProfileHeader
         isOwnProfile={isOwnProfile}
-        onConnect={canDraft ? onConnect : undefined}
+        onConnect={handleConnectClick}
+        onWithdrawConnection={handleWithdrawConnection}
+        onAcceptConnection={handleAcceptConnection}
+        onDeclineConnection={handleDeclineConnection}
         onReport={() => {}}
         onShare={onShare}
         connectLabel="Draft"
         profileName={profileData.fullName}
         profileType="athlete"
         reportedUserId={profileData.userId}
+        connectionStatus={currentConnectionStatus}
+        connectionDirection={connectionDirection}
+        isConnecting={isConnecting}
         hasUnsavedChanges={hasUnsavedChanges}
         isSaving={isSaving}
         onSaveChanges={saveProfile}
         onDiscardChanges={discardChanges}
+      />
+
+      {/* Connection Dialog */}
+      <ConnectionDialog
+        open={connectionDialogOpen}
+        onOpenChange={setConnectionDialogOpen}
+        profileName={profileData.fullName}
+        profileType="athlete"
+        onConfirm={handleConnectionConfirm}
+        isConnecting={isConnecting}
       />
 
       {/* Verification Dialog */}

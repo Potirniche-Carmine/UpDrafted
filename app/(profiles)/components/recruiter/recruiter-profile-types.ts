@@ -55,4 +55,5 @@ export interface RecruiterProfileProps {
   hasRejectedVerification?: boolean;
   rejectionReason?: string;
   rejectedAt?: string;
+  connectionStatus?: "none" | "pending" | "connected";
 } 

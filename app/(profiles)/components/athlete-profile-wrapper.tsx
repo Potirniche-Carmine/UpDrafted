@@ -6,6 +6,7 @@ import type { AthleteProfileData } from './athlete-profile';
 interface AthleteProfileWrapperProps {
   data: AthleteProfileData;
   isOwnProfile?: boolean;
+  connectionStatus?: "none" | "pending" | "connected";
   hasPendingVerification?: boolean;
   pendingSubmittedAt?: string;
 }
@@ -13,6 +14,7 @@ interface AthleteProfileWrapperProps {
 export function AthleteProfileWrapper({ 
   data, 
   isOwnProfile = false, 
+  connectionStatus,
   hasPendingVerification,
   pendingSubmittedAt 
 }: AthleteProfileWrapperProps) {
@@ -30,6 +32,7 @@ export function AthleteProfileWrapper({
       onShare={handleShare}
       hasPendingVerification={hasPendingVerification}
       pendingSubmittedAt={pendingSubmittedAt}
+      connectionStatus={connectionStatus}
     />
   );
 } 

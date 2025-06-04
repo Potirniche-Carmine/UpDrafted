@@ -6,13 +6,15 @@ import type { CoachProfileData } from './coach/coach-profile-types';
 interface CoachProfileWrapperProps {
   data: CoachProfileData;
   isOwnProfile?: boolean;
+  connectionStatus?: "none" | "pending" | "connected";
   hasPendingVerification?: boolean;
   pendingSubmittedAt?: string;
 }
 
 export function CoachProfileWrapper({ 
   data, 
-  isOwnProfile = false, 
+  isOwnProfile = false,
+  connectionStatus,
   hasPendingVerification,
   pendingSubmittedAt 
 }: CoachProfileWrapperProps) {
@@ -32,6 +34,7 @@ export function CoachProfileWrapper({
       onShare={handleShare}
       hasPendingVerification={hasPendingVerification}
       pendingSubmittedAt={pendingSubmittedAt}
+      connectionStatus={connectionStatus}
     />
   );
 } 

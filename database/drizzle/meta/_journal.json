@@ -155,6 +155,20 @@
       "when": 1748992389616,
       "tag": "0021_bored_lila_cheney",
       "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "7",
+      "when": 1748996676667,
+      "tag": "0022_white_prodigy",
+      "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1749001156104,
+      "tag": "0023_clear_scarlet_witch",
+      "breakpoints": true
     }
   ]
 }

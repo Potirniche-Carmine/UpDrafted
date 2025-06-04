@@ -1,4 +1,4 @@
-import { eq, and, desc } from 'drizzle-orm';
+import { eq, and, desc, or, asc } from 'drizzle-orm';
 import { db } from './db';
 import { 
   users, 
@@ -85,23 +85,18 @@ export const userOperations = {
 export const athleteOperations = {
   // Get athlete profile with all related data
   async getAthleteProfile(userId: string) {
-    return await db.query.athleteProfiles.findFirst({
+    const athleteProfile = await db.query.athleteProfiles.findFirst({
       where: eq(athleteProfiles.userId, userId),
       with: {
         user: true,
         measurables: true,
-        videos: true,
-        connections: {
-          with: {
-            coach: {
-              with: {
-                user: true
-              }
-            }
-          }
+        videos: {
+          orderBy: [asc(athleteVideos.sortOrder)],
         }
       }
     });
+
+    return athleteProfile;
   },
 
   // Create athlete profile
@@ -239,22 +234,15 @@ export const athleteOperations = {
 export const coachOperations = {
   // Get coach profile with all related data
   async getCoachProfile(userId: string) {
-    return await db.query.coachProfiles.findFirst({
+    const coachProfile = await db.query.coachProfiles.findFirst({
       where: eq(coachProfiles.userId, userId),
       with: {
         user: true,
-        recruitingNeeds: true,
-        connections: {
-          with: {
-            athlete: {
-              with: {
-                user: true
-              }
-            }
-          }
-        }
+        recruitingNeeds: true
       }
     });
+
+    return coachProfile;
   },
 
   // Create coach profile
@@ -471,58 +459,82 @@ export const recruitingNeedsOperations = {
 
 // Connection operations
 export const connectionOperations = {
-  // Create connection between athlete and coach
-  async createConnection(athleteId: number, coachId: number, initiatedBy: 'athlete' | 'coach') {
+  // Create connection between any two users
+  async createConnection(fromUserId: string, toUserId: string, initiatedBy: 'athlete' | 'coach' | 'recruiter', notes?: string) {
     const [connection] = await db.insert(connections).values({
-      athleteId,
-      coachId,
+      fromUserId,
+      toUserId,
       initiatedBy,
-      status: 'viewed'
+      status: 'pending',
+      notes
     }).returning();
     return connection;
   },
 
   // Update connection status
-  async updateConnectionStatus(athleteId: number, coachId: number, status: 'connected' | 'interested' | 'viewed') {
+  async updateConnectionStatus(fromUserId: string, toUserId: string, status: 'connected' | 'pending') {
     const [connection] = await db
       .update(connections)
       .set({ status })
-      .where(and(
-        eq(connections.athleteId, athleteId),
-        eq(connections.coachId, coachId)
+      .where(or(
+        and(eq(connections.fromUserId, fromUserId), eq(connections.toUserId, toUserId)),
+        and(eq(connections.fromUserId, toUserId), eq(connections.toUserId, fromUserId))
       ))
       .returning();
     return connection;
   },
 
-  // Get connections for athlete
-  async getAthleteConnections(athleteId: number) {
-    return await db.query.connections.findMany({
-      where: eq(connections.athleteId, athleteId),
-      with: {
-        coach: {
-          with: {
-            user: true
-          }
-        }
-      },
-      orderBy: [desc(connections.createdAt)]
-    });
+  // Delete connection
+  async deleteConnection(fromUserId: string, toUserId: string) {
+    const [deletedConnection] = await db
+      .delete(connections)
+      .where(or(
+        and(eq(connections.fromUserId, fromUserId), eq(connections.toUserId, toUserId)),
+        and(eq(connections.fromUserId, toUserId), eq(connections.toUserId, fromUserId))
+      ))
+      .returning();
+    return deletedConnection;
   },
 
-  // Get connections for coach
-  async getCoachConnections(coachId: number) {
-    return await db.query.connections.findMany({
-      where: eq(connections.coachId, coachId),
+  // Get connections for a user (all their connections regardless of role)
+  async getUserConnections(userId: string) {
+    const userConnections = await db.query.connections.findMany({
+      where: or(
+        eq(connections.fromUserId, userId),
+        eq(connections.toUserId, userId)
+      ),
       with: {
-        athlete: {
+        fromUser: {
           with: {
-            user: true
+            athleteProfile: true,
+            coachProfile: true,
+            recruitingProfile: true
+          }
+        },
+        toUser: {
+          with: {
+            athleteProfile: true,
+            coachProfile: true,
+            recruitingProfile: true
           }
         }
       },
       orderBy: [desc(connections.createdAt)]
     });
+
+    return userConnections;
+  },
+
+  // Check if a connection exists between two users
+  async getConnectionBetweenUsers(fromUserId: string, toUserId: string) {
+    const connection = await db.query.connections.findFirst({
+      where: or(
+        and(eq(connections.fromUserId, fromUserId), eq(connections.toUserId, toUserId)),
+        and(eq(connections.fromUserId, toUserId), eq(connections.toUserId, fromUserId))
+      )
+    });
+    
+    return connection;
   }
 };
 
@@ -530,21 +542,20 @@ export const connectionOperations = {
 export const activityOperations = {
   // Log activity
   async logActivity(viewerId: string, viewedUserId: string, action: string, metadata?: Record<string, unknown>) {
-    const [activity] = await db.insert(activityLog).values({
+    await db.insert(activityLog).values({
       viewerId,
       viewedUserId,
       action,
       metadata
-    }).returning();
-    return activity;
+    });
   },
 
   // Get user activity
   async getUserActivity(userId: string, limit = 50) {
     return await db.query.activityLog.findMany({
-      where: eq(activityLog.viewerId, userId),
-      limit,
-      orderBy: [desc(activityLog.createdAt)]
+      where: eq(activityLog.viewedUserId, userId),
+      orderBy: [desc(activityLog.createdAt)],
+      limit
     });
   }
 };
