@@ -200,7 +200,6 @@ function sanitizeForViewing(profileData: Record<string, any>, profileType: strin
   // Remove sensitive profile data based on type
   if (profileType === 'athlete') {
     // Keep public athlete information but remove private details
-    delete sanitized.personalStatement; // Keep this for now, but could be made private
     // Remove any private measurables or stats if needed
   } else if (profileType === 'coach' || profileType === 'recruiter') {
     // Remove any sensitive coaching/recruiting information

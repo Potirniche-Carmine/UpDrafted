@@ -83,65 +83,65 @@ interface FilterButtonsProps {
   onFilterChange: (filter: string) => void;
 }
 
-// Helper function to get role badge with descriptive text
+// Helper function to get role badge with descriptive text and improved styling
 const getRoleBadge = (role: string, division?: string, educationLevel?: string) => {
   let roleText = '';
   let roleColor = '';
 
   if (role === 'athlete') {
     if (educationLevel === 'high_school') {
-      roleText = 'High School Athlete';
-      roleColor = 'bg-blue-100 text-blue-800';
+      roleText = 'HS Athlete';
+      roleColor = 'bg-blue-500/10 text-blue-700 border-blue-200 dark:bg-blue-500/20 dark:text-blue-300 dark:border-blue-700';
     } else if (educationLevel === 'undergraduate') {
       roleText = 'College Athlete';
-      roleColor = 'bg-purple-100 text-purple-800';
+      roleColor = 'bg-purple-500/10 text-purple-700 border-purple-200 dark:bg-purple-500/20 dark:text-purple-300 dark:border-purple-700';
     } else if (educationLevel === 'associate') {
-      roleText = 'Community College Athlete';
-      roleColor = 'bg-orange-100 text-orange-800';
+      roleText = 'JC Athlete';
+      roleColor = 'bg-orange-500/10 text-orange-700 border-orange-200 dark:bg-orange-500/20 dark:text-orange-300 dark:border-orange-700';
     } else if (educationLevel === 'graduate') {
-      roleText = 'Graduate Athlete';
-      roleColor = 'bg-indigo-100 text-indigo-800';
+      roleText = 'Grad Athlete';
+      roleColor = 'bg-indigo-500/10 text-indigo-700 border-indigo-200 dark:bg-indigo-500/20 dark:text-indigo-300 dark:border-indigo-700';
     } else {
       roleText = 'Athlete';
-      roleColor = 'bg-blue-100 text-blue-800';
+      roleColor = 'bg-blue-500/10 text-blue-700 border-blue-200 dark:bg-blue-500/20 dark:text-blue-300 dark:border-blue-700';
     }
   } else if (role === 'coach') {
     if (division === 'High School') {
-      roleText = 'High School Coach';
-      roleColor = 'bg-blue-100 text-blue-800';
+      roleText = 'HS Coach';
+      roleColor = 'bg-blue-500/10 text-blue-700 border-blue-200 dark:bg-blue-500/20 dark:text-blue-300 dark:border-blue-700';
     } else if (division === 'Club Sports') {
       roleText = 'Club Coach';
-      roleColor = 'bg-green-100 text-green-800';
+      roleColor = 'bg-green-500/10 text-green-700 border-green-200 dark:bg-green-500/20 dark:text-green-300 dark:border-green-700';
     } else if (division === 'Community College' || division === 'Junior College' || division?.includes('NJCAA')) {
-      roleText = division === 'Junior College' ? 'Junior College Coach' : 'Community College Coach';
-      roleColor = 'bg-orange-100 text-orange-800';
+      roleText = 'JC Coach';
+      roleColor = 'bg-orange-500/10 text-orange-700 border-orange-200 dark:bg-orange-500/20 dark:text-orange-300 dark:border-orange-700';
     } else if (division?.includes('NCAA') || division === 'NAIA') {
       roleText = 'College Coach';
-      roleColor = 'bg-purple-100 text-purple-800';
+      roleColor = 'bg-purple-500/10 text-purple-700 border-purple-200 dark:bg-purple-500/20 dark:text-purple-300 dark:border-purple-700';
     } else {
       roleText = 'Coach';
-      roleColor = 'bg-gray-100 text-gray-800';
+      roleColor = 'bg-gray-500/10 text-gray-700 border-gray-200 dark:bg-gray-500/20 dark:text-gray-300 dark:border-gray-700';
     }
   } else if (role === 'recruiter') {
     if (division === 'High School') {
-      roleText = 'High School Recruiter';
-      roleColor = 'bg-blue-100 text-blue-800';
+      roleText = 'HS Recruiter';
+      roleColor = 'bg-blue-500/10 text-blue-700 border-blue-200 dark:bg-blue-500/20 dark:text-blue-300 dark:border-blue-700';
     } else if (division === 'Club Sports') {
       roleText = 'Club Recruiter';
-      roleColor = 'bg-green-100 text-green-800';
+      roleColor = 'bg-green-500/10 text-green-700 border-green-200 dark:bg-green-500/20 dark:text-green-300 dark:border-green-700';
     } else if (division === 'Community College' || division === 'Junior College' || division?.includes('NJCAA')) {
-      roleText = division === 'Junior College' ? 'Junior College Recruiter' : 'Community College Recruiter';
-      roleColor = 'bg-orange-100 text-orange-800';
+      roleText = 'JC Recruiter';
+      roleColor = 'bg-orange-500/10 text-orange-700 border-orange-200 dark:bg-orange-500/20 dark:text-orange-300 dark:border-orange-700';
     } else if (division?.includes('NCAA') || division === 'NAIA') {
       roleText = 'College Recruiter';
-      roleColor = 'bg-purple-100 text-purple-800';
+      roleColor = 'bg-purple-500/10 text-purple-700 border-purple-200 dark:bg-purple-500/20 dark:text-purple-300 dark:border-purple-700';
     } else {
       roleText = 'Recruiter';
-      roleColor = 'bg-gray-100 text-gray-800';
+      roleColor = 'bg-gray-500/10 text-gray-700 border-gray-200 dark:bg-gray-500/20 dark:text-gray-300 dark:border-gray-700';
     }
   }
 
-  return <Badge className={`text-xs ${roleColor}`}>{roleText}</Badge>;
+  return <Badge variant="outline" className={`text-xs font-medium px-2 py-0.5 border ${roleColor} whitespace-nowrap`}>{roleText}</Badge>;
 };
 
 const UserCard: React.FC<UserCardProps> = ({ connection, onRemove, isRemoving = false }) => {
@@ -159,89 +159,156 @@ const UserCard: React.FC<UserCardProps> = ({ connection, onRemove, isRemoving = 
     setShowMenu(!showMenu);
   };
 
-  const handleSendMessageClick = (e: React.MouseEvent) => {
+  const handleCardClick = (e: React.MouseEvent) => {
     e.preventDefault();
-    e.stopPropagation();
-    // Handle send message action
+    // Handle send message action instead of navigation
+    console.log('Send message to:', otherUser.fullName);
+  };
+
+  // Format date as "June 3rd, 2025"
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    const options: Intl.DateTimeFormatOptions = { 
+      month: 'long', 
+      day: 'numeric', 
+      year: 'numeric' 
+    };
+    const formatted = date.toLocaleDateString('en-US', options);
+    
+    // Add ordinal suffix to day
+    const day = date.getDate();
+    const suffix = day % 10 === 1 && day !== 11 ? 'st' : 
+                   day % 10 === 2 && day !== 12 ? 'nd' : 
+                   day % 10 === 3 && day !== 13 ? 'rd' : 'th';
+    
+    return formatted.replace(/(\d+)/, `$1${suffix}`);
+  };
+
+  // Process profile image URL to ensure it works with R2/CloudFlare
+  const getProfileImageUrl = (profileImage: string | null) => {
+    if (!profileImage) {
+      return null;
+    }
+    
+    // If it's already a full URL, return as is
+    if (profileImage.startsWith('http')) {
+      return profileImage;
+    }
+    
+    // Construct the full R2 URL using environment variable or fallback to known R2 domain
+    const baseUrl = process.env.NEXT_PUBLIC_R2_PUBLIC_URL || 'https://pub-19c0754937db426497ca014f0e2a297c.r2.dev';
+    return `${baseUrl}/${profileImage}`;
   };
 
   return (
-    <Link href={`/profile/${otherUser.userId}`} className="block h-full">
-      <Card className="group transition-all duration-300 hover:shadow-md hover:shadow-[#01ae79]/5 border-border/50 hover:border-[#01ae79]/20 dark:hover:border-[#01ae79]/30 h-full cursor-pointer">
-        <CardContent className="p-3 flex flex-col h-full">
-          <div className="flex items-start space-x-3 mb-3">
-            <div className="flex-shrink-0">
-              <div className="relative">
-                <Avatar className="w-12 h-12 ring-2 ring-[#01ae79]/20 dark:ring-[#01ae79]/30 group-hover:ring-[#01ae79]/30 dark:group-hover:ring-[#01ae79]/40 transition-colors">
-                  <AvatarImage src={otherUser.profileImage || undefined} alt={otherUser.fullName} />
-                  <AvatarFallback className="text-xs font-medium">
-                    {otherUser.fullName.split(' ').map(n => n[0]).join('')}
+    <div className="relative">
+      <Card className="group transition-all duration-200 hover:shadow-xl hover:shadow-[#01ae79]/15 border border-border/60 hover:border-[#01ae79]/40 dark:hover:border-[#01ae79]/50 overflow-hidden">
+        <CardContent className="p-3 sm:p-4 md:p-5">
+          {/* Header Section with Date */}
+          <div className="flex items-start justify-between mb-3 md:mb-4">
+            <div className="flex items-start gap-2 md:gap-3 lg:gap-4 flex-1 min-w-0">
+              <div className="relative flex-shrink-0">
+                <Avatar className="w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 ring-2 ring-[#01ae79]/20 group-hover:ring-[#01ae79]/50 transition-all duration-200">
+                  <AvatarImage 
+                    src={getProfileImageUrl(otherUser.profileImage) || undefined} 
+                    alt={otherUser.fullName}
+                    className="object-cover"
+                  />
+                  <AvatarFallback className="text-xs sm:text-sm font-semibold bg-gradient-to-br from-[#01ae79]/10 to-[#01ae79]/20 text-[#01ae79]">
+                    {otherUser.fullName.split(' ').map(n => n[0]).join('').toUpperCase()}
                   </AvatarFallback>
                 </Avatar>
-                {/* Verification indicator */}
                 {otherUser.isVerified && (
-                  <div className="absolute -top-1 -right-1 w-4 h-4 bg-green-500 rounded-full flex items-center justify-center">
-                    <Shield className="w-2.5 h-2.5 text-white" />
+                  <div className="absolute -top-1 -right-1 w-4 h-4 sm:w-5 sm:h-5 bg-green-500 rounded-full flex items-center justify-center shadow-md">
+                    <Shield className="w-2 h-2 sm:w-3 sm:h-3 text-white" />
                   </div>
                 )}
               </div>
-            </div>
-            <div className="flex-1 min-w-0">
-              <h3 className="text-sm font-semibold text-foreground leading-tight mb-1 truncate">{otherUser.fullName}</h3>
-              <div className="space-y-1">
-                {getRoleBadge(otherUser.role, otherUser.division, otherUser.educationLevel)}
-                <p className="text-xs text-[#01ae79] font-medium truncate">
+
+              <div className="flex-1 min-w-0 space-y-2">
+                <h3 className="font-semibold text-sm md:text-base text-foreground leading-tight truncate">{otherUser.fullName}</h3>
+                
+                <div className="flex items-center gap-2 flex-wrap pt-1.5">
+                  {getRoleBadge(otherUser.role, otherUser.division, otherUser.educationLevel)}
+                </div>
+
+                <p className="text-xs md:text-sm font-medium text-[#01ae79] truncate">
                   {otherUser.role === 'athlete' ? otherUser.sport : otherUser.title}
                 </p>
-                <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                  <MapPin className="w-3 h-3" />
-                  <span className="truncate">{otherUser.city}, {otherUser.state}</span>
-                </div>
-                <p className="text-xs text-muted-foreground truncate">{otherUser.organizationName}</p>
               </div>
             </div>
-            <div className="relative flex-shrink-0">
+
+            <div className="flex flex-col items-end gap-1 md:gap-2 flex-shrink-0">
+              <span className="text-[10px] sm:text-xs text-muted-foreground font-medium">
+                {formatDate(connection.createdAt)}
+              </span>
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={handleMenuClick}
-                className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground"
+                className="h-5 w-5 sm:h-6 sm:w-6 p-0 text-muted-foreground hover:text-foreground opacity-0 group-hover:opacity-100 transition-opacity"
               >
-                <MoreHorizontal size={14} />
+                <MoreHorizontal size={12} className="sm:hidden" />
+                <MoreHorizontal size={14} className="hidden sm:block" />
               </Button>
-              {showMenu && (
-                <div className="absolute right-0 top-full mt-1 w-32 bg-card rounded-lg shadow-lg border border-border py-1 z-10">
+            </div>
+
+            {showMenu && (
+              <div className="absolute right-3 sm:right-5 top-14 sm:top-16 w-36 sm:w-40 bg-background rounded-lg shadow-lg border border-border py-1 z-20">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleRemove}
+                  disabled={isRemoving}
+                  className="w-full justify-start text-destructive hover:text-destructive hover:bg-destructive/10 px-3 py-2 h-auto text-xs"
+                >
+                  <X size={12} className="mr-2" />
+                  {isRemoving ? 'Removing...' : 'Remove Connection'}
+                </Button>
+                <Link href={`/profile/${otherUser.userId}`} className="block">
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={handleRemove}
-                    disabled={isRemoving}
-                    className="w-full justify-start text-destructive hover:text-destructive hover:bg-destructive/10 px-2 py-2 h-auto text-xs"
+                    className="w-full justify-start hover:bg-muted/50 px-3 py-2 h-auto text-xs"
                   >
-                    <X size={12} className="mr-1" />
-                    {isRemoving ? 'Removing...' : 'Remove'}
+                    <User size={12} className="mr-2" />
+                    View Profile
                   </Button>
-                </div>
-              )}
+                </Link>
+              </div>
+            )}
+          </div>
+
+          {/* Status Section */}
+          <div className="mb-3 md:mb-4">
+            <div className="inline-flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-1 sm:py-1.5 bg-[#01ae79]/10 text-[#01ae79] rounded-full border border-[#01ae79]/20">
+              <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-[#01ae79] rounded-full"></div>
+              <span className="text-[10px] sm:text-xs font-medium">Connected</span>
             </div>
           </div>
 
-          <div className="flex-1 flex flex-col justify-end space-y-2">
-            <div className="text-xs text-muted-foreground">
-              <span className="text-foreground">Connected</span> • {new Date(connection.createdAt).toLocaleDateString()}
+          {/* Info Section */}
+          <div className="space-y-2 md:space-y-3 mb-3 md:mb-4">
+            <div className="flex items-center gap-1.5 sm:gap-2 text-xs md:text-sm text-muted-foreground">
+              <MapPin className="w-3 h-3 md:w-4 md:h-4 flex-shrink-0" />
+              <span className="truncate">{otherUser.city}, {otherUser.state}</span>
             </div>
+            <p className="text-xs md:text-sm text-muted-foreground truncate font-medium">{otherUser.organizationName}</p>
+          </div>
+
+          {/* Message Button */}
+          <div className="pt-3 md:pt-4 border-t border-border/50">
             <Button
-              className="w-full h-8 bg-[#01ae79] hover:bg-[#01ae79]/90 text-white text-xs"
-              size="sm"
-              onClick={handleSendMessageClick}
+              onClick={handleCardClick}
+              className="w-full h-8 sm:h-9 md:h-10 bg-[#01ae79] hover:bg-[#01ae79]/90 text-white text-xs sm:text-sm font-medium transition-all duration-200 hover:scale-[1.02]"
             >
-              <MessageSquare size={14} className="mr-1" />
-              Message
+              <MessageSquare size={14} className="mr-1.5 sm:mr-2" />
+              Send Message
             </Button>
           </div>
         </CardContent>
       </Card>
-    </Link>
+    </div>
   );
 };
 
@@ -249,90 +316,151 @@ const PendingRequestCard: React.FC<PendingRequestCardProps> = ({ request, onAcce
   const { otherUser } = request;
   const sanitizedNotes = request.notes ? sanitizeText(request.notes) : null;
 
+  // Format date as "June 3rd, 2025"
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    const options: Intl.DateTimeFormatOptions = { 
+      month: 'long', 
+      day: 'numeric', 
+      year: 'numeric' 
+    };
+    const formatted = date.toLocaleDateString('en-US', options);
+    
+    // Add ordinal suffix to day
+    const day = date.getDate();
+    const suffix = day % 10 === 1 && day !== 11 ? 'st' : 
+                   day % 10 === 2 && day !== 12 ? 'nd' : 
+                   day % 10 === 3 && day !== 13 ? 'rd' : 'th';
+    
+    return formatted.replace(/(\d+)/, `$1${suffix}`);
+  };
+
+  // Process profile image URL to ensure it works with R2/CloudFlare
+  const getProfileImageUrl = (profileImage: string | null) => {
+    if (!profileImage) {
+      return null;
+    }
+    
+    // If it's already a full URL, return as is
+    if (profileImage.startsWith('http')) {
+      return profileImage;
+    }
+    
+    // Construct the full R2 URL using environment variable or fallback to known R2 domain
+    const baseUrl = process.env.NEXT_PUBLIC_R2_PUBLIC_URL || 'https://pub-19c0754937db426497ca014f0e2a297c.r2.dev';
+    return `${baseUrl}/${profileImage}`;
+  };
+
   return (
-    <Link href={`/profile/${otherUser.userId}`} className="block h-full">
-      <Card className="group transition-all duration-300 hover:shadow-md hover:shadow-amber-500/5 border-border/50 hover:border-amber-500/20 dark:hover:border-amber-500/30 h-full cursor-pointer">
-        <CardContent className="p-3 flex flex-col h-full">
-          <div className="flex items-start space-x-3 mb-3">
-            <div className="flex-shrink-0">
-              <div className="relative">
-                <Avatar className="w-12 h-12 ring-2 ring-amber-100 dark:ring-amber-900 group-hover:ring-amber-200 dark:group-hover:ring-amber-800 transition-colors">
-                  <AvatarImage src={otherUser.profileImage || undefined} alt={otherUser.fullName} />
-                  <AvatarFallback className="text-xs font-medium">
-                    {otherUser.fullName.split(' ').map(n => n[0]).join('')}
+    <div className="relative">
+      <Card className="group transition-all duration-200 hover:shadow-xl hover:shadow-amber-500/15 border border-amber-200/60 hover:border-amber-400 dark:border-amber-700/60 dark:hover:border-amber-500 overflow-hidden">
+        <CardContent className="p-3 sm:p-4 md:p-5">
+          {/* Header Section with Date */}
+          <div className="flex items-start justify-between mb-3 md:mb-4">
+            <div className="flex items-start gap-2 md:gap-3 lg:gap-4 flex-1 min-w-0">
+              <div className="relative flex-shrink-0">
+                <Avatar className="w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 ring-2 ring-amber-200 group-hover:ring-amber-400 dark:ring-amber-700 dark:group-hover:ring-amber-500 transition-all duration-200">
+                  <AvatarImage 
+                    src={getProfileImageUrl(otherUser.profileImage) || undefined} 
+                    alt={otherUser.fullName}
+                    className="object-cover"
+                  />
+                  <AvatarFallback className="text-xs sm:text-sm font-semibold bg-gradient-to-br from-amber-100 to-amber-200 text-amber-700 dark:from-amber-800 dark:to-amber-700 dark:text-amber-200">
+                    {otherUser.fullName.split(' ').map(n => n[0]).join('').toUpperCase()}
                   </AvatarFallback>
                 </Avatar>
-                {/* Verification indicator */}
                 {otherUser.isVerified && (
-                  <div className="absolute -top-1 -right-1 w-4 h-4 bg-green-500 rounded-full flex items-center justify-center">
-                    <Shield className="w-2.5 h-2.5 text-white" />
+                  <div className="absolute -top-1 -right-1 w-4 h-4 sm:w-5 sm:h-5 bg-green-500 rounded-full flex items-center justify-center shadow-md">
+                    <Shield className="w-2 h-2 sm:w-3 sm:h-3 text-white" />
                   </div>
                 )}
               </div>
-            </div>
-            <div className="flex-1 min-w-0">
-              <h3 className="text-sm font-semibold text-foreground leading-tight mb-1 truncate">{otherUser.fullName}</h3>
-              <div className="space-y-1">
-                {getRoleBadge(otherUser.role, otherUser.division, otherUser.educationLevel)}
-                <p className="text-xs text-amber-600 font-medium truncate">
+
+              <div className="flex-1 min-w-0 space-y-2">
+                <div className="flex items-start justify-between">
+                  <h3 className="font-semibold text-sm md:text-base text-foreground leading-tight truncate pr-2">{otherUser.fullName}</h3>
+                  <Link href={`/profile/${otherUser.userId}`} onClick={(e) => e.stopPropagation()}>
+                    <Button variant="ghost" size="sm" className="h-5 w-5 sm:h-6 sm:w-6 p-0 text-muted-foreground hover:text-foreground opacity-0 group-hover:opacity-100 transition-opacity">
+                      <User size={12} className="sm:hidden" />
+                      <User size={14} className="hidden sm:block" />
+                    </Button>
+                  </Link>
+                </div>
+                
+                <div className="flex items-center gap-2 flex-wrap">
+                  {getRoleBadge(otherUser.role, otherUser.division, otherUser.educationLevel)}
+                </div>
+
+                <p className="text-xs md:text-sm font-medium text-amber-600 dark:text-amber-400 truncate">
                   {otherUser.role === 'athlete' ? otherUser.sport : otherUser.title}
                 </p>
-                <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                  <MapPin className="w-3 h-3" />
-                  <span className="truncate">{otherUser.city}, {otherUser.state}</span>
-                </div>
-                <p className="text-xs text-muted-foreground truncate">{otherUser.organizationName}</p>
               </div>
             </div>
+
             <div className="flex-shrink-0">
-              <span className="text-xs text-muted-foreground">
-                {new Date(request.createdAt).toLocaleDateString()}
+              <span className="text-[10px] sm:text-xs text-muted-foreground font-medium">
+                {formatDate(request.createdAt)}
               </span>
             </div>
           </div>
 
+          {/* Status Section */}
+          <div className="mb-3 md:mb-4">
+            <div className="inline-flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-1 sm:py-1.5 bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 rounded-full border border-amber-200 dark:border-amber-700">
+              <Clock size={10} className="sm:hidden" />
+              <Clock size={12} className="hidden sm:block" />
+              <span className="text-[10px] sm:text-xs font-medium">Pending Request</span>
+            </div>
+          </div>
+
+          {/* Info Section */}
+          <div className="space-y-2 md:space-y-3 mb-3 md:mb-4">
+            <div className="flex items-center gap-1.5 sm:gap-2 text-xs md:text-sm text-muted-foreground">
+              <MapPin className="w-3 h-3 md:w-4 md:h-4 flex-shrink-0" />
+              <span className="truncate">{otherUser.city}, {otherUser.state}</span>
+            </div>
+            <p className="text-xs md:text-sm text-muted-foreground truncate font-medium">{otherUser.organizationName}</p>
+          </div>
+
+          {/* Notes Section */}
           {sanitizedNotes && (
-            <div className="bg-muted/50 rounded p-2 mb-3 flex-shrink-0">
-              <p className="text-xs text-muted-foreground mb-1">Message:</p>
-              <p className="text-xs text-foreground break-words line-clamp-2">{sanitizedNotes}</p>
+            <div className="bg-amber-50 dark:bg-amber-900/20 rounded-lg p-2 sm:p-3 mb-3 md:mb-4 border border-amber-200/60 dark:border-amber-700/60">
+              <p className="text-[10px] sm:text-xs text-muted-foreground mb-1 font-medium">Message:</p>
+              <p className="text-[10px] sm:text-xs text-foreground break-words line-clamp-2">{sanitizedNotes}</p>
             </div>
           )}
 
-          <div className="flex-1 flex flex-col justify-end space-y-2">
-            <div className="text-xs text-muted-foreground">
-              <span className="text-amber-600">Pending Request</span> • {new Date(request.createdAt).toLocaleDateString()}
-            </div>
-            <div className="flex gap-2">
-              <Button
-                size="sm"
-                className="bg-[#01ae79] hover:bg-[#01ae79]/90 text-white flex-1 h-8 text-xs"
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  onAccept(request.id);
-                }}
-              >
-                <CheckCircle size={14} className="mr-1" />
-                Accept
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                className="flex-1 h-8 text-xs"
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  onDecline(request.id);
-                }}
-              >
-                <X size={14} className="mr-1" />
-                Decline
-              </Button>
-            </div>
+          {/* Action Buttons */}
+          <div className="flex gap-2 sm:gap-3 pt-3 md:pt-4 border-t border-border/50">
+            <Button
+              size="sm"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                onAccept(request.id);
+              }}
+              className="flex-1 h-8 sm:h-9 bg-[#01ae79] hover:bg-[#01ae79]/90 text-white text-xs sm:text-sm font-medium"
+            >
+              <CheckCircle size={12} className="mr-1 sm:mr-2" />
+              Accept
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                onDecline(request.id);
+              }}
+              className="flex-1 h-8 sm:h-9 text-xs sm:text-sm font-medium hover:bg-destructive hover:text-destructive-foreground hover:border-destructive"
+            >
+              <X size={12} className="mr-1 sm:mr-2" />
+              Decline
+            </Button>
           </div>
         </CardContent>
       </Card>
-    </Link>
+    </div>
   );
 };
 
@@ -345,67 +473,129 @@ const SentRequestCard: React.FC<SentRequestCardProps> = ({ request, onWithdraw, 
     onWithdraw(request.id, otherUser.userId);
   };
 
+  // Format date as "June 3rd, 2025"
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    const options: Intl.DateTimeFormatOptions = { 
+      month: 'long', 
+      day: 'numeric', 
+      year: 'numeric' 
+    };
+    const formatted = date.toLocaleDateString('en-US', options);
+    
+    // Add ordinal suffix to day
+    const day = date.getDate();
+    const suffix = day % 10 === 1 && day !== 11 ? 'st' : 
+                   day % 10 === 2 && day !== 12 ? 'nd' : 
+                   day % 10 === 3 && day !== 13 ? 'rd' : 'th';
+    
+    return formatted.replace(/(\d+)/, `$1${suffix}`);
+  };
+
+  // Process profile image URL to ensure it works with R2/CloudFlare
+  const getProfileImageUrl = (profileImage: string | null) => {
+    if (!profileImage) {
+      return null;
+    }
+    
+    // If it's already a full URL, return as is
+    if (profileImage.startsWith('http')) {
+      return profileImage;
+    }
+    
+    // Construct the full R2 URL using environment variable or fallback to known R2 domain
+    const baseUrl = process.env.NEXT_PUBLIC_R2_PUBLIC_URL || 'https://pub-19c0754937db426497ca014f0e2a297c.r2.dev';
+    return `${baseUrl}/${profileImage}`;
+  };
+
   return (
-    <Link href={`/profile/${otherUser.userId}`} className="block h-full">
-      <Card className="group transition-all duration-300 hover:shadow-md hover:shadow-blue-500/5 border-border/50 hover:border-blue-500/20 dark:hover:border-blue-500/30 h-full cursor-pointer">
-        <CardContent className="p-3 flex flex-col h-full">
-          <div className="flex items-start space-x-3 mb-3">
-            <div className="flex-shrink-0">
-              <div className="relative">
-                <Avatar className="w-12 h-12 ring-2 ring-blue-100 dark:ring-blue-900 group-hover:ring-blue-200 dark:group-hover:ring-blue-800 transition-colors">
-                  <AvatarImage src={otherUser.profileImage || undefined} alt={otherUser.fullName} />
-                  <AvatarFallback className="text-xs font-medium">
-                    {otherUser.fullName.split(' ').map(n => n[0]).join('')}
+    <div className="relative">
+      <Card className="group transition-all duration-200 hover:shadow-xl hover:shadow-blue-500/15 border border-blue-200/60 hover:border-blue-400 dark:border-blue-700/60 dark:hover:border-blue-500 overflow-hidden">
+        <CardContent className="p-3 sm:p-4 md:p-5">
+          {/* Header Section with Date */}
+          <div className="flex items-start justify-between mb-3 md:mb-4">
+            <div className="flex items-start gap-2 md:gap-3 lg:gap-4 flex-1 min-w-0">
+              <div className="relative flex-shrink-0">
+                <Avatar className="w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 ring-2 ring-blue-200 group-hover:ring-blue-400 dark:ring-blue-700 dark:group-hover:ring-blue-500 transition-all duration-200">
+                  <AvatarImage 
+                    src={getProfileImageUrl(otherUser.profileImage) || undefined} 
+                    alt={otherUser.fullName}
+                    className="object-cover"
+                  />
+                  <AvatarFallback className="text-xs sm:text-sm font-semibold bg-gradient-to-br from-blue-100 to-blue-200 text-blue-700 dark:from-blue-800 dark:to-blue-700 dark:text-blue-200">
+                    {otherUser.fullName.split(' ').map(n => n[0]).join('').toUpperCase()}
                   </AvatarFallback>
                 </Avatar>
-                {/* Verification indicator */}
                 {otherUser.isVerified && (
-                  <div className="absolute -top-1 -right-1 w-4 h-4 bg-green-500 rounded-full flex items-center justify-center">
-                    <Shield className="w-2.5 h-2.5 text-white" />
+                  <div className="absolute -top-1 -right-1 w-4 h-4 sm:w-5 sm:h-5 bg-green-500 rounded-full flex items-center justify-center shadow-md">
+                    <Shield className="w-2 h-2 sm:w-3 sm:h-3 text-white" />
                   </div>
                 )}
               </div>
-            </div>
-            <div className="flex-1 min-w-0">
-              <h3 className="text-sm font-semibold text-foreground leading-tight mb-1 truncate">{otherUser.fullName}</h3>
-              <div className="space-y-1">
-                {getRoleBadge(otherUser.role, otherUser.division, otherUser.educationLevel)}
-                <p className="text-xs text-blue-600 font-medium truncate">
+
+              <div className="flex-1 min-w-0 space-y-2">
+                <div className="flex items-start justify-between">
+                  <h3 className="font-semibold text-sm md:text-base text-foreground leading-tight truncate pr-2">{otherUser.fullName}</h3>
+                  <Link href={`/profile/${otherUser.userId}`} onClick={(e) => e.stopPropagation()}>
+                    <Button variant="ghost" size="sm" className="h-5 w-5 sm:h-6 sm:w-6 p-0 text-muted-foreground hover:text-foreground opacity-0 group-hover:opacity-100 transition-opacity">
+                      <User size={12} className="sm:hidden" />
+                      <User size={14} className="hidden sm:block" />
+                    </Button>
+                  </Link>
+                </div>
+                
+                <div className="flex items-center gap-2 flex-wrap">
+                  {getRoleBadge(otherUser.role, otherUser.division, otherUser.educationLevel)}
+                </div>
+
+                <p className="text-xs md:text-sm font-medium text-blue-600 dark:text-blue-400 truncate">
                   {otherUser.role === 'athlete' ? otherUser.sport : otherUser.title}
                 </p>
-                <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                  <MapPin className="w-3 h-3" />
-                  <span className="truncate">{otherUser.city}, {otherUser.state}</span>
-                </div>
-                <p className="text-xs text-muted-foreground truncate">{otherUser.organizationName}</p>
               </div>
             </div>
+
             <div className="flex-shrink-0">
-              <span className="text-xs text-muted-foreground">
-                {new Date(request.createdAt).toLocaleDateString()}
+              <span className="text-[10px] sm:text-xs text-muted-foreground font-medium">
+                {formatDate(request.createdAt)}
               </span>
             </div>
           </div>
 
-          <div className="flex-1 flex flex-col justify-end space-y-2">
-            <div className="text-xs text-muted-foreground">
-              <span className="text-blue-600">Request Sent</span> • {new Date(request.createdAt).toLocaleDateString()}
+          {/* Status Section */}
+          <div className="mb-3 md:mb-4">
+            <div className="inline-flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-1 sm:py-1.5 bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 rounded-full border border-blue-200 dark:border-blue-700">
+              <Send size={10} className="sm:hidden" />
+              <Send size={12} className="hidden sm:block" />
+              <span className="text-[10px] sm:text-xs font-medium">Request Sent</span>
             </div>
+          </div>
+
+          {/* Info Section - Fixed margin to match other cards */}
+          <div className="space-y-2 md:space-y-3 mb-3 md:mb-4">
+            <div className="flex items-center gap-1.5 sm:gap-2 text-xs md:text-sm text-muted-foreground">
+              <MapPin className="w-3 h-3 md:w-4 md:h-4 flex-shrink-0" />
+              <span className="truncate">{otherUser.city}, {otherUser.state}</span>
+            </div>
+            <p className="text-xs md:text-sm text-muted-foreground truncate font-medium">{otherUser.organizationName}</p>
+          </div>
+
+          {/* Action Button */}
+          <div className="pt-3 md:pt-4 border-t border-border/50">
             <Button
               size="sm"
               variant="outline"
-              className="w-full h-8 text-xs hover:bg-destructive hover:text-destructive-foreground"
               onClick={handleWithdraw}
               disabled={isWithdrawing}
+              className="w-full h-8 sm:h-9 text-xs sm:text-sm font-medium hover:bg-destructive hover:text-destructive-foreground hover:border-destructive"
             >
               {isWithdrawing ? (
                 <>
-                  <Clock size={14} className="mr-1 animate-spin" />
+                  <Clock size={12} className="mr-1 sm:mr-2 animate-spin" />
                   Withdrawing...
                 </>
               ) : (
                 <>
-                  <X size={14} className="mr-1" />
+                  <X size={12} className="mr-1 sm:mr-2" />
                   Withdraw Request
                 </>
               )}
@@ -413,7 +603,7 @@ const SentRequestCard: React.FC<SentRequestCardProps> = ({ request, onWithdraw, 
           </div>
         </CardContent>
       </Card>
-    </Link>
+    </div>
   );
 };
 
@@ -846,8 +1036,8 @@ function App() {
                   <span className="hidden sm:inline transition-colors group-data-[state=active]:text-[#01ae79] group-data-[state=active]:font-semibold">
                     Connections
                   </span>
-                  <span className="sm:hidden transition-colors group-data-[state=active]:text-[#01ae79] group-data-[state=active]:font-semibold">
-                    Connections
+                  <span className="sm:hidden transition-colors group-data-[state=active]:text-[#01ae79] group-data-[state=active]:font-semibold text-xs">
+                    Connected
                   </span>
                 </div>
                 {/* Active indicator line */}
@@ -870,7 +1060,7 @@ function App() {
                   <span className="hidden sm:inline transition-colors group-data-[state=active]:text-[#01ae79] group-data-[state=active]:font-semibold">
                     Requests
                   </span>
-                  <span className="sm:hidden transition-colors group-data-[state=active]:text-[#01ae79] group-data-[state=active]:font-semibold">
+                  <span className="sm:hidden transition-colors group-data-[state=active]:text-[#01ae79] group-data-[state=active]:font-semibold text-xs">
                     Requests
                   </span>
                 </div>
@@ -894,7 +1084,7 @@ function App() {
                   <span className="hidden sm:inline transition-colors group-data-[state=active]:text-[#01ae79] group-data-[state=active]:font-semibold">
                     Sent Requests
                   </span>
-                  <span className="sm:hidden transition-colors group-data-[state=active]:text-[#01ae79] group-data-[state=active]:font-semibold">
+                  <span className="sm:hidden transition-colors group-data-[state=active]:text-[#01ae79] group-data-[state=active]:font-semibold text-xs">
                     Sent
                   </span>
                 </div>
@@ -904,7 +1094,7 @@ function App() {
             </TabsList>
           </div>
 
-          <TabsContent value="connections" className="space-y-6">
+          <TabsContent value="connections" className="mt-6 min-h-[400px]">
             <FilterButtons currentFilter={filter} onFilterChange={setFilter} />
 
             {filteredConnections.length === 0 ? (
@@ -923,7 +1113,7 @@ function App() {
                 </p>
               </div>
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                 {filteredConnections.map(connection => (
                   <UserCard
                     key={connection.id}
@@ -936,7 +1126,7 @@ function App() {
             )}
           </TabsContent>
 
-          <TabsContent value="requests" className="space-y-6">
+          <TabsContent value="requests" className="mt-6 min-h-[400px]">
             <FilterButtons currentFilter={filter} onFilterChange={setFilter} />
 
             {filteredPendingRequests.length === 0 ? (
@@ -955,7 +1145,7 @@ function App() {
                 </p>
               </div>
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                 {filteredPendingRequests.map(request => (
                   <PendingRequestCard
                     key={request.id}
@@ -968,7 +1158,7 @@ function App() {
             )}
           </TabsContent>
 
-          <TabsContent value="sent-requests" className="space-y-6">
+          <TabsContent value="sent-requests" className="mt-6 min-h-[424px]">
             <FilterButtons currentFilter={filter} onFilterChange={setFilter} />
 
             {filteredSentRequests.length === 0 ? (
@@ -987,7 +1177,7 @@ function App() {
                 </p>
               </div>
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                 {filteredSentRequests.map(request => (
                   <SentRequestCard
                     key={request.id}

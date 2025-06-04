@@ -169,7 +169,9 @@ export async function GET() {
           fullName: otherUser.athleteProfile?.fullName || 
                     otherUser.coachProfile?.fullName || 
                     otherUser.recruitingProfile?.fullName || '',
-          profileImage: null, // We'll handle profile images separately
+          profileImage: otherUser.athleteProfile?.profileImageR3Key || 
+                        otherUser.coachProfile?.profileImageR3Key || 
+                        otherUser.recruitingProfile?.profileImageR3Key || null,
           organizationName: otherUser.athleteProfile?.organizationName || 
                             otherUser.coachProfile?.organizationName || 
                             otherUser.recruitingProfile?.organizationName || '',
