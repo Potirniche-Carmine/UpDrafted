@@ -1,3 +1,4 @@
+import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server';
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
@@ -14,8 +15,22 @@ setInterval(() => {
   }
 }, 60000); // Clean every minute
 
-export function middleware(request: NextRequest) {
-  // Only run on mutation methods
+// Define protected routes that require authentication
+const isProtectedApiRoute = createRouteMatcher([
+  '/api/profile/(.*)',
+  '/api/connections(.*)',
+  '/api/verification(.*)',
+  '/api/onboarding(.*)',
+  '/api/search(.*)',
+  '/api/discover(.*)',
+  '/api/messages(.*)',
+  '/api/messages/(.*)',
+  '/api/notifications(.*)'
+]);
+
+// Security middleware for mutation operations
+const securityMiddleware = async (request: NextRequest) => {
+  // Only apply security checks to mutation methods
   if (!['POST', 'PUT', 'DELETE', 'PATCH'].includes(request.method)) {
     return NextResponse.next();
   }
@@ -79,7 +94,7 @@ export function middleware(request: NextRequest) {
     }
   }
 
-  // Add security headers to the response
+  // Add security headers
   const response = NextResponse.next();
   response.headers.set('X-Content-Type-Options', 'nosniff');
   response.headers.set('X-Frame-Options', 'DENY');
@@ -87,9 +102,36 @@ export function middleware(request: NextRequest) {
   response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
 
   return response;
-}
+};
 
+// Combine Clerk middleware with security middleware
+export default clerkMiddleware(async (auth, req) => {
+  // Check if it's a protected API route
+  if (isProtectedApiRoute(req)) {
+    // Protect all routes except search
+    if (!req.nextUrl.pathname.startsWith('/api/search')) {
+      await auth.protect();
+    }
+  }
+
+  // Apply security middleware for API routes
+  if (req.nextUrl.pathname.startsWith('/api/')) {
+    const securityResult = await securityMiddleware(req);
+    if (securityResult.status !== 200) {
+      return securityResult;
+    }
+  }
+
+  return NextResponse.next();
+});
+
+// Optimized matcher configuration
 export const config = {
-  matcher: '/api/:path*'  // Match API routes only
+  matcher: [
+    // Skip Next.js internals and static files
+    '/((?!_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)',
+    // Include API routes
+    '/api/:path*'
+  ]
 };
 
