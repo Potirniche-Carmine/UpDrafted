@@ -120,7 +120,7 @@ function SearchPageContent() {
 
   // Fetch search results from API
   const searchUsers = useCallback(async (query: string, page: number) => {
-    if (!query || query.length < 4) {
+    if (!query || query.length < 3) {
       setAllResults([]);
       setFilteredResults([]);
       setTotalResults(0);
@@ -169,14 +169,14 @@ function SearchPageContent() {
 
   // Initial load when coming from header search
   useEffect(() => {
-    if (initialQuery && initialQuery.length >= 4) {
+    if (initialQuery && initialQuery.length >= 3) {
       searchUsers(initialQuery, 1);
     }
   }, [initialQuery, searchUsers]); // Empty dependency array - only runs once on mount
 
   // Load more results if needed when page changes
   useEffect(() => {
-    if (currentPage > lastLoadedPage - PAGES_TO_LOAD && searchTerm.length >= 4) {
+    if (currentPage > lastLoadedPage - PAGES_TO_LOAD && searchTerm.length >= 3) {
       searchUsers(searchTerm, currentPage);
     }
   }, [currentPage, lastLoadedPage, searchTerm, searchUsers]);
@@ -209,7 +209,7 @@ function SearchPageContent() {
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    if (inputValue.length >= 4) {
+    if (inputValue.length >= 3) {
       // Update the actual search term
       setSearchTerm(inputValue);
       
@@ -296,7 +296,7 @@ function SearchPageContent() {
               <Button 
                 type="submit" 
                 className="h-12 px-6 bg-[#01ae79] hover:bg-[#01ae79]/90 text-white"
-                disabled={inputValue.length < 4}
+                disabled={inputValue.length < 3}
               >
                 Search
               </Button>
@@ -345,7 +345,7 @@ function SearchPageContent() {
         <p className="text-muted-foreground">
           {isLoading ? (
             'Searching...'
-          ) : searchTerm.length < 4 ? (
+          ) : searchTerm.length < 3 ? (
             'Enter at least 4 characters to search'
           ) : (
             <>
@@ -359,7 +359,7 @@ function SearchPageContent() {
       </div>
 
       {/* Results Grid */}
-      {searchTerm.length < 4 ? (
+      {searchTerm.length < 3 ? (
         <div className="text-center py-16">
           <Search className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
           <h3 className="text-xl font-semibold text-foreground mb-2">Start your search</h3>

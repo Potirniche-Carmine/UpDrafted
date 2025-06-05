@@ -14,7 +14,7 @@ export function SearchBar() {
 
   // Show/hide dropdown based on search term length
   useEffect(() => {
-    setIsOpen(searchTerm.length >= 4);
+    setIsOpen(searchTerm.length >= 3);
   }, [searchTerm.length]);
 
   // Close dropdown when clicking outside
@@ -31,14 +31,14 @@ export function SearchBar() {
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    if (searchTerm.length >= 4) {
+    if (searchTerm.length >= 3) {
       router.push(`/search?q=${encodeURIComponent(searchTerm)}`);
       setIsOpen(false);
     }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && searchTerm.length >= 4) {
+    if (e.key === 'Enter' && searchTerm.length >= 3) {
       e.preventDefault();
       router.push(`/search?q=${encodeURIComponent(searchTerm)}`);
       setIsOpen(false);
