@@ -47,11 +47,11 @@ export async function GET(request: NextRequest) {
     const role = searchParams.get('role'); // Optional role filter
 
     // Validate minimum search length
-    if (!query || query.length < 4) {
+    if (!query || query.length < 3) {
       return NextResponse.json({
         results: [],
         total: 0,
-        message: query ? 'Search query must be at least 4 characters long' : 'Search query is required'
+        message: query ? 'Search query must be at least 3 characters long' : 'Search query is required'
       });
     }
 
