@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireAnyRole } from '@/utils/roles';
 import { db } from '@/database/db';
 import { users, athleteProfiles, coachProfiles, recruitingProfiles } from '@/database/schema';
-import { or, eq, ilike, sql } from 'drizzle-orm';
+import { or, eq, ilike, sql, and, ne } from 'drizzle-orm';
 import { R2_PUBLIC_URL } from '@/database/r2';
 
 // Force Node.js runtime
@@ -89,12 +89,16 @@ export async function GET(request: NextRequest) {
         .from(athleteProfiles)
         .innerJoin(users, eq(users.id, athleteProfiles.userId))
         .where(
-          or(
-            ilike(athleteProfiles.fullName, searchTerm),
-            ilike(athleteProfiles.sport, searchTerm),
-            ilike(athleteProfiles.organizationName, searchTerm),
-            ilike(athleteProfiles.city, searchTerm),
-            ilike(athleteProfiles.state, searchTerm)
+          and(
+            or(
+              ilike(athleteProfiles.fullName, searchTerm),
+              ilike(athleteProfiles.sport, searchTerm),
+              ilike(athleteProfiles.organizationName, searchTerm),
+              ilike(athleteProfiles.city, searchTerm),
+              ilike(athleteProfiles.state, searchTerm)
+            ),
+            // Exclude current user's profile
+            ne(users.id, auth.userId)
           )
         )
         .offset(offset)
@@ -106,12 +110,16 @@ export async function GET(request: NextRequest) {
         .from(athleteProfiles)
         .innerJoin(users, eq(users.id, athleteProfiles.userId))
         .where(
-          or(
-            ilike(athleteProfiles.fullName, searchTerm),
-            ilike(athleteProfiles.sport, searchTerm),
-            ilike(athleteProfiles.organizationName, searchTerm),
-            ilike(athleteProfiles.city, searchTerm),
-            ilike(athleteProfiles.state, searchTerm)
+          and(
+            or(
+              ilike(athleteProfiles.fullName, searchTerm),
+              ilike(athleteProfiles.sport, searchTerm),
+              ilike(athleteProfiles.organizationName, searchTerm),
+              ilike(athleteProfiles.city, searchTerm),
+              ilike(athleteProfiles.state, searchTerm)
+            ),
+            // Exclude current user's profile
+            ne(users.id, auth.userId)
           )
         );
 
@@ -153,13 +161,17 @@ export async function GET(request: NextRequest) {
         .from(coachProfiles)
         .innerJoin(users, eq(users.id, coachProfiles.userId))
         .where(
-          or(
-            ilike(coachProfiles.fullName, searchTerm),
-            ilike(coachProfiles.sportCoaching, searchTerm),
-            ilike(coachProfiles.organizationName, searchTerm),
-            ilike(coachProfiles.city, searchTerm),
-            ilike(coachProfiles.state, searchTerm),
-            ilike(coachProfiles.title, searchTerm)
+          and(
+            or(
+              ilike(coachProfiles.fullName, searchTerm),
+              ilike(coachProfiles.sportCoaching, searchTerm),
+              ilike(coachProfiles.organizationName, searchTerm),
+              ilike(coachProfiles.city, searchTerm),
+              ilike(coachProfiles.state, searchTerm),
+              ilike(coachProfiles.title, searchTerm)
+            ),
+            // Exclude current user's profile
+            ne(users.id, auth.userId)
           )
         )
         .offset(offset)
@@ -171,13 +183,17 @@ export async function GET(request: NextRequest) {
         .from(coachProfiles)
         .innerJoin(users, eq(users.id, coachProfiles.userId))
         .where(
-          or(
-            ilike(coachProfiles.fullName, searchTerm),
-            ilike(coachProfiles.sportCoaching, searchTerm),
-            ilike(coachProfiles.organizationName, searchTerm),
-            ilike(coachProfiles.city, searchTerm),
-            ilike(coachProfiles.state, searchTerm),
-            ilike(coachProfiles.title, searchTerm)
+          and(
+            or(
+              ilike(coachProfiles.fullName, searchTerm),
+              ilike(coachProfiles.sportCoaching, searchTerm),
+              ilike(coachProfiles.organizationName, searchTerm),
+              ilike(coachProfiles.city, searchTerm),
+              ilike(coachProfiles.state, searchTerm),
+              ilike(coachProfiles.title, searchTerm)
+            ),
+            // Exclude current user's profile
+            ne(users.id, auth.userId)
           )
         );
 

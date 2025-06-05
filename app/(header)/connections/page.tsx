@@ -7,7 +7,16 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import Link from "next/link";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { useRouter } from 'next/navigation';
 import { useSearchParams } from 'next/navigation';
 import { AuthWrapper } from '../../../components/auth-wrapper';
 import { sanitizeText } from '@/utils/sanitization';
@@ -146,11 +155,14 @@ const getRoleBadge = (role: string, division?: string, educationLevel?: string) 
 
 const UserCard: React.FC<UserCardProps> = ({ connection, onRemove, isRemoving = false }) => {
   const [showMenu, setShowMenu] = useState(false);
+  const [showRemoveDialog, setShowRemoveDialog] = useState(false);
+  const router = useRouter();
   const { otherUser } = connection;
 
   const handleRemove = () => {
     onRemove(connection.id, otherUser.userId);
     setShowMenu(false);
+    setShowRemoveDialog(false);
   };
 
   const handleMenuClick = (e: React.MouseEvent) => {
@@ -159,10 +171,9 @@ const UserCard: React.FC<UserCardProps> = ({ connection, onRemove, isRemoving = 
     setShowMenu(!showMenu);
   };
 
-  const handleCardClick = (e: React.MouseEvent) => {
-    e.preventDefault();
-    // Handle send message action instead of navigation
-    console.log('Send message to:', otherUser.fullName);
+  const navigateToProfile = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    router.push(`/profile/${otherUser.userId}`);
   };
 
   // Format date as "June 3rd, 2025"
@@ -202,12 +213,12 @@ const UserCard: React.FC<UserCardProps> = ({ connection, onRemove, isRemoving = 
 
   return (
     <div className="relative">
-      <Card className="group transition-all duration-200 hover:shadow-xl hover:shadow-[#01ae79]/15 border border-border/60 hover:border-[#01ae79]/40 dark:hover:border-[#01ae79]/50 overflow-hidden">
+      <Card className="group transition-all duration-200 hover:shadow-xl hover:shadow-[#01ae79]/15 border border-border hover:border-[#01ae79]/40 dark:hover:border-[#01ae79]/50 overflow-hidden">
         <CardContent className="p-3 sm:p-4 md:p-5">
           {/* Header Section with Date */}
           <div className="flex items-start justify-between mb-3 md:mb-4">
             <div className="flex items-start gap-2 md:gap-3 lg:gap-4 flex-1 min-w-0">
-              <div className="relative flex-shrink-0">
+              <div className="relative flex-shrink-0 cursor-pointer" onClick={navigateToProfile}>
                 <Avatar className="w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 ring-2 ring-[#01ae79]/20 group-hover:ring-[#01ae79]/50 transition-all duration-200">
                   <AvatarImage 
                     src={getProfileImageUrl(otherUser.profileImage) || undefined} 
@@ -226,8 +237,12 @@ const UserCard: React.FC<UserCardProps> = ({ connection, onRemove, isRemoving = 
               </div>
 
               <div className="flex-1 min-w-0 space-y-2">
-                <h3 className="font-semibold text-sm md:text-base text-foreground leading-tight truncate">{otherUser.fullName}</h3>
-                
+                <h3 
+                  onClick={navigateToProfile}
+                  className="font-semibold text-sm md:text-base text-foreground leading-tight truncate cursor-pointer hover:text-[#01ae79] transition-colors"
+                >
+                  {otherUser.fullName}
+                </h3>
                 <div className="flex items-center gap-2 flex-wrap pt-1.5">
                   {getRoleBadge(otherUser.role, otherUser.division, otherUser.educationLevel)}
                 </div>
@@ -239,14 +254,14 @@ const UserCard: React.FC<UserCardProps> = ({ connection, onRemove, isRemoving = 
             </div>
 
             <div className="flex flex-col items-end gap-1 md:gap-2 flex-shrink-0">
-              <span className="text-[10px] sm:text-xs text-muted-foreground font-medium">
+              <span className="py-1.5 text-[10px] sm:text-xs text-muted-foreground font-medium">
                 {formatDate(connection.createdAt)}
               </span>
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={handleMenuClick}
-                className="h-5 w-5 sm:h-6 sm:w-6 p-0 text-muted-foreground hover:text-foreground opacity-0 group-hover:opacity-100 transition-opacity"
+                className="h-5 w-5 sm:h-6 sm:w-6 p-0 text-muted-foreground hover:text-foreground"
               >
                 <MoreHorizontal size={12} className="sm:hidden" />
                 <MoreHorizontal size={14} className="hidden sm:block" />
@@ -255,26 +270,38 @@ const UserCard: React.FC<UserCardProps> = ({ connection, onRemove, isRemoving = 
 
             {showMenu && (
               <div className="absolute right-3 sm:right-5 top-14 sm:top-16 w-36 sm:w-40 bg-background rounded-lg shadow-lg border border-border py-1 z-20">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={handleRemove}
-                  disabled={isRemoving}
-                  className="w-full justify-start text-destructive hover:text-destructive hover:bg-destructive/10 px-3 py-2 h-auto text-xs"
-                >
-                  <X size={12} className="mr-2" />
-                  {isRemoving ? 'Removing...' : 'Remove Connection'}
-                </Button>
-                <Link href={`/profile/${otherUser.userId}`} className="block">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="w-full justify-start hover:bg-muted/50 px-3 py-2 h-auto text-xs"
-                  >
-                    <User size={12} className="mr-2" />
-                    View Profile
-                  </Button>
-                </Link>
+                <Dialog open={showRemoveDialog} onOpenChange={setShowRemoveDialog}>
+                  <DialogTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="w-full justify-start text-destructive hover:text-destructive hover:bg-destructive/10 px-3 py-2 h-auto text-xs"
+                    >
+                      <X size={12} className="mr-1" />
+                      Remove
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent onClick={(e) => e.stopPropagation()}>
+                    <DialogHeader>
+                      <DialogTitle>Remove Connection</DialogTitle>
+                      <DialogDescription>
+                        Are you sure you want to remove {otherUser.fullName} from your connections? This action cannot be undone.
+                      </DialogDescription>
+                    </DialogHeader>
+                    <DialogFooter>
+                      <Button variant="outline" onClick={() => setShowRemoveDialog(false)}>
+                        Cancel
+                      </Button>
+                      <Button 
+                        variant="destructive" 
+                        onClick={handleRemove}
+                        disabled={isRemoving}
+                      >
+                        {isRemoving ? 'Removing...' : 'Remove'}
+                      </Button>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
               </div>
             )}
           </div>
@@ -299,10 +326,13 @@ const UserCard: React.FC<UserCardProps> = ({ connection, onRemove, isRemoving = 
           {/* Message Button */}
           <div className="pt-3 md:pt-4 border-t border-border/50">
             <Button
-              onClick={handleCardClick}
-              className="w-full h-8 sm:h-9 md:h-10 bg-[#01ae79] hover:bg-[#01ae79]/90 text-white text-xs sm:text-sm font-medium transition-all duration-200 hover:scale-[1.02]"
+              onClick={(e) => {
+                e.stopPropagation();
+                console.log('Send message to:', otherUser.fullName);
+              }}
+              className="w-full h-8 sm:h-8 md:h-9 bg-[#01ae79] hover:bg-[#01ae79]/90 text-white text-xs sm:text-sm font-medium transition-all duration-200 hover:scale-[1.02]"
             >
-              <MessageSquare size={14} className="mr-1.5 sm:mr-2" />
+              <MessageSquare size={14} className="mr-1.5 sm:mr-2" />  
               Send Message
             </Button>
           </div>
@@ -313,8 +343,14 @@ const UserCard: React.FC<UserCardProps> = ({ connection, onRemove, isRemoving = 
 };
 
 const PendingRequestCard: React.FC<PendingRequestCardProps> = ({ request, onAccept, onDecline }) => {
+  const router = useRouter();
   const { otherUser } = request;
   const sanitizedNotes = request.notes ? sanitizeText(request.notes) : null;
+
+  const navigateToProfile = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    router.push(`/profile/${otherUser.userId}`);
+  };
 
   // Format date as "June 3rd, 2025"
   const formatDate = (dateString: string) => {
@@ -353,19 +389,19 @@ const PendingRequestCard: React.FC<PendingRequestCardProps> = ({ request, onAcce
 
   return (
     <div className="relative">
-      <Card className="group transition-all duration-200 hover:shadow-xl hover:shadow-amber-500/15 border border-amber-200/60 hover:border-amber-400 dark:border-amber-700/60 dark:hover:border-amber-500 overflow-hidden">
+      <Card className="group transition-all duration-200 hover:shadow-xl hover:shadow-[#01ae79]/15 border border-border hover:border-[#01ae79]/40 dark:hover:border-[#01ae79]/50 overflow-hidden">
         <CardContent className="p-3 sm:p-4 md:p-5">
           {/* Header Section with Date */}
           <div className="flex items-start justify-between mb-3 md:mb-4">
             <div className="flex items-start gap-2 md:gap-3 lg:gap-4 flex-1 min-w-0">
-              <div className="relative flex-shrink-0">
-                <Avatar className="w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 ring-2 ring-amber-200 group-hover:ring-amber-400 dark:ring-amber-700 dark:group-hover:ring-amber-500 transition-all duration-200">
+              <div className="relative flex-shrink-0 cursor-pointer" onClick={navigateToProfile}>
+                <Avatar className="w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 ring-2 ring-[#01ae79]/20 group-hover:ring-[#01ae79]/50 transition-all duration-200">
                   <AvatarImage 
                     src={getProfileImageUrl(otherUser.profileImage) || undefined} 
                     alt={otherUser.fullName}
                     className="object-cover"
                   />
-                  <AvatarFallback className="text-xs sm:text-sm font-semibold bg-gradient-to-br from-amber-100 to-amber-200 text-amber-700 dark:from-amber-800 dark:to-amber-700 dark:text-amber-200">
+                  <AvatarFallback className="text-xs sm:text-sm font-semibold bg-gradient-to-br from-[#01ae79]/10 to-[#01ae79]/20 text-[#01ae79]">
                     {otherUser.fullName.split(' ').map(n => n[0]).join('').toUpperCase()}
                   </AvatarFallback>
                 </Avatar>
@@ -377,17 +413,14 @@ const PendingRequestCard: React.FC<PendingRequestCardProps> = ({ request, onAcce
               </div>
 
               <div className="flex-1 min-w-0 space-y-2">
-                <div className="flex items-start justify-between">
-                  <h3 className="font-semibold text-sm md:text-base text-foreground leading-tight truncate pr-2">{otherUser.fullName}</h3>
-                  <Link href={`/profile/${otherUser.userId}`} onClick={(e) => e.stopPropagation()}>
-                    <Button variant="ghost" size="sm" className="h-5 w-5 sm:h-6 sm:w-6 p-0 text-muted-foreground hover:text-foreground opacity-0 group-hover:opacity-100 transition-opacity">
-                      <User size={12} className="sm:hidden" />
-                      <User size={14} className="hidden sm:block" />
-                    </Button>
-                  </Link>
-                </div>
+                <h3 
+                  onClick={navigateToProfile}
+                  className="font-semibold text-sm md:text-base text-foreground leading-tight truncate cursor-pointer hover:text-[#01ae79] transition-colors"
+                >
+                  {otherUser.fullName}
+                </h3>
                 
-                <div className="flex items-center gap-2 flex-wrap">
+                <div className="flex items-center gap-2 flex-wrap pt-1.5">
                   {getRoleBadge(otherUser.role, otherUser.division, otherUser.educationLevel)}
                 </div>
 
@@ -465,7 +498,13 @@ const PendingRequestCard: React.FC<PendingRequestCardProps> = ({ request, onAcce
 };
 
 const SentRequestCard: React.FC<SentRequestCardProps> = ({ request, onWithdraw, isWithdrawing = false }) => {
+  const router = useRouter();
   const { otherUser } = request;
+
+  const navigateToProfile = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    router.push(`/profile/${otherUser.userId}`);
+  };
 
   const handleWithdraw = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -510,19 +549,19 @@ const SentRequestCard: React.FC<SentRequestCardProps> = ({ request, onWithdraw, 
 
   return (
     <div className="relative">
-      <Card className="group transition-all duration-200 hover:shadow-xl hover:shadow-blue-500/15 border border-blue-200/60 hover:border-blue-400 dark:border-blue-700/60 dark:hover:border-blue-500 overflow-hidden">
+      <Card className="group transition-all duration-200 hover:shadow-xl hover:shadow-[#01ae79]/15 border border-border hover:border-[#01ae79]/40 dark:hover:border-[#01ae79]/50 overflow-hidden">
         <CardContent className="p-3 sm:p-4 md:p-5">
           {/* Header Section with Date */}
           <div className="flex items-start justify-between mb-3 md:mb-4">
             <div className="flex items-start gap-2 md:gap-3 lg:gap-4 flex-1 min-w-0">
-              <div className="relative flex-shrink-0">
-                <Avatar className="w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 ring-2 ring-blue-200 group-hover:ring-blue-400 dark:ring-blue-700 dark:group-hover:ring-blue-500 transition-all duration-200">
+              <div className="relative flex-shrink-0 cursor-pointer" onClick={navigateToProfile}>
+                <Avatar className="w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 ring-2 ring-[#01ae79]/20 group-hover:ring-[#01ae79]/50 transition-all duration-200">
                   <AvatarImage 
                     src={getProfileImageUrl(otherUser.profileImage) || undefined} 
                     alt={otherUser.fullName}
                     className="object-cover"
                   />
-                  <AvatarFallback className="text-xs sm:text-sm font-semibold bg-gradient-to-br from-blue-100 to-blue-200 text-blue-700 dark:from-blue-800 dark:to-blue-700 dark:text-blue-200">
+                  <AvatarFallback className="text-xs sm:text-sm font-semibold bg-gradient-to-br from-[#01ae79]/10 to-[#01ae79]/20 text-[#01ae79]">
                     {otherUser.fullName.split(' ').map(n => n[0]).join('').toUpperCase()}
                   </AvatarFallback>
                 </Avatar>
@@ -534,17 +573,14 @@ const SentRequestCard: React.FC<SentRequestCardProps> = ({ request, onWithdraw, 
               </div>
 
               <div className="flex-1 min-w-0 space-y-2">
-                <div className="flex items-start justify-between">
-                  <h3 className="font-semibold text-sm md:text-base text-foreground leading-tight truncate pr-2">{otherUser.fullName}</h3>
-                  <Link href={`/profile/${otherUser.userId}`} onClick={(e) => e.stopPropagation()}>
-                    <Button variant="ghost" size="sm" className="h-5 w-5 sm:h-6 sm:w-6 p-0 text-muted-foreground hover:text-foreground opacity-0 group-hover:opacity-100 transition-opacity">
-                      <User size={12} className="sm:hidden" />
-                      <User size={14} className="hidden sm:block" />
-                    </Button>
-                  </Link>
-                </div>
+                <h3 
+                  onClick={navigateToProfile}
+                  className="font-semibold text-sm md:text-base text-foreground leading-tight truncate cursor-pointer hover:text-[#01ae79] transition-colors"
+                >
+                  {otherUser.fullName}
+                </h3>
                 
-                <div className="flex items-center gap-2 flex-wrap">
+                <div className="flex items-center gap-2 flex-wrap pt-1.5">
                   {getRoleBadge(otherUser.role, otherUser.division, otherUser.educationLevel)}
                 </div>
 
@@ -700,10 +736,6 @@ function App() {
   };
 
   const handleRemoveConnection = async (connectionId: number, targetUserId: string) => {
-    if (!confirm('Are you sure you want to remove this connection? This action cannot be undone.')) {
-      return;
-    }
-
     setRemovingConnection(connectionId);
     try {
       // Get auth token

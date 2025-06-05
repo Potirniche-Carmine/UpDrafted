@@ -21,11 +21,11 @@ export default function ForRecruitersPage() {
             <h1 className="text-4xl font-bold tracking-tight sm:text-5xl xl:text-6xl/none">
               Find Your Next{" "}
               <span className="bg-clip-text text-transparent bg-gradient-to-r from-[#01ae79] to-[#01ae79]/80">
-                Star Player
+                Star Athletes
               </span>
             </h1>
             <p className="max-w-3xl mx-auto text-lg text-muted-foreground md:text-xl">
-              UpDrafted provides a simple platform to view detailed athlete profiles, build your trusted recruiter presence, and connect with emerging prospects.
+              UpDrafted empowers school recruiters and scouts to discover talent across multiple sports, build trusted relationships, and connect with promising prospects for their institutions.
             </p>
           </div>
         </div>
@@ -43,9 +43,9 @@ export default function ForRecruitersPage() {
                       <Users className="h-8 w-8 text-emerald-600 dark:text-emerald-400" />
                     </div>
                     <div>
-                      <h3 className="text-xl font-semibold mb-3">All-in-One Athlete Profiles</h3>
+                      <h3 className="text-xl font-semibold mb-3">Multi-Sport Recruiting</h3>
                       <p className="text-muted-foreground">
-                        Access comprehensive athlete data: embedded YouTube highlights, stats, MaxPreps/Hudl links, social media, and key measurables, all in one spot.
+                        Recruit for multiple sports under one profile. Access and manage prospects across different athletic programs, making it easier to build diverse talent pools for your institution.
                       </p>
                     </div>
                   </div>
@@ -59,9 +59,9 @@ export default function ForRecruitersPage() {
                       <Search className="h-8 w-8 text-emerald-600 dark:text-emerald-400" />
                     </div>
                     <div>
-                      <h3 className="text-xl font-semibold mb-3">Discover and View Talent</h3>
+                      <h3 className="text-xl font-semibold mb-3">Advanced Talent Discovery</h3>
                       <p className="text-muted-foreground">
-                        Easily browse and view athlete profiles. See all their crucial recruiting information consolidated for quick assessment.
+                        Use powerful filters to find athletes across different sports. View comprehensive profiles with stats, highlights, and measurables specific to each sport you&apos;re recruiting for.
                       </p>
                     </div>
                   </div>
@@ -75,9 +75,9 @@ export default function ForRecruitersPage() {
                       <Shield className="h-8 w-8 text-emerald-600 dark:text-emerald-400" />
                     </div>
                     <div>
-                      <h3 className="text-xl font-semibold mb-3">Build a Trusted Profile</h3>
+                      <h3 className="text-xl font-semibold mb-3">Institutional Representation</h3>
                       <p className="text-muted-foreground">
-                        Share details about your school/program. You can submit verification materials (like a school profile link or PDF) for our team to review, helping you gain a trusted badge.
+                        Establish your profile as an official school representative. Display the sports programs you recruit for, get verified, and build trust with prospects and their families.
                       </p>
                     </div>
                   </div>
@@ -91,9 +91,9 @@ export default function ForRecruitersPage() {
                       <CheckCircle className="h-8 w-8 text-emerald-600 dark:text-emerald-400" />
                     </div>
                     <div>
-                      <h3 className="text-xl font-semibold mb-3">Connect With Prospects</h3>
+                      <h3 className="text-xl font-semibold mb-3">Streamlined Communication</h3>
                       <p className="text-muted-foreground">
-                        Once you find an athlete of interest, our platform facilitates making that initial connection to start the conversation.
+                        Efficiently manage communications with prospects across different sports. Keep track of your recruiting pipeline and maintain organized conversations with potential recruits.
                       </p>
                     </div>
                   </div>

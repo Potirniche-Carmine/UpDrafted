@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { ArrowRight, User, Target, Eye, Gift, Trophy, Star } from 'lucide-react';
+import { ArrowRight, User, Target, Eye, Trophy, Star, Shield } from 'lucide-react';
 
 export default function ForAthletesPage() {
   return (
@@ -19,13 +19,13 @@ export default function ForAthletesPage() {
               For Athletes
             </Badge>
             <h1 className="text-4xl font-bold tracking-tight sm:text-5xl xl:text-6xl/none">
-              Your MVP Season{" "}
+              Your College Sports{" "}
               <span className="bg-clip-text text-transparent bg-gradient-to-r from-[#01ae79] to-[#01ae79]/80">
-                Starts Here
+                Journey Begins
               </span>
             </h1>
             <p className="max-w-3xl mx-auto text-lg text-muted-foreground md:text-xl">
-              UpDrafted helps you consolidate all your athletic achievements, highlights, and stats into one powerful profile to share with coaches and recruiters.
+              Whether you&apos;re a current college athlete, play club sports, or are looking to start your college athletic career, UpDrafted connects you with college programs that match your potential.
             </p>
           </div>
         </div>
@@ -43,9 +43,9 @@ export default function ForAthletesPage() {
                       <User className="h-8 w-8 text-emerald-600 dark:text-emerald-400" />
                     </div>
                     <div>
-                      <h3 className="text-xl font-semibold mb-3">Your Complete Recruiting Hub</h3>
+                      <h3 className="text-xl font-semibold mb-3">Showcase Your Experience</h3>
                       <p className="text-muted-foreground">
-                        Bring your Hudl, MaxPreps, YouTube highlights, social media links, and key stats together in one professional, shareable athletic profile.
+                        Highlight your college athletic experience, club sports achievements, or current capabilities. Build a profile that shows your readiness for college sports.
                       </p>
                     </div>
                   </div>
@@ -56,12 +56,12 @@ export default function ForAthletesPage() {
                 <CardContent className="p-8">
                   <div className="space-y-6">
                     <div className="w-16 h-16 bg-emerald-100 dark:bg-emerald-900/30 rounded-full flex items-center justify-center">
-                      <Target className="h-8 w-8 text-emerald-600 dark:text-emerald-400" />
+                      <Shield className="h-8 w-8 text-emerald-600 dark:text-emerald-400" />
                     </div>
                     <div>
-                      <h3 className="text-xl font-semibold mb-3">Showcase Key Measurables</h3>
+                      <h3 className="text-xl font-semibold mb-3">Get Verified</h3>
                       <p className="text-muted-foreground">
-                        Easily add and update your sport-specific measurables and achievements. Let recruiters see your current capabilities and progress.
+                        Build credibility with our verification process. Whether you have MaxPreps history or current athletic achievements, we help validate your athletic background.
                       </p>
                     </div>
                   </div>
@@ -75,9 +75,9 @@ export default function ForAthletesPage() {
                       <Eye className="h-8 w-8 text-emerald-600 dark:text-emerald-400" />
                     </div>
                     <div>
-                      <h3 className="text-xl font-semibold mb-3">Get Seen by College Programs</h3>
+                      <h3 className="text-xl font-semibold mb-3">Connect with Programs</h3>
                       <p className="text-muted-foreground">
-                        Make your profile discoverable. UpDrafted is your platform to be seen by college coaches and recruiters actively searching for new talent.
+                        Get discovered by college programs looking for experienced athletes. Connect directly with coaches and recruiters through our built-in messaging system.
                       </p>
                     </div>
                   </div>
@@ -88,12 +88,12 @@ export default function ForAthletesPage() {
                 <CardContent className="p-8">
                   <div className="space-y-6">
                     <div className="w-16 h-16 bg-emerald-100 dark:bg-emerald-900/30 rounded-full flex items-center justify-center">
-                      <Gift className="h-8 w-8 text-emerald-600 dark:text-emerald-400" />
+                      <Target className="h-8 w-8 text-emerald-600 dark:text-emerald-400" />
                     </div>
                     <div>
-                      <h3 className="text-xl font-semibold mb-3">Free to Build Your Future</h3>
+                      <h3 className="text-xl font-semibold mb-3">Find Your Opportunity</h3>
                       <p className="text-muted-foreground">
-                        Create your complete athletic profile, showcase your talent, and start your recruiting journey on UpDrafted—all at no cost.
+                        Whether you&apos;re transferring programs or stepping up from club sports, find college athletic opportunities that match your experience and goals.
                       </p>
                     </div>
                   </div>
@@ -112,10 +112,10 @@ export default function ForAthletesPage() {
               <Trophy className="h-8 w-8 text-white" />
             </div>
             <h2 className="text-3xl font-bold tracking-tight sm:text-4xl md:text-5xl">
-              Ready to Take Your Game to the Next Level?
+              Take Your Next Step in College Athletics
             </h2>
             <p className="max-w-3xl mx-auto text-lg opacity-90">
-              Join thousands of student-athletes already using UpDrafted to connect with college programs and achieve their dreams.
+              Join athletes from college and club sports backgrounds on UpDrafted to discover and connect with college athletic programs that value your experience.
             </p>
             <Link href="/sign-up">
               <Button size="lg" variant="secondary" className="px-12 py-4 text-xl group bg-white text-[#01ae79] hover:bg-gray-100">

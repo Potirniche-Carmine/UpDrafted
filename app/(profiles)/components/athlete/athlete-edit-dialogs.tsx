@@ -63,6 +63,9 @@ const YEAR_OPTIONS = Array.from({ length: 11 }, (_, i) => {
   return { value: year.toString(), label: year.toString() };
 });
 
+// Add constant for video limit
+const VIDEO_LIMIT = 2;
+
 export interface Measurable {
   id: string;
   sport: string;
@@ -137,6 +140,14 @@ export function AthleteEditDialogs({
   const [isUploading, setIsUploading] = useState(false);
   const [profileImagePreview, setProfileImagePreview] = useState<string | null>(null);
   const [selectedProfileFile, setSelectedProfileFile] = useState<File | null>(null);
+  const [isDirty, setIsDirty] = useState(false);
+
+  // Initialize tempVideos when dialog opens
+  useEffect(() => {
+    if (dialogType === 'video-highlights') {
+      setTempVideos(profileData.youtubeVideos || []);
+    }
+  }, [dialogType, profileData.youtubeVideos]);
 
   // Set measurable to edit when measurableIdToEdit changes
   useEffect(() => {
@@ -151,10 +162,11 @@ export function AthleteEditDialogs({
   // Initialize edit data when dialog opens
   useEffect(() => {
     if (!dialogType) {
-      // Clean up preview state when dialog is closed
+      // Clean up state when dialog is closed
       setProfileImagePreview(null);
       setSelectedProfileFile(null);
       setValidationErrors({});
+      setTempVideos([]); // Clear temp videos when dialog closes
       return;
     }
 
@@ -210,9 +222,6 @@ export function AthleteEditDialogs({
           hudlEmbedUrl: profileData.hudlEmbedUrl || ''
         });
         break;
-      case 'video-highlights':
-        setTempVideos(profileData.youtubeVideos || []);
-        break;
       case 'measurable':
       case 'edit-measurable':
       case 'measurables':
@@ -254,6 +263,13 @@ export function AthleteEditDialogs({
         break;
     }
   }, [dialogType, profileData, measurableToEdit, selectedSport]);
+
+  // Reset dirty state when dialog closes or changes type
+  useEffect(() => {
+    if (!isOpen || !dialogType) {
+      setIsDirty(false);
+    }
+  }, [isOpen, dialogType]);
 
   // Validation function
   const validateField = (field: string, value: string | number): string | null => {
@@ -332,7 +348,9 @@ export function AthleteEditDialogs({
     return null;
   };
 
+  // Modify handleFieldChange to track dirty state
   const handleFieldChange = (field: string, value: string | number) => {
+    setIsDirty(true);
     setEditData(prev => ({ ...prev, [field]: value }));
     
     // Clear existing validation error for this field
@@ -389,6 +407,15 @@ export function AthleteEditDialogs({
     const youtubeUrl = editData.youtubeUrl as string;
     const title = editData.title as string;
     
+    // Check video limit
+    if ((tempVideos || []).length >= VIDEO_LIMIT) {
+      setValidationErrors(prev => ({ 
+        ...prev, 
+        youtubeUrl: `You can only have up to ${VIDEO_LIMIT} videos on your profile` 
+      }));
+      return;
+    }
+    
     // Validate YouTube URL
     const urlError = validateField('youtubeUrl', youtubeUrl);
     if (urlError) {
@@ -412,6 +439,7 @@ export function AthleteEditDialogs({
         
         setTempVideos(prev => [...(prev || []), newVideo]);
         setEditData(prev => ({ ...prev, youtubeUrl: '', title: '' }));
+        setIsDirty(true); // Mark form as dirty when adding video
         
         // Clear any validation errors
         setValidationErrors(prev => {
@@ -606,9 +634,9 @@ export function AthleteEditDialogs({
     return true;
   };
 
+  // Modify handleSave to reset dirty state
   const handleSave = () => {
     const updates: Partial<AthleteProfileData> = {};
-    const tempVideos = [...(editData.youtubeVideos || [])];
 
     switch (dialogType) {
       case 'basic-info':
@@ -726,9 +754,14 @@ export function AthleteEditDialogs({
         break;
       }
 
-      case 'video-highlights':
-        updates.youtubeVideos = tempVideos;
+      case 'video-highlights': {
+        const hasReachedLimit = (tempVideos || []).length >= VIDEO_LIMIT;
+        
+        if (!hasReachedLimit) {
+          updates.youtubeVideos = tempVideos;
+        }
         break;
+      }
 
       case 'profile-image':
         // Image uploads handle their own saving
@@ -743,9 +776,9 @@ export function AthleteEditDialogs({
 
     onSave(sanitizedUpdates);
     setMeasurableToEdit(null);
+    setIsDirty(false); // Reset dirty state after saving
+    onClose(); // Close the dialog after saving
   };
-
-  if (!isOpen || !dialogType) return null;
 
   const getDialogContent = () => {
     switch (dialogType) {
@@ -1204,7 +1237,9 @@ export function AthleteEditDialogs({
           </>
         );
 
-      case 'video-highlights':
+      case 'video-highlights': {
+        const hasReachedLimit = (tempVideos || []).length >= VIDEO_LIMIT;
+        
         return (
           <>
             <DialogHeader>
@@ -1215,7 +1250,12 @@ export function AthleteEditDialogs({
               {/* Existing videos */}
               {tempVideos && tempVideos.length > 0 && (
                 <div className="space-y-3">
-                  <Label>Current Videos</Label>
+                  <div className="flex items-center justify-between">
+                    <Label>Current Videos</Label>
+                    <p className="text-sm text-muted-foreground">
+                      {tempVideos.length} of {VIDEO_LIMIT} videos
+                    </p>
+                  </div>
                   {tempVideos.map((video, index) => (
                     <div key={video.id || index} className="flex items-center gap-3 p-3 border rounded-lg">
                       <div className="flex-1">
@@ -1236,46 +1276,60 @@ export function AthleteEditDialogs({
               )}
               
               {/* Add new video form */}
-              <div className="space-y-4 border-t pt-4">
-                <Label>Add New Video</Label>
-                <div className="space-y-2">
-                  <Label htmlFor="edit-youtubeUrl">YouTube Video URL</Label>
-                  <Input
-                    id="edit-youtubeUrl"
-                    placeholder="https://www.youtube.com/watch?v=..."
-                    value={editData.youtubeUrl || ''}
-                    onChange={(e) => handleFieldChange('youtubeUrl', e.target.value)}
-                    className={`h-12 ${validationErrors.youtubeUrl ? 'border-red-500' : ''}`}
-                    maxLength={FIELD_LIMITS.URL}
-                  />
-                  {validationErrors.youtubeUrl && (
-                    <p className="text-sm text-red-500">{validationErrors.youtubeUrl}</p>
-                  )}
+              {!hasReachedLimit ? (
+                <div className="space-y-4 border-t pt-4">
+                  <Label>Add New Video</Label>
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-youtubeUrl">YouTube Video URL</Label>
+                    <Input
+                      id="edit-youtubeUrl"
+                      placeholder="https://www.youtube.com/watch?v=..."
+                      value={editData.youtubeUrl || ''}
+                      onChange={(e) => handleFieldChange('youtubeUrl', e.target.value)}
+                      className={`h-12 ${validationErrors.youtubeUrl ? 'border-red-500' : ''}`}
+                      maxLength={FIELD_LIMITS.URL}
+                    />
+                    {validationErrors.youtubeUrl && (
+                      <p className="text-sm text-red-500">{validationErrors.youtubeUrl}</p>
+                    )}
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-videoTitle">Video Title</Label>
+                    <Input
+                      id="edit-videoTitle"
+                      placeholder="e.g., Senior Season Highlights"
+                      value={editData.title || ''}
+                      onChange={(e) => handleFieldChange('title', e.target.value)}
+                      className="h-12"
+                      maxLength={100}
+                    />
+                  </div>
+                  <Button 
+                    type="button"
+                    onClick={addTempVideo}
+                    disabled={!editData.youtubeUrl || !editData.title}
+                    className="w-full"
+                  >
+                    <Plus className="w-4 h-4 mr-2" />
+                    Add Video
+                  </Button>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="edit-videoTitle">Video Title</Label>
-                  <Input
-                    id="edit-videoTitle"
-                    placeholder="e.g., Senior Season Highlights"
-                    value={editData.title || ''}
-                    onChange={(e) => handleFieldChange('title', e.target.value)}
-                    className="h-12"
-                    maxLength={100}
-                  />
+              ) : (
+                <div className="border-t pt-4">
+                  <div className="bg-muted/50 rounded-lg p-4">
+                    <div className="text-center">
+                      <p className="font-medium text-muted-foreground mb-2">Video Limit Reached</p>
+                      <p className="text-sm text-muted-foreground">
+                        You can have a maximum of {VIDEO_LIMIT} videos on your profile. Remove an existing video to add a new one.
+                      </p>
+                    </div>
+                  </div>
                 </div>
-                <Button 
-                  type="button"
-                  onClick={addTempVideo}
-                  disabled={!editData.youtubeUrl || !editData.title}
-                  className="w-full"
-                >
-                  <Plus className="w-4 h-4 mr-2" />
-                  Add Video
-                </Button>
-              </div>
+              )}
             </div>
           </>
         );
+      }
 
       case 'measurable':
       case 'edit-measurable':
@@ -1600,7 +1654,17 @@ export function AthleteEditDialogs({
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
+    <Dialog open={isOpen} onOpenChange={(open) => {
+      if (!open && !isDirty) {
+        onClose();
+      } else if (!open && isDirty) {
+        // Only show confirmation if there are unsaved changes
+        if (window.confirm('Are you sure you want to close? Any unsaved changes will be lost.')) {
+          setIsDirty(false);
+          onClose();
+        }
+      }
+    }}>
       <DialogContent className={dialogType === 'basic-info' ? "sm:max-w-2xl max-w-lg" : "sm:max-w-md max-w-lg"}>
         {getDialogContent()}
         {dialogType === 'delete-measurable' ? (

@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useUser } from '@clerk/nextjs';
+import { usePathname } from 'next/navigation';
 
 interface UseConnectionsReturn {
   pendingRequestsCount: number;
@@ -9,13 +10,28 @@ interface UseConnectionsReturn {
 }
 
 export function useConnections(): UseConnectionsReturn {
-  const { isSignedIn } = useUser();
+  const { isSignedIn, user } = useUser();
+  const pathname = usePathname();
   const [pendingRequestsCount, setPendingRequestsCount] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const fetchConnections = useCallback(async () => {
+    // Don't fetch if user is not signed in
     if (!isSignedIn) {
+      setPendingRequestsCount(0);
+      return;
+    }
+
+    // Don't fetch if user is on onboarding page
+    if (pathname?.startsWith('/onboarding')) {
+      setPendingRequestsCount(0);
+      return;
+    }
+
+    // Don't fetch if user doesn't have a role yet
+    const userRole = user?.publicMetadata?.role as string;
+    if (!userRole || !['athlete', 'coach', 'recruiter'].includes(userRole)) {
       setPendingRequestsCount(0);
       return;
     }
@@ -58,7 +74,7 @@ export function useConnections(): UseConnectionsReturn {
     } finally {
       setLoading(false);
     }
-  }, [isSignedIn]);
+  }, [isSignedIn, pathname, user?.publicMetadata?.role]);
 
   useEffect(() => {
     fetchConnections();
