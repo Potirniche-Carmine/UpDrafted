@@ -14,9 +14,15 @@ setInterval(() => {
   }
 }, 60000); // Clean every minute
 
-export async function middleware(req: NextRequest) {
-  const clientIP = req.headers.get('x-forwarded-for')?.split(',')[0] || 
-                  req.headers.get('x-real-ip') || 
+export function middleware(request: NextRequest) {
+  // Only run on mutation methods
+  if (!['POST', 'PUT', 'DELETE', 'PATCH'].includes(request.method)) {
+    return NextResponse.next();
+  }
+
+  // Rate limiting for mutation operations
+  const clientIP = request.headers.get('x-forwarded-for')?.split(',')[0] || 
+                  request.headers.get('x-real-ip') || 
                   'unknown';
   const now = Date.now();
   const windowMs = 60 * 1000; // 1 minute window
@@ -27,7 +33,15 @@ export async function middleware(req: NextRequest) {
     if (current.count >= maxRequests) {
       return NextResponse.json(
         { error: 'Too many requests. Please try again later.' },
-        { status: 429 }
+        { 
+          status: 429,
+          headers: {
+            'Retry-After': Math.ceil((current.resetTime - now) / 1000).toString(),
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': 'POST, PUT, DELETE, PATCH',
+            'Access-Control-Allow-Headers': 'Content-Type, Authorization'
+          }
+        }
       );
     }
     current.count++;
@@ -35,33 +49,47 @@ export async function middleware(req: NextRequest) {
     rateLimit.set(clientIP, { count: 1, resetTime: now + windowMs });
   }
 
-  // CSRF: Verify origin matches host for same-origin policy
-  const origin = req.headers.get('origin');
-  const host = req.headers.get('host');
+  // CSRF Protection
+  const origin = request.headers.get('origin');
+  const host = request.headers.get('host');
   
   if (origin && host) {
     try {
       const originUrl = new URL(origin);
       if (originUrl.host !== host) {
         console.warn(`CSRF attempt blocked: origin=${origin}, host=${host}`);
-        return NextResponse.json({ error: 'Invalid request origin' }, { status: 403 });
+        return NextResponse.json(
+          { error: 'Invalid request origin' },
+          { 
+            status: 403,
+            headers: {
+              'Access-Control-Allow-Origin': '*',
+              'Access-Control-Allow-Methods': 'POST, PUT, DELETE, PATCH',
+              'Access-Control-Allow-Headers': 'Content-Type, Authorization'
+            }
+          }
+        );
       }
     } catch (error) {
       console.error('Origin validation error:', error);
-      return NextResponse.json({ error: 'Invalid origin header' }, { status: 400 });
+      return NextResponse.json(
+        { error: 'Invalid origin header' },
+        { status: 400 }
+      );
     }
   }
 
-  return NextResponse.next();
+  // Add security headers to the response
+  const response = NextResponse.next();
+  response.headers.set('X-Content-Type-Options', 'nosniff');
+  response.headers.set('X-Frame-Options', 'DENY');
+  response.headers.set('X-XSS-Protection', '1; mode=block');
+  response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
+
+  return response;
 }
 
 export const config = {
-  matcher: [
-    // Match POST requests
-    {
-      source: "/api/:path*",
-      methods: ["POST", "PUT", "DELETE", "PATCH"]
-    }
-  ]
+  matcher: '/api/:path*'  // Match API routes only
 };
 

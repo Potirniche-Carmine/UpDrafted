@@ -169,6 +169,13 @@
       "when": 1749001156104,
       "tag": "0023_clear_scarlet_witch",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1749102840068,
+      "tag": "0024_left_nightshade",
+      "breakpoints": true
     }
   ]
 }
