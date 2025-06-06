@@ -3,16 +3,18 @@
 import React, { useState, useMemo, useEffect, Suspense } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Search, User, Users, Target, MapPin, MessageCircle, Heart, Award, GraduationCap, Filter } from "lucide-react";
+import { User, Users, Target, MapPin, Shield, GraduationCap, Send, UserCheck, ChevronLeft, ChevronRight, Search } from "lucide-react";
 import { useSearchParams } from 'next/navigation';
 import Link from "next/link";
-import Image from "next/image";
 import { getSportsList, US_STATES, GRADUATION_YEARS, DIVISIONS } from "@/lib/sports-data";
 import { useRoleView } from "@/hooks/use-role-view";
-import { AuthWrapper } from '../../../components/auth-wrapper';
 
+import { AuthWrapper } from '../../../components/auth-wrapper';
+import MultipleSelector, { Option } from "@/components/ui/multi-select";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Card, CardContent } from "@/components/ui/card";
+import { cn } from "@/lib/utils";
 // Fallback data in case imports fail
 const FALLBACK_SPORTS = ['Basketball', 'Football', 'Baseball', 'Soccer', 'Tennis', 'Golf', 'Swimming', 'Track & Field'];
 const FALLBACK_STATES = ['California', 'Texas', 'Florida', 'New York', 'Illinois', 'Pennsylvania'];
@@ -246,537 +248,456 @@ const mockUsers: UserProfile[] = [
   }
 ];
 
-const getRoleIcon = (role: UserProfile['role']) => {
-  switch (role) {
-    case 'athlete': return <User className="h-4 w-4" />;
-    case 'coach': return <Users className="h-4 w-4" />;
-    case 'recruiter': return <Target className="h-4 w-4" />;
-  }
-};
 
-const getRoleBadgeColor = (role: UserProfile['role']) => {
-  switch (role) {
-    case 'athlete': return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200';
-    case 'coach': return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200';
-    case 'recruiter': return 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200';
-  }
-};
 
-// Capitalize role for display
-const formatRole = (role: UserProfile['role']) => {
-  return role.charAt(0).toUpperCase() + role.slice(1);
-};
+
+
+// Add new filter interfaces
+interface FilterOption extends Option {
+  value: string;
+  label: string;
+}
+
+// Convert arrays to filter options
+const sportsOptions = getSafeSpotsList().map(sport => ({ value: sport, label: sport }));
+const statesOptions = getSafeStates().map(state => ({ value: state, label: state }));
+const divisionsOptions = getSafeDivisions().map(division => ({ value: division, label: division }));
+const graduationYearsOptions = getSafeGraduationYears().map(year => ({ value: year.toString(), label: year.toString() }));
+
+// Add type for tab values
+type TabValue = 'all' | 'athletes' | 'coaches' | 'recruiters';
 
 // Get available tabs based on user role
 const getAvailableTabs = (userRole: string) => {
   switch (userRole) {
     case 'athlete':
       return [
-        { value: 'all', label: 'All', icon: <Users className="h-4 w-4" /> },
-        { value: 'coaches', label: 'Coaches', icon: <Users className="h-4 w-4" /> },
-        { value: 'recruiters', label: 'Recruiters', icon: <Target className="h-4 w-4" /> }
+        { value: 'all' as TabValue, label: 'All', icon: <Users className="h-4 w-4" /> },
+        { value: 'coaches' as TabValue, label: 'Coaches', icon: <GraduationCap className="h-4 w-4" /> },
+        { value: 'recruiters' as TabValue, label: 'Recruiters', icon: <Target className="h-4 w-4" /> }
       ];
     case 'coach':
     case 'recruiter':
       return [
-        { value: 'athletes', label: 'Athletes', icon: <User className="h-4 w-4" /> },
-        { value: 'coaches', label: 'Coaches', icon: <Users className="h-4 w-4" /> },
-        { value: 'recruiters', label: 'Recruiters', icon: <Target className="h-4 w-4" /> }
+        { value: 'all' as TabValue, label: 'All', icon: <Users className="h-4 w-4" /> },
+        { value: 'athletes' as TabValue, label: 'Athletes', icon: <User className="h-4 w-4" /> },
+        { value: 'coaches' as TabValue, label: 'Coaches', icon: <GraduationCap className="h-4 w-4" /> },
+        { value: 'recruiters' as TabValue, label: 'Recruiters', icon: <Target className="h-4 w-4" /> }
       ];
     default:
-      return [];
-  }
-};
-
-// Get description based on user role
-const getDescription = (userRole: string) => {
-  switch (userRole) {
-    case 'athlete':
-      return "Connect with coaches and recruiters who can help advance your athletic career";
-    case 'coach':
-      return "Discover talented athletes and connect with fellow coaches and recruiters in your network";
-    case 'recruiter':
-      return "Find promising athletes and build relationships with coaches and other recruiters";
-    default:
-      return "Discover and connect with athletes, coaches, and recruiters in your sports community";
+      return [
+        { value: 'all' as TabValue, label: 'All', icon: <Users className="h-4 w-4" /> },
+        { value: 'athletes' as TabValue, label: 'Athletes', icon: <User className="h-4 w-4" /> },
+        { value: 'coaches' as TabValue, label: 'Coaches', icon: <GraduationCap className="h-4 w-4" /> },
+        { value: 'recruiters' as TabValue, label: 'Recruiters', icon: <Target className="h-4 w-4" /> }
+      ];
   }
 };
 
 function SearchPageContent() {
   const searchParams = useSearchParams();
-  const initialQuery = searchParams.get('q') || '';
-  
   const { effectiveRole } = useRoleView();
-  
-  const availableTabs = getAvailableTabs(effectiveRole);
-  
-  const [activeTab, setActiveTab] = useState<'athletes' | 'coaches' | 'recruiters' | 'all'>(
-    availableTabs.length > 0 ? availableTabs[0].value as 'athletes'| 'coaches' | 'recruiters' | 'all' : 'athletes'
-  );
-  const [nameFilter, setNameFilter] = useState(initialQuery);
-  const [hasSearched, setHasSearched] = useState(false);
-  const [filters, setFilters] = useState({
-    sport: "all",
-    graduationYear: "all", // For athletes
-    division: "all", // For coaches/recruiters
-    state: "all"
+  const [activeTab, setActiveTab] = useState<TabValue>(searchParams?.get('tab') as TabValue || 'athletes');
+  const [selectedSports, setSelectedSports] = useState<FilterOption[]>([]);
+  const [selectedDivisions, setSelectedDivisions] = useState<FilterOption[]>([]);
+  const [selectedStates, setSelectedStates] = useState<FilterOption[]>([]);
+  const [selectedYears, setSelectedYears] = useState<FilterOption[]>([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [appliedFilters, setAppliedFilters] = useState({
+    tab: 'athletes' as TabValue,
+    sports: [] as FilterOption[],
+    divisions: [] as FilterOption[],
+    states: [] as FilterOption[],
+    years: [] as FilterOption[]
   });
+  const itemsPerPage = 20;
 
+  const availableTabs = getAvailableTabs(effectiveRole);
+
+  // Reset page when applied filters change
   useEffect(() => {
-    if (initialQuery) {
-      setNameFilter(initialQuery);
-      setHasSearched(true);
-    }
-  }, [initialQuery]);
-
-  // Update activeTab when effectiveRole changes
-  useEffect(() => {
-    const newAvailableTabs = getAvailableTabs(effectiveRole);
-    if (newAvailableTabs.length > 0) {
-      setActiveTab(newAvailableTabs[0].value as 'athletes' | 'coaches' | 'recruiters' | 'all');
-    }
-  }, [effectiveRole]);
-
-  const handleTabChange = (value: string) => {
-    setActiveTab(value as 'athletes' | 'coaches' | 'recruiters' | 'all');
-  };
+    setCurrentPage(1);
+  }, [appliedFilters]);
 
   const filteredUsers = useMemo(() => {
-    // Don't show any results if haven't searched yet
-    if (!hasSearched) {
-      return [];
-    }
-
     let filtered = mockUsers;
 
-    // Apply role-based filtering based on current user role and active tab
-    if (effectiveRole === 'athlete') {
-      if (activeTab === 'coaches') {
-        // Athletes searching coaches see only coaches
-        filtered = filtered.filter(user => user.role === 'coach');
-      } else if (activeTab === 'recruiters') {
-        // Athletes searching recruiters see only recruiters
-        filtered = filtered.filter(user => user.role === 'recruiter');
-      } else if (activeTab === 'all') {
-        // Athletes searching all see both coaches and recruiters
-        filtered = filtered.filter(user => user.role === 'coach' || user.role === 'recruiter');
-      }
-    } else {
-      // Coaches and recruiters can see all roles based on tab
-      if (activeTab === 'athletes') {
-        filtered = filtered.filter(user => user.role === 'athlete');
-      } else if (activeTab === 'coaches') {
-        filtered = filtered.filter(user => user.role === 'coach');
-      } else if (activeTab === 'recruiters') {
-        filtered = filtered.filter(user => user.role === 'recruiter');
-      }
-      // No 'all' tab for coaches/recruiters in this implementation
+    // Filter by role
+    if (appliedFilters.tab !== 'all') {
+      const roleMap: Record<TabValue, string> = {
+        'athletes': 'athlete',
+        'coaches': 'coach',
+        'recruiters': 'recruiter',
+        'all': 'all'
+      };
+      filtered = filtered.filter(user => user.role === roleMap[appliedFilters.tab]);
     }
 
-    // Apply sport filter
-    if (filters.sport !== "all") {
-      filtered = filtered.filter(user => user.sport === filters.sport);
-    }
-
-    // Apply graduation year filter (athletes only)
-    if (filters.graduationYear !== "all" && activeTab === 'athletes') {
+    // Filter by sports
+    if (appliedFilters.sports.length > 0) {
       filtered = filtered.filter(user => 
-        user.role === 'athlete' && user.graduationYear.toString() === filters.graduationYear
+        appliedFilters.sports.some(sport => sport.value === user.sport)
       );
     }
 
-    // Apply division filter (coaches/recruiters only)
-    if (filters.division !== "all" && (activeTab === 'coaches' || activeTab === 'recruiters' || activeTab === 'all')) {
+    // Filter by divisions (for coaches and recruiters)
+    if (appliedFilters.divisions.length > 0 && (appliedFilters.tab === 'coaches' || appliedFilters.tab === 'recruiters')) {
       filtered = filtered.filter(user => 
-        (user.role === 'coach' || user.role === 'recruiter') && user.division === filters.division
+        user.role !== 'athlete' && appliedFilters.divisions.some(div => div.value === user.division)
       );
     }
 
-    // Apply state filter
-    if (filters.state !== "all") {
-      filtered = filtered.filter(user => user.location.includes(filters.state));
-    }
-
-    // Apply name filter if provided
-    if (nameFilter.trim()) {
-      const term = nameFilter.toLowerCase();
+    // Filter by states
+    if (appliedFilters.states.length > 0) {
       filtered = filtered.filter(user => {
-        const matchesName = user.name.toLowerCase().includes(term);
-        const matchesBio = user.bio?.toLowerCase().includes(term);
-        const matchesSchool = (user.role === 'coach' || user.role === 'recruiter') && 
-                             user.school.toLowerCase().includes(term);
-        const matchesPosition = user.role === 'athlete' && 
-                               user.position.toLowerCase().includes(term);
-        
-        return matchesName || matchesBio || matchesSchool || matchesPosition;
+        const userState = user.location.split(', ')[1];
+        return appliedFilters.states.some(state => state.value === userState);
       });
+    }
+
+    // Filter by graduation years (for athletes)
+    if (appliedFilters.years.length > 0 && appliedFilters.tab === 'athletes') {
+      filtered = filtered.filter(user => 
+        user.role === 'athlete' && appliedFilters.years.some(year => parseInt(year.value) === user.graduationYear)
+      );
     }
 
     return filtered;
-  }, [hasSearched, activeTab, filters, nameFilter, effectiveRole]);
+  }, [appliedFilters]);
 
   const clearFilters = () => {
-    setFilters({
-      sport: "all",
-      graduationYear: "all",
-      division: "all", 
-      state: "all"
+    setSelectedSports([]);
+    setSelectedDivisions([]);
+    setSelectedStates([]);
+    setSelectedYears([]);
+    setCurrentPage(1);
+  };
+
+  const handleDiscover = () => {
+    setAppliedFilters({
+      tab: activeTab,
+      sports: selectedSports,
+      divisions: selectedDivisions,
+      states: selectedStates,
+      years: selectedYears
     });
-    setNameFilter("");
-    setHasSearched(false);
   };
 
-  const handleSearch = () => {
-    setHasSearched(true);
+  // Process profile image URL to ensure it works with R2/CloudFlare
+  const getProfileImageUrl = (profileImage: string) => {
+    if (!profileImage || typeof profileImage !== 'string') {
+      return undefined;
+    }
+    
+    // If it's already a full URL, return as is
+    if (profileImage.startsWith('http')) {
+      return profileImage;
+    }
+    
+    // Construct the full R2 URL using environment variable or fallback to known R2 domain
+    const baseUrl = process.env.NEXT_PUBLIC_R2_PUBLIC_URL || 'https://pub-19c0754937db426497ca014f0e2a297c.r2.dev';
+    return `${baseUrl}/${profileImage}`;
   };
 
-  const getTabCounts = () => {
-    // Don't calculate counts until user has actually searched
-    if (!hasSearched) {
-      return { athletes: 0, coaches: 0, recruiters: 0, all: 0 };
+  // Get role badge with descriptive text and improved styling
+  const getRoleBadge = (user: UserProfile) => {
+    let roleText = '';
+    let roleColor = '';
+
+    if (user.role === 'athlete') {
+      roleText = `${user.sport} Athlete`;
+      roleColor = 'bg-blue-500/10 text-blue-700 border-blue-200 dark:bg-blue-500/20 dark:text-blue-300 dark:border-blue-700';
+    } else if (user.role === 'coach') {
+      if (user.division === 'High School') {
+        roleText = 'HS Coach';
+        roleColor = 'bg-blue-500/10 text-blue-700 border-blue-200 dark:bg-blue-500/20 dark:text-blue-300 dark:border-blue-700';
+      } else if (user.division === 'Club Sports') {
+        roleText = 'Club Coach';
+        roleColor = 'bg-green-500/10 text-green-700 border-green-200 dark:bg-green-500/20 dark:text-green-300 dark:border-green-700';
+      } else if (user.division === 'Community College' || user.division === 'Junior College' || user.division?.includes('NJCAA')) {
+        roleText = 'JC Coach';
+        roleColor = 'bg-orange-500/10 text-orange-700 border-orange-200 dark:bg-orange-500/20 dark:text-orange-300 dark:border-orange-700';
+      } else if (user.division?.includes('NCAA') || user.division === 'NAIA') {
+        roleText = 'College Coach';
+        roleColor = 'bg-purple-500/10 text-purple-700 border-purple-200 dark:bg-purple-500/20 dark:text-purple-300 dark:border-purple-700';
+      } else {
+        roleText = 'Coach';
+        roleColor = 'bg-gray-500/10 text-gray-700 border-gray-200 dark:bg-gray-500/20 dark:text-gray-300 dark:border-gray-700';
+      }
+    } else if (user.role === 'recruiter') {
+      if (user.division === 'High School') {
+        roleText = 'HS Recruiter';
+        roleColor = 'bg-blue-500/10 text-blue-700 border-blue-200 dark:bg-blue-500/20 dark:text-blue-300 dark:border-blue-700';
+      } else if (user.division === 'Club Sports') {
+        roleText = 'Club Recruiter';
+        roleColor = 'bg-green-500/10 text-green-700 border-green-200 dark:bg-green-500/20 dark:text-green-300 dark:border-green-700';
+      } else if (user.division === 'Community College' || user.division === 'Junior College' || user.division?.includes('NJCAA')) {
+        roleText = 'JC Recruiter';
+        roleColor = 'bg-orange-500/10 text-orange-700 border-orange-200 dark:bg-orange-500/20 dark:text-orange-300 dark:border-orange-700';
+      } else if (user.division?.includes('NCAA') || user.division === 'NAIA') {
+        roleText = 'College Recruiter';
+        roleColor = 'bg-purple-500/10 text-purple-700 border-purple-200 dark:bg-purple-500/20 dark:text-purple-300 dark:border-purple-700';
+      } else {
+        roleText = 'Recruiter';
+        roleColor = 'bg-gray-500/10 text-gray-700 border-gray-200 dark:bg-gray-500/20 dark:text-gray-300 dark:border-gray-700';
+      }
     }
 
-    // Calculate total counts for each role type regardless of active tab
-    // Apply base role filtering first based on current user role
-    let baseFiltered = mockUsers;
-    
-    if (effectiveRole === 'athlete') {
-      // Athletes can only see coaches and recruiters
-      baseFiltered = baseFiltered.filter(user => user.role === 'coach' || user.role === 'recruiter');
-    }
-    // For coaches/recruiters, they can see all roles, so no base filtering needed
-
-    // Apply other filters (excluding role-based tab filtering)
-    if (filters.sport !== "all") {
-      baseFiltered = baseFiltered.filter(user => user.sport === filters.sport);
-    }
-
-    if (filters.state !== "all") {
-      baseFiltered = baseFiltered.filter(user => user.location.includes(filters.state));
-    }
-
-    // Apply graduation year filter for athletes
-    if (filters.graduationYear !== "all") {
-      baseFiltered = baseFiltered.filter(user => 
-        user.role !== 'athlete' || user.graduationYear.toString() === filters.graduationYear
-      );
-    }
-
-    // Apply division filter for coaches/recruiters
-    if (filters.division !== "all") {
-      baseFiltered = baseFiltered.filter(user => 
-        (user.role !== 'coach' && user.role !== 'recruiter') || user.division === filters.division
-      );
-    }
-
-    // Apply name filter if provided
-    if (nameFilter.trim()) {
-      const term = nameFilter.toLowerCase();
-      baseFiltered = baseFiltered.filter(user => {
-        const matchesName = user.name.toLowerCase().includes(term);
-        const matchesBio = user.bio?.toLowerCase().includes(term);
-        const matchesSchool = (user.role === 'coach' || user.role === 'recruiter') && 
-                             user.school.toLowerCase().includes(term);
-        const matchesPosition = user.role === 'athlete' && 
-                               user.position.toLowerCase().includes(term);
-        
-        return matchesName || matchesBio || matchesSchool || matchesPosition;
-      });
-    }
-
-    // Calculate counts for each tab based on user role
-    const athletes = baseFiltered.filter(u => u.role === 'athlete').length;
-    const coaches = baseFiltered.filter(u => u.role === 'coach').length;
-    const recruiters = baseFiltered.filter(u => u.role === 'recruiter').length;
-    
-    // For athletes: 'all' means coaches + recruiters
-    // For coaches/recruiters: no 'all' tab
-    const all = effectiveRole === 'athlete' ? coaches + recruiters : 0;
-    
-    return { athletes, coaches, recruiters, all };
+    return <Badge variant="outline" className={`text-xs font-medium px-2 py-0.5 border ${roleColor} whitespace-nowrap`}>{roleText}</Badge>;
   };
-
-  const counts = getTabCounts();
 
   return (
-    <div className="min-h-screen bg-background p-4 md:p-6">
-      <div className="max-w-7xl mx-auto">
+    <div className="container py-8">
+      <div className="max-w-6xl mx-auto">
         {/* Header */}
-        <div className="mb-6">
-          <h1 className="text-2xl md:text-4xl font-bold bg-gradient-to-r from-[#01ae79] via-[#01ae79] to-[#01ae79] bg-clip-text text-transparent mb-2">
-            Discovery
-          </h1>
-          <p className="text-muted-foreground text-sm md:text-lg">
-            {getDescription(effectiveRole)}
-          </p>
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-foreground mb-2">Discover</h1>
+          <p className="text-muted-foreground">Find and connect with athletes, coaches, and recruiters</p>
         </div>
 
-        {/* Search Bar */}
-        <div className="mb-6">
-          <div className="relative max-w-md">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <input
-              type="search"
-              placeholder="Search by name, school, or position..."
-              value={nameFilter}
-              onChange={(e) => setNameFilter(e.target.value)}
-              className="w-full pl-9 pr-4 py-3 text-sm border border-border/50 bg-background/80 backdrop-blur-sm text-foreground rounded-lg focus:outline-none focus:ring-2 focus:ring-[#01ae79] focus:border-[#01ae79] transition-all"
-            />
-          </div>
-        </div>
-
-        {/* Tabs - Restored shadcn implementation */}
-        <Tabs value={activeTab} onValueChange={handleTabChange} className="mb-6">
-          <TabsList className={`grid w-full max-w-lg bg-[#01ae79]/5 dark:bg-[#01ae79]/10 p-1 rounded-xl`} style={{ gridTemplateColumns: `repeat(${availableTabs.length}, 1fr)` }}>
-            {availableTabs.map(tab => (
-              <TabsTrigger 
-                key={tab.value} 
-                value={tab.value} 
-                className="flex items-center gap-1 md:gap-2 text-xs md:text-sm data-[state=active]:bg-[#01ae79] data-[state=active]:text-white cursor-pointer hover:bg-[#01ae79]/10 dark:hover:bg-[#01ae79]/20 transition-colors"
-              >
-                {tab.icon}
-                <span className="hidden sm:inline">{tab.label}</span>
-                <span className="sm:hidden">{tab.label.slice(0, 4)}</span>
-                ({counts[tab.value as keyof typeof counts]})
-              </TabsTrigger>
-            ))}
-          </TabsList>
-
-          {/* Filters */}
-          <div className="border border-border/50 rounded-xl shadow-sm bg-card/50 backdrop-blur-sm p-4 md:p-6 mb-6 mt-6">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-base md:text-lg font-semibold text-foreground flex items-center gap-2">
-                <Filter className="h-4 w-4 md:h-5 md:w-5" />
-                Filters
-              </h3>
-              <div className="flex gap-2">
-                <Button variant="outline" size="sm" onClick={clearFilters} className="text-xs md:text-sm text-[#01ae79] border-[#01ae79]/30 hover:bg-[#01ae79]/5 dark:border-[#01ae79]/40 dark:hover:bg-[#01ae79]/10">
-                  Clear
-                </Button>
-                <Button 
-                  onClick={handleSearch} 
-                  size="sm"
-                  className="text-xs md:text-sm bg-[#01ae79] hover:bg-[#01ae79]/90 text-white"
+        {/* Tabs */}
+        <Tabs value={activeTab} onValueChange={(value: string) => setActiveTab(value as TabValue)} className="space-y-6">
+          <div className="relative">
+            <TabsList className="inline-flex h-12 items-center justify-center rounded-xl bg-muted/30 p-1 text-muted-foreground w-full max-w-2xl mx-auto backdrop-blur-sm border border-border/50">
+              {availableTabs.map((tab) => (
+                <TabsTrigger
+                  key={tab.value}
+                  value={tab.value}
+                  className="group relative inline-flex items-center justify-center whitespace-nowrap rounded-lg px-4 py-2.5 text-[10px] md:text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm hover:bg-muted/50 data-[state=active]:hover:bg-background min-w-0 flex-1"
                 >
-                  <Search className="h-3 w-3 md:h-4 md:w-4 mr-1" />
+                  <div className="flex items-center gap-2">
+                    <div className="relative">
+                      {tab.icon}
+                    </div>
+                    <span className="transition-colors group-data-[state=active]:text-[#01ae79] group-data-[state=active]:font-semibold">
+                      {tab.label}
+                    </span>
+                  </div>
+                  <div className="absolute bottom-0 left-1/2 h-0.5 w-0 bg-[#01ae79] transition-all duration-300 group-data-[state=active]:w-8 group-data-[state=active]:-translate-x-1/2 rounded-full"></div>
+                </TabsTrigger>
+              ))}
+            </TabsList>
+          </div>
+
+          {/* Content */}
+          <TabsContent value={activeTab} className="mt-6 min-h-[400px]">
+            {/* Filters */}
+            <div className="flex flex-col gap-6">
+              <div className="flex flex-col md:flex-row gap-4">
+                <div className="flex-1 min-w-[200px]">
+                  <label className="text-sm font-medium mb-2 block">Sports</label>
+                  <MultipleSelector
+                    value={selectedSports}
+                    onChange={setSelectedSports}
+                    defaultOptions={sportsOptions}
+                    placeholder="Select sports..."
+                    className="w-full"
+                  />
+                </div>
+
+                {activeTab !== 'athletes' && (
+                  <div className="flex-1 min-w-[200px]">
+                    <label className="text-sm font-medium mb-2 block">Divisions</label>
+                    <MultipleSelector
+                      value={selectedDivisions}
+                      onChange={setSelectedDivisions}
+                      defaultOptions={divisionsOptions}
+                      placeholder="Select divisions..."
+                      className="w-full"
+                    />
+                  </div>
+                )}
+
+                <div className="flex-1 min-w-[200px]">
+                  <label className="text-sm font-medium mb-2 block">States</label>
+                  <MultipleSelector
+                    value={selectedStates}
+                    onChange={setSelectedStates}
+                    defaultOptions={statesOptions}
+                    placeholder="Select states..."
+                    className="w-full"
+                  />
+                </div>
+
+                {activeTab === 'athletes' && (
+                  <div className="flex-1 min-w-[200px]">
+                    <label className="text-sm font-medium mb-2 block">Graduation</label>
+                    <MultipleSelector
+                      value={selectedYears}
+                      onChange={setSelectedYears}
+                      defaultOptions={graduationYearsOptions}
+                      placeholder="Select years..."
+                      className="w-full"
+                    />
+                  </div>
+                )}
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex items-center justify-end gap-4">
+                <Button
+                  variant="outline"
+                  onClick={clearFilters}
+                  className="text-sm"
+                >
+                  Clear Filters
+                </Button>
+                <Button
+                  onClick={handleDiscover}
+                  className="bg-[#01ae79] hover:bg-[#01ae79]/90 text-white text-sm min-w-[120px]"
+                >
+                  <Search className="w-4 h-4 mr-2" />
                   Discover
                 </Button>
               </div>
             </div>
-            
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 md:gap-4">
-              {/* Sport Filter */}
-              <div>
-                <label className="text-xs md:text-sm font-medium mb-2 block text-muted-foreground">Sport</label>
-                <Select value={filters.sport} onValueChange={(value) => setFilters(prev => ({ ...prev, sport: value }))}>
-                  <SelectTrigger className="bg-background/50 border-border/50 h-9">
-                    <SelectValue placeholder="All Sports" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Sports</SelectItem>
-                    {getSafeSpotsList().map(sport => (
-                      <SelectItem key={sport} value={sport}>{sport}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
 
-              {/* Conditional filters based on active tab */}
-              {activeTab === "athletes" && (
-                <div>
-                  <label className="text-xs md:text-sm font-medium mb-2 block text-muted-foreground">Graduation Year</label>
-                  <Select value={filters.graduationYear} onValueChange={(value) => setFilters(prev => ({ ...prev, graduationYear: value }))}>
-                    <SelectTrigger className="bg-background/50 border-border/50 h-9">
-                      <SelectValue placeholder="All Years" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Years</SelectItem>
-                      {getSafeGraduationYears().map(year => (
-                        <SelectItem key={year} value={year.toString()}>{year}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+            {/* Results */}
+            <div className="mt-8">
+              {filteredUsers.length === 0 ? (
+                <div className="text-center py-12">
+                  <div className="w-24 h-24 bg-gradient-to-br from-muted to-muted/60 rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm">
+                    <Users className="w-12 h-12 text-muted-foreground" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-foreground mb-2">
+                    {appliedFilters.sports.length > 0 || appliedFilters.divisions.length > 0 || appliedFilters.states.length > 0 || appliedFilters.years.length > 0
+                      ? 'No results found'
+                      : 'No users found'}
+                  </h3>
+                  <p className="text-muted-foreground max-w-md mx-auto">
+                    {appliedFilters.sports.length > 0 || appliedFilters.divisions.length > 0 || appliedFilters.states.length > 0 || appliedFilters.years.length > 0
+                      ? 'Try adjusting your filters'
+                      : 'Try changing your search criteria'}
+                  </p>
                 </div>
-              )}
+              ) : (
+                <>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {filteredUsers
+                      .slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
+                      .map((user) => (
+                      <Link href={`/profile/${user.id}`} key={user.id}>
+                        <Card className="group transition-all duration-200 hover:shadow-xl hover:shadow-[#01ae79]/15 border border-border hover:border-[#01ae79]/40 dark:hover:border-[#01ae79]/50 overflow-hidden">
+                          <CardContent className="p-3 sm:p-4 md:p-5">
+                            {/* Header Section */}
+                            <div className="flex items-start justify-between mb-3 md:mb-4">
+                              <div className="flex items-start gap-2 md:gap-3 lg:gap-4 flex-1 min-w-0">
+                                <div className="relative flex-shrink-0">
+                                  <Avatar className="w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 ring-2 ring-[#01ae79]/20 group-hover:ring-[#01ae79]/50 transition-all duration-200">
+                                    <AvatarImage 
+                                      src={getProfileImageUrl(user.profilePicture)} 
+                                      alt={user.name}
+                                      className="object-cover"
+                                    />
+                                    <AvatarFallback className="text-xs sm:text-sm font-semibold bg-gradient-to-br from-[#01ae79]/10 to-[#01ae79]/20 text-[#01ae79]">
+                                      {user.name.split(' ').map(n => n[0]).join('').toUpperCase()}
+                                    </AvatarFallback>
+                                  </Avatar>
+                                  {user.verified && (
+                                    <div className="absolute -top-1 -right-1 w-4 h-4 sm:w-5 sm:h-5 bg-green-500 rounded-full flex items-center justify-center shadow-md">
+                                      <Shield className="w-2 h-2 sm:w-3 sm:h-3 text-white" />
+                                    </div>
+                                  )}
+                                </div>
 
-              {(activeTab === "coaches" || activeTab === "recruiters" || activeTab === "all") && (
-                <div>
-                  <label className="text-xs md:text-sm font-medium mb-2 block text-muted-foreground">Division</label>
-                  <Select value={filters.division} onValueChange={(value) => setFilters(prev => ({ ...prev, division: value }))}>
-                    <SelectTrigger className="bg-background/50 border-border/50 h-9">
-                      <SelectValue placeholder="All Divisions" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Divisions</SelectItem>
-                      {getSafeDivisions().map(division => (
-                        <SelectItem key={division} value={division}>{division}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
-
-              {/* State Filter */}
-              <div>
-                <label className="text-xs md:text-sm font-medium mb-2 block text-muted-foreground">State</label>
-                <Select value={filters.state} onValueChange={(value) => setFilters(prev => ({ ...prev, state: value }))}>
-                  <SelectTrigger className="bg-background/50 border-border/50 h-9">
-                    <SelectValue placeholder="All States" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All States</SelectItem>
-                    {getSafeStates().map(state => (
-                      <SelectItem key={state} value={state}>{state}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-          </div>
-
-          {/* Results - Single TabsContent that shows content based on activeTab */}
-          <TabsContent value={activeTab} className="mt-0">
-            {!hasSearched ? (
-              <div className="text-center py-12 md:py-16">
-                <div className="w-16 h-16 md:w-24 md:h-24 rounded-full bg-[#01ae79]/10 dark:bg-[#01ae79]/20 flex items-center justify-center mx-auto mb-4 md:mb-6">
-                  <Search className="h-8 w-8 md:h-12 md:w-12 text-[#01ae79] dark:text-[#01ae79]" />
-                </div>
-                <h3 className="text-lg md:text-xl font-semibold text-foreground mb-2">
-                  Ready to discover amazing talent?
-                </h3>
-                <p className="text-muted-foreground text-sm md:text-base max-w-md mx-auto">
-                  {effectiveRole === 'athlete' 
-                    ? "Click discover to find coaches and recruiters who can help you reach the next level, or use filters to narrow your search."
-                    : "Click discover to see all available users, or use filters to find the perfect matches for your program."
-                  }
-                </p>
-              </div>
-            ) : filteredUsers.length > 0 ? (
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
-                {filteredUsers.map(user => (
-                  <Link
-                    key={user.id}
-                    href={`/profile/${user.id}`}
-                    className="group block"
-                  >
-                    <div className="flex flex-col p-4 rounded-lg border border-border/50 bg-card/50 backdrop-blur-sm hover:shadow-md hover:border-[#01ae79]/30 dark:hover:border-[#01ae79]/40 transition-all duration-200 hover:bg-card/80 cursor-pointer">
-                      {/* User Header */}
-                      <div className="flex items-center gap-3 mb-3">
-                        <div className="relative flex-shrink-0">
-                          <Image
-                            src={user.profilePicture}
-                            alt={user.name}
-                            width={48}
-                            height={48}
-                            className="rounded-full object-cover ring-2 ring-[#01ae79]/20 dark:ring-[#01ae79]/30 group-hover:ring-[#01ae79]/40 dark:group-hover:ring-[#01ae79]/50 transition-colors"
-                          />
-                          {user.verified && (
-                            <div className="absolute -top-1 -right-1 bg-[#01ae79] rounded-full p-0.5">
-                              <Award className="h-2.5 w-2.5 text-white" />
+                                <div className="flex-1 min-w-0 space-y-2">
+                                  <h3 className="font-semibold text-sm md:text-base text-foreground leading-tight truncate">
+                                    {user.name}
+                                  </h3>
+                                  <div className="flex items-center gap-2 flex-wrap pt-1.5">
+                                    {getRoleBadge(user)}
+                                  </div>
+                                  <p className="text-xs md:text-sm font-medium text-[#01ae79] truncate">
+                                    {user.role === 'athlete' ? user.position : user.school}
+                                  </p>
+                                </div>
+                              </div>
                             </div>
-                          )}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <h3 className="font-semibold text-sm text-foreground truncate">{user.name}</h3>
-                          <Badge className={`text-xs px-1.5 py-0.5 flex items-center gap-1 w-fit ${getRoleBadgeColor(user.role)}`}>
-                            {getRoleIcon(user.role)}
-                            {formatRole(user.role)}
-                          </Badge>
-                        </div>
-                      </div>
 
-                      {/* User Details */}
-                      <div className="space-y-2 flex-grow">
-                        <div className="flex items-center gap-1">
-                          <span className="font-medium text-[#01ae79] dark:text-[#01ae79] text-sm">{user.sport}</span>
-                          {user.role === 'athlete' && (
-                            <>
-                              <span className="text-muted-foreground text-xs">•</span>
-                              <span className="text-xs text-muted-foreground truncate">{user.position}</span>
-                            </>
-                          )}
-                        </div>
-
-                        <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                          <MapPin className="h-3 w-3 flex-shrink-0" />
-                          <span className="truncate">{user.location}</span>
-                        </div>
-
-                        {user.role === 'athlete' && (
-                          <div className="space-y-1 text-xs">
-                            <div className="flex items-center gap-1">
-                              <GraduationCap className="h-3 w-3 text-muted-foreground" />
-                              <span className="text-muted-foreground">Class of {user.graduationYear}</span>
+                            {/* Info Section */}
+                            <div className="space-y-2 md:space-y-3 mb-3 md:mb-4">
+                              <div className="flex items-center gap-1.5 sm:gap-2 text-xs md:text-sm text-muted-foreground">
+                                <MapPin className="w-3 h-3 md:w-4 md:h-4 flex-shrink-0" />
+                                <span className="truncate">{user.location}</span>
+                              </div>
+                              {user.role === 'athlete' ? (
+                                <p className="text-xs md:text-sm text-muted-foreground truncate font-medium">
+                                  Class of {user.graduationYear}
+                                </p>
+                              ) : (
+                                <p className="text-xs md:text-sm text-muted-foreground truncate font-medium">
+                                  {user.division}
+                                </p>
+                              )}
                             </div>
-                            <div className="font-medium">GPA: {user.gpa}</div>
-                          </div>
-                        )}
 
-                        {(user.role === 'coach' || user.role === 'recruiter') && (
-                          <div className="text-xs space-y-1">
-                            <div className="font-medium text-foreground">{user.school}</div>
-                            <div className="text-muted-foreground">{user.division}</div>
-                          </div>
-                        )}
-                      </div>
+                            {/* Connect Button */}
+                            <div className="pt-3 md:pt-4 border-t border-border/50">
+                              <Button
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  // Handle connect action
+                                }}
+                                disabled={user.isConnected}
+                                className={cn(
+                                  "w-full h-8 sm:h-8 md:h-9 text-xs sm:text-sm font-medium transition-all duration-200 hover:scale-[1.02]",
+                                  user.isConnected
+                                    ? "bg-muted text-muted-foreground cursor-not-allowed"
+                                    : "bg-[#01ae79] hover:bg-[#01ae79]/90 text-white"
+                                )}
+                              >
+                                {user.isConnected ? (
+                                  <>
+                                    <UserCheck size={14} className="mr-1.5 sm:mr-2" />
+                                    Connected
+                                  </>
+                                ) : (
+                                  <>
+                                    <Send size={14} className="mr-1.5 sm:mr-2" />
+                                    Connect
+                                  </>
+                                )}
+                              </Button>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      </Link>
+                    ))}
+                  </div>
 
-                      {/* Action Button */}
-                      <div className="pt-3 mt-3 border-t border-border/30">
-                        {user.isConnected ? (
-                          <Button 
-                            size="sm" 
-                            className="w-full h-8 text-xs bg-[#01ae79] hover:bg-[#01ae79]/90 text-white"
-                            onClick={(e) => {
-                              e.preventDefault();
-                              e.stopPropagation();
-                              // Handle message action
-                            }}
-                          >
-                            <MessageCircle className="h-3 w-3 mr-1" />
-                            Message
-                          </Button>
-                        ) : (
-                          <Button 
-                            size="sm" 
-                            className="w-full h-8 text-xs bg-[#01ae79] hover:bg-[#01ae79]/90 text-white"
-                            onClick={(e) => {
-                              e.preventDefault();
-                              e.stopPropagation();
-                              // Handle connect action
-                            }}
-                          >
-                            <Heart className="h-3 w-3 mr-1" />
-                            Connect
-                          </Button>
-                        )}
+                  {/* Pagination */}
+                  {filteredUsers.length > itemsPerPage && (
+                    <div className="mt-8 flex justify-center gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                        disabled={currentPage === 1}
+                        className="h-8 w-8 p-0"
+                      >
+                        <ChevronLeft className="h-4 w-4" />
+                      </Button>
+                      <div className="flex items-center gap-2 text-sm">
+                        <span className="text-muted-foreground">Page</span>
+                        <span className="font-medium">{currentPage}</span>
+                        <span className="text-muted-foreground">of</span>
+                        <span className="font-medium">{Math.ceil(filteredUsers.length / itemsPerPage)}</span>
                       </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setCurrentPage(prev => Math.min(Math.ceil(filteredUsers.length / itemsPerPage), prev + 1))}
+                        disabled={currentPage === Math.ceil(filteredUsers.length / itemsPerPage)}
+                        className="h-8 w-8 p-0"
+                      >
+                        <ChevronRight className="h-4 w-4" />
+                      </Button>
                     </div>
-                  </Link>
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-12 md:py-16">
-                <div className="w-16 h-16 md:w-24 md:h-24 rounded-full bg-[#01ae79]/10 dark:bg-[#01ae79]/20 flex items-center justify-center mx-auto mb-4 md:mb-6">
-                  {activeTab === 'athletes' ? <User className="h-8 w-8 md:h-12 md:w-12 text-[#01ae79] dark:text-[#01ae79]" /> :
-                   activeTab === 'coaches' ? <Users className="h-8 w-8 md:h-12 md:w-12 text-[#01ae79] dark:text-[#01ae79]" /> :
-                   activeTab === 'recruiters' ? <Target className="h-8 w-8 md:h-12 md:w-12 text-[#01ae79] dark:text-[#01ae79]" /> :
-                   <Users className="h-8 w-8 md:h-12 md:w-12 text-[#01ae79] dark:text-[#01ae79]" />}
-                </div>
-                <h3 className="text-lg md:text-xl font-semibold text-foreground mb-2">
-                  No {activeTab === 'all' ? 'results' : activeTab} found
-                </h3>
-                <p className="text-muted-foreground text-sm md:text-base max-w-md mx-auto">
-                  Try adjusting your filters or search criteria to find more results.
-                </p>
-                <Button 
-                  variant="outline" 
-                  onClick={clearFilters}
-                  className="mt-4 border-[#01ae79]/30 hover:bg-[#01ae79]/5 dark:border-[#01ae79]/40 dark:hover:bg-[#01ae79]/10"
-                >
-                  Clear All Filters & Start Over
-                </Button>
-              </div>
-            )}
+                  )}
+                </>
+              )}
+            </div>
           </TabsContent>
         </Tabs>
       </div>
