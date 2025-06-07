@@ -77,10 +77,10 @@ export function ProfileHeader({
   };
 
   const handleConnectionAction = () => {
-    if (connectionStatus === "pending") {
-      // Show withdrawal confirmation dialog
+    if (connectionStatus === "pending" && connectionDirection === "outgoing") {
+      // Show withdrawal confirmation dialog only for outgoing requests
       setShowWithdrawDialog(true);
-    } else {
+    } else if (connectionStatus === "none") {
       onConnect?.();
     }
   };
@@ -124,7 +124,7 @@ export function ProfileHeader({
               ) : (
                 <>
                   <CheckCircle className="w-4 h-4 mr-1" />
-                  Accept
+                  Accept Connection
                 </>
               )}
             </Button>
@@ -140,30 +140,29 @@ export function ProfileHeader({
             </Button>
           </div>
         );
-      } else {
-        // Show withdraw button for outgoing requests
-        return (
-          <Button 
-            size="sm" 
-            variant="outline"
-            onClick={handleConnectionAction}
-            disabled={isConnecting}
-            className="text-orange-600 border-orange-600 hover:bg-orange-50"
-          >
-            {isConnecting ? (
-              <>
-                <Clock className="w-4 h-4 mr-1 animate-spin" />
-                Withdrawing...
-              </>
-            ) : (
-              <>
-                <Clock className="w-4 h-4 mr-1" />
-                Request Pending
-              </>
-            )}
-          </Button>
-        );
       }
+      // Show withdraw button for outgoing requests
+      return (
+        <Button 
+          size="sm" 
+          variant="outline"
+          onClick={handleConnectionAction}
+          disabled={isConnecting}
+          className="text-orange-600 border-orange-600 hover:bg-orange-50"
+        >
+          {isConnecting ? (
+            <>
+              <Clock className="w-4 h-4 mr-1 animate-spin" />
+              Withdrawing...
+            </>
+          ) : (
+            <>
+              <Clock className="w-4 h-4 mr-1" />
+              Connection Pending
+            </>
+          )}
+        </Button>
+      );
     }
 
     // Default connect button

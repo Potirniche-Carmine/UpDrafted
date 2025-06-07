@@ -8,6 +8,7 @@ interface RecruiterProfileWrapperProps {
   data: RecruiterProfileData;
   isOwnProfile?: boolean;
   connectionStatus?: "none" | "pending" | "connected";
+  connectionDirection?: "incoming" | "outgoing" | null;
   hasPendingVerification?: boolean;
   pendingSubmittedAt?: string;
   hasRejectedVerification?: boolean;
@@ -19,16 +20,15 @@ export function RecruiterProfileWrapper({
   data, 
   isOwnProfile = false,
   connectionStatus,
+  connectionDirection,
   hasPendingVerification,
   pendingSubmittedAt,
   hasRejectedVerification,
   rejectionReason,
   rejectedAt
 }: RecruiterProfileWrapperProps) {
-  const handleShowInterest = () => {
-    console.log('Show interest in recruiter clicked');
-    // TODO: Implement show interest logic
-    // This could make an API call to express interest in getting recruited
+  const handleConnect = () => {
+    console.log('Connect clicked');
   };
 
   const handleShare = () => {
@@ -39,7 +39,7 @@ export function RecruiterProfileWrapper({
     <RecruiterProfile
       data={data}
       isOwnProfile={isOwnProfile}
-      onConnect={handleShowInterest}
+      onConnect={handleConnect}
       onShare={handleShare}
       hasPendingVerification={hasPendingVerification}
       pendingSubmittedAt={pendingSubmittedAt}
@@ -47,6 +47,7 @@ export function RecruiterProfileWrapper({
       rejectionReason={rejectionReason}
       rejectedAt={rejectedAt}
       connectionStatus={connectionStatus}
+      connectionDirection={connectionDirection}
     />
   );
 } 

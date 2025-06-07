@@ -125,7 +125,8 @@ export function CoachProfile({
   onShare,
   hasPendingVerification,
   pendingSubmittedAt,
-  connectionStatus = "none"
+  connectionStatus = "none",
+  connectionDirection
 }: CoachProfileProps) {
   const [profileData, setProfileData] = useState<CoachProfileData>(data);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
@@ -458,8 +459,10 @@ export function CoachProfile({
       {/* Header Actions */}
       <ProfileHeader
         isOwnProfile={isOwnProfile}
-        onConnect={canConnect ? handleConnectClick : undefined}
+        onConnect={handleConnectClick}
         onWithdrawConnection={handleWithdrawConnection}
+        onAcceptConnection={handleConnectionConfirm}
+        onDeclineConnection={handleWithdrawConnection}
         onReport={() => {}}
         onShare={onShare}
         connectLabel="Connect with Coach"
@@ -467,6 +470,7 @@ export function CoachProfile({
         profileType="coach"
         reportedUserId={profileData.userId}
         connectionStatus={currentConnectionStatus}
+        connectionDirection={connectionDirection}
         isConnecting={isConnecting}
         hasUnsavedChanges={hasUnsavedChanges}
         isSaving={isSaving}

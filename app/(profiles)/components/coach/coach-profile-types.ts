@@ -52,4 +52,5 @@ export interface CoachProfileProps {
   hasPendingVerification?: boolean;
   pendingSubmittedAt?: string;
   connectionStatus?: "none" | "pending" | "connected";
+  connectionDirection?: "incoming" | "outgoing" | null;
 } 

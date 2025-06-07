@@ -75,6 +75,7 @@ interface ProfileApiResponse {
   canEdit: boolean;
   currentUserRole: string;
   connectionStatus?: "none" | "pending" | "connected";
+  connectionDirection?: "incoming" | "outgoing" | null;
   hasPendingVerification?: boolean;
   pendingSubmittedAt?: string;
   hasRejectedVerification?: boolean;
@@ -399,6 +400,7 @@ function ProfileContent({ profileId }: { profileId: string }) {
           data={profileData.profile as AthleteProfileData}
           isOwnProfile={profileData.isOwnProfile}
           connectionStatus={profileData.connectionStatus}
+          connectionDirection={profileData.connectionDirection}
           hasPendingVerification={profileData.hasPendingVerification}
           pendingSubmittedAt={profileData.pendingSubmittedAt}
         />
@@ -409,6 +411,7 @@ function ProfileContent({ profileId }: { profileId: string }) {
           data={profileData.profile as CoachProfileData}
           isOwnProfile={profileData.isOwnProfile}
           connectionStatus={profileData.connectionStatus}
+          connectionDirection={profileData.connectionDirection}
           hasPendingVerification={profileData.hasPendingVerification}
           pendingSubmittedAt={profileData.pendingSubmittedAt}
         />
@@ -419,6 +422,7 @@ function ProfileContent({ profileId }: { profileId: string }) {
           data={profileData.profile as RecruitingProfileData}
           isOwnProfile={profileData.isOwnProfile}
           connectionStatus={profileData.connectionStatus}
+          connectionDirection={profileData.connectionDirection}
           hasPendingVerification={profileData.hasPendingVerification}
           pendingSubmittedAt={profileData.pendingSubmittedAt}
           hasRejectedVerification={profileData.hasRejectedVerification}

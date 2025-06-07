@@ -324,7 +324,8 @@ export function RecruiterProfile({
   hasRejectedVerification,
   rejectionReason,
   rejectedAt,
-  connectionStatus = "none"
+  connectionStatus = "none",
+  connectionDirection
 }: RecruiterProfileProps) {
   const [profileData, setProfileData] = useState<RecruiterProfileData>(data);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
@@ -646,15 +647,18 @@ export function RecruiterProfile({
       {/* Header Actions */}
       <ProfileHeader
         isOwnProfile={isOwnProfile}
-        onConnect={canConnect ? handleConnectClick : undefined}
+        onConnect={handleConnectClick}
         onWithdrawConnection={handleWithdrawConnection}
+        onAcceptConnection={handleConnectionConfirm}
+        onDeclineConnection={handleWithdrawConnection}
         onReport={handleReportProfile}
         onShare={onShare}
-        connectLabel="Get Recruited"
+        connectLabel="Connect with Recruiter"
         profileName={profileData.fullName}
         profileType="recruiter"
         reportedUserId={profileData.userId}
         connectionStatus={currentConnectionStatus}
+        connectionDirection={connectionDirection}
         isConnecting={isConnecting}
         hasUnsavedChanges={hasUnsavedChanges}
         isSaving={isSaving}
