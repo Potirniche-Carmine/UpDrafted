@@ -14,6 +14,7 @@ import type { Option as FilterOption } from '@/components/ui/multi-select';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
+import { sanitizeText } from '@/utils/sanitization';
 
 // Safe getters with fallbacks
 const getSafeSpotsList = () => {
@@ -104,7 +105,7 @@ const getAvailableTabs = (userRole: string) => {
 function SearchPageContent() {
   const searchParams = useSearchParams();
   const { effectiveRole } = useRoleView();
-  const [activeTab, setActiveTab] = useState<TabValue>(searchParams?.get('tab') as TabValue || 'athletes');
+  const [activeTab, setActiveTab] = useState<TabValue>(searchParams?.get('tab') as TabValue || 'all');
   const [selectedSports, setSelectedSports] = useState<FilterOption[]>([]);
   const [selectedDivisions, setSelectedDivisions] = useState<FilterOption[]>([]);
   const [selectedStates, setSelectedStates] = useState<FilterOption[]>([]);
@@ -114,14 +115,13 @@ function SearchPageContent() {
   const [error, setError] = useState<string | null>(null);
   const [results, setResults] = useState<DiscoverResponse | null>(null);
   const [appliedFilters, setAppliedFilters] = useState({
-    tab: 'athletes' as TabValue,
+    tab: 'all' as TabValue,
     sports: [] as FilterOption[],
     divisions: [] as FilterOption[],
     states: [] as FilterOption[],
     years: [] as FilterOption[]
   });
   const [hasSearched, setHasSearched] = useState(false);
-  const itemsPerPage = 20;
   const resultsPerQuery = 40;
 
   const availableTabs = useMemo(() => 
@@ -149,6 +149,17 @@ function SearchPageContent() {
     }))
   , []);
 
+  // Set initial tab without triggering search
+  useEffect(() => {
+    // Just set applied filters with the active tab
+    setAppliedFilters(prev => ({
+      ...prev,
+      tab: activeTab
+    }));
+    // We explicitly do NOT set hasSearched to true here
+    // so that the user must click the Discover button to initiate search
+  }, [activeTab]); // Include activeTab as a dependency to update when it changes
+
   // Load discover results
   const loadResults = useCallback(async () => {
     try {
@@ -168,39 +179,51 @@ function SearchPageContent() {
       // Calculate the page number for the API call (2 pages at a time)
       const apiPage = Math.ceil(currentPage / 2);
       
-      // Build query parameters
+      // Build query parameters - sanitize all inputs before sending to API
       const params = new URLSearchParams({
         page: apiPage.toString(),
         pageSize: resultsPerQuery.toString()
       });
 
-      // Add filters
+      // Add filters - sanitize all filter values
       if (appliedFilters.tab !== 'all') {
         params.append('role', appliedFilters.tab === 'athletes' ? 'athlete' : 
                             appliedFilters.tab === 'coaches' ? 'coach' : 'recruiter');
       }
 
       if (appliedFilters.sports.length > 0) {
-        appliedFilters.sports.forEach(sport => params.append('sports', sport.value));
+        appliedFilters.sports.forEach(sport => 
+          params.append('sports', sanitizeText(sport.value))
+        );
       }
 
       if (appliedFilters.divisions.length > 0) {
-        appliedFilters.divisions.forEach(div => params.append('divisions', div.value));
+        appliedFilters.divisions.forEach(div => 
+          params.append('divisions', sanitizeText(div.value))
+        );
       }
 
       if (appliedFilters.states.length > 0) {
-        appliedFilters.states.forEach(state => params.append('states', state.value));
+        appliedFilters.states.forEach(state => 
+          params.append('states', sanitizeText(state.value))
+        );
       }
 
       if (appliedFilters.years.length > 0) {
-        appliedFilters.years.forEach(year => params.append('graduationYears', year.value));
+        appliedFilters.years.forEach(year => 
+          params.append('graduationYears', sanitizeText(year.value))
+        );
       }
 
+      // SECURITY: Add CSRF protection header if you have CSRF tokens
       const response = await fetch(`/api/discover?${params.toString()}`, {
         headers: {
           'Authorization': `Bearer ${token}`,
-          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
         },
+        // Add proper security headers
+        credentials: 'same-origin'
       });
 
       if (!response.ok) {
@@ -208,30 +231,41 @@ function SearchPageContent() {
         throw new Error(errorData.error || 'Failed to load discover results');
       }
 
-      const data = await response.json();
+      const data = await response.json() as DiscoverResponse;
       
-      // Calculate the actual results for the current page
-      const startIdx = (currentPage % 2 === 0 ? itemsPerPage : 0);
-      const pageResults = {
+      // Sanitize all incoming data to prevent XSS attacks
+      const sanitizedResults = data.results.map(user => ({
+        ...user,
+        fullName: sanitizeText(user.fullName),
+        organizationName: sanitizeText(user.organizationName || ''),
+        city: sanitizeText(user.city || ''),
+        state: sanitizeText(user.state || ''),
+        sport: sanitizeText(user.sport || ''),
+        title: user.title ? sanitizeText(user.title) : undefined,
+        division: user.division ? sanitizeText(user.division) : undefined,
+        educationLevel: user.educationLevel ? sanitizeText(user.educationLevel) : undefined,
+      }));
+      
+      setResults({
         ...data,
-        results: data.results.slice(startIdx, startIdx + itemsPerPage)
-      };
-      
-      setResults(pageResults);
+        results: sanitizedResults
+      });
+      setHasSearched(true);
+
     } catch (error) {
       console.error('Error loading discover results:', error);
       setError(error instanceof Error ? error.message : 'Failed to load discover results');
     } finally {
       setLoading(false);
     }
-  }, [currentPage, appliedFilters, itemsPerPage]);
+  }, [currentPage, appliedFilters, resultsPerQuery]);
 
   // Load results only when page changes after initial search
   useEffect(() => {
     if (hasSearched) {
       loadResults();
     }
-  }, [currentPage, appliedFilters, loadResults, hasSearched]);
+  }, [hasSearched, loadResults]);  // Only depend on hasSearched and loadResults
 
   const clearFilters = () => {
     setSelectedSports([]);
@@ -245,7 +279,8 @@ function SearchPageContent() {
 
   const handleDiscover = () => {
     setCurrentPage(1); // Reset to first page
-    setHasSearched(true); // Mark that we've performed a search
+    
+    // Update applied filters
     setAppliedFilters({
       tab: activeTab,
       sports: selectedSports,
@@ -253,21 +288,22 @@ function SearchPageContent() {
       states: selectedStates,
       years: selectedYears
     });
+    
+    // Set hasSearched to true to trigger the search
+    setHasSearched(true);
   };
 
-  // Process profile image URL to ensure it works with R2/CloudFlare
+  // Display profile image with fallback for broken images
   const getProfileImageUrl = (profileImage: string | null) => {
-    if (!profileImage) {
-      return undefined;
-    }
+    if (!profileImage) return null;
     
-    // If it's already a full URL, return as is
+    // Return the image URL directly if it's already a full URL
     if (profileImage.startsWith('http')) {
       return profileImage;
     }
     
-    // Construct the full R2 URL using environment variable or fallback to known R2 domain
-    const baseUrl = process.env.NEXT_PUBLIC_R2_PUBLIC_URL || 'https://pub-19c0754937db426497ca014f0e2a297c.r2.dev';
+    // If image path is just a relative path, use the environment variable
+    const baseUrl = process.env.NEXT_PUBLIC_R2_PUBLIC_URL || 'https://r2-up-drafts.cdn.updrafted.app';
     return `${baseUrl}/${profileImage}`;
   };
 
@@ -333,9 +369,10 @@ function SearchPageContent() {
   };
 
   // Handle connect button click
-  const handleConnect = async (userId: string, e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
+  const handleConnect = async (userId: string, event: React.MouseEvent) => {
+    // Prevent default link behavior and event propagation
+    event.preventDefault();
+    event.stopPropagation();
 
     try {
       // Get auth token
@@ -348,6 +385,9 @@ function SearchPageContent() {
       };
       const token = await windowWithClerk.Clerk?.session?.getToken();
 
+      // Sanitize userId before sending to API
+      const sanitizedUserId = sanitizeText(userId);
+      
       const response = await fetch('/api/connections', {
         method: 'POST',
         headers: {
@@ -355,7 +395,8 @@ function SearchPageContent() {
           'Authorization': `Bearer ${token}`,
           'Accept': 'application/json',
         },
-        body: JSON.stringify({ targetUserId: userId }),
+        body: JSON.stringify({ targetUserId: sanitizedUserId }),
+        credentials: 'same-origin'
       });
 
       if (!response.ok) {
@@ -391,6 +432,100 @@ function SearchPageContent() {
       }, 3000);
     }
   };
+
+  // Create a new function to use as the direct handler
+  const createConnectHandler = (userId: string) => (e: React.MouseEvent) => {
+    handleConnect(userId, e);
+  };
+
+  const renderUserCard = (user: DiscoverUser) => (
+    <Card className="group transition-all duration-200 hover:shadow-xl hover:shadow-[#01ae79]/15 border border-border hover:border-[#01ae79]/40 dark:hover:border-[#01ae79]/50 overflow-hidden">
+      <CardContent className="p-3 sm:p-4 md:p-5">
+        {/* Header Section */}
+        <div className="flex items-start justify-between mb-3 md:mb-4">
+          <div className="flex items-start gap-2 md:gap-3 lg:gap-4 flex-1 min-w-0">
+            <div className="relative flex-shrink-0">
+              <Avatar className="w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 ring-2 ring-[#01ae79]/20 group-hover:ring-[#01ae79]/50 transition-all duration-200">
+                <AvatarImage 
+                  src={getProfileImageUrl(user.profileImage) || ''} 
+                  alt={user.fullName || 'User'}
+                  className="object-cover"
+                />
+                <AvatarFallback className="text-xs sm:text-sm font-semibold bg-gradient-to-br from-[#01ae79]/10 to-[#01ae79]/20 text-[#01ae79]">
+                  {user.fullName ? user.fullName.split(' ').map(n => n[0]).join('').toUpperCase() : 'U'}
+                </AvatarFallback>
+              </Avatar>
+              {user.isVerified && (
+                <div className="absolute -top-1 -right-1 w-4 h-4 sm:w-5 sm:h-5 bg-green-500 rounded-full flex items-center justify-center shadow-md">
+                  <Shield className="w-2 h-2 sm:w-3 sm:h-3 text-white" />
+                </div>
+              )}
+            </div>
+
+            <div className="flex-1 min-w-0 space-y-2">
+              <h3 className="font-semibold text-sm md:text-base text-foreground leading-tight truncate">
+                {user.fullName}
+              </h3>
+              <div className="flex items-center gap-2 flex-wrap pt-1.5">
+                {getRoleBadge(user)}
+              </div>
+              <p className="text-xs md:text-sm font-medium text-[#01ae79] truncate">
+                {user.role === 'athlete' ? user.sport : user.title}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Info Section */}
+        <div className="space-y-2 md:space-y-3 mb-3 md:mb-4">
+          <div className="flex items-center gap-1.5 sm:gap-2 text-xs md:text-sm text-muted-foreground">
+            <MapPin className="w-3 h-3 md:w-4 md:h-4 flex-shrink-0" />
+            <span className="truncate">{user.city}, {user.state}</span>
+          </div>
+          {user.role === 'athlete' ? (
+            <div className="flex items-center gap-1.5 sm:gap-2 text-xs md:text-sm text-muted-foreground">
+              <GraduationCap className="w-3 h-3 md:w-4 md:h-4 flex-shrink-0" />
+              <span className="truncate">Class of {user.graduationYear}</span>
+            </div>
+          ) : (
+            <div className="flex items-center gap-1.5 sm:gap-2 text-xs md:text-sm text-muted-foreground">
+              <Building2 className="w-3 h-3 md:w-4 md:h-4 flex-shrink-0" />
+              <span className="truncate">{user.division || 'No Division'}</span>
+            </div>
+          )}
+          <p className="text-xs md:text-sm text-muted-foreground truncate font-medium">
+            {user.organizationName}
+          </p>
+        </div>
+
+        {/* Connect Button */}
+        <div className="pt-3 md:pt-4 border-t border-border/50">
+          <Button
+            onClick={createConnectHandler(user.id)}
+            disabled={user.hasPendingRequest}
+            className={cn(
+              "w-full h-8 sm:h-8 md:h-9 text-xs sm:text-sm font-medium transition-all duration-200 hover:scale-[1.02]",
+              user.hasPendingRequest
+                ? "bg-muted text-muted-foreground cursor-not-allowed"
+                : "bg-[#01ae79] hover:bg-[#01ae79]/90 text-white"
+            )}
+          >
+            {user.hasPendingRequest ? (
+              <>
+                <Clock size={14} className="mr-1.5 sm:mr-2" />
+                Request Pending
+              </>
+            ) : (
+              <>
+                <Send size={14} className="mr-1.5 sm:mr-2" />
+                Connect
+              </>
+            )}
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  );
 
   return (
     <div className="container py-8">
@@ -528,92 +663,7 @@ function SearchPageContent() {
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                     {results.results.map((user) => (
                       <Link href={`/profile/${user.id}`} key={user.id}>
-                        <Card className="group transition-all duration-200 hover:shadow-xl hover:shadow-[#01ae79]/15 border border-border hover:border-[#01ae79]/40 dark:hover:border-[#01ae79]/50 overflow-hidden">
-                          <CardContent className="p-3 sm:p-4 md:p-5">
-                            {/* Header Section */}
-                            <div className="flex items-start justify-between mb-3 md:mb-4">
-                              <div className="flex items-start gap-2 md:gap-3 lg:gap-4 flex-1 min-w-0">
-                                <div className="relative flex-shrink-0">
-                                  <Avatar className="w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 ring-2 ring-[#01ae79]/20 group-hover:ring-[#01ae79]/50 transition-all duration-200">
-                                    <AvatarImage 
-                                      src={getProfileImageUrl(user.profileImage)} 
-                                      alt={user.fullName || 'User'}
-                                      className="object-cover"
-                                    />
-                                    <AvatarFallback className="text-xs sm:text-sm font-semibold bg-gradient-to-br from-[#01ae79]/10 to-[#01ae79]/20 text-[#01ae79]">
-                                      {user.fullName ? user.fullName.split(' ').map(n => n[0]).join('').toUpperCase() : 'U'}
-                                    </AvatarFallback>
-                                  </Avatar>
-                                  {user.isVerified && (
-                                    <div className="absolute -top-1 -right-1 w-4 h-4 sm:w-5 sm:h-5 bg-green-500 rounded-full flex items-center justify-center shadow-md">
-                                      <Shield className="w-2 h-2 sm:w-3 sm:h-3 text-white" />
-                                    </div>
-                                  )}
-                                </div>
-
-                                <div className="flex-1 min-w-0 space-y-2">
-                                  <h3 className="font-semibold text-sm md:text-base text-foreground leading-tight truncate">
-                                    {user.fullName}
-                                  </h3>
-                                  <div className="flex items-center gap-2 flex-wrap pt-1.5">
-                                    {getRoleBadge(user)}
-                                  </div>
-                                  <p className="text-xs md:text-sm font-medium text-[#01ae79] truncate">
-                                    {user.role === 'athlete' ? user.sport : user.title}
-                                  </p>
-                                </div>
-                              </div>
-                            </div>
-
-                            {/* Info Section */}
-                            <div className="space-y-2 md:space-y-3 mb-3 md:mb-4">
-                              <div className="flex items-center gap-1.5 sm:gap-2 text-xs md:text-sm text-muted-foreground">
-                                <MapPin className="w-3 h-3 md:w-4 md:h-4 flex-shrink-0" />
-                                <span className="truncate">{user.city}, {user.state}</span>
-                              </div>
-                              {user.role === 'athlete' ? (
-                                <div className="flex items-center gap-1.5 sm:gap-2 text-xs md:text-sm text-muted-foreground">
-                                  <GraduationCap className="w-3 h-3 md:w-4 md:h-4 flex-shrink-0" />
-                                  <span className="truncate">Class of {user.graduationYear}</span>
-                                </div>
-                              ) : (
-                                <div className="flex items-center gap-1.5 sm:gap-2 text-xs md:text-sm text-muted-foreground">
-                                  <Building2 className="w-3 h-3 md:w-4 md:h-4 flex-shrink-0" />
-                                  <span className="truncate">{user.division || 'No Division'}</span>
-                                </div>
-                              )}
-                              <p className="text-xs md:text-sm text-muted-foreground truncate font-medium">
-                                {user.organizationName}
-                              </p>
-                            </div>
-
-                            {/* Connect Button */}
-                            <div className="pt-3 md:pt-4 border-t border-border/50">
-                              <Button
-                                onClick={(e) => handleConnect(user.id, e)}
-                                disabled={user.hasPendingRequest}
-                                className={cn(
-                                  "w-full h-8 sm:h-8 md:h-9 text-xs sm:text-sm font-medium transition-all duration-200 hover:scale-[1.02]",
-                                  user.hasPendingRequest
-                                    ? "bg-muted text-muted-foreground cursor-not-allowed"
-                                    : "bg-[#01ae79] hover:bg-[#01ae79]/90 text-white"
-                                )}
-                              >
-                                {user.hasPendingRequest ? (
-                                  <>
-                                    <Clock size={14} className="mr-1.5 sm:mr-2" />
-                                    Request Pending
-                                  </>
-                                ) : (
-                                  <>
-                                    <Send size={14} className="mr-1.5 sm:mr-2" />
-                                    Connect
-                                  </>
-                                )}
-                              </Button>
-                            </div>
-                          </CardContent>
-                        </Card>
+                        {renderUserCard(user)}
                       </Link>
                     ))}
                   </div>

@@ -287,7 +287,7 @@ function SearchPageContent() {
                 <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
                   type="search"
-                  placeholder="Search athletes, coaches, recruiters... (minimum 4 characters)"
+                  placeholder="Search athletes, coaches, recruiters... (minimum 3 characters)"
                   className="pl-10 h-12"
                   value={inputValue}
                   onChange={(e) => setInputValue(e.target.value)}
@@ -346,7 +346,7 @@ function SearchPageContent() {
           {isLoading ? (
             'Searching...'
           ) : searchTerm.length < 3 ? (
-            'Enter at least 4 characters to search'
+            'Enter at least 3 characters to search'
           ) : (
             <>
               {totalResults} {totalResults === 1 ? 'result' : 'results'} found
@@ -364,7 +364,7 @@ function SearchPageContent() {
           <Search className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
           <h3 className="text-xl font-semibold text-foreground mb-2">Start your search</h3>
           <p className="text-muted-foreground">
-            Enter at least 4 characters to search for athletes, coaches, and recruiters
+            Enter at least 3 characters to search for athletes, coaches, and recruiters
           </p>
         </div>
       ) : isLoading && allResults.length === 0 ? (

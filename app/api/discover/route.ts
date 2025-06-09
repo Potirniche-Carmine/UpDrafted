@@ -2,8 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireAnyRole } from '@/utils/roles';
 import { db } from '@/database/db';
 import { users, athleteProfiles, coachProfiles, recruitingProfiles, connections } from '@/database/schema';
-import { and, eq, or, not, ilike, isNull, sql, exists, ne } from 'drizzle-orm';
-import { R2_PUBLIC_URL } from '@/database/r2';
+import { and, eq, or, not, ilike, isNull, exists, ne, sql } from 'drizzle-orm';
 import { sanitizeText, sanitizeNumber } from '@/utils/sanitization';
 
 // Force Node.js runtime
@@ -141,26 +140,14 @@ export async function GET(request: NextRequest) {
       )
     ] : [];
 
-    // Execute the search query using Drizzle's query builder
+    // Execute the search query using Drizzle's query builder with relations
     const results = await db
       .select({
         id: users.id,
-        fullName: sql<string>`COALESCE(${athleteProfiles.fullName}, ${coachProfiles.fullName}, ${recruitingProfiles.fullName})`,
-        organizationName: sql<string>`COALESCE(${athleteProfiles.organizationName}, ${coachProfiles.organizationName}, ${recruitingProfiles.organizationName})`,
-        profileImage: sql<string>`COALESCE(${athleteProfiles.profileImageR3Key}, ${coachProfiles.profileImageR3Key}, ${recruitingProfiles.profileImageR3Key})`,
-        city: sql<string>`COALESCE(${athleteProfiles.city}, ${coachProfiles.city}, ${recruitingProfiles.city})`,
-        state: sql<string>`COALESCE(${athleteProfiles.state}, ${coachProfiles.state}, ${recruitingProfiles.state})`,
-        isVerified: sql<boolean>`COALESCE(${athleteProfiles.isVerified}, ${coachProfiles.isVerified}, ${recruitingProfiles.isVerified}, false)`,
-        role: sql<'athlete' | 'coach' | 'recruiter'>`CASE 
-          WHEN ${athleteProfiles.userId} IS NOT NULL THEN 'athlete'
-          WHEN ${coachProfiles.userId} IS NOT NULL THEN 'coach'
-          WHEN ${recruitingProfiles.userId} IS NOT NULL THEN 'recruiter'
-        END`,
-        sport: sql<string>`COALESCE(${athleteProfiles.sport}, ${coachProfiles.sportCoaching}, ${recruitingProfiles.sportRecruiting})`,
-        title: sql<string>`COALESCE(${coachProfiles.title}, ${recruitingProfiles.title})`,
-        division: sql<string>`COALESCE(${coachProfiles.division}, ${recruitingProfiles.division})`,
-        educationLevel: athleteProfiles.educationLevel,
-        graduationYear: athleteProfiles.graduationYear,
+        role: users.role,
+        athleteProfile: athleteProfiles,
+        coachProfile: coachProfiles,
+        recruitingProfile: recruitingProfiles,
         hasPendingRequest: exists(
           db.select()
             .from(connections)
@@ -169,7 +156,7 @@ export async function GET(request: NextRequest) {
               eq(connections.toUserId, userId),
               eq(connections.status, 'pending')
             ))
-        ).as('hasPendingRequest')
+        )
       })
       .from(users)
       .leftJoin(athleteProfiles, eq(athleteProfiles.userId, users.id))
@@ -191,21 +178,89 @@ export async function GET(request: NextRequest) {
     const total = Number(totalResults[0]?.count || 0);
     const totalPages = Math.ceil(total / pageSize);
 
-    // Process profile images to use R2 URLs and sanitize output
-    const processedResults = results.map(user => ({
-      ...user,
-      // Sanitize all text fields to prevent XSS
-      fullName: sanitizeText(user.fullName),
-      organizationName: sanitizeText(user.organizationName),
-      city: sanitizeText(user.city),
-      state: sanitizeText(user.state),
-      sport: sanitizeText(user.sport),
-      title: user.title ? sanitizeText(user.title) : null,
-      division: user.division ? sanitizeText(user.division) : null,
-      educationLevel: user.educationLevel ? sanitizeText(user.educationLevel) : null,
-      // Safely construct profile image URL
-      profileImage: user.profileImage ? `${R2_PUBLIC_URL}/${user.profileImage}` : null
-    }));
+    // Process results using a similar approach as the connections API
+    const processedResults = results.map(user => {
+      // Determine which profile to use
+      const userRole = user.role;
+      let userProfileData: {
+        fullName: string | null;
+        organizationName: string | null;
+        profileImage: string | null;
+        city: string | null;
+        state: string | null;
+        isVerified: boolean | null;
+        sport: string | null;
+        title?: string | null;
+        division?: string | null;
+        educationLevel?: string | null;
+        graduationYear?: number | null;
+      } = {
+        fullName: null,
+        organizationName: null,
+        profileImage: null,
+        city: null,
+        state: null,
+        isVerified: false,
+        sport: null,
+      };
+
+      // Set properties based on profile type
+      if (userRole === 'athlete' && user.athleteProfile) {
+        userProfileData = {
+          fullName: user.athleteProfile.fullName,
+          organizationName: user.athleteProfile.organizationName,
+          profileImage: user.athleteProfile.profileImageR3Key,
+          city: user.athleteProfile.city,
+          state: user.athleteProfile.state,
+          isVerified: user.athleteProfile.isVerified || false,
+          sport: user.athleteProfile.sport,
+          educationLevel: user.athleteProfile.educationLevel,
+          graduationYear: user.athleteProfile.graduationYear,
+        };
+      } else if (userRole === 'coach' && user.coachProfile) {
+        userProfileData = {
+          fullName: user.coachProfile.fullName,
+          organizationName: user.coachProfile.organizationName,
+          profileImage: user.coachProfile.profileImageR3Key,
+          city: user.coachProfile.city,
+          state: user.coachProfile.state,
+          isVerified: user.coachProfile.isVerified || false,
+          sport: user.coachProfile.sportCoaching,
+          title: user.coachProfile.title,
+          division: user.coachProfile.division,
+        };
+      } else if (userRole === 'recruiter' && user.recruitingProfile) {
+        userProfileData = {
+          fullName: user.recruitingProfile.fullName,
+          organizationName: user.recruitingProfile.organizationName,
+          profileImage: user.recruitingProfile.profileImageR3Key,
+          city: user.recruitingProfile.city,
+          state: user.recruitingProfile.state,
+          isVerified: user.recruitingProfile.isVerified || false,
+          sport: user.recruitingProfile.sportRecruiting,
+          title: user.recruitingProfile.title,
+          division: user.recruitingProfile.division,
+        };
+      }
+
+      // Return formatted and sanitized user data
+      return {
+        id: user.id,
+        fullName: userProfileData.fullName ? sanitizeText(userProfileData.fullName) : null,
+        organizationName: userProfileData.organizationName ? sanitizeText(userProfileData.organizationName) : null,
+        profileImage: userProfileData.profileImage || null,
+        city: userProfileData.city ? sanitizeText(userProfileData.city) : null,
+        state: userProfileData.state ? sanitizeText(userProfileData.state) : null,
+        isVerified: userProfileData.isVerified || false,
+        role: userRole,
+        sport: userProfileData.sport ? sanitizeText(userProfileData.sport) : null,
+        title: userProfileData.title ? sanitizeText(userProfileData.title) : null,
+        division: userProfileData.division ? sanitizeText(userProfileData.division) : null,
+        educationLevel: userProfileData.educationLevel ? sanitizeText(userProfileData.educationLevel) : null,
+        graduationYear: userProfileData.graduationYear,
+        hasPendingRequest: user.hasPendingRequest,
+      };
+    });
 
     // Set security headers
     const headers = new Headers({

@@ -4,19 +4,16 @@ import { useUser } from '@clerk/nextjs';
 import { useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Separator } from "@/components/ui/separator"
 import { 
   ArrowRight,
   Bell,
-  CheckCircle,
+  Calendar,
   Eye,
+  FileText,
+  Info,
   MessageSquare,
   Search,
-  UserPlus,
   Users,
-  X,
 } from "lucide-react"
 import Link from "next/link"
 import { useRoleView } from '@/hooks/use-role-view'
@@ -24,145 +21,267 @@ import { useProfileNavigation } from '@/hooks/use-profile-navigation'
 import { DashboardHeader } from '../components/dashboard-header'
 import { AuthWrapper } from '../../../components/auth-wrapper'
 
-// TypeScript interfaces for actions
-interface ActionWithHref {
+// TypeScript interfaces for navigation items
+interface NavItemWithHref {
   label: string;
   href: string;
   icon: React.ComponentType<{ className?: string }>;
   description: string;
+  color: string;
   onClick?: never;
 }
 
-interface ActionWithOnClick {
+interface NavItemWithOnClick {
   label: string;
   onClick: () => void;
   icon: React.ComponentType<{ className?: string }>;
   description: string;
+  color: string;
   href?: never;
 }
 
-type DashboardAction = ActionWithHref | ActionWithOnClick;
+type NavItem = NavItemWithHref | NavItemWithOnClick;
 
-// Mock data - replace with real data from your database
-const mockDashboardData = {
-  user: {
-    name: "Alex Johnson",
-    role: "athlete", // This will be overridden by useRoleView
-    verified: true,
-    email: "alex@example.com",
-    id: "user_123"
+// NCAA Rules information - static content
+const ncaaRules = [
+  {
+    title: "Contact Periods",
+    description: "During a contact period, a college coach may have face-to-face contact with college-bound student-athletes or their parents, watch student-athletes compete and visit their high schools, and write or telephone student-athletes or their parents."
   },
-  connectionRequests: 4,
-  unreadMessages: 7,
-  notifications: 12,
-  pendingConnections: [
-    { 
-      id: 1,
-      name: 'Coach Martinez', 
-      title: 'Head Basketball Coach',
-      organization: 'UCLA', 
-      avatar: '/api/placeholder/40/40',
-      requestedAt: '2 hours ago'
-    },
-    { 
-      id: 2,
-      name: 'Sarah Johnson', 
-      title: 'Sports Recruiter',
-      organization: 'Elite Sports Agency', 
-      avatar: '/api/placeholder/40/40',
-      requestedAt: '5 hours ago'
-    },
-    { 
-      id: 3,
-      name: 'Coach Thompson', 
-      title: 'Assistant Coach',
-      organization: 'Stanford Football', 
-      avatar: '/api/placeholder/40/40',
-      requestedAt: '1 day ago'
-    },
-    { 
-      id: 4,
-      name: 'Mike Rodriguez', 
-      title: 'College Athlete',
-      organization: 'USC Basketball', 
-      avatar: '/api/placeholder/40/40',
-      requestedAt: '2 days ago'
-    },
-  ]
-}
+  {
+    title: "Dead Periods",
+    description: "During a dead period, a college coach may not have face-to-face contact with college-bound student-athletes or their parents, and may not watch student-athletes compete or visit their high schools."
+  },
+  {
+    title: "Evaluation Periods",
+    description: "During an evaluation period, a college coach may watch college-bound student-athletes compete, visit their high schools, and write or telephone student-athletes or their parents."
+  },
+  {
+    title: "Quiet Periods",
+    description: "During a quiet period, a college coach may only have face-to-face contact with college-bound student-athletes or their parents on the college's campus. A coach may not watch student-athletes compete or visit their high schools during this time."
+  }
+];
 
-const getUserTypeContent = (role: string, userId: string, handleViewProfile: () => void, profileNavigating: boolean = false): {
+const getUserContent = (role: string, handleViewProfile: () => void, profileNavigating: boolean = false): {
   welcomeText: string;
   searchText: string;
   searchHref: string;
-  primaryActions: DashboardAction[];
-  secondaryActions: DashboardAction[];
+  primaryNav: NavItem[];
 } => {
+  // Base navigation items that exist in the app
   switch (role) {
     case 'athlete':
       return {
         welcomeText: "Continue your recruiting journey",
         searchText: "Discover Schools & Coaches",
         searchHref: "/discover",
-        primaryActions: [
-          { label: "Discover Schools", href: "/discover", icon: Search, description: "Find your perfect college match" },
-          { label: profileNavigating ? "Loading..." : "View Profile", onClick: handleViewProfile, icon: Eye, description: "Check your current profile" },
-          { label: "My Connections", href: "/connections", icon: Users, description: "Manage your network" },
-          { label: "Check Messages", href: "/messages", icon: MessageSquare, description: "Connect with coaches" }
-        ],
-        secondaryActions: []
-      }
+        primaryNav: [
+          { 
+            label: profileNavigating ? "Loading..." : "View Profile", 
+            onClick: handleViewProfile, 
+            icon: Eye, 
+            description: "Check and update your profile", 
+            color: "#01ae79" 
+          },
+          { 
+            label: "Discover", 
+            href: "/discover", 
+            icon: Search, 
+            description: "Find schools and coaches", 
+            color: "#4f46e5" 
+          },
+          { 
+            label: "Connections", 
+            href: "/connections", 
+            icon: Users, 
+            description: "Manage your network", 
+            color: "#0ea5e9" 
+          },
+          { 
+            label: "Messages", 
+            href: "/messages", 
+            icon: MessageSquare, 
+            description: "Check your conversations", 
+            color: "#f59e0b" 
+          },
+          { 
+            label: "Notifications", 
+            href: "/notifications", 
+            icon: Bell, 
+            description: "View your notifications", 
+            color: "#ef4444" 
+          },
+          { 
+            label: "Search", 
+            href: "/search", 
+            icon: Search, 
+            description: "Search for athletes, coaches, and schools", 
+            color: "#8b5cf6" 
+          }
+        ]
+      };
     case 'coach':
       return {
         welcomeText: "Discover and recruit talented athletes",
         searchText: "Discover Athletes",
         searchHref: "/discover",
-        primaryActions: [
-          { label: "Discover Athletes", href: "/discover", icon: Search, description: "Find top prospects" },
-          { label: profileNavigating ? "Loading..." : "View Profile", onClick: handleViewProfile, icon: Eye, description: "Check your current profile" },
-          { label: "My Connections", href: "/connections", icon: Users, description: "Manage your network" },
-          { label: "Send Messages", href: "/messages", icon: MessageSquare, description: "Connect with prospects" }
-        ],
-        secondaryActions: []
-      }
+        primaryNav: [
+          { 
+            label: profileNavigating ? "Loading..." : "View Profile", 
+            onClick: handleViewProfile, 
+            icon: Eye, 
+            description: "Check and update your profile", 
+            color: "#01ae79" 
+          },
+          { 
+            label: "Discover", 
+            href: "/discover", 
+            icon: Search, 
+            description: "Find talented athletes", 
+            color: "#4f46e5" 
+          },
+          { 
+            label: "Connections", 
+            href: "/connections", 
+            icon: Users, 
+            description: "Manage your network", 
+            color: "#0ea5e9" 
+          },
+          { 
+            label: "Messages", 
+            href: "/messages", 
+            icon: MessageSquare, 
+            description: "Check your conversations", 
+            color: "#f59e0b" 
+          },
+          { 
+            label: "Notifications", 
+            href: "/notifications", 
+            icon: Bell, 
+            description: "View your notifications", 
+            color: "#ef4444" 
+          },
+          { 
+            label: "Search", 
+            href: "/search", 
+            icon: Search, 
+            description: "Search for athletes and coaches", 
+            color: "#8b5cf6" 
+          }
+        ]
+      };
     case 'recruiter':
       return {
         welcomeText: "Connect athletes with the right opportunities",
         searchText: "Discover Athletes",
         searchHref: "/discover",
-        primaryActions: [
-          { label: "Discover Athletes", href: "/discover", icon: Search, description: "Find athletes & coaches" },
-          { label: profileNavigating ? "Loading..." : "View Profile", onClick: handleViewProfile, icon: Eye, description: "Check your current profile" },
-          { label: "My Connections", href: "/connections", icon: Users, description: "Manage your network" },
-          { label: "Send Messages", href: "/messages", icon: MessageSquare, description: "Facilitate connections" }
-        ],
-        secondaryActions: []
-      }
+        primaryNav: [
+          { 
+            label: profileNavigating ? "Loading..." : "View Profile", 
+            onClick: handleViewProfile, 
+            icon: Eye, 
+            description: "Check and update your profile", 
+            color: "#01ae79" 
+          },
+          { 
+            label: "Discover", 
+            href: "/discover", 
+            icon: Search, 
+            description: "Find talented athletes", 
+            color: "#4f46e5" 
+          },
+          { 
+            label: "Connections", 
+            href: "/connections", 
+            icon: Users, 
+            description: "Manage your network", 
+            color: "#0ea5e9" 
+          },
+          { 
+            label: "Messages", 
+            href: "/messages", 
+            icon: MessageSquare, 
+            description: "Check your conversations", 
+            color: "#f59e0b" 
+          },
+          { 
+            label: "Notifications", 
+            href: "/notifications", 
+            icon: Bell, 
+            description: "View your notifications", 
+            color: "#ef4444" 
+          },
+          { 
+            label: "Search", 
+            href: "/search", 
+            icon: Search, 
+            description: "Search for athletes and coaches", 
+            color: "#8b5cf6" 
+          }
+        ]
+      };
     default:
       return {
         welcomeText: "Welcome to your dashboard",
         searchText: "Discover",
         searchHref: "/discover",
-        primaryActions: [
-          { label: "Discover", href: "/discover", icon: Search, description: "Find what you need" },
-          { label: profileNavigating ? "Loading..." : "View Profile", onClick: handleViewProfile, icon: Eye, description: "Check your profile" },
-          { label: "Messages", href: "/messages", icon: MessageSquare, description: "Check messages" },
-          { label: "Notifications", href: "/notifications", icon: Bell, description: "Stay updated" }
-        ],
-        secondaryActions: []
-      }
+        primaryNav: [
+          { 
+            label: profileNavigating ? "Loading..." : "View Profile", 
+            onClick: handleViewProfile, 
+            icon: Eye, 
+            description: "Check and update your profile", 
+            color: "#01ae79" 
+          },
+          { 
+            label: "Discover", 
+            href: "/discover", 
+            icon: Search, 
+            description: "Explore UpDrafted", 
+            color: "#4f46e5" 
+          },
+          { 
+            label: "Connections", 
+            href: "/connections", 
+            icon: Users, 
+            description: "Manage your network", 
+            color: "#0ea5e9" 
+          },
+          { 
+            label: "Messages", 
+            href: "/messages", 
+            icon: MessageSquare, 
+            description: "Check your conversations", 
+            color: "#f59e0b" 
+          },
+          { 
+            label: "Notifications", 
+            href: "/notifications", 
+            icon: Bell, 
+            description: "View your notifications", 
+            color: "#ef4444" 
+          },
+          { 
+            label: "Search", 
+            href: "/search", 
+            icon: Search, 
+            description: "Search UpDrafted", 
+            color: "#8b5cf6" 
+          }
+        ]
+      };
   }
-}
+};
 
 export default function DashboardPage() {
   const { navigateToProfile, isNavigating: profileNavigating } = useProfileNavigation();
   
-  // Scroll to top when dashboard loads (after onboarding)
+  // Scroll to top when dashboard loads
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, []);
 
-  // Handle profile navigation with proper prefetching
+  // Handle profile navigation
   const handleViewProfile = async () => {
     await navigateToProfile();
   };
@@ -177,7 +296,7 @@ export default function DashboardPage() {
   );
 }
 
-// Separate component for dashboard content that runs inside AuthWrapper
+// Dashboard content component
 function DashboardContent({ 
   handleViewProfile, 
   profileNavigating 
@@ -188,7 +307,16 @@ function DashboardContent({
   const { user } = useUser();
   const { effectiveRole, isAdmin, isViewingAsOtherRole } = useRoleView();
 
-  // Let AuthWrapper handle authentication - only check if we have the user data we need
+  // Get current date for calendar display
+  const currentDate = new Date();
+  const formattedDate = currentDate.toLocaleDateString('en-US', {
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric'
+  });
+
+  // Loading state
   if (!user) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -204,15 +332,15 @@ function DashboardContent({
     );
   }
 
-  // Use effectiveRole instead of the hardcoded role
-  const userContent = getUserTypeContent(effectiveRole || 'athlete', user.id, handleViewProfile, profileNavigating);
-
+  // Get content based on user role
+  const userContent = getUserContent(effectiveRole || 'athlete', handleViewProfile, profileNavigating);
+  
   // Get user display name
   const displayName = user.fullName || user.firstName || user.username || 'User';
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="container mx-auto py-6 px-4 md:px-6 space-y-6">
+      <div className="container mx-auto py-6 px-4 md:px-6 space-y-8">
         {/* Header Section */}
         <DashboardHeader
           displayName={displayName}
@@ -224,166 +352,69 @@ function DashboardContent({
           effectiveRole={effectiveRole || 'athlete'}
         />
 
-        {/* Quick Stats Grid */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          <Card className="transition-all duration-300 hover:shadow-lg hover:shadow-[#01ae79]/5 border-border/50 hover:border-[#01ae79]/20 dark:hover:border-[#01ae79]/30">
-            <CardContent className="flex items-center p-4 md:p-6">
-              <UserPlus className="h-6 w-6 md:h-8 md:w-8 text-[#01ae79] mr-3 flex-shrink-0" />
-              <div className="min-w-0">
-                <p className="text-xl md:text-2xl font-bold text-foreground">{mockDashboardData.connectionRequests}</p>
-                <p className="text-xs text-muted-foreground">Connection Requests</p>
-              </div>
-            </CardContent>
-          </Card>
-          
-          <Card className="transition-all duration-300 hover:shadow-lg hover:shadow-[#01ae79]/5 border-border/50 hover:border-[#01ae79]/20 dark:hover:border-[#01ae79]/30">
-            <CardContent className="flex items-center p-4 md:p-6">
-              <MessageSquare className="h-6 w-6 md:h-8 md:w-8 text-[#01ae79] mr-3 flex-shrink-0" />
-              <div className="min-w-0">
-                <p className="text-xl md:text-2xl font-bold text-foreground">{mockDashboardData.unreadMessages}</p>
-                <p className="text-xs text-muted-foreground">Unread Messages</p>
-              </div>
-            </CardContent>
-          </Card>
-          
-          <Card className="transition-all duration-300 hover:shadow-lg hover:shadow-[#01ae79]/5 border-border/50 hover:border-[#01ae79]/20 dark:hover:border-[#01ae79]/30">
-            <CardContent className="flex items-center p-4 md:p-6">
-              <Bell className="h-6 w-6 md:h-8 md:w-8 text-[#01ae79] mr-3 flex-shrink-0" />
-              <div className="min-w-0">
-                <p className="text-xl md:text-2xl font-bold text-foreground">{mockDashboardData.notifications}</p>
-                <p className="text-xs text-muted-foreground">Notifications</p>
-              </div>
-            </CardContent>
-          </Card>
-          
-          <Card className="transition-all duration-300 hover:shadow-lg hover:shadow-[#01ae79]/5 border-border/50 hover:border-[#01ae79]/20 dark:hover:border-[#01ae79]/30">
-            <CardContent className="flex items-center p-4 md:p-6">
-              <Users className="h-6 w-6 md:h-8 md:w-8 text-[#01ae79] mr-3 flex-shrink-0" />
-              <div className="min-w-0">
-                <p className="text-xl md:text-2xl font-bold text-foreground">42</p>
-                <p className="text-xs text-muted-foreground">
-                  {effectiveRole === 'athlete' ? 'Profile Views' : 'Connections'}
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Main Content Grid */}
+        {/* Main Grid Layout */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Quick Actions */}
+          {/* Navigation Cards */}
           <div className="lg:col-span-2">
             <Card className="border-border/50">
               <CardHeader>
-                <CardTitle className="text-foreground">Quick Actions</CardTitle>
+                <CardTitle className="text-foreground">Quick Navigation</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {userContent.primaryActions.map((action) => {
-                    const IconComponent = action.icon;
-                    
-                    // Handle both href and onClick actions
-                    if (action.onClick) {
-                      const isViewProfileAction = action.label.includes("View Profile") || action.label.includes("Loading");
-                      const shouldDisable = isViewProfileAction && profileNavigating;
-                      
-                      return (
-                        <Card 
-                          key={action.label} 
-                          className={`group transition-all duration-300 border-border/50 ${
-                            shouldDisable 
-                              ? 'opacity-50 cursor-not-allowed' 
-                              : 'hover:shadow-lg hover:shadow-[#01ae79]/5 hover:border-[#01ae79]/20 dark:hover:border-[#01ae79]/30 cursor-pointer'
-                          }`} 
-                          onClick={shouldDisable ? undefined : action.onClick}
-                        >
-                          <CardContent className="flex items-center p-4 md:p-6">
-                            <IconComponent className={`h-6 w-6 md:h-8 md:w-8 text-[#01ae79] mr-4 flex-shrink-0 transition-colors ${
-                              shouldDisable ? '' : 'group-hover:text-[#01ae79]/80'
-                            } ${profileNavigating && isViewProfileAction ? 'animate-pulse' : ''}`} />
-                            <div className="min-w-0">
-                              <h3 className="font-semibold text-foreground mb-1">{action.label}</h3>
-                              <p className="text-sm text-muted-foreground">{action.description}</p>
-                            </div>
-                          </CardContent>
-                        </Card>
-                      );
-                    }
-                    
-                    return (
-                      <Link key={action.label} href={action.href || '#'}>
-                        <Card className="group transition-all duration-300 hover:shadow-lg hover:shadow-[#01ae79]/5 border-border/50 hover:border-[#01ae79]/20 dark:hover:border-[#01ae79]/30 cursor-pointer">
-                          <CardContent className="flex items-center p-4 md:p-6">
-                            <IconComponent className="h-6 w-6 md:h-8 md:w-8 text-[#01ae79] mr-4 flex-shrink-0 transition-colors group-hover:text-[#01ae79]/80" />
-                            <div className="min-w-0">
-                              <h3 className="font-semibold text-foreground mb-1">{action.label}</h3>
-                              <p className="text-sm text-muted-foreground">{action.description}</p>
-                            </div>
-                          </CardContent>
-                        </Card>
-                      </Link>
-                    );
-                  })}
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                  {userContent.primaryNav.map((item, index) => (
+                    <NavCard key={index} item={item} profileNavigating={profileNavigating} />
+                  ))}
                 </div>
               </CardContent>
             </Card>
           </div>
 
-          {/* Recent Activity / Connection Requests */}
-          <div>
+          {/* Side Content - Calendar and NCAA Rules */}
+          <div className="space-y-6">
+            {/* Calendar Date */}
             <Card className="border-border/50">
-              <CardHeader className="pb-4">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-foreground text-base md:text-lg">Recent Connection Requests</CardTitle>
-                  <div className="flex items-center justify-center">
-                    <Badge variant="secondary" className="bg-[#01ae79]/10 text-[#01ae79] border-[#01ae79]/20 px-2 py-1 text-sm font-medium">
-                      {mockDashboardData.pendingConnections.length}
-                    </Badge>
-                  </div>
-                </div>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-foreground flex items-center">
+                  <Calendar className="mr-2 h-5 w-5 text-[#01ae79]" />
+                  Today
+                </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4">
-                {mockDashboardData.pendingConnections.slice(0, 3).map((connection) => (
-                  <div key={connection.id} className="flex items-center space-x-3 p-3 rounded-lg hover:bg-muted/30 transition-colors">
-                    <Avatar className="h-10 w-10 ring-2 ring-[#01ae79]/20 dark:ring-[#01ae79]/30">
-                      <AvatarImage src={connection.avatar} />
-                      <AvatarFallback className="text-sm">{connection.name.split(' ').map(n => n[0]).join('')}</AvatarFallback>
-                    </Avatar>
-                    <div className="flex-1 space-y-1 min-w-0">
-                      <p className="text-sm font-medium leading-none text-foreground truncate">{connection.name}</p>
-                      <p className="text-xs text-muted-foreground truncate">{connection.title}</p>
-                      <p className="text-xs text-muted-foreground truncate">{connection.organization}</p>
+              <CardContent>
+                <div className="text-center p-4 bg-muted/30 rounded-md">
+                  <p className="text-lg font-medium text-foreground">{formattedDate}</p>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* NCAA Rules */}
+            <Card className="border-border/50">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-foreground flex items-center">
+                  <FileText className="mr-2 h-5 w-5 text-[#01ae79]" />
+                  NCAA Recruiting Periods
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {ncaaRules.map((rule, index) => (
+                    <div key={index} className="space-y-1">
+                      <h3 className="text-sm font-medium text-foreground flex items-center">
+                        <Info className="h-4 w-4 text-[#01ae79] mr-2" />
+                        {rule.title}
+                      </h3>
+                      <p className="text-xs text-muted-foreground">{rule.description}</p>
+                      {index < ncaaRules.length - 1 && (
+                        <div className="pt-2 border-b border-border/50"></div>
+                      )}
                     </div>
-                    <div className="flex gap-1 flex-shrink-0">
-                      <Button size="sm" className="h-8 w-8 p-0 bg-[#01ae79] hover:bg-[#01ae79]/90">
-                        <CheckCircle className="h-4 w-4" />
-                      </Button>
-                      <Button size="sm" variant="outline" className="h-8 w-8 p-0 border-border hover:bg-muted">
-                        <X className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
-                ))}
-                
-                {mockDashboardData.pendingConnections.length > 3 && (
-                  <div className="text-center pt-2">
-                    <Link href="/connections">
-                      <Button variant="outline" size="sm" className="border-[#01ae79] text-[#01ae79] hover:bg-[#01ae79] hover:text-white">
-                        View All Requests
-                        <ArrowRight className="ml-2 h-3 w-3" />
-                      </Button>
-                    </Link>
-                  </div>
-                )}
-                
-                <Separator />
-                
-                <div className="text-center">
-                  <Link href="/connections">
-                    <Button variant="outline" className="w-full border-[#01ae79] text-[#01ae79] hover:bg-[#01ae79] hover:text-white">
-                      Manage All Connections
+                  ))}
+                  <div className="pt-2">
+                    <Button variant="outline" size="sm" className="w-full border-[#01ae79] text-[#01ae79] hover:bg-[#01ae79] hover:text-white">
+                      NCAA Recruiting Periods
+                      <ArrowRight className="ml-2 h-3 w-3" />
                     </Button>
-                  </Link>
+                  </div>
                 </div>
               </CardContent>
             </Card>
@@ -391,5 +422,59 @@ function DashboardContent({
         </div>
       </div>
     </div>
+  );
+}
+
+// Navigation card component
+function NavCard({ 
+  item, 
+  profileNavigating
+}: { 
+  item: NavItem, 
+  profileNavigating: boolean
+}) {
+  const IconComponent = item.icon;
+  const isViewProfileAction = 'onClick' in item && (item.label.includes("Profile") || item.label.includes("Loading"));
+  const shouldDisable = isViewProfileAction && profileNavigating;
+  
+  if ('onClick' in item) {
+    return (
+      <Card 
+        className={`group transition-all duration-300 border-border/50 ${
+          shouldDisable 
+            ? 'opacity-50 cursor-not-allowed' 
+            : 'hover:shadow-lg hover:shadow-[#01ae79]/5 hover:border-[#01ae79]/20 dark:hover:border-[#01ae79]/30 cursor-pointer'
+        }`} 
+        onClick={shouldDisable ? undefined : item.onClick}
+      >
+        <CardContent className="flex flex-col items-center text-center p-4">
+          <div className={`h-10 w-10 rounded-full bg-[${item.color}]/10 flex items-center justify-center mb-3 ${
+            profileNavigating && isViewProfileAction ? 'animate-pulse' : ''
+          }`}>
+            <IconComponent 
+              className={`h-5 w-5 text-[${item.color}]`} 
+            />
+          </div>
+          <h3 className="font-medium text-foreground mb-1">{item.label}</h3>
+          <p className="text-xs text-muted-foreground">{item.description}</p>
+        </CardContent>
+      </Card>
+    );
+  }
+  
+  return (
+    <Link href={item.href}>
+      <Card className="group transition-all duration-300 hover:shadow-lg hover:shadow-[#01ae79]/5 border-border/50 hover:border-[#01ae79]/20 dark:hover:border-[#01ae79]/30 cursor-pointer">
+        <CardContent className="flex flex-col items-center text-center p-4">
+          <div className={`h-10 w-10 rounded-full bg-[${item.color}]/10 flex items-center justify-center mb-3`}>
+            <IconComponent 
+              className={`h-5 w-5 text-[${item.color}]`} 
+            />
+          </div>
+          <h3 className="font-medium text-foreground mb-1">{item.label}</h3>
+          <p className="text-xs text-muted-foreground">{item.description}</p>
+        </CardContent>
+      </Card>
+    </Link>
   );
 } 
