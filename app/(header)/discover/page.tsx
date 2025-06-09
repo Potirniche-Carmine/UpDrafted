@@ -113,16 +113,18 @@ function SearchPageContent() {
   const [currentPage, setCurrentPage] = useState(1);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [results, setResults] = useState<DiscoverResponse | null>(null);
+  
+  const [allUsers, setAllUsers] = useState<DiscoverUser[]>([]);
+  const [displayedUsers, setDisplayedUsers] = useState<DiscoverUser[]>([]);
+
   const [appliedFilters, setAppliedFilters] = useState({
-    tab: 'all' as TabValue,
     sports: [] as FilterOption[],
     divisions: [] as FilterOption[],
     states: [] as FilterOption[],
     years: [] as FilterOption[]
   });
   const [hasSearched, setHasSearched] = useState(false);
-  const resultsPerQuery = 40;
+  const resultsPerPage = 12;
 
   const availableTabs = useMemo(() => 
     getAvailableTabs(effectiveRole)
@@ -149,16 +151,17 @@ function SearchPageContent() {
     }))
   , []);
 
-  // Set initial tab without triggering search
   useEffect(() => {
-    // Just set applied filters with the active tab
-    setAppliedFilters(prev => ({
-      ...prev,
-      tab: activeTab
-    }));
-    // We explicitly do NOT set hasSearched to true here
-    // so that the user must click the Discover button to initiate search
-  }, [activeTab]); // Include activeTab as a dependency to update when it changes
+    if (!hasSearched) return;
+
+    let filtered = allUsers;
+    if (activeTab !== 'all') {
+        const roleToFilter = activeTab.slice(0, -1); // 'athletes' -> 'athlete'
+        filtered = allUsers.filter(user => user.role === roleToFilter);
+    }
+    setDisplayedUsers(filtered);
+    setCurrentPage(1); // Reset to first page on tab change
+  }, [activeTab, allUsers, hasSearched]);
 
   // Load discover results
   const loadResults = useCallback(async () => {
@@ -166,7 +169,6 @@ function SearchPageContent() {
       setLoading(true);
       setError(null);
 
-      // Get auth token
       const windowWithClerk = window as unknown as {
         Clerk?: {
           session?: {
@@ -176,21 +178,12 @@ function SearchPageContent() {
       };
       const token = await windowWithClerk.Clerk?.session?.getToken();
 
-      // Calculate the page number for the API call (2 pages at a time)
-      const apiPage = Math.ceil(currentPage / 2);
-      
-      // Build query parameters - sanitize all inputs before sending to API
       const params = new URLSearchParams({
-        page: apiPage.toString(),
-        pageSize: resultsPerQuery.toString()
+        page: '1', // Always fetch from the beginning
+        pageSize: '200' // Fetch a large number of results for client-side filtering
       });
 
       // Add filters - sanitize all filter values
-      if (appliedFilters.tab !== 'all') {
-        params.append('role', appliedFilters.tab === 'athletes' ? 'athlete' : 
-                            appliedFilters.tab === 'coaches' ? 'coach' : 'recruiter');
-      }
-
       if (appliedFilters.sports.length > 0) {
         appliedFilters.sports.forEach(sport => 
           params.append('sports', sanitizeText(sport.value))
@@ -215,14 +208,12 @@ function SearchPageContent() {
         );
       }
 
-      // SECURITY: Add CSRF protection header if you have CSRF tokens
       const response = await fetch(`/api/discover?${params.toString()}`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
           'Accept': 'application/json'
         },
-        // Add proper security headers
         credentials: 'same-origin'
       });
 
@@ -233,81 +224,92 @@ function SearchPageContent() {
 
       const data = await response.json() as DiscoverResponse;
       
-      // Sanitize all incoming data to prevent XSS attacks
-      const sanitizedResults = data.results.map(user => ({
-        ...user,
-        fullName: sanitizeText(user.fullName),
-        organizationName: sanitizeText(user.organizationName || ''),
-        city: sanitizeText(user.city || ''),
-        state: sanitizeText(user.state || ''),
-        sport: sanitizeText(user.sport || ''),
-        title: user.title ? sanitizeText(user.title) : undefined,
-        division: user.division ? sanitizeText(user.division) : undefined,
-        educationLevel: user.educationLevel ? sanitizeText(user.educationLevel) : undefined,
-      }));
-      
-      setResults({
-        ...data,
-        results: sanitizedResults
-      });
+      setAllUsers(data.results);
       setHasSearched(true);
 
-    } catch (error) {
-      console.error('Error loading discover results:', error);
-      setError(error instanceof Error ? error.message : 'Failed to load discover results');
+    } catch (err: unknown) {
+      console.error("Discover Error:", err);
+      const message = err instanceof Error ? err.message : 'An unexpected error occurred.';
+      setError(message);
     } finally {
       setLoading(false);
     }
-  }, [currentPage, appliedFilters, resultsPerQuery]);
+  }, [appliedFilters]);
 
-  // Load results only when page changes after initial search
-  useEffect(() => {
-    if (hasSearched) {
-      loadResults();
+  // Pagination logic
+  const paginatedResults = useMemo(() => {
+    const startIndex = (currentPage - 1) * resultsPerPage;
+    return displayedUsers.slice(startIndex, startIndex + resultsPerPage);
+  }, [displayedUsers, currentPage]);
+
+  const totalPages = useMemo(() => {
+    return Math.ceil(displayedUsers.length / resultsPerPage);
+  }, [displayedUsers]);
+
+
+  const handleNextPage = () => {
+    if (currentPage < totalPages) {
+      setCurrentPage(currentPage + 1);
     }
-  }, [hasSearched, loadResults]);  // Only depend on hasSearched and loadResults
+  };
+
+  const handlePreviousPage = () => {
+    if (currentPage > 1) {
+      setCurrentPage(currentPage - 1);
+    }
+  };
 
   const clearFilters = () => {
     setSelectedSports([]);
     setSelectedDivisions([]);
     setSelectedStates([]);
     setSelectedYears([]);
-    setCurrentPage(1);
-    setHasSearched(false);
-    setResults(null);
-  };
-
-  const handleDiscover = () => {
-    setCurrentPage(1); // Reset to first page
-    
-    // Update applied filters
     setAppliedFilters({
-      tab: activeTab,
+      sports: [],
+      divisions: [],
+      states: [],
+      years: []
+    });
+    setAllUsers([]);
+    setDisplayedUsers([]);
+    setHasSearched(false);
+    setError(null);
+  };
+  
+  const handleDiscover = () => {
+    setCurrentPage(1);
+    setAppliedFilters({
       sports: selectedSports,
       divisions: selectedDivisions,
       states: selectedStates,
       years: selectedYears
     });
-    
-    // Set hasSearched to true to trigger the search
     setHasSearched(true);
+    // loadResults will be called by the useEffect watching appliedFilters
   };
 
-  // Display profile image with fallback for broken images
+  useEffect(() => {
+    if (hasSearched) {
+        loadResults();
+    }
+  }, [appliedFilters, hasSearched, loadResults]);
+
+
   const getProfileImageUrl = (profileImage: string | null) => {
-    if (!profileImage) return null;
+    if (!profileImage) {
+      return null;
+    }
     
-    // Return the image URL directly if it's already a full URL
+    // If it's already a full URL, return as is
     if (profileImage.startsWith('http')) {
       return profileImage;
     }
     
-    // If image path is just a relative path, use the environment variable
-    const baseUrl = process.env.NEXT_PUBLIC_R2_PUBLIC_URL || 'https://r2-up-drafts.cdn.updrafted.app';
+    // Construct the full R2 URL using environment variable or fallback to known R2 domain
+    const baseUrl = process.env.NEXT_PUBLIC_R2_PUBLIC_URL || 'https://pub-19c0754937db426497ca014f0e2a297c.r2.dev';
     return `${baseUrl}/${profileImage}`;
   };
 
-  // Get role badge with descriptive text and improved styling
   const getRoleBadge = (user: DiscoverUser) => {
     let roleText = '';
     let roleColor = '';
@@ -369,11 +371,11 @@ function SearchPageContent() {
   };
 
   // Handle connect button click
-  const handleConnect = async (userId: string, event: React.MouseEvent) => {
+  const handleConnect = useCallback(async (userId: string, event: React.MouseEvent) => {
     // Prevent default link behavior and event propagation
     event.preventDefault();
     event.stopPropagation();
-
+     
     try {
       // Get auth token
       const windowWithClerk = window as unknown as {
@@ -431,12 +433,12 @@ function SearchPageContent() {
         document.body.removeChild(notification);
       }, 3000);
     }
-  };
+  }, [loadResults]);
 
-  // Create a new function to use as the direct handler
-  const createConnectHandler = (userId: string) => (e: React.MouseEvent) => {
+  // Memoize the handler creation to prevent re-renders
+  const createConnectHandler = useCallback((userId: string) => (e: React.MouseEvent) => {
     handleConnect(userId, e);
-  };
+  }, [handleConnect]);
 
   const renderUserCard = (user: DiscoverUser) => (
     <Card className="group transition-all duration-200 hover:shadow-xl hover:shadow-[#01ae79]/15 border border-border hover:border-[#01ae79]/40 dark:hover:border-[#01ae79]/50 overflow-hidden">
@@ -447,7 +449,7 @@ function SearchPageContent() {
             <div className="relative flex-shrink-0">
               <Avatar className="w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 ring-2 ring-[#01ae79]/20 group-hover:ring-[#01ae79]/50 transition-all duration-200">
                 <AvatarImage 
-                  src={getProfileImageUrl(user.profileImage) || ''} 
+                  src={getProfileImageUrl(user.profileImage) || undefined} 
                   alt={user.fullName || 'User'}
                   className="object-cover"
                 />
@@ -467,7 +469,7 @@ function SearchPageContent() {
                 {user.fullName}
               </h3>
               <div className="flex items-center gap-2 flex-wrap pt-1.5">
-                {getRoleBadge(user)}
+                  {getRoleBadge(user)}
               </div>
               <p className="text-xs md:text-sm font-medium text-[#01ae79] truncate">
                 {user.role === 'athlete' ? user.sport : user.title}
@@ -642,39 +644,47 @@ function SearchPageContent() {
                     Try Again
                   </button>
                 </div>
-              ) : !results || results.results.length === 0 ? (
+              ) : !hasSearched && paginatedResults.length === 0 ? (
+                <div className="text-center py-12">
+                   <div className="w-24 h-24 bg-gradient-to-br from-muted to-muted/60 rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm">
+                     <Users className="w-12 h-12 text-muted-foreground" />
+                   </div>
+                   <h3 className="text-lg font-semibold text-foreground mb-2">
+                    Discover Your Network
+                   </h3>
+                   <p className="text-muted-foreground max-w-md mx-auto">
+                    Use the filters above and click &apos;Discover&apos; to find new connections.
+                   </p>
+                 </div>
+              ) : hasSearched && paginatedResults.length === 0 ? (
                 <div className="text-center py-12">
                   <div className="w-24 h-24 bg-gradient-to-br from-muted to-muted/60 rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm">
                     <Users className="w-12 h-12 text-muted-foreground" />
                   </div>
                   <h3 className="text-lg font-semibold text-foreground mb-2">
-                    {appliedFilters.sports.length > 0 || appliedFilters.divisions.length > 0 || appliedFilters.states.length > 0 || appliedFilters.years.length > 0
-                      ? 'No results found'
-                      : 'No users found'}
+                    No results found
                   </h3>
                   <p className="text-muted-foreground max-w-md mx-auto">
-                    {appliedFilters.sports.length > 0 || appliedFilters.divisions.length > 0 || appliedFilters.states.length > 0 || appliedFilters.years.length > 0
-                      ? 'Try adjusting your filters'
-                      : 'Try changing your search criteria'}
+                    Try adjusting your filters
                   </p>
                 </div>
               ) : (
                 <>
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {results.results.map((user) => (
+                    {paginatedResults.map((user) => (
                       <Link href={`/profile/${user.id}`} key={user.id}>
                         {renderUserCard(user)}
                       </Link>
                     ))}
                   </div>
-
+                  
                   {/* Pagination */}
-                  {results.totalPages > 1 && (
+                  {totalPages > 1 && (
                     <div className="mt-8 flex justify-center gap-2">
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                        onClick={handlePreviousPage}
                         disabled={currentPage === 1}
                         className="h-8 w-8 p-0"
                       >
@@ -684,13 +694,13 @@ function SearchPageContent() {
                         <span className="text-muted-foreground">Page</span>
                         <span className="font-medium">{currentPage}</span>
                         <span className="text-muted-foreground">of</span>
-                        <span className="font-medium">{results.totalPages}</span>
+                        <span className="font-medium">{totalPages}</span>
                       </div>
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => setCurrentPage(prev => Math.min(results.totalPages, prev + 1))}
-                        disabled={currentPage === results.totalPages}
+                        onClick={handleNextPage}
+                        disabled={currentPage === totalPages}
                         className="h-8 w-8 p-0"
                       >
                         <ChevronRight className="h-4 w-4" />

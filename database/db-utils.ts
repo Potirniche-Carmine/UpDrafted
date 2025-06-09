@@ -508,21 +508,97 @@ export const connectionOperations = {
       ),
       with: {
         fromUser: {
+          columns: {
+            id: true,
+            role: true,
+          },
           with: {
-            athleteProfile: true,
-            coachProfile: true,
-            recruitingProfile: true
-          }
+            athleteProfile: {
+              columns: {
+                fullName: true,
+                profileImageR3Key: true,
+                organizationName: true,
+                sport: true,
+                city: true,
+                state: true,
+                graduationYear: true,
+                educationLevel: true,
+                isVerified: true,
+              },
+            },
+            coachProfile: {
+              columns: {
+                fullName: true,
+                profileImageR3Key: true,
+                organizationName: true,
+                title: true,
+                city: true,
+                state: true,
+                division: true,
+                isVerified: true,
+              },
+            },
+            recruitingProfile: {
+              columns: {
+                fullName: true,
+                profileImageR3Key: true,
+                organizationName: true,
+                title: true,
+                city: true,
+                state: true,
+                division: true,
+                isVerified: true,
+              },
+            },
+          },
         },
         toUser: {
+          columns: {
+            id: true,
+            role: true,
+          },
           with: {
-            athleteProfile: true,
-            coachProfile: true,
-            recruitingProfile: true
-          }
-        }
+            athleteProfile: {
+              columns: {
+                fullName: true,
+                profileImageR3Key: true,
+                organizationName: true,
+                sport: true,
+                city: true,
+                state: true,
+                graduationYear: true,
+                educationLevel: true,
+                isVerified: true,
+              },
+            },
+            coachProfile: {
+              columns: {
+                fullName: true,
+                profileImageR3Key: true,
+                organizationName: true,
+                title: true,
+                city: true,
+                state: true,
+                division: true,
+                isVerified: true,
+              },
+            },
+            recruitingProfile: {
+              columns: {
+                fullName: true,
+                profileImageR3Key: true,
+                organizationName: true,
+                title: true,
+                city: true,
+                state: true,
+                division: true,
+                isVerified: true,
+              },
+            },
+          },
+        },
       },
-      orderBy: [desc(connections.createdAt)]
+      orderBy: [desc(connections.createdAt)],
     });
 
     return userConnections;

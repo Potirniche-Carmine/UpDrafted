@@ -112,15 +112,6 @@ export async function GET() {
 
     const { userId: currentUserId } = authResult;
 
-    // Get current user's profile
-    const currentUser = await userOperations.getUserWithProfile(currentUserId);
-    if (!currentUser) {
-      return NextResponse.json(
-        { error: 'User profile not found' },
-        { status: 404 }
-      );
-    }
-
     // Get connections based on user type - now using the new user-based approach
     const allConnections = await connectionOperations.getUserConnections(currentUserId);
 
