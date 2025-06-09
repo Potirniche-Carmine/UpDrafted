@@ -410,9 +410,9 @@ function DashboardContent({
                     </div>
                   ))}
                   <div className="pt-2">
-                    <Button variant="outline" size="sm" className="w-full border-[#01ae79] text-[#01ae79] hover:bg-[#01ae79] hover:text-white">
-                      NCAA Recruiting Periods
-                      <ArrowRight className="ml-2 h-3 w-3" />
+                    <Button variant="outline" size="sm" className="w-full border-[#01ae79] text-[#01ae79] hover:bg-[#01ae79] hover:text-white" onClick={() => window.open('https://www.ncsasports.org/ncaa-eligibility-center/recruiting-rules', '_blank')}>
+                      More On NCAA Recruiting Periods
+                      <ArrowRight className="h-3 w-3" />
                     </Button>
                   </div>
                 </div>
