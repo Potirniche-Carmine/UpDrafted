@@ -144,7 +144,7 @@ export async function POST(request: NextRequest) {
           profileData, 
           profileImageR3Key
         )
-        profileId = result.profile.id
+        profileId = result.athleteProfile.id
         
       } else if (role === 'coach') {
         result = await onboardingOperations.createCoachOnboarding(

@@ -166,6 +166,8 @@ export default function MessagingPage() {
   const [initialLoadComplete, setInitialLoadComplete] = useState(false);
   
   const messagesContainerRef = useRef<HTMLDivElement>(null);
+  const fetchingConversations = useRef(false);
+  const fetchingMessages = useRef(false);
 
   // Get messages for the current conversation from cache or set empty if not cached
   const messages = useMemo(() => {
@@ -189,19 +191,8 @@ export default function MessagingPage() {
 
   // Get/store selected conversation from localStorage to persist across refreshes
   useEffect(() => {
-    // Try to restore selectedConversationId from localStorage on initial load
-    if (!selectedConversationId && !initialLoadComplete) {
-      const savedId = localStorage.getItem('selectedConversationId');
-      if (savedId) {
-        setSelectedConversationId(Number(savedId));
-      }
-    }
-    
-    // Save selectedConversationId to localStorage whenever it changes
-    if (selectedConversationId) {
-      localStorage.setItem('selectedConversationId', selectedConversationId.toString());
-    }
-  }, [selectedConversationId, initialLoadComplete]);
+    window.scrollTo(0, 0);
+  }, []);
 
   // Use ref to track if component is mounted
   const isMounted = useRef(true);
@@ -214,8 +205,9 @@ export default function MessagingPage() {
 
   // Fetch conversations - only on component mount
   const fetchConversations = useCallback(async () => {
-    if (loading && initialLoadComplete) return; // Prevent multiple calls but always run on initial load
-    
+    if (fetchingConversations.current) return;
+
+    fetchingConversations.current = true;
     setLoading(true);
     
     try {
@@ -252,18 +244,6 @@ export default function MessagingPage() {
         const conversationsData = result.conversations || [];
         setConversations(conversationsData);
         
-        // Only auto-select first conversation if none is selected
-        if (conversationsData.length > 0 && !selectedConversationId) {
-          setSelectedConversationId(conversationsData[0].id);
-        } else if (selectedConversationId) {
-          // Verify the selected conversation still exists
-          const exists = conversationsData.some((conv: Conversation) => conv.id === selectedConversationId);
-          if (!exists && conversationsData.length > 0) {
-            // If previously selected conversation is gone, select the first available one
-            setSelectedConversationId(conversationsData[0].id);
-          }
-        }
-        
         // Mark initial load as complete
         setInitialLoadComplete(true);
       } else {
@@ -275,9 +255,10 @@ export default function MessagingPage() {
       setConversations([]);
       setInitialLoadComplete(true); // Still mark as complete to prevent infinite loading
     } finally {
+      fetchingConversations.current = false;
       setLoading(false);
     }
-  }, [initialLoadComplete, loading, selectedConversationId]);
+  }, []);
 
   // Use a stable reference for fetchConversations to prevent infinite re-renders
   const stableFetchConversations = useRef(fetchConversations);
@@ -300,8 +281,9 @@ export default function MessagingPage() {
 
   // Fetch messages for the selected conversation
   const fetchMessages = useCallback(async (conversationId: number) => {
-    if (!conversationId || loading) return;
+    if (!conversationId || fetchingMessages.current) return;
     
+    fetchingMessages.current = true;
     setLoading(true);
     setError(null);
     
@@ -373,8 +355,9 @@ export default function MessagingPage() {
       if (isMounted.current) {
         setLoading(false);
       }
+      fetchingMessages.current = false;
     }
-  }, [loading]);
+  }, []);
 
   // Calculate and update total unread count when conversations change
   useEffect(() => {
@@ -391,9 +374,12 @@ export default function MessagingPage() {
   // Fetch messages when a conversation is selected
   useEffect(() => {
     if (selectedConversationId && initialLoadComplete) {
-      fetchMessages(selectedConversationId);
+      // Only fetch if messages aren't already cached
+      if (!messagesCache[selectedConversationId]) {
+        fetchMessages(selectedConversationId);
+      }
     }
-  }, [selectedConversationId, fetchMessages, initialLoadComplete]);
+  }, [selectedConversationId, fetchMessages, initialLoadComplete, messagesCache]);
 
   const scrollToBottom = useCallback(() => {
     setTimeout(() => {
@@ -416,7 +402,7 @@ export default function MessagingPage() {
   // Handle sending a new message
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newMessage.trim() || !selectedConversationId || sendingMessage) return;
+    if (!newMessage.trim() || !selectedConversationId || sendingMessage || noConnection) return;
     
     setSendingMessage(true);
     const messageContent = newMessage.trim();
@@ -904,25 +890,20 @@ export default function MessagingPage() {
                       {/* Message Input */}
                       <form onSubmit={handleSendMessage} className="p-4 border-t border-border/50 bg-card/80 backdrop-blur-sm">
                         <div className="flex items-center space-x-3">
-                          {/* TODO Add file upload}
-                          <Button variant="ghost" size="icon" type="button" className="hidden sm:flex text-muted-foreground hover:text-[#01ae79] hover:bg-[#01ae79]/10 dark:hover:bg-[#01ae79]/20">
-                            <Paperclip className="h-5 w-5"/>
-                          </Button>
-                          */}
                           <div className="flex-1 relative">
                             <input
                               type="text"
                               value={newMessage}
                               onChange={(e) => setNewMessage(e.target.value)}
-                              placeholder="Type a message..."
+                              placeholder={noConnection ? "You are no longer connected" : "Type a message..."}
                               className="w-full px-4 py-3 pr-12 text-sm rounded-full border border-border/50 bg-background/70 focus:ring-2 focus:ring-[#01ae79] focus:border-[#01ae79] outline-none transition-all"
-                              disabled={sendingMessage}
+                              disabled={sendingMessage || noConnection || loading}
                             />
                           </div>
                           <Button 
                             type="submit" 
                             size="icon" 
-                            disabled={!newMessage.trim() || sendingMessage}
+                            disabled={!newMessage.trim() || sendingMessage || noConnection || loading}
                             className="bg-[#01ae79] hover:bg-[#01ae79]/90 text-white h-12 w-12 rounded-full shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
                           >
                             {sendingMessage ? (
@@ -932,6 +913,12 @@ export default function MessagingPage() {
                             )}
                           </Button>
                         </div>
+                        {noConnection && (
+                          <div className="flex items-center text-sm justify-center text-center pt-2 text-red-700 dark:text-red-300">
+                              <Lock size={16} className="mr-2 flex-shrink-0" />
+                              <span className="truncate">You are no longer connected with {activeConversation?.partnerName}. Messaging is disabled.</span>
+                          </div>
+                        )}
                         {error && (
                           <p className="mt-2 text-xs text-red-500">Error: {error}</p>
                         )}
