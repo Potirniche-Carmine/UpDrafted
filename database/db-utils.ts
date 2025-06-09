@@ -567,41 +567,34 @@ export const activityOperations = {
 export const onboardingOperations = {
   // Complete onboarding for athlete
   async createAthleteOnboarding(userId: string, email: string, profileData: OnboardingProfileData, profileImageR3Key?: string) {
-    // Create/update user
-    const user = await userOperations.createOrUpdateUser(userId, {
+    // Create or update user
+    const user = await userOperations.createOrUpdateUser(userId, { 
       id: userId,
-      email,
-      role: 'athlete'
+      email, 
+      role: 'athlete',
     });
 
     // Create athlete profile
-    const athleteProfile = await athleteOperations.createAthleteProfile({
+    const newProfile: NewAthleteProfile = {
       userId,
       fullName: profileData.fullName,
-      profileImageR3Key,
+      profileImageR3Key: profileImageR3Key,
       sport: profileData.sport!,
       secondarySports: profileData.secondarySports || [],
       graduationYear: profileData.graduationYear!,
-      educationLevel: profileData.educationLevel || 'high_school',
+      educationLevel: profileData.educationLevel!,
       organizationName: profileData.organizationName!,
-      city: profileData.city,
-      state: profileData.state,
+      city: profileData.city!,
+      state: profileData.state!,
       height: profileData.height!,
       weight: profileData.weight!,
       positions: profileData.positions!,
-      gpa: profileData.gpa,
-      satScore: profileData.satScore,
-      actScore: profileData.actScore,
-      intendedMajor: profileData.intendedMajor || undefined,
-      gender: profileData.gender || undefined,
-      maxprepsUrl: profileData.maxprepsUrl || undefined,
-      hudlUrl: profileData.hudlUrl || undefined,
-      instagramHandle: profileData.instagramHandle || undefined,
-      twitterHandle: profileData.twitterHandle || undefined,
-      personalStatement: profileData.personalStatement || undefined
-    });
-
-    return { user, profile: athleteProfile };
+      division: profileData.division,
+    };
+    
+    const athleteProfile = await athleteOperations.createAthleteProfile(newProfile);
+    
+    return { user, athleteProfile };
   },
 
   // Complete onboarding for coach
@@ -1042,12 +1035,12 @@ export const messageOperations = {
 
   // Get the partner user ID from a conversation
   async getPartnerIdFromConversation(conversationId: number, userId: string) {
-    const conversation = await this.getConversationById(conversationId);
-    
-    if (!conversation) {
-      throw new Error('Conversation not found');
-    }
-    
+    const conversation = await db.query.conversations.findFirst({
+      where: eq(conversations.id, conversationId),
+    });
+
+    if (!conversation) return null;
+
     return conversation.user1Id === userId ? conversation.user2Id : conversation.user1Id;
   }
 };
@@ -1062,44 +1055,47 @@ export const profileOperations = {
         athleteProfile: true,
         coachProfile: true,
         recruitingProfile: true,
-      }
+      },
     });
   },
   
   // Get user profile image and name based on their role
   async getUserProfileInfo(userId: string) {
     const user = await this.getUserWithProfile(userId);
-    
-    if (!user) {
-      return null;
-    }
-    
+
+    if (!user) return null;
+
+    let fullName = 'Unknown User';
     let profileImageUrl = null;
-    let fullName = user.email.split('@')[0]; // Fallback name
-    
-    if (user.athleteProfile) {
-      profileImageUrl = user.athleteProfile.profileImageR3Key 
-        ? `${process.env.NEXT_PUBLIC_R2_PUBLIC_URL}/${user.athleteProfile.profileImageR3Key}` 
-        : null;
+    let division = undefined;
+    let educationLevel = undefined;
+    let isVerified = false;
+
+    if (user.role === 'athlete' && user.athleteProfile) {
       fullName = user.athleteProfile.fullName;
-    } else if (user.coachProfile) {
-      profileImageUrl = user.coachProfile.profileImageR3Key 
-        ? `${process.env.NEXT_PUBLIC_R2_PUBLIC_URL}/${user.coachProfile.profileImageR3Key}` 
-        : null;
+      profileImageUrl = user.athleteProfile.profileImageR3Key;
+      division = user.athleteProfile.division;
+      educationLevel = user.athleteProfile.educationLevel;
+      isVerified = user.athleteProfile.isVerified ?? false;
+    } else if (user.role === 'coach' && user.coachProfile) {
       fullName = user.coachProfile.fullName;
-    } else if (user.recruitingProfile) {
-      profileImageUrl = user.recruitingProfile.profileImageR3Key 
-        ? `${process.env.NEXT_PUBLIC_R2_PUBLIC_URL}/${user.recruitingProfile.profileImageR3Key}` 
-        : null;
+      profileImageUrl = user.coachProfile.profileImageR3Key;
+      division = user.coachProfile.division;
+      isVerified = user.coachProfile.isVerified ?? false;
+    } else if (user.role === 'recruiter' && user.recruitingProfile) {
       fullName = user.recruitingProfile.fullName;
+      profileImageUrl = user.recruitingProfile.profileImageR3Key;
+      division = user.recruitingProfile.division;
+      isVerified = user.recruitingProfile.isVerified ?? false;
     }
-    
+
     return {
-      id: userId,
-      email: user.email,
-      role: user.role,
       fullName,
       profileImageUrl,
+      role: user.role,
+      division,
+      educationLevel,
+      isVerified,
     };
   }
 }; 

@@ -44,7 +44,7 @@ function NotificationBadge({ count, className = "" }: { count: number; className
     <div className={`absolute -top-2 -right-2 z-10 ${className}`}>
       <div className="relative">
         <div className="flex items-center justify-center min-w-[18px] h-[18px] bg-red-500 text-white text-xs font-medium rounded-full px-1 border-2 border-white dark:border-gray-950 shadow-sm">
-          {count > 99 ? '99+' : count}
+          {count > 99 ? '99+' : String(count)}
         </div>
         {/* Subtle pulse animation for new notifications */}
         <div className="absolute inset-0 bg-red-500 rounded-full animate-ping opacity-20"></div>
@@ -114,7 +114,7 @@ export function Header() {
   const { isSignedIn, user } = useUser();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { navigateToProfile, isNavigating: profileNavigating } = useProfileNavigation();
-  const { pendingRequestsCount } = useConnections();
+  const { pendingCount } = useConnections();
   const { unreadCount } = useMessages();
 
   // Check if user has completed onboarding (has a role)
@@ -185,7 +185,7 @@ export function Header() {
               key={item.key}
               item={item}
               notificationCount={
-                item.key === "connections" ? pendingRequestsCount : 
+                item.key === "connections" ? pendingCount : 
                 item.key === "messages" ? unreadCount : 0
               }
             />
@@ -254,7 +254,7 @@ export function Header() {
                   <Button variant="ghost" size="sm" className="h-9 w-9 p-0 relative">
                     <Menu className="h-5 w-5" />
                     <NotificationBadge 
-                      count={pendingRequestsCount + unreadCount} 
+                      count={pendingCount + unreadCount} 
                       className="-top-1 -right-1"
                     />
                     <span className="sr-only">Toggle menu</span>
@@ -289,9 +289,9 @@ export function Header() {
                             {item.icon}
                             <span>{item.label}</span>
                           </div>
-                          {item.key === "connections" && pendingRequestsCount > 0 && (
+                          {item.key === "connections" && pendingCount > 0 && (
                             <div className="flex items-center justify-center min-w-[20px] h-5 bg-red-500 text-white text-xs font-medium rounded-full px-1.5">
-                              {pendingRequestsCount > 99 ? '99+' : pendingRequestsCount}
+                              {pendingCount > 99 ? '99+' : pendingCount}
                             </div>
                           )}
                           {item.key === "messages" && unreadCount > 0 && (

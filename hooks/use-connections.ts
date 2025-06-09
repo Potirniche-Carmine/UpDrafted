@@ -1,89 +1,92 @@
+import { create } from 'zustand';
+import { persist, createJSONStorage } from 'zustand/middleware';
 import { useState, useEffect, useCallback } from 'react';
-import { useUser } from '@clerk/nextjs';
 import { usePathname } from 'next/navigation';
 
-interface UseConnectionsReturn {
-  pendingRequestsCount: number;
-  loading: boolean;
-  error: string | null;
-  refetch: () => void;
+interface ConnectionsState {
+  pendingCount: number;
+  lastFetched: number | null;
+  setPendingCount: (count: number) => void;
+  fetchPendingCount: (token: string) => Promise<void>;
 }
 
-export function useConnections(): UseConnectionsReturn {
-  const { isSignedIn, user } = useUser();
+interface ClerkSession {
+    getToken: () => Promise<string>;
+}
+
+interface WindowWithClerk extends Window {
+    Clerk?: {
+        session?: ClerkSession;
+    };
+}
+
+const useConnectionsStore = create(
+  persist<ConnectionsState>(
+    (set) => ({
+      pendingCount: 0,
+      lastFetched: null,
+      setPendingCount: (count) => set({ pendingCount: count, lastFetched: Date.now() }),
+      fetchPendingCount: async (token) => {
+        try {
+          const response = await fetch('/api/connections', {
+            method: 'GET',
+            headers: {
+              'Authorization': `Bearer ${token}`,
+            },
+          });
+
+          if (response.ok) {
+            const data = await response.json();
+            if (data.success) {
+              set({ pendingCount: data.pendingRequests?.length || 0, lastFetched: Date.now() });
+            }
+          }
+        } catch (error) {
+          console.error('Failed to fetch pending connections count:', error);
+        }
+      },
+    }),
+    {
+      name: 'connections-storage',
+      storage: createJSONStorage(() => localStorage),
+    }
+  )
+);
+
+// React hook to use the store and fetch data
+export const useConnections = () => {
+  const { pendingCount, lastFetched, fetchPendingCount, setPendingCount } = useConnectionsStore();
+  const [isFetching, setIsFetching] = useState(false);
   const pathname = usePathname();
-  const [pendingRequestsCount, setPendingRequestsCount] = useState(0);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
-  const fetchConnections = useCallback(async () => {
-    // Don't fetch if user is not signed in
-    if (!isSignedIn) {
-      setPendingRequestsCount(0);
-      return;
-    }
-
-    // Don't fetch if user is on onboarding page
-    if (pathname?.startsWith('/onboarding')) {
-      setPendingRequestsCount(0);
-      return;
-    }
-
-    // Don't fetch if user doesn't have a role yet
-    const userRole = user?.publicMetadata?.role as string;
-    if (!userRole || !['athlete', 'coach', 'recruiter'].includes(userRole)) {
-      setPendingRequestsCount(0);
-      return;
-    }
-
-    setLoading(true);
-    setError(null);
-
-    try {
-      // Get auth token
-      const windowWithClerk = window as unknown as {
-        Clerk?: {
-          session?: {
-            getToken: () => Promise<string>;
-          };
-        };
-      };
-      const token = await windowWithClerk.Clerk?.session?.getToken();
-
-      const response = await fetch('/api/connections', {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to fetch connections');
+  const fetchWithToken = useCallback(async () => {
+    const windowWithClerk = window as WindowWithClerk;
+    if (typeof windowWithClerk !== 'undefined' && windowWithClerk.Clerk?.session) {
+      setIsFetching(true);
+      try {
+        const token = await windowWithClerk.Clerk.session.getToken();
+        if (token) {
+          await fetchPendingCount(token);
+        }
+      } catch (error) {
+        console.error('Error fetching connections count with token:', error);
+      } finally {
+        setIsFetching(false);
       }
-
-      const result = await response.json();
-      if (result.success) {
-        setPendingRequestsCount(result.pendingRequests?.length || 0);
-      } else {
-        throw new Error(result.error || 'Failed to fetch connections');
-      }
-    } catch (error) {
-      console.error('Error fetching connections:', error);
-      setError(error instanceof Error ? error.message : 'Failed to fetch connections');
-      setPendingRequestsCount(0);
-    } finally {
-      setLoading(false);
     }
-  }, [isSignedIn, pathname, user?.publicMetadata?.role]);
+  }, [fetchPendingCount]);
 
   useEffect(() => {
-    fetchConnections();
-  }, [fetchConnections]);
+    // Only fetch on the client if we haven't fetched before
+    const windowWithClerk = window as WindowWithClerk;
+    if (typeof windowWithClerk !== 'undefined' && lastFetched === null && pathname !== '/connections') {
+      fetchWithToken();
+    }
+  }, [lastFetched, pathname, fetchWithToken]);
 
-  return {
-    pendingRequestsCount,
-    loading,
-    error,
-    refetch: fetchConnections
-  };
-} 
+  const refetch = useCallback(() => {
+    return fetchWithToken();
+  }, [fetchWithToken]);
+
+  return { pendingCount, isFetching, refetch, setPendingCount };
+};

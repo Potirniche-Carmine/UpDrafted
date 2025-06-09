@@ -23,10 +23,25 @@ interface ConversationData {
   user2?: User;
 }
 
-type Operation = 'getConversations' | 'getMessages' | 'sendMessage' | 'markRead' | 'getUnreadCount';
+interface Message {
+  id: number;
+  senderId: string;
+  content: string;
+  isFromCurrentUser: boolean;
+  isRead: boolean;
+  readAt: Date | null;
+  createdAt: Date;
+  messageType: string;
+}
+
+type Operation = 'getConversations' | 'getMessages' | 'sendMessage' | 'markRead' | 'getUnreadCount' | 'getOrCreateConversation';
 
 interface BaseRequestBody {
   operation: Operation;
+}
+
+interface GetConversationsRequestBody extends BaseRequestBody {
+  includeFirstConversationMessages?: boolean;
 }
 
 interface GetMessagesRequestBody extends BaseRequestBody {
@@ -44,6 +59,10 @@ interface MarkReadRequestBody extends BaseRequestBody {
   conversationId: string | number;
 }
 
+interface GetOrCreateConversationRequestBody extends BaseRequestBody {
+  partnerId: string;
+}
+
 /**
  * Unified messaging API that handles all operations
  * Uses a single endpoint to reduce function invocations
@@ -54,6 +73,7 @@ interface MarkReadRequestBody extends BaseRequestBody {
  * - sendMessage: Send a new message
  * - markRead: Mark messages in a conversation as read
  * - getUnreadCount: Get total unread message count
+ * - getOrCreateConversation: Get or create a conversation with a specified partner
  */
 export async function POST(request: NextRequest) {
   // Validate security headers
@@ -88,7 +108,7 @@ export async function POST(request: NextRequest) {
     // Route to appropriate handler based on operation
     switch (operation) {
       case 'getConversations':
-        return await handleGetConversations(userId);
+        return await handleGetConversations(userId, body as GetConversationsRequestBody);
       
       case 'getMessages':
         return await handleGetMessages(userId, body as GetMessagesRequestBody);
@@ -101,6 +121,9 @@ export async function POST(request: NextRequest) {
       
       case 'getUnreadCount':
         return await handleGetUnreadCount(userId);
+      
+      case 'getOrCreateConversation':
+        return await handleGetOrCreateConversation(userId, body as GetOrCreateConversationRequestBody);
       
       default:
         return NextResponse.json({
@@ -121,8 +144,10 @@ export async function POST(request: NextRequest) {
 /**
  * Get all conversations for the current user
  */
-async function handleGetConversations(userId: string) {
+async function handleGetConversations(userId: string, body: GetConversationsRequestBody) {
   try {
+    const { includeFirstConversationMessages } = body;
+
     // Get conversations
     const conversations = await messageOperations.getUserConversations(userId);
     
@@ -173,6 +198,8 @@ async function handleGetConversations(userId: string) {
         partnerName: partnerInfo.fullName,
         partnerRole: partnerInfo.role,
         partnerImageUrl: partnerInfo.profileImageUrl,
+        division: partnerInfo.division,
+        educationLevel: partnerInfo.educationLevel,
         lastMessagePreview: messagePreview,
         lastMessageTime: conversation.lastMessageAt,
         unreadCount: isUser1 
@@ -183,10 +210,51 @@ async function handleGetConversations(userId: string) {
       };
     }));
 
+    const finalConversations = formattedConversations.filter(c => c !== null) as (typeof formattedConversations)[number][];
+
+    let firstConversationMessages: Message[] = [];
+    if (includeFirstConversationMessages && finalConversations.length > 0) {
+      const firstConversation = finalConversations[0];
+      if (firstConversation) {
+        const firstConversationId = firstConversation.id;
+        const messagesData = await messageOperations.getMessages(firstConversationId, 50, 0);
+        
+        firstConversationMessages = messagesData.map(msg => {
+          let decryptedContent = '';
+          try {
+            decryptedContent = decryptMessage(msg.encryptedContent, msg.contentIV);
+          } catch {
+            decryptedContent = '[Message unavailable]';
+          }
+
+          return {
+            id: msg.id,
+            senderId: msg.senderId,
+            content: decryptedContent,
+            isFromCurrentUser: msg.senderId === userId,
+            isRead: msg.isRead,
+            readAt: msg.readAt,
+            createdAt: msg.createdAt,
+            messageType: msg.messageType,
+          };
+        });
+
+        // Mark messages as read for the first conversation
+        await messageOperations.markMessagesAsRead(firstConversationId, userId);
+        
+        // Update unread count for the first conversation in the list
+        const firstConvo = finalConversations.find(c => c && c.id === firstConversationId);
+        if (firstConvo) {
+          firstConvo.unreadCount = 0;
+        }
+      }
+    }
+
     return NextResponse.json({
       success: true,
-      conversations: formattedConversations.filter(Boolean),
-      totalUnreadCount: unreadCount
+      conversations: finalConversations,
+      totalUnreadCount: unreadCount,
+      ...(includeFirstConversationMessages && { firstConversationMessages }),
     });
   } catch (error) {
     console.error('Error fetching conversations:', error);
@@ -532,6 +600,44 @@ async function handleGetUnreadCount(userId: string) {
 }
 
 /**
+ * Get or create a conversation between two users
+ */
+async function handleGetOrCreateConversation(userId: string, body: GetOrCreateConversationRequestBody) {
+  try {
+    const { partnerId } = body;
+
+    if (!partnerId) {
+      return NextResponse.json({ success: false, error: 'Missing partner ID' }, { status: 400 });
+    }
+
+    if (userId === partnerId) {
+      return NextResponse.json({ success: false, error: 'Cannot start conversation with yourself' }, { status: 400 });
+    }
+
+    // Check if a connection exists between the users and is active
+    const connection = await connectionOperations.getConnectionBetweenUsers(userId, partnerId);
+    if (!connection || connection.status !== 'connected') {
+      return NextResponse.json({ success: false, error: 'A connection is required to start a conversation.' }, { status: 403 });
+    }
+
+    // Check for an existing conversation
+    const conversation = await messageOperations.getConversationByUsers(userId, partnerId);
+
+    if (conversation) {
+      // If conversation exists, just return its ID
+      return NextResponse.json({ success: true, conversationId: conversation.id });
+    } else {
+      // Otherwise, create a new one
+      const newConversation = await messageOperations.createConversation(userId, partnerId);
+      return NextResponse.json({ success: true, conversationId: newConversation.id });
+    }
+  } catch (error) {
+    console.error('Error in getOrCreateConversation:', error);
+    return NextResponse.json({ success: false, error: 'Failed to get or create conversation' }, { status: 500 });
+  }
+}
+
+/**
  * GET handler for backward compatibility
  * Simply redirects to the POST handler with getConversations operation
  */
@@ -554,7 +660,7 @@ export async function GET(request: NextRequest) {
     const { userId } = authResult;
     
     // Handle as getConversations
-    return await handleGetConversations(userId);
+    return await handleGetConversations(userId, { operation: 'getConversations', includeFirstConversationMessages: true });
   } catch (error) {
     console.error('Error in GET handler:', error);
     

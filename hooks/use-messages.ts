@@ -1,153 +1,95 @@
+import { create } from 'zustand';
+import { persist, createJSONStorage } from 'zustand/middleware';
 import { useState, useEffect, useCallback } from 'react';
-import { useUser } from '@clerk/nextjs';
 import { usePathname } from 'next/navigation';
 
-interface UseMessagesReturn {
+interface MessagesState {
   unreadCount: number;
-  loading: boolean;
-  error: string | null;
-  refetch: () => void;
+  lastFetched: number | null;
+  setUnreadCount: (count: number) => void;
+  fetchUnreadCount: (token: string) => Promise<void>;
 }
 
-export function useMessages(): UseMessagesReturn {
-  const { isSignedIn, user } = useUser();
-  const pathname = usePathname();
-  const [unreadCount, setUnreadCount] = useState(0);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+interface ClerkSession {
+    getToken: () => Promise<string>;
+}
 
-  const fetchUnreadCount = useCallback(async () => {
-    // Don't fetch if user is not signed in
-    if (!isSignedIn) {
-      setUnreadCount(0);
-      return;
-    }
-
-    // Don't fetch if user is on onboarding page
-    if (pathname?.startsWith('/onboarding')) {
-      setUnreadCount(0);
-      return;
-    }
-
-    // Don't fetch if user doesn't have a role yet
-    const userRole = user?.publicMetadata?.role as string;
-    if (!userRole || !['athlete', 'coach', 'recruiter'].includes(userRole)) {
-      setUnreadCount(0);
-      return;
-    }
-
-    // Don't fetch if window/tab is not visible
-    if (typeof document !== 'undefined' && document.visibilityState === 'hidden') {
-      return;
-    }
-
-    setLoading(true);
-    setError(null);
-
-    try {
-      // Get auth token
-      const windowWithClerk = window as unknown as {
-        Clerk?: {
-          session?: {
-            getToken: () => Promise<string>;
-          };
-        };
-      };
-      const token = await windowWithClerk.Clerk?.session?.getToken();
-
-      const response = await fetch('/api/messages', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          operation: 'getUnreadCount'
-        })
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to fetch unread messages count');
-      }
-
-      const result = await response.json();
-      if (result.success) {
-        setUnreadCount(result.unreadCount || 0);
-      } else {
-        throw new Error(result.error || 'Failed to fetch unread messages count');
-      }
-    } catch (error) {
-      console.error('Error fetching unread messages count:', error);
-      setError(error instanceof Error ? error.message : 'Failed to fetch unread messages count');
-      setUnreadCount(0);
-    } finally {
-      setLoading(false);
-    }
-  }, [isSignedIn, pathname, user?.publicMetadata?.role]);
-
-  useEffect(() => {
-    // Initial fetch
-    fetchUnreadCount();
-    
-    // Helper function to create a random interval between min and max seconds
-    const getRandomInterval = () => {
-      const min = 45000; // 45 seconds
-      const max = 75000; // 75 seconds
-      return Math.floor(Math.random() * (max - min + 1)) + min;
+interface WindowWithClerk extends Window {
+    Clerk?: {
+        session?: ClerkSession;
     };
-    
-    // Store interval ID
-    let intervalId: NodeJS.Timeout;
-    
-    // Function to start polling
-    const startPolling = () => {
-      // Clear any existing interval
-      if (intervalId) clearInterval(intervalId);
-      
-      // Set a new interval with a random time
-      intervalId = setInterval(() => {
-        fetchUnreadCount();
-        
-        // Reset the interval with a new random time after each fetch
-        clearInterval(intervalId);
-        intervalId = setInterval(fetchUnreadCount, getRandomInterval());
-      }, getRandomInterval());
-    };
-    
-    // Start polling initially
-    if (typeof window !== 'undefined') {
-      startPolling();
-      
-      // Handle visibility change to pause/resume polling
-      const handleVisibilityChange = () => {
-        if (document.visibilityState === 'visible') {
-          // When tab becomes visible, fetch immediately and restart polling
-          fetchUnreadCount();
-          startPolling();
-        } else {
-          // When tab is hidden, clear the interval
-          clearInterval(intervalId);
+}
+
+const useMessagesStore = create(
+  persist<MessagesState>(
+    (set) => ({
+      unreadCount: 0,
+      lastFetched: null,
+      setUnreadCount: (count) => set({ unreadCount: count, lastFetched: Date.now() }),
+      fetchUnreadCount: async (token) => {
+        try {
+          const response = await fetch('/api/messages', {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ operation: 'getUnreadCount' })
+          });
+
+          if (response.ok) {
+            const data = await response.json();
+            if (data.success) {
+              set({ unreadCount: data.totalUnreadCount, lastFetched: Date.now() });
+            }
+          }
+        } catch (error) {
+          console.error('Failed to fetch unread message count:', error);
         }
-      };
-      
-      document.addEventListener('visibilitychange', handleVisibilityChange);
-      
-      // Clean up
-      return () => {
-        document.removeEventListener('visibilitychange', handleVisibilityChange);
-        clearInterval(intervalId);
-      };
+      },
+    }),
+    {
+      name: 'messages-storage',
+      storage: createJSONStorage(() => localStorage),
     }
-    
-    return () => {
-      if (intervalId) clearInterval(intervalId);
-    };
+  )
+);
+
+// React hook to use the store and fetch data
+export const useMessages = () => {
+  const { unreadCount, lastFetched, fetchUnreadCount, setUnreadCount } = useMessagesStore();
+  const [isFetching, setIsFetching] = useState(false);
+  const pathname = usePathname();
+
+  const fetchWithToken = useCallback(async () => {
+    // Check if Clerk is loaded and user is available
+    const windowWithClerk = window as WindowWithClerk;
+    if (typeof windowWithClerk !== 'undefined' && windowWithClerk.Clerk?.session) {
+      setIsFetching(true);
+      try {
+        const token = await windowWithClerk.Clerk.session.getToken();
+        if (token) {
+          await fetchUnreadCount(token);
+        }
+      } catch (error) {
+        console.error('Error fetching message count with token:', error);
+      } finally {
+        setIsFetching(false);
+      }
+    }
   }, [fetchUnreadCount]);
 
-  return {
-    unreadCount,
-    loading,
-    error,
-    refetch: fetchUnreadCount
-  };
-} 
+  useEffect(() => {
+    // Only fetch on the client and if we haven't fetched before
+    const windowWithClerk = window as WindowWithClerk;
+    if (typeof windowWithClerk !== 'undefined' && lastFetched === null && pathname !== '/messages') {
+      fetchWithToken();
+    }
+  }, [lastFetched, pathname, fetchWithToken]);
+
+  const refetch = useCallback(() => {
+    return fetchWithToken();
+  }, [fetchWithToken]);
+
+  return { unreadCount, isFetching, refetch, setUnreadCount };
+};

@@ -4,13 +4,13 @@ import {
   text,
   serial,
   integer,
-  decimal,
   boolean,
   timestamp,
   date,
   jsonb,
   index,
   unique,
+  real,
 } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
 
@@ -42,6 +42,7 @@ export const athleteProfiles = pgTable('athlete_profiles', {
   sport: text('sport').notNull(),
   secondarySports: text('secondary_sports').array(),
   graduationYear: integer('graduation_year').notNull(),
+  division: text('division'),
   educationLevel: educationLevelEnum('education_level').notNull().default('high_school'),
   organizationName: text('organization_name').notNull(),
   city: text('city').notNull(),
@@ -49,7 +50,7 @@ export const athleteProfiles = pgTable('athlete_profiles', {
   height: text('height').notNull(),
   weight: text('weight').notNull(),
   positions: text('positions').array().notNull(),
-  gpa: decimal('gpa', { precision: 3, scale: 2 }),
+  gpa: real('gpa'),
   satScore: integer('sat_score'),
   actScore: integer('act_score'),
   intendedMajor: text('intended_major'),
