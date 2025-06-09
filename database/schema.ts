@@ -211,40 +211,37 @@ export const activityLog = pgTable('activity_log', {
 
 export const conversations = pgTable('conversations', {
   id: serial('id').primaryKey(),
-  athleteId: integer('athlete_id').notNull().references(() => athleteProfiles.id, { onDelete: 'cascade' }),
-  coachId: integer('coach_id').notNull().references(() => coachProfiles.id, { onDelete: 'cascade' }),
+  user1Id: text('user1_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  user2Id: text('user2_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
   lastMessageAt: timestamp('last_message_at', { withTimezone: true }),
+  user1UnreadCount: integer('user1_unread_count').default(0).notNull(),
+  user2UnreadCount: integer('user2_unread_count').default(0).notNull(),
+  connectionActive: boolean('connection_active').default(true).notNull(),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
 }, (table) => [
-  index('idx_conversations_athlete_id').on(table.athleteId),
-  index('idx_conversations_coach_id').on(table.coachId),
+  index('idx_conversations_user1_id').on(table.user1Id),
+  index('idx_conversations_user2_id').on(table.user2Id),
   index('idx_conversations_last_message_at').on(table.lastMessageAt),
-  unique('conversations_athlete_coach_unique').on(table.athleteId, table.coachId),
+  index('idx_conversations_connection_active').on(table.connectionActive),
+  unique('conversations_users_unique').on(table.user1Id, table.user2Id),
 ]);
 
 export const messages = pgTable('messages', {
   id: serial('id').primaryKey(),
   conversationId: integer('conversation_id').notNull().references(() => conversations.id, { onDelete: 'cascade' }),
   senderId: text('sender_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
-  content: text('content').notNull(),
+  encryptedContent: text('encrypted_content').notNull(),
+  contentIV: text('content_iv').notNull(),
   messageType: text('message_type').default('text').notNull(),
   attachmentUrl: text('attachment_url'),
+  isRead: boolean('is_read').default(false).notNull(),
+  readAt: timestamp('read_at', { withTimezone: true }),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
 }, (table) => [
   index('idx_messages_conversation_id').on(table.conversationId),
   index('idx_messages_sender_id').on(table.senderId),
   index('idx_messages_created_at').on(table.createdAt),
-]);
-
-export const messageReads = pgTable('message_reads', {
-  id: serial('id').primaryKey(),
-  messageId: integer('message_id').notNull().references(() => messages.id, { onDelete: 'cascade' }),
-  userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
-  readAt: timestamp('read_at', { withTimezone: true }).defaultNow().notNull(),
-}, (table) => [
-  index('idx_message_reads_message_id').on(table.messageId),
-  index('idx_message_reads_user_id').on(table.userId),
-  unique('message_reads_message_user_unique').on(table.messageId, table.userId),
+  index('idx_messages_is_read').on(table.isRead),
 ]);
 
 export const verificationRequests = pgTable('verification_requests', {
@@ -384,29 +381,25 @@ export const connectionsRelations = relations(connections, ({ one }) => ({
   }),
 }));
 
-export const conversationsRelations = relations(conversations, ({ many }) => ({
+export const conversationsRelations = relations(conversations, ({ many, one }) => ({
   messages: many(messages),
+  user1: one(users, {
+    fields: [conversations.user1Id],
+    references: [users.id],
+  }),
+  user2: one(users, {
+    fields: [conversations.user2Id],
+    references: [users.id],
+  }),
 }));
 
-export const messagesRelations = relations(messages, ({ one, many }) => ({
+export const messagesRelations = relations(messages, ({ one }) => ({
   conversation: one(conversations, {
     fields: [messages.conversationId],
     references: [conversations.id],
   }),
   sender: one(users, {
     fields: [messages.senderId],
-    references: [users.id],
-  }),
-  reads: many(messageReads),
-}));
-
-export const messageReadsRelations = relations(messageReads, ({ one }) => ({
-  message: one(messages, {
-    fields: [messageReads.messageId],
-    references: [messages.id],
-  }),
-  user: one(users, {
-    fields: [messageReads.userId],
     references: [users.id],
   }),
 }));
@@ -463,8 +456,6 @@ export type Conversation = typeof conversations.$inferSelect;
 export type NewConversation = typeof conversations.$inferInsert;
 export type Message = typeof messages.$inferSelect;
 export type NewMessage = typeof messages.$inferInsert;
-export type MessageRead = typeof messageReads.$inferSelect;
-export type NewMessageRead = typeof messageReads.$inferInsert;
 export type RecruitingNeeds = typeof recruitingNeeds.$inferSelect;
 export type NewRecruitingNeeds = typeof recruitingNeeds.$inferInsert;
 export type RecruitingProfileNeeds = typeof recruitingProfileNeeds.$inferSelect;

@@ -1,4 +1,4 @@
-import { eq, and, desc, or, asc } from 'drizzle-orm';
+import { eq, and, desc, or, asc, sql } from 'drizzle-orm';
 import { db } from './db';
 import { 
   users, 
@@ -11,6 +11,8 @@ import {
   connections,
   activityLog,
   reports,
+  messages,
+  conversations,
   type NewUser,
   type NewAthleteProfile,
   type NewAthleteMeasurable,
@@ -20,9 +22,10 @@ import {
   type NewRecruitingNeeds,
   type NewRecruitingProfileNeeds,
   type NewReport,
-  athleteVideos
+  athleteVideos,
 } from './schema';
 import { OnboardingProfileData } from '@/app/(onboarding)/lib/onboarding';
+import { sanitizeAndEncryptMessage } from '@/utils/encryption';
 
 // User operations
 export const userOperations = {
@@ -796,5 +799,307 @@ export const reportOperations = {
       )
     });
     return !!existingReport;
+  }
+};
+
+// Messaging operations
+export const messageOperations = {
+  // Get conversation by users
+  async getConversationByUsers(user1Id: string, user2Id: string) {
+    // First try with user1 and user2 in current order
+    const conversation = await db.query.conversations.findFirst({
+      where: and(
+        eq(conversations.user1Id, user1Id),
+        eq(conversations.user2Id, user2Id)
+      ),
+      with: {
+        user1: true,
+        user2: true,
+      }
+    });
+    
+    if (conversation) {
+      return conversation;
+    }
+    
+    // If not found, try with users in reverse order
+    return await db.query.conversations.findFirst({
+      where: and(
+        eq(conversations.user1Id, user2Id),
+        eq(conversations.user2Id, user1Id)
+      ),
+      with: {
+        user1: true,
+        user2: true,
+      }
+    });
+  },
+  
+  // Get conversation by ID with participants
+  async getConversationById(conversationId: number) {
+    return await db.query.conversations.findFirst({
+      where: eq(conversations.id, conversationId),
+      with: {
+        user1: true,
+        user2: true,
+      }
+    });
+  },
+  
+  // Create a new conversation
+  async createConversation(user1Id: string, user2Id: string): Promise<{ id: number }> {
+    const [conversation] = await db.insert(conversations)
+      .values({
+        user1Id,
+        user2Id,
+        lastMessageAt: new Date(),
+      })
+      .returning({ id: conversations.id });
+    
+    return conversation;
+  },
+
+  // Get all conversations for a user
+  async getUserConversations(userId: string) {
+    // Get conversations where user is either user1 or user2
+    const conversationsAsUser1 = await db.query.conversations.findMany({
+      where: and(
+        eq(conversations.user1Id, userId),
+        eq(conversations.connectionActive, true)
+      ),
+      with: {
+        user2: true,
+        messages: {
+          orderBy: [desc(messages.createdAt)],
+          limit: 1,
+        }
+      },
+      orderBy: [desc(conversations.lastMessageAt)]
+    });
+    
+    const conversationsAsUser2 = await db.query.conversations.findMany({
+      where: and(
+        eq(conversations.user2Id, userId),
+        eq(conversations.connectionActive, true)
+      ),
+      with: {
+        user1: true,
+        messages: {
+          orderBy: [desc(messages.createdAt)],
+          limit: 1,
+        }
+      },
+      orderBy: [desc(conversations.lastMessageAt)]
+    });
+    
+    // Combine and sort all conversations by lastMessageAt
+    const allConversations = [
+      ...conversationsAsUser1,
+      ...conversationsAsUser2
+    ].sort((a, b) => {
+      if (!a.lastMessageAt) return 1;
+      if (!b.lastMessageAt) return -1;
+      return new Date(b.lastMessageAt).getTime() - new Date(a.lastMessageAt).getTime();
+    });
+    
+    return allConversations;
+  },
+
+  // Update connection active status for a conversation
+  async updateConversationConnectionStatus(conversationId: number, isActive: boolean) {
+    return await db.update(conversations)
+      .set({ connectionActive: isActive })
+      .where(eq(conversations.id, conversationId))
+      .returning();
+  },
+
+  // Get messages for a conversation with pagination
+  async getMessages(conversationId: number, limit = 50, offset = 0) {
+    return await db.query.messages.findMany({
+      where: eq(messages.conversationId, conversationId),
+      orderBy: [desc(messages.createdAt)],
+      limit,
+      offset,
+      with: {
+        sender: true
+      }
+    });
+  },
+  
+  // Send a new message
+  async sendMessage(conversationId: number, senderId: string, content: string) {
+    // Sanitize and encrypt the message
+    const { encryptedText, iv } = sanitizeAndEncryptMessage(content);
+    
+    // Get the conversation to determine who's who
+    const conversation = await this.getConversationById(conversationId);
+    
+    if (!conversation) {
+      throw new Error('Conversation not found');
+    }
+    
+    // Determine if sender is user1 or user2 and update unread counts accordingly
+    const isUser1 = conversation.user1Id === senderId;
+    
+    // Update conversation with new last message time and increment unread count
+    if (isUser1) {
+      await db.update(conversations)
+        .set({ 
+          lastMessageAt: new Date(),
+          user2UnreadCount: sql`${conversations.user2UnreadCount} + 1`
+        })
+        .where(eq(conversations.id, conversationId));
+    } else {
+      await db.update(conversations)
+        .set({ 
+          lastMessageAt: new Date(),
+          user1UnreadCount: sql`${conversations.user1UnreadCount} + 1`
+        })
+        .where(eq(conversations.id, conversationId));
+    }
+    
+    // Insert the new message
+    const [message] = await db.insert(messages)
+      .values({
+        conversationId,
+        senderId,
+        encryptedContent: encryptedText,
+        contentIV: iv,
+        messageType: 'text',
+        createdAt: new Date()
+      })
+      .returning();
+    
+    return message;
+  },
+  
+  // Mark messages as read
+  async markMessagesAsRead(conversationId: number, userId: string) {
+    // Get the conversation to determine who's who
+    const conversation = await this.getConversationById(conversationId);
+    
+    if (!conversation) {
+      throw new Error('Conversation not found');
+    }
+    
+    const isUser1 = conversation.user1Id === userId;
+    
+    // Mark messages as read where this user is NOT the sender
+    await db.update(messages)
+      .set({ 
+        isRead: true,
+        readAt: new Date()
+      })
+      .where(and(
+        eq(messages.conversationId, conversationId),
+        sql`${messages.senderId} != ${userId}`,
+        eq(messages.isRead, false)
+      ));
+    
+    // Reset unread count in conversation
+    if (isUser1) {
+      await db.update(conversations)
+        .set({ user1UnreadCount: 0 })
+        .where(eq(conversations.id, conversationId));
+    } else {
+      await db.update(conversations)
+        .set({ user2UnreadCount: 0 })
+        .where(eq(conversations.id, conversationId));
+    }
+    
+    return { success: true };
+  },
+  
+  // Get total unread message count for a user
+  async getUnreadMessageCount(userId: string) {
+    // Check for unread messages where user is user1
+    const resultAsUser1 = await db.select({
+      count: sql`sum(${conversations.user1UnreadCount})`
+    })
+    .from(conversations)
+    .where(and(
+      eq(conversations.user1Id, userId),
+      eq(conversations.connectionActive, true)
+    ));
+    
+    const unreadCountAsUser1 = Number(resultAsUser1[0]?.count || 0);
+    
+    // Check for unread messages where user is user2
+    const resultAsUser2 = await db.select({
+      count: sql`sum(${conversations.user2UnreadCount})`
+    })
+    .from(conversations)
+    .where(and(
+      eq(conversations.user2Id, userId),
+      eq(conversations.connectionActive, true)
+    ));
+    
+    const unreadCountAsUser2 = Number(resultAsUser2[0]?.count || 0);
+    
+    // Return the total unread count
+    return unreadCountAsUser1 + unreadCountAsUser2;
+  },
+
+  // Get the partner user ID from a conversation
+  async getPartnerIdFromConversation(conversationId: number, userId: string) {
+    const conversation = await this.getConversationById(conversationId);
+    
+    if (!conversation) {
+      throw new Error('Conversation not found');
+    }
+    
+    return conversation.user1Id === userId ? conversation.user2Id : conversation.user1Id;
+  }
+};
+
+// Profile operations - for accessing user profiles
+export const profileOperations = {
+  // Get user with all profile types
+  async getUserWithProfile(userId: string) {
+    return await db.query.users.findFirst({
+      where: eq(users.id, userId),
+      with: {
+        athleteProfile: true,
+        coachProfile: true,
+        recruitingProfile: true,
+      }
+    });
+  },
+  
+  // Get user profile image and name based on their role
+  async getUserProfileInfo(userId: string) {
+    const user = await this.getUserWithProfile(userId);
+    
+    if (!user) {
+      return null;
+    }
+    
+    let profileImageUrl = null;
+    let fullName = user.email.split('@')[0]; // Fallback name
+    
+    if (user.athleteProfile) {
+      profileImageUrl = user.athleteProfile.profileImageR3Key 
+        ? `${process.env.NEXT_PUBLIC_R2_PUBLIC_URL}/${user.athleteProfile.profileImageR3Key}` 
+        : null;
+      fullName = user.athleteProfile.fullName;
+    } else if (user.coachProfile) {
+      profileImageUrl = user.coachProfile.profileImageR3Key 
+        ? `${process.env.NEXT_PUBLIC_R2_PUBLIC_URL}/${user.coachProfile.profileImageR3Key}` 
+        : null;
+      fullName = user.coachProfile.fullName;
+    } else if (user.recruitingProfile) {
+      profileImageUrl = user.recruitingProfile.profileImageR3Key 
+        ? `${process.env.NEXT_PUBLIC_R2_PUBLIC_URL}/${user.recruitingProfile.profileImageR3Key}` 
+        : null;
+      fullName = user.recruitingProfile.fullName;
+    }
+    
+    return {
+      id: userId,
+      email: user.email,
+      role: user.role,
+      fullName,
+      profileImageUrl,
+    };
   }
 }; 
