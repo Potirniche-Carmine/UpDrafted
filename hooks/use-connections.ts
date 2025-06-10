@@ -1,4 +1,4 @@
-import { create } from 'zustand';
+/*import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { useState, useEffect, useCallback } from 'react';
 import { usePathname } from 'next/navigation';
@@ -77,9 +77,15 @@ export const useConnections = () => {
   }, [fetchPendingCount]);
 
   useEffect(() => {
-    // Only fetch on the client if we haven't fetched before
+    const now = Date.now();
+    const oneMinute = 1 * 60 * 1000; // 1 minute
     const windowWithClerk = window as WindowWithClerk;
-    if (typeof windowWithClerk !== 'undefined' && lastFetched === null && pathname !== '/connections') {
+    // Fetch if we are on the client, not on the connections page, and the data is stale or never fetched.
+    if (
+      typeof windowWithClerk !== 'undefined' &&
+      pathname !== '/connections' &&
+      (!lastFetched || now - lastFetched > oneMinute)
+    ) {
       fetchWithToken();
     }
   }, [lastFetched, pathname, fetchWithToken]);
@@ -90,3 +96,4 @@ export const useConnections = () => {
 
   return { pendingCount, isFetching, refetch, setPendingCount };
 };
+*/

@@ -6,7 +6,6 @@ import { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import { Badge } from "@/components/ui/badge";
 import Link from 'next/link';
 import { AuthWrapper } from '../../../components/auth-wrapper';
-import { useMessages } from '@/hooks/use-messages';
 import {
   Dialog,
   DialogContent,
@@ -14,7 +13,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Spinner } from "@/components/ui/spinner";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 
 // Define real API types
@@ -56,6 +54,7 @@ interface WindowWithClerk extends Window {
 
 // Define connection interface
 interface ApiConnection {
+  status: string;
   otherUser: {
     userId: string;
     fullName: string;
@@ -156,15 +155,13 @@ export default function MessagingPage() {
   const [loading, setLoading] = useState(true);
   const [sendingMessage, setSendingMessage] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [noConnection, setNoConnection] = useState(false);
-  const [otherUserId, setOtherUserId] = useState<string | null>(null);
-  const { setUnreadCount } = useMessages();
   const [isNewMessageDialogOpen, setIsNewMessageDialogOpen] = useState(false);
   const [connections, setConnections] = useState<Array<{id: string, name: string, imageUrl: string | null, role: string, division?: string, educationLevel?: string}>>([]);
   const [loadingConnections, setLoadingConnections] = useState(false);
   const [connectionSearchTerm, setConnectionSearchTerm] = useState("");
   const [initialLoadComplete, setInitialLoadComplete] = useState(false);
   
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const fetchingConversations = useRef(false);
   const fetchingMessages = useRef(false);
@@ -318,14 +315,7 @@ export default function MessagingPage() {
       const result = await response.json();
       
       if (result.success) {
-        // Check if connection is active
-        if (result.conversation?.connectionActive === false) {
-          setNoConnection(true);
-          setOtherUserId(result.otherUserId || null);
-        } else {
-          setNoConnection(false);
-          setOtherUserId(null);
-        }
+        // Just check if the connection is active, nothing else needed
         
         // Update cache with fetched messages
         setMessagesCache(prevCache => ({
@@ -333,11 +323,11 @@ export default function MessagingPage() {
           [conversationId]: result.messages || []
         }));
         
-        // Update conversations list to mark this conversation as read
+        // Update conversations list to mark this conversation as read and update connection status
         setConversations(prevConversations => {
           const updatedConversations = prevConversations.map(conv => 
             conv.id === conversationId 
-              ? { ...conv, unreadCount: 0 }
+              ? { ...conv, unreadCount: 0, connectionActive: result.conversation.connectionActive }
               : conv
           );
           
@@ -358,18 +348,6 @@ export default function MessagingPage() {
       fetchingMessages.current = false;
     }
   }, []);
-
-  // Calculate and update total unread count when conversations change
-  useEffect(() => {
-    // Skip during initial render or when conversations is empty
-    if (!initialLoadComplete || conversations.length === 0) return;
-    
-    // Calculate total unread count from all conversations
-    const totalUnread = conversations.reduce((sum, conv) => sum + (conv.unreadCount || 0), 0);
-    
-    // Update global unread count
-    setUnreadCount(totalUnread);
-  }, [conversations, setUnreadCount, initialLoadComplete]);
 
   // Fetch messages when a conversation is selected
   useEffect(() => {
@@ -402,7 +380,7 @@ export default function MessagingPage() {
   // Handle sending a new message
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newMessage.trim() || !selectedConversationId || sendingMessage || noConnection) return;
+    if (!newMessage.trim() || !selectedConversationId || sendingMessage || !activeConversation?.connectionActive) return;
     
     setSendingMessage(true);
     const messageContent = newMessage.trim();
@@ -466,21 +444,32 @@ export default function MessagingPage() {
       });
       
       if (!response.ok) {
-        const result = await response.json();
-        if (result.connectionStatus === 'inactive') {
-          setNoConnection(true);
-          setOtherUserId(result.otherUserId || null);
-          throw new Error('Cannot send message: No longer connected with this user');
-        }
-        throw new Error('Failed to send message');
+        const result = await response.json().catch(() => ({})); // Handle cases where body is not JSON
+        console.error('Failed to send message:', result.error || 'Server returned an error');
+
+        // On failure, revert the optimistic UI changes
+        // Restore the message input
+        setNewMessage(messageContent);
+        // Remove the temporary message from the cache
+        setMessagesCache(prevCache => {
+          const messages = prevCache[selectedConversationId] || [];
+          return {
+            ...prevCache,
+            [selectedConversationId]: messages.filter(m => m.id !== tempMsg.id)
+          };
+        });
+        // We can optionally revert the conversation preview, but leaving it shows the failed attempt
+        // which might be desired UX. For now, we'll leave it.
+        return; // Stop execution
       }
       
-      // No need to refresh conversations here as we've already updated the UI
+      // On success, we might want to refetch conversations to get the real message from the server
+      // For now, the optimistic update stands.
     } catch (error) {
       console.error('Error sending message:', error);
-      setError(error instanceof Error ? error.message : 'Failed to send message');
       
-      // Revert the optimistic UI updates on error
+      // Revert the optimistic UI updates on any unexpected error
+      setNewMessage(messageContent);
       setMessagesCache(prevCache => {
         const messages = prevCache[selectedConversationId] || [];
         return {
@@ -488,11 +477,15 @@ export default function MessagingPage() {
           [selectedConversationId]: messages.slice(0, -1) // Remove the last message
         };
       });
-      
-      // Revert conversation preview update
-      fetchConversations();
     } finally {
       setSendingMessage(false);
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSendMessage(e as unknown as React.FormEvent);
     }
   };
 
@@ -507,30 +500,14 @@ export default function MessagingPage() {
     return conversations;
   }, [searchTerm, conversations]);
 
-  // Function to initiate a connection request
-  const handleConnectionRequest = () => {
-    if (!otherUserId) return;
-    
-    // Redirect to the connections page with the user ID to pre-fill the form
-    window.location.href = `/connections/add?userId=${otherUserId}`;
-  };
+
 
   // Fetch user connections for the new message dialog
   const fetchConnections = useCallback(async () => {
     setLoadingConnections(true);
     
     try {
-      // Check if connections were recently cached (within 5 minutes)
-      const cachedConnections = sessionStorage.getItem('connections_cache');
-      const cacheTimestamp = sessionStorage.getItem('connections_cache_time');
-      const cacheAge = cacheTimestamp ? Date.now() - parseInt(cacheTimestamp) : Infinity;
-      
-      if (cachedConnections && cacheAge < 300000) {
-        setConnections(JSON.parse(cachedConnections));
-        setLoadingConnections(false);
-        return;
-      }
-      
+      // Always fetch fresh connections to ensure new connections are included
       // Get auth token
       const windowWithClerk = window as unknown as {
         Clerk?: {
@@ -555,15 +532,17 @@ export default function MessagingPage() {
       const result = await response.json();
       
       if (result.success) {
-        // Filter to only include connected users (not pending requests)
-        const connectedUsers = result.connections.map((conn: ApiConnection) => ({
-          id: conn.otherUser.userId,
-          name: conn.otherUser.fullName || 'Unknown User',
-          imageUrl: conn.otherUser.profileImage,
-          role: conn.otherUser.role || 'user',
-          division: conn.otherUser.division,
-          educationLevel: conn.otherUser.educationLevel,
-        }));
+        // Filter to only include 'connected' users, then map to a simpler object
+        const connectedUsers = result.connections
+          .filter((conn: ApiConnection) => conn.status === 'connected')
+          .map((conn: ApiConnection) => ({
+            id: conn.otherUser.userId,
+            name: conn.otherUser.fullName || 'Unknown User',
+            imageUrl: conn.otherUser.profileImage,
+            role: conn.otherUser.role || 'user',
+            division: conn.otherUser.division,
+            educationLevel: conn.otherUser.educationLevel,
+          }));
         
         // Get list of partner IDs from existing conversations
         const existingPartnerIds = conversations.map(convo => convo.partnerId);
@@ -572,10 +551,6 @@ export default function MessagingPage() {
         const filteredUsers = connectedUsers.filter(
           (conn: {id: string}) => !existingPartnerIds.includes(conn.id)
         );
-        
-        // Cache the filtered connections
-        sessionStorage.setItem('connections_cache', JSON.stringify(filteredUsers));
-        sessionStorage.setItem('connections_cache_time', Date.now().toString());
         
         setConnections(filteredUsers);
       }
@@ -802,129 +777,112 @@ export default function MessagingPage() {
                           </div>
                         </div>
                         <div className="flex items-center gap-2 flex-wrap pt-1.5">
-                            {activeConversation && getRoleBadge(activeConversation.partnerRole, activeConversation.division, activeConversation.educationLevel)}
+                          {activeConversation && getRoleBadge(activeConversation.partnerRole, activeConversation.division, activeConversation.educationLevel)}
+                          {!activeConversation.connectionActive && (
+                            <Badge variant="outline" className="text-xs font-medium px-2 py-0.5 border bg-amber-500/10 text-amber-700 border-amber-200 dark:bg-amber-500/20 dark:text-amber-300 dark:border-amber-700">
+                              No longer connected
+                            </Badge>
+                          )}
                         </div>
                       </div>
                     </div>
                   </div>
 
                   {/* Messages Area */}
-                  {noConnection ? (
-                    <div className="flex-grow flex flex-col items-center justify-center text-center p-8">
-                      <div className="w-24 h-24 rounded-full bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center mb-6">
-                        <Users className="h-12 w-12 text-amber-500 dark:text-amber-400" />
+                  <div 
+                    ref={messagesContainerRef}
+                    className="flex-grow p-4 space-y-4 overflow-y-auto bg-gradient-to-b from-transparent to-[#01ae79]/5 dark:to-[#01ae79]/5"
+                  >
+                    {loading && !initialLoadComplete ? (
+                      <div className="h-full flex items-center justify-center">
+                        <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-[#01ae79] border-r-transparent align-[-0.125em] motion-reduce:animate-[spin_1.5s_linear_infinite]" />
                       </div>
-                      <h3 className="text-2xl font-semibold text-foreground mb-2">Connection required</h3>
-                      <p className="text-muted-foreground mb-6 max-w-md">
-                        You are no longer connected with this user. To continue messaging, you need to re-establish the connection.
-                      </p>
-                      <Button variant="default" className="bg-[#01ae79] hover:bg-[#01ae79]/90" onClick={handleConnectionRequest}>
-                        <Users className="h-4 w-4 mr-2" />
-                        Send Connection Request
+                    ) : loading && messages.length === 0 ? (
+                      <div className="h-full flex items-center justify-center">
+                        <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-[#01ae79] border-r-transparent align-[-0.125em] motion-reduce:animate-[spin_1.5s_linear_infinite]" />
+                      </div>
+                    ) : messages.length > 0 ? (
+                      <div className="flex flex-col justify-end min-h-full">
+                        <div>
+                          {messages.map((msg) => (
+                            <div 
+                              key={msg.id}
+                              className={`flex ${msg.isFromCurrentUser ? 'justify-end' : 'justify-start'} mb-4`}
+                            >
+                              <div className={`max-w-[75%] md:max-w-[70%] p-3 rounded-2xl shadow-sm relative ${
+                                msg.isFromCurrentUser 
+                                  ? 'bg-[#01ae79] text-white rounded-br-md' 
+                                  : `bg-card border text-foreground rounded-bl-md ${
+                                      !msg.isRead
+                                        ? 'border-[#01ae79]/30 dark:border-[#01ae79]/40 bg-[#01ae79]/5 dark:bg-[#01ae79]/10' 
+                                        : 'border-border/40'
+                                    }`
+                              }`}>
+                                {!msg.isRead && !msg.isFromCurrentUser && (
+                                  <div className="absolute -left-2 top-1/2 transform -translate-y-1/2 w-2 h-2 bg-[#01ae79] rounded-full transition-opacity duration-300"></div>
+                                )}
+                                <p className="text-sm leading-relaxed">{msg.content}</p>
+                                <p className={`text-xs mt-2 ${
+                                  msg.isFromCurrentUser 
+                                    ? 'text-white/80 text-right' 
+                                    : 'text-muted-foreground text-left'
+                                }`}>
+                                  {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                </p>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                        <div className="mt-6 text-center">
+                          <p className="text-xs text-muted-foreground/60 px-4 py-1 bg-background/40 rounded-full inline-block border border-border/30">
+                            🔒 Messages are encrypted. UpDrafted may access them only for safety monitoring.
+                          </p>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="h-full flex flex-col items-center justify-center text-center">
+                        <MessageSquare className="h-12 w-12 text-muted-foreground/30 mb-4" />
+                        <p className="text-lg font-medium text-muted-foreground/70">No messages yet</p>
+                        <p className="text-sm text-muted-foreground/50 mt-1">Start a conversation to connect!</p>
+                        <p className="text-xs text-muted-foreground/60 mt-4 px-4 py-1 bg-background/40 rounded-full inline-block border border-border/30">
+                          🔒 Messages are encrypted. UpDrafted may access them only for safety monitoring.
+                        </p>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Message Input */}
+                  <form onSubmit={handleSendMessage} className="p-4 border-t border-border/50 bg-card/80 backdrop-blur-sm">
+                    <div className="flex items-center space-x-3">
+                      <div className="flex-1 relative">
+                        <textarea
+                          ref={textareaRef}
+                          value={newMessage}
+                          onChange={(e) => setNewMessage(e.target.value)}
+                          onKeyDown={handleKeyDown}
+                          placeholder={!activeConversation?.connectionActive ? "You are no longer connected." : "Type a message..."}
+                          className="w-full flex-1 bg-transparent text-sm resize-none pr-4 focus:outline-none disabled:cursor-not-allowed"
+                          rows={1}
+                          disabled={sendingMessage || !activeConversation?.connectionActive}
+                        />
+                      </div>
+                      <Button 
+                        type="submit" 
+                        size="icon" 
+                        disabled={!newMessage.trim() || sendingMessage || !activeConversation?.connectionActive}
+                        className="bg-[#01ae79] hover:bg-[#01ae79]/90 text-white h-12 w-12 rounded-full shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {sendingMessage ? (
+                          <div className="h-5 w-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                        ) : (
+                          <Send className="h-5 w-5" />
+                        )}
                       </Button>
                     </div>
-                  ) : (
-                    <>
-                      <div 
-                        ref={messagesContainerRef}
-                        className="flex-grow p-4 space-y-4 overflow-y-auto bg-gradient-to-b from-transparent to-[#01ae79]/5 dark:to-[#01ae79]/5"
-                      >
-                        {loading && !initialLoadComplete ? (
-                          <div className="h-full flex items-center justify-center">
-                            <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-[#01ae79] border-r-transparent align-[-0.125em] motion-reduce:animate-[spin_1.5s_linear_infinite]" />
-                          </div>
-                        ) : loading && messages.length === 0 ? (
-                          <div className="h-full flex items-center justify-center">
-                            <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-[#01ae79] border-r-transparent align-[-0.125em] motion-reduce:animate-[spin_1.5s_linear_infinite]" />
-                          </div>
-                        ) : messages.length > 0 ? (
-                          <div className="flex flex-col justify-end min-h-full">
-                            <div>
-                              {messages.map((msg) => (
-                                <div 
-                                  key={msg.id}
-                                  className={`flex ${msg.isFromCurrentUser ? 'justify-end' : 'justify-start'} mb-4`}
-                                >
-                                  <div className={`max-w-[75%] md:max-w-[70%] p-3 rounded-2xl shadow-sm relative ${
-                                    msg.isFromCurrentUser 
-                                      ? 'bg-[#01ae79] text-white rounded-br-md' 
-                                      : `bg-card border text-foreground rounded-bl-md ${
-                                          !msg.isRead
-                                            ? 'border-[#01ae79]/30 dark:border-[#01ae79]/40 bg-[#01ae79]/5 dark:bg-[#01ae79]/10' 
-                                            : 'border-border/40'
-                                        }`
-                                  }`}>
-                                    {!msg.isRead && !msg.isFromCurrentUser && (
-                                      <div className="absolute -left-2 top-1/2 transform -translate-y-1/2 w-2 h-2 bg-[#01ae79] rounded-full transition-opacity duration-300"></div>
-                                    )}
-                                    <p className="text-sm leading-relaxed">{msg.content}</p>
-                                    <p className={`text-xs mt-2 ${
-                                      msg.isFromCurrentUser 
-                                        ? 'text-white/80 text-right' 
-                                        : 'text-muted-foreground text-left'
-                                    }`}>
-                                      {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                    </p>
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
-                            <div className="mt-6 text-center">
-                              <p className="text-xs text-muted-foreground/60 px-4 py-1 bg-background/40 rounded-full inline-block border border-border/30">
-                                🔒 Messages are encrypted. UpDrafted may access them only for safety monitoring.
-                              </p>
-                            </div>
-                          </div>
-                        ) : (
-                          <div className="h-full flex flex-col items-center justify-center text-center">
-                            <MessageSquare className="h-12 w-12 text-muted-foreground/30 mb-4" />
-                            <p className="text-lg font-medium text-muted-foreground/70">No messages yet</p>
-                            <p className="text-sm text-muted-foreground/50 mt-1">Start a conversation to connect!</p>
-                            <p className="text-xs text-muted-foreground/60 mt-4 px-4 py-1 bg-background/40 rounded-full inline-block border border-border/30">
-                              🔒 Messages are encrypted. UpDrafted may access them only for safety monitoring.
-                            </p>
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Message Input */}
-                      <form onSubmit={handleSendMessage} className="p-4 border-t border-border/50 bg-card/80 backdrop-blur-sm">
-                        <div className="flex items-center space-x-3">
-                          <div className="flex-1 relative">
-                            <input
-                              type="text"
-                              value={newMessage}
-                              onChange={(e) => setNewMessage(e.target.value)}
-                              placeholder={noConnection ? "You are no longer connected" : "Type a message..."}
-                              className="w-full px-4 py-3 pr-12 text-sm rounded-full border border-border/50 bg-background/70 focus:ring-2 focus:ring-[#01ae79] focus:border-[#01ae79] outline-none transition-all"
-                              disabled={sendingMessage || noConnection || loading}
-                            />
-                          </div>
-                          <Button 
-                            type="submit" 
-                            size="icon" 
-                            disabled={!newMessage.trim() || sendingMessage || noConnection || loading}
-                            className="bg-[#01ae79] hover:bg-[#01ae79]/90 text-white h-12 w-12 rounded-full shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
-                          >
-                            {sendingMessage ? (
-                              <div className="h-5 w-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                            ) : (
-                              <Send className="h-5 w-5" />
-                            )}
-                          </Button>
-                        </div>
-                        {noConnection && (
-                          <div className="flex items-center text-sm justify-center text-center pt-2 text-red-700 dark:text-red-300">
-                              <Lock size={16} className="mr-2 flex-shrink-0" />
-                              <span className="truncate">You are no longer connected with {activeConversation?.partnerName}. Messaging is disabled.</span>
-                          </div>
-                        )}
-                        {error && (
-                          <p className="mt-2 text-xs text-red-500">Error: {error}</p>
-                        )}
-                      </form>
-                    </>
-                  )}
+                    {error && (
+                      <p className="mt-2 text-xs text-red-500">Error: {error}</p>
+                    )}
+                  </form>
                 </>
               ) : (
                 <div className="flex-grow flex flex-col items-center justify-center text-center p-8">
@@ -953,69 +911,60 @@ export default function MessagingPage() {
         
         {/* New Message Dialog */}
         <Dialog open={isNewMessageDialogOpen} onOpenChange={setIsNewMessageDialogOpen}>
-          <DialogContent className="sm:max-w-md">
+          <DialogContent className="max-w-md bg-card border-border/50">
             <DialogHeader>
-              <DialogTitle>New Message</DialogTitle>
-              <DialogDescription>
-                Select a connection to start a conversation with.
-              </DialogDescription>
+              <DialogTitle>Start a New Conversation</DialogTitle>
+              <DialogDescription>Select a connection to start messaging.</DialogDescription>
             </DialogHeader>
-            
-            <div className="py-4">
-              <div className="relative mb-4">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <input
-                  type="text"
-                  placeholder="Search connections..."
-                  className="w-full pl-9 pr-4 py-2.5 text-sm border border-border/50 bg-background/80 backdrop-blur-sm text-foreground rounded-lg focus:outline-none focus:ring-2 focus:ring-[#01ae79] focus:border-[#01ae79] transition-all"
-                  value={connectionSearchTerm}
-                  onChange={(e) => setConnectionSearchTerm(e.target.value)}
-                />
-              </div>
-              
-              <div className="max-h-[50vh] overflow-y-auto space-y-2 pr-1">
-                {loadingConnections ? (
-                  <div key="loading-connections" className="p-8 text-center">
-                    <Spinner size="md" />
-                    <p className="mt-4 text-sm text-muted-foreground">Loading connections...</p>
-                  </div>
-                ) : filteredConnections.length > 0 ? (
-                  filteredConnections.map(conn => (
-                    <div
-                      key={`connection-${conn.id}`}
-                      onClick={() => startConversation(conn.id)}
-                      className="p-3 rounded-lg cursor-pointer transition-all duration-200 hover:bg-[#01ae79]/5 dark:hover:bg-[#01ae79]/10 border border-transparent hover:border-[#01ae79]/20 dark:hover:border-[#01ae79]/30 flex items-center"
-                    >
-                      <div className="relative h-10 w-10 flex-shrink-0 mr-3">
-                        <Avatar className="w-10 h-10 rounded-full ring-2 ring-[#01ae79]/20 dark:ring-[#01ae79]/30">
-                          <AvatarImage src={getProfileImageUrl(conn.imageUrl) || undefined} alt={conn.name || "Profile picture"} className="object-cover" />
-                          <AvatarFallback className="text-sm font-semibold bg-gradient-to-br from-[#01ae79]/10 to-[#01ae79]/20 text-[#01ae79]">
-                            {conn.name ? conn.name.split(' ').map(n => n[0]).join('').toUpperCase() : "U"}
-                          </AvatarFallback>
-                        </Avatar>
-                      </div>
-                      <div className="flex-1">
-                        <h3 className="text-sm font-semibold text-foreground">
-                          {conn.name || "Unknown User"}
-                        </h3>
-                        <div className="flex items-center gap-2 flex-wrap pt-1.5">
-                          {getRoleBadge(conn.role, conn.division, conn.educationLevel)}
-                        </div>
+            <div className="relative mt-4">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <input
+                type="text"
+                placeholder="Search connections..."
+                className="w-full pl-9 pr-4 py-2.5 text-sm border border-border/50 bg-background/80 backdrop-blur-sm text-foreground rounded-lg focus:outline-none focus:ring-2 focus:ring-[#01ae79] focus:border-[#01ae79] transition-all"
+                value={connectionSearchTerm}
+                onChange={(e) => setConnectionSearchTerm(e.target.value)}
+              />
+            </div>
+            <div className="mt-4 max-h-[50vh] overflow-y-auto space-y-2">
+              {loadingConnections ? (
+                <div className="text-center p-8">
+                  <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-[#01ae79] border-r-transparent align-[-0.125em] motion-reduce:animate-[spin_1.5s_linear_infinite]" />
+                  <p className="mt-4 text-muted-foreground">Loading connections...</p>
+                </div>
+              ) : filteredConnections.length > 0 ? (
+                filteredConnections.map(conn => (
+                  <div
+                    key={conn.id}
+                    onClick={() => startConversation(conn.id)}
+                    className="flex items-center p-3 rounded-lg hover:bg-[#01ae79]/10 cursor-pointer transition-colors"
+                  >
+                    <Avatar className="w-10 h-10 mr-4">
+                      <AvatarImage src={getProfileImageUrl(conn.imageUrl) || undefined} alt={conn.name || "P"} className="object-cover" />
+                      <AvatarFallback className="text-sm font-semibold bg-gradient-to-br from-[#01ae79]/10 to-[#01ae79]/20 text-[#01ae79]">
+                        {conn.name ? conn.name.split(' ').map(n => n[0]).join('').toUpperCase() : "U"}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1">
+                      <p className="font-semibold text-sm">{conn.name}</p>
+                      <div className="flex items-center gap-2 mt-1">
+                        {getRoleBadge(conn.role, conn.division, conn.educationLevel)}
                       </div>
                     </div>
-                  ))
-                ) : (
-                  <div className="p-8 text-center">
-                    <Users size={40} className="mx-auto text-muted-foreground/50 mb-3" />
-                    <p className="text-sm text-muted-foreground">
-                      {connectionSearchTerm ? 'No matching connections' : 'No connections found'}
-                    </p>
-                    <p className="text-xs text-muted-foreground/80 mt-1">
-                      {connectionSearchTerm ? 'Try different keywords' : 'Connect with others to start messaging'}
-                    </p>
                   </div>
-                )}
-              </div>
+                ))
+              ) : (
+                <div className="text-center py-8 px-4">
+                  <Users className="h-12 w-12 mx-auto text-muted-foreground" />
+                  <h3 className="mt-4 text-lg font-semibold">No Connections Found</h3>
+                  <p className="mt-2 text-sm text-muted-foreground">
+                    You have no available connections to message. Find new connections to start a conversation.
+                  </p>
+                  <Button size="sm" className="mt-4 bg-[#01ae79] hover:bg-[#01ae79]/90 text-white" onClick={() => (window.location.href = '/connections')}>
+                    Find Connections
+                  </Button>
+                </div>
+              )}
             </div>
           </DialogContent>
         </Dialog>

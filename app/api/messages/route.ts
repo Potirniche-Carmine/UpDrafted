@@ -306,43 +306,23 @@ async function handleGetMessages(userId: string, body: GetMessagesRequestBody) {
       }, { status: 403 });
     }
     
-    // Check if connection is still active
-    if (!conversation.connectionActive) {
-      // Get connection status to see if they're still connected
-      const partnerId = conversation.user1Id === userId 
-        ? conversation.user2Id
-        : conversation.user1Id;
-      
-      // Get connection status
-      const connection = await connectionOperations.getConnectionBetweenUsers(userId, partnerId);
-      const reverseConnection = await connectionOperations.getConnectionBetweenUsers(partnerId, userId);
-      
-      // If there's no active connection in either direction
-      if (
-        (!connection || connection.status !== 'connected') && 
-        (!reverseConnection || reverseConnection.status !== 'connected')
-      ) {
-        // Return messages but with a flag that connection is inactive
-        return NextResponse.json({
-          success: true,
-          messages: [],
-          conversation: {
-            id: conversation.id,
-            connectionActive: false
-          },
-          connectionStatus: 'inactive',
-          otherUserId: partnerId
-        });
-      } else {
-        // There's an active connection but conversation flag is wrong - fix it
-        await messageOperations.updateConversationConnectionStatus(
-          conversation.id,
-          true
-        );
-      }
+    // Always check the latest connection status
+    const partnerId = conversation.user1Id === userId 
+      ? conversation.user2Id
+      : conversation.user1Id;
+    
+    const connection = await connectionOperations.getConnectionBetweenUsers(userId, partnerId);
+    const reverseConnection = await connectionOperations.getConnectionBetweenUsers(partnerId, userId);
+    
+    const isConnected = (connection?.status === 'connected' || reverseConnection?.status === 'connected');
+
+    // If the stored status is out of sync with the real status, update it
+    if (isConnected !== conversation.connectionActive) {
+      await messageOperations.updateConversationConnectionStatus(conversation.id, isConnected);
+      conversation.connectionActive = isConnected; // Update in-memory object for this request
     }
     
-    // Get messages
+    // Get messages regardless of connection status
     const messages = await messageOperations.getMessages(
       conversationIdNum,
       limit,
@@ -385,7 +365,6 @@ async function handleGetMessages(userId: string, body: GetMessagesRequestBody) {
     });
     
     // Get partner user details
-    const partnerId = conversation.user1Id === userId ? conversation.user2Id : conversation.user1Id;
     const partnerInfo = await profileOperations.getUserProfileInfo(partnerId);
     
     if (!partnerInfo) {
@@ -406,7 +385,7 @@ async function handleGetMessages(userId: string, body: GetMessagesRequestBody) {
           role: partnerInfo.role,
           profileImageUrl: partnerInfo.profileImageUrl
         },
-        connectionActive: conversation.connectionActive
+        connectionActive: conversation.connectionActive // Return the latest status
       },
     });
   } catch (error) {
@@ -469,37 +448,36 @@ async function handleSendMessage(userId: string, body: SendMessageRequestBody) {
       }, { status: 403 });
     }
     
-    // Check if connection is still active
-    if (!conversation.connectionActive) {
-      // Get connection status to see if they're still connected
-      const partnerId = conversation.user1Id === userId 
-        ? conversation.user2Id
-        : conversation.user1Id;
-      
-      const connection = await connectionOperations.getConnectionBetweenUsers(userId, partnerId);
-      const reverseConnection = await connectionOperations.getConnectionBetweenUsers(partnerId, userId);
-      
-      // If there's no active connection in either direction
-      if (
-        (!connection || connection.status !== 'connected') && 
-        (!reverseConnection || reverseConnection.status !== 'connected')
-      ) {
-        return NextResponse.json({
-          success: false,
-          error: 'Cannot send message: You are no longer connected with this user',
-          connectionStatus: 'inactive',
-          otherUserId: partnerId
-        }, { status: 403 });
-      } else {
-        // There's an active connection but conversation flag is wrong - fix it
-        await messageOperations.updateConversationConnectionStatus(
-          conversation.id,
-          true
-        );
+    // Always check the latest connection status before sending a message
+    const partnerId = conversation.user1Id === userId 
+      ? conversation.user2Id 
+      : conversation.user1Id;
+    
+    const connection = await connectionOperations.getConnectionBetweenUsers(userId, partnerId);
+    const reverseConnection = await connectionOperations.getConnectionBetweenUsers(partnerId, userId);
+
+    // A connection is active if a 'connected' status exists in either direction.
+    const isConnected = (connection?.status === 'connected' || reverseConnection?.status === 'connected');
+
+    if (!isConnected) {
+      // If not connected, update the conversation status to inactive
+      if (conversation.connectionActive) {
+        await messageOperations.updateConversationConnectionStatus(conversation.id, false);
+      }
+      return NextResponse.json({
+        success: false,
+        error: 'Cannot send message: You are not connected with this user.',
+        connectionStatus: 'inactive',
+        otherUserId: partnerId,
+      }, { status: 403 });
+    } else {
+      // If connected, ensure the conversation status is active
+      if (!conversation.connectionActive) {
+        await messageOperations.updateConversationConnectionStatus(conversation.id, true);
       }
     }
     
-    // Send the message
+    // Proceed with sending the message
     await messageOperations.sendMessage(
       conversationIdNum,
       userId,

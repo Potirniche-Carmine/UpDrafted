@@ -932,10 +932,7 @@ export const messageOperations = {
   async getUserConversations(userId: string) {
     // Get conversations where user is either user1 or user2
     const conversationsAsUser1 = await db.query.conversations.findMany({
-      where: and(
-        eq(conversations.user1Id, userId),
-        eq(conversations.connectionActive, true)
-      ),
+      where: eq(conversations.user1Id, userId),
       with: {
         user2: true,
         messages: {
@@ -947,10 +944,7 @@ export const messageOperations = {
     });
     
     const conversationsAsUser2 = await db.query.conversations.findMany({
-      where: and(
-        eq(conversations.user2Id, userId),
-        eq(conversations.connectionActive, true)
-      ),
+      where: eq(conversations.user2Id, userId),
       with: {
         user1: true,
         messages: {
@@ -1086,10 +1080,7 @@ export const messageOperations = {
       count: sql`sum(${conversations.user1UnreadCount})`
     })
     .from(conversations)
-    .where(and(
-      eq(conversations.user1Id, userId),
-      eq(conversations.connectionActive, true)
-    ));
+    .where(eq(conversations.user1Id, userId));
     
     const unreadCountAsUser1 = Number(resultAsUser1[0]?.count || 0);
     
@@ -1098,10 +1089,7 @@ export const messageOperations = {
       count: sql`sum(${conversations.user2UnreadCount})`
     })
     .from(conversations)
-    .where(and(
-      eq(conversations.user2Id, userId),
-      eq(conversations.connectionActive, true)
-    ));
+    .where(eq(conversations.user2Id, userId));
     
     const unreadCountAsUser2 = Number(resultAsUser2[0]?.count || 0);
     

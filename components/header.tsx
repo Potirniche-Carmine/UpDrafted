@@ -22,9 +22,7 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { useProfileNavigation } from '@/hooks/use-profile-navigation';
-import { useConnections } from '@/hooks/use-connections';
 import { SearchBar } from '@/app/(search)/components/search-bar';
-import { useMessages } from '@/hooks/use-messages';
 
 interface NavItem {
   key: string;
@@ -114,8 +112,6 @@ export function Header() {
   const { isSignedIn, user } = useUser();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { navigateToProfile, isNavigating: profileNavigating } = useProfileNavigation();
-  const { pendingCount } = useConnections();
-  const { unreadCount } = useMessages();
 
   // Check if user has completed onboarding (has a role)
   const userRole = user?.publicMetadata?.role as string;
@@ -184,10 +180,6 @@ export function Header() {
             <NavItem
               key={item.key}
               item={item}
-              notificationCount={
-                item.key === "connections" ? pendingCount : 
-                item.key === "messages" ? unreadCount : 0
-              }
             />
           ))}
 
@@ -253,10 +245,6 @@ export function Header() {
                 <SheetTrigger asChild>
                   <Button variant="ghost" size="sm" className="h-9 w-9 p-0 relative">
                     <Menu className="h-5 w-5" />
-                    <NotificationBadge 
-                      count={pendingCount + unreadCount} 
-                      className="-top-1 -right-1"
-                    />
                     <span className="sr-only">Toggle menu</span>
                   </Button>
                 </SheetTrigger>
@@ -289,16 +277,6 @@ export function Header() {
                             {item.icon}
                             <span>{item.label}</span>
                           </div>
-                          {item.key === "connections" && pendingCount > 0 && (
-                            <div className="flex items-center justify-center min-w-[20px] h-5 bg-red-500 text-white text-xs font-medium rounded-full px-1.5">
-                              {pendingCount > 99 ? '99+' : pendingCount}
-                            </div>
-                          )}
-                          {item.key === "messages" && unreadCount > 0 && (
-                            <div className="flex items-center justify-center min-w-[20px] h-5 bg-red-500 text-white text-xs font-medium rounded-full px-1.5">
-                              {unreadCount > 99 ? '99+' : unreadCount}
-                            </div>
-                          )}
                         </Link>
                       ))}
                     </div>

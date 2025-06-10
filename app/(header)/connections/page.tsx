@@ -328,7 +328,8 @@ const UserCard: React.FC<UserCardProps> = ({ connection, onRemove, isRemoving = 
             <Button
               onClick={(e) => {
                 e.stopPropagation();
-                console.log('Send message to:', otherUser.fullName);
+                // Redirect to messages page
+                router.push('/messages');
               }}
               className="w-full h-8 sm:h-8 md:h-9 bg-[#01ae79] hover:bg-[#01ae79]/90 text-white text-xs sm:text-sm font-medium transition-all duration-200 hover:scale-[1.02]"
             >
