@@ -1,4 +1,4 @@
-import { eq, and, desc, or, asc, sql } from 'drizzle-orm';
+import { eq, and, desc, or, asc, sql, count } from 'drizzle-orm';
 import { db } from './db';
 import { 
   users, 
@@ -13,6 +13,7 @@ import {
   reports,
   messages,
   conversations,
+  notifications,
   type NewUser,
   type NewAthleteProfile,
   type NewAthleteMeasurable,
@@ -26,6 +27,7 @@ import {
 } from './schema';
 import { OnboardingProfileData } from '@/app/(onboarding)/lib/onboarding';
 import { sanitizeAndEncryptMessage } from '@/utils/encryption';
+import { R2_PUBLIC_URL } from './r2/config';
 
 // User operations
 export const userOperations = {
@@ -1155,11 +1157,171 @@ export const profileOperations = {
 
     return {
       fullName,
-      profileImageUrl,
+      profileImageUrl: profileImageUrl 
+        ? `${R2_PUBLIC_URL}/${profileImageUrl}`
+        : null,
       role: user.role,
       division,
       educationLevel,
       isVerified,
     };
   }
+};
+
+// Notification operations
+export const notificationOperations = {
+  // Create a new notification
+  async createNotification(userId: string, type: 'profileView' | 'newConnection' | 'newMessage' | 'systemUpdate' | 'premiumFeature' | 'connectionAccepted', title: string, message: string, metadata?: Record<string, unknown>) {
+    const [notification] = await db.insert(notifications).values({
+      userId,
+      type,
+      title,
+      message,
+      metadata,
+    }).returning();
+    return notification;
+  },
+
+  // Get notifications for a user
+  async getUserNotifications(userId: string, limit = 20, offset = 0, unreadOnly = false) {
+    const query = db
+      .select({
+        id: notifications.id,
+        type: notifications.type,
+        title: notifications.title,
+        message: notifications.message,
+        isRead: notifications.isRead,
+        metadata: notifications.metadata,
+        createdAt: notifications.createdAt,
+        readAt: notifications.readAt,
+      })
+      .from(notifications)
+      .where(
+        unreadOnly 
+          ? and(eq(notifications.userId, userId), eq(notifications.isRead, false))
+          : eq(notifications.userId, userId)
+      )
+      .orderBy(desc(notifications.createdAt))
+      .limit(limit)
+      .offset(offset);
+
+    return await query;
+  },
+
+  // Mark notification as read
+  async markNotificationAsRead(userId: string, notificationId: number) {
+    const [notification] = await db
+      .update(notifications)
+      .set({ 
+        isRead: true, 
+        readAt: new Date() 
+      })
+      .where(
+        and(
+          eq(notifications.id, notificationId),
+          eq(notifications.userId, userId)
+        )
+      )
+      .returning();
+    return notification;
+  },
+
+  // Mark all notifications as read for a user
+  async markAllNotificationsAsRead(userId: string) {
+    await db
+      .update(notifications)
+      .set({ 
+        isRead: true, 
+        readAt: new Date() 
+      })
+      .where(
+        and(
+          eq(notifications.userId, userId),
+          eq(notifications.isRead, false)
+        )
+      );
+  },
+
+  // Get unread notification count
+  async getUnreadNotificationCount(userId: string) {
+    const result = await db
+      .select({ count: count() })
+      .from(notifications)
+      .where(
+        and(
+          eq(notifications.userId, userId),
+          eq(notifications.isRead, false)
+        )
+      );
+
+    return result[0]?.count || 0;
+  },
+
+  // Delete a notification
+  async deleteNotification(userId: string, notificationId: number) {
+    const [deletedNotification] = await db
+      .delete(notifications)
+      .where(
+        and(
+          eq(notifications.id, notificationId),
+          eq(notifications.userId, userId)
+        )
+      )
+      .returning();
+    return deletedNotification;
+  },
+
+  // Helper function to create profile view notification
+  async createProfileViewNotification(viewedUserId: string, viewerUserId: string) {
+    const viewerInfo = await profileOperations.getUserProfileInfo(viewerUserId);
+    if (!viewerInfo) return null;
+
+    return await this.createNotification(
+      viewedUserId,
+      'profileView',
+      'Profile View',
+      'viewed your profile.',
+      {
+        actorUserId: viewerUserId,
+        viewerName: viewerInfo.fullName,
+      }
+    );
+  },
+
+  // Helper function to create connection notification
+  async createConnectionNotification(toUserId: string, fromUserId: string, type: 'newConnection' | 'connectionAccepted', connectionId?: number) {
+    const fromUserInfo = await profileOperations.getUserProfileInfo(fromUserId);
+    if (!fromUserInfo) return null;
+
+    const title = type === 'newConnection' ? 'New Connection Request' : 'Connection Accepted';
+    const message = type === 'newConnection' ? 'sent you a connection request.' : 'accepted your connection request.';
+
+    return await this.createNotification(
+      toUserId,
+      type,
+      title,
+      message,
+      {
+        actorUserId: fromUserId,
+        connectionId,
+      }
+    );
+  },
+
+  // Helper function to create message notification
+  async createMessageNotification(recipientUserId: string, senderUserId: string, conversationId: number) {
+    const senderInfo = await profileOperations.getUserProfileInfo(senderUserId);
+    if (!senderInfo) return null;
+
+    return await this.createNotification(
+      recipientUserId,
+      'newMessage',
+      'New Message',
+      'sent you a new message.',
+      {
+        senderId: senderUserId,
+        conversationId,
+      }
+    );
+  },
 }; 

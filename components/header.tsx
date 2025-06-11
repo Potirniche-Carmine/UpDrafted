@@ -22,6 +22,7 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { useProfileNavigation } from '@/hooks/use-profile-navigation';
+import { useNotifications } from '@/hooks/use-notifications';
 import { SearchBar } from '@/app/(search)/components/search-bar';
 
 interface NavItem {
@@ -112,6 +113,7 @@ export function Header() {
   const { isSignedIn, user } = useUser();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { navigateToProfile, isNavigating: profileNavigating } = useProfileNavigation();
+  const { unreadCount: notificationCount } = useNotifications();
 
   // Check if user has completed onboarding (has a role)
   const userRole = user?.publicMetadata?.role as string;
@@ -180,6 +182,7 @@ export function Header() {
             <NavItem
               key={item.key}
               item={item}
+              notificationCount={item.key === 'notifications' ? notificationCount : 0}
             />
           ))}
 
@@ -273,8 +276,13 @@ export function Header() {
                           onClick={() => setMobileMenuOpen(false)}
                           className="flex items-center justify-between rounded-lg px-3 py-3 text-sm font-medium transition-colors hover:bg-[#01ae79]/5 dark:hover:bg-[#01ae79]/10 hover:text-[#01ae79]"
                         >
-                          <div className="flex items-center space-x-3">
-                            {item.icon}
+                          <div className="flex items-center space-x-3 relative">
+                            <div className="relative">
+                              {item.icon}
+                              {item.key === 'notifications' && notificationCount > 0 && (
+                                <NotificationBadge count={notificationCount} />
+                              )}
+                            </div>
                             <span>{item.label}</span>
                           </div>
                         </Link>

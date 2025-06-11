@@ -22,6 +22,8 @@ export const genderEnum = pgEnum('gender', ['male', 'female', 'coed']);
 export const reportStatusEnum = pgEnum('report_status', ['pending', 'under_review', 'resolved', 'dismissed']);
 export const verificationRequestStatusEnum = pgEnum('verification_request_status', ['pending', 'approved', 'rejected', 'under_review']);
 export const educationLevelEnum = pgEnum('education_level', ['high_school', 'undergraduate', 'graduate', 'associate']);
+export const notificationTypeEnum = pgEnum('notification_type', ['profileView', 'newConnection', 'newMessage', 'systemUpdate', 'premiumFeature', 'connectionAccepted']);
+
 
 export const users = pgTable('users', {
   id: text('id').primaryKey(),
@@ -300,6 +302,23 @@ export const reports = pgTable('reports', {
   index('idx_reports_submitted_at').on(table.submittedAt),
 ]);
 
+export const notifications = pgTable('notifications', {
+  id: serial('id').primaryKey(),
+  userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  type: notificationTypeEnum('type').notNull(),
+  title: text('title').notNull(),
+  message: text('message').notNull(),
+  isRead: boolean('is_read').default(false).notNull(),
+  metadata: jsonb('metadata'), // Additional data like userIds, messageIds, connectionIds
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  readAt: timestamp('read_at', { withTimezone: true }),
+}, (table) => [
+  index('idx_notifications_user_id').on(table.userId),
+  index('idx_notifications_is_read').on(table.isRead),
+  index('idx_notifications_type').on(table.type),
+  index('idx_notifications_created_at').on(table.createdAt),
+]);
+
 export const usersRelations = relations(users, ({ one, many }) => ({
   athleteProfile: one(athleteProfiles, {
     fields: [users.id],
@@ -466,4 +485,6 @@ export type NewVerificationRequest = typeof verificationRequests.$inferInsert;
 export type VerificationFile = typeof verificationFiles.$inferSelect;
 export type NewVerificationFile = typeof verificationFiles.$inferInsert;
 export type Report = typeof reports.$inferSelect;
-export type NewReport = typeof reports.$inferInsert; 
+export type NewReport = typeof reports.$inferInsert;
+export type Notification = typeof notifications.$inferSelect;
+export type NewNotification = typeof notifications.$inferInsert; 

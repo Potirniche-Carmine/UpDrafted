@@ -4,38 +4,32 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Badge } from "@/components/ui/badge";
-import { Bell, Eye, UserPlus, MessageCircle, Trash2, Circle, Star, Search, Check } from 'lucide-react';
-import { useState, useMemo } from 'react';
+import { Bell, UserPlus, MessageCircle, Trash2, Circle, Check, ArrowRight, RefreshCw } from 'lucide-react';
+import { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { AuthWrapper } from '../../../components/auth-wrapper';
+import { useNotifications } from '@/hooks/use-notifications';
+import { useAuth } from '@clerk/nextjs';
 
-// Placeholder data types
 interface Notification {
-  id: string;
-  type: 'profileView' | 'newConnection' | 'newMessage' | 'systemUpdate' | 'premiumFeature';
-  text: string;
-  timestamp: string;
+  id: number;
+  type: 'newMessage' | 'newConnection';
+  title: string;
+  message: string;
   isRead: boolean;
-  link?: string; // Optional link to navigate to
-  actorName?: string; // Person who initiated the notification
-  actorAvatar?: string; // Avatar of the person
+  metadata?: Record<string, unknown>;
+  createdAt: Date;
+  readAt?: Date | null;
+  timestamp: string;
+  actorName?: string;
+  actorImageUrl?: string;
+  actorRole?: string;
+  link?: string;
 }
-
-// Placeholder data
-const placeholderNotifications: Notification[] = [
-  { id: 'n1', type: 'profileView', text: 'viewed your profile.', actorName: 'Coach K.', actorAvatar: 'https://placehold.co/40x40/E0E0E0/B0B0B0?text=CK', timestamp: '2 hours ago', isRead: false, link: '/profile/coach-k' },
-  { id: 'n2', type: 'newConnection', text: 'accepted your connection request.', actorName: 'Jane Smith (Soccer)', actorAvatar: 'https://placehold.co/40x40/D1C4E9/7E57C2?text=JS', timestamp: '5 hours ago', isRead: false, link: '/connections' },
-  { id: 'n3', type: 'newMessage', text: 'sent you a new message.', actorName: 'Alex Ray', actorAvatar: 'https://placehold.co/40x40/C8E6C9/66BB6A?text=AR', timestamp: '1 day ago', isRead: true, link: '/messaging/alex-ray' },
-  { id: 'n4', type: 'systemUpdate', text: 'Terms of Service have been updated. Please review the changes.', timestamp: '3 days ago', isRead: true, link: '/terms-of-service' },
-  { id: 'n5', type: 'premiumFeature', text: 'Unlock "Drafted Connections" with Premium to boost your visibility!', timestamp: '1 week ago', isRead: true, link: '/premium' },
-  { id: 'n6', type: 'profileView', text: 'and 2 other programs viewed your profile.', actorName: 'UCLA Athletics', actorAvatar: 'https://placehold.co/40x40/BBDEFB/42A5F5?text=UA', timestamp: '10 hours ago', isRead: false, link: '/profile/ucla-athletics' },
-];
 
 const getNotificationIcon = (type: Notification['type']) => {
   switch (type) {
-    case 'profileView': return <Eye className="h-5 w-5 text-blue-500" />;
     case 'newConnection': return <UserPlus className="h-5 w-5 text-green-500" />;
     case 'newMessage': return <MessageCircle className="h-5 w-5 text-purple-500" />;
-    case 'premiumFeature': return <Star className="h-5 w-5 text-amber-500" />;
     default: return <Bell className="h-5 w-5 text-gray-500" />;
   }
 };
@@ -43,20 +37,19 @@ const getNotificationIcon = (type: Notification['type']) => {
 type NotificationFilter = 'all' | 'unread';
 
 export default function NotificationsPage() {
-  const [notifications, setNotifications] = useState<Notification[]>(placeholderNotifications);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
   const [activeFilter, setActiveFilter] = useState<NotificationFilter>('all');
-  const [searchTerm, setSearchTerm] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const hasFetchedRef = useRef(false);
+  const isRequestInProgressRef = useRef(false);
+  
+  const { getToken } = useAuth();
+  const { refetch: refetchUnreadCount, setUnreadCount } = useNotifications();
 
   const filteredNotifications = useMemo(() => {
     let filtered = notifications;
-    
-    // Apply search filter
-    if (searchTerm) {
-      filtered = filtered.filter(n => 
-        n.text.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (n.actorName && n.actorName.toLowerCase().includes(searchTerm.toLowerCase()))
-      );
-    }
     
     // Apply read/unread filter
     if (activeFilter === 'unread') {
@@ -64,21 +57,189 @@ export default function NotificationsPage() {
     }
     
     return filtered;
-  }, [notifications, activeFilter, searchTerm]);
+  }, [notifications, activeFilter]);
 
   const unreadCount = notifications.filter(n => !n.isRead).length;
 
-  const markAsRead = (id: string) => {
-    setNotifications(prev => prev.map(n => n.id === id ? { ...n, isRead: true } : n));
-  };
+  const fetchNotifications = useCallback(async (unreadOnly = false, isManualRefresh = false) => {
+    // Prevent duplicate calls
+    if (isRequestInProgressRef.current) {
+      return;
+    }
+    
+    isRequestInProgressRef.current = true;
+    
+    try {
+      if (isManualRefresh) {
+        setIsRefreshing(true);
+      } else {
+        setLoading(true);
+      }
+      
+      const token = await getToken();
+      
+      if (!token) {
+        throw new Error('No authentication token available');
+      }
 
-  const markAllAsRead = () => {
-    setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
-  };
+      const response = await fetch('/api/notifications', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ 
+          operation: 'getNotifications',
+          limit: 50,
+          offset: 0,
+          unreadOnly
+        })
+      });
 
-  const deleteAllNotifications = () => {
+      if (!response.ok) {
+        throw new Error(`Failed to fetch notifications: ${response.status} ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      
+      if (data.success) {
+        setNotifications(data.notifications);
+        setError(null);
+        // Update the unread count in the hook's store
+        const currentUnreadCount = data.notifications.filter((n: Notification) => !n.isRead).length;
+        setUnreadCount(currentUnreadCount);
+      } else {
+        throw new Error(data.error || 'Failed to fetch notifications');
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to fetch notifications');
+    } finally {
+      setLoading(false);
+      setIsRefreshing(false);
+      isRequestInProgressRef.current = false;
+    }
+  }, [getToken, setUnreadCount]);
+
+  const markAsRead = useCallback(async (id: number) => {
+    try {
+      const token = await getToken();
+      
+      if (!token) return;
+
+      const response = await fetch('/api/notifications', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ 
+          operation: 'markAsRead',
+          notificationId: id
+        })
+      });
+
+      if (response.ok) {
+        setNotifications(prev => prev.map(n => n.id === id ? { ...n, isRead: true, readAt: new Date() } : n));
+        // Update unread count in the hook
+        refetchUnreadCount();
+      }
+    } catch {
+      // Silently handle error
+    }
+  }, [getToken, refetchUnreadCount]);
+
+  const markAllAsRead = useCallback(async () => {
+    try {
+      const token = await getToken();
+      
+      if (!token) return;
+
+      const response = await fetch('/api/notifications', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ 
+          operation: 'markAllAsRead'
+        })
+      });
+
+      if (response.ok) {
+        setNotifications(prev => prev.map(n => ({ ...n, isRead: true, readAt: new Date() })));
+        setUnreadCount(0);
+      }
+    } catch {
+      // Silently handle error
+    }
+  }, [getToken, setUnreadCount]);
+
+  const deleteAllNotifications = useCallback(async () => {
+    // For now, just clear locally. You could implement a deleteAll API endpoint if needed
     setNotifications([]);
-  };
+    setUnreadCount(0);
+  }, [setUnreadCount]);
+
+  useEffect(() => {
+    if (!hasFetchedRef.current) {
+      hasFetchedRef.current = true;
+      fetchNotifications();
+    }
+  }, [fetchNotifications]); // Include fetchNotifications dependency
+
+  // Removed page visibility listener to prevent automatic API calls when switching tabs
+
+  const handleNotificationClick = useCallback((notification: Notification) => {
+    if (!notification.isRead) {
+      markAsRead(notification.id);
+    }
+  }, [markAsRead]);
+
+  if (loading) {
+    return (
+      <AuthWrapper>
+        <div className="min-h-screen bg-background p-4 md:p-6">
+          <div className="max-w-5xl mx-auto h-[calc(100vh-2rem)] md:h-[calc(100vh-3rem)]">
+            <div className="h-full flex flex-col border border-border/50 rounded-xl shadow-lg bg-card overflow-hidden">
+              <div className="p-6 border-b border-border/50">
+                <h1 className="text-2xl md:text-3xl font-bold">Notifications</h1>
+              </div>
+              <div className="flex-grow flex items-center justify-center">
+                <div className="text-center">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#01ae79] mx-auto"></div>
+                  <p className="mt-2 text-muted-foreground">Loading notifications...</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </AuthWrapper>
+    );
+  }
+
+  if (error) {
+    return (
+      <AuthWrapper>
+        <div className="min-h-screen bg-background p-4 md:p-6">
+          <div className="max-w-5xl mx-auto h-[calc(100vh-2rem)] md:h-[calc(100vh-3rem)]">
+            <div className="h-full flex flex-col border border-border/50 rounded-xl shadow-lg bg-card overflow-hidden">
+              <div className="p-6 border-b border-border/50">
+                <h1 className="text-2xl md:text-3xl font-bold">Notifications</h1>
+              </div>
+              <div className="flex-grow flex items-center justify-center">
+                <div className="text-center">
+                  <p className="text-red-500 mb-4">{error}</p>
+                  <Button onClick={() => fetchNotifications()} variant="outline">
+                    Try Again
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </AuthWrapper>
+    );
+  }
 
   return (
     <AuthWrapper>
@@ -108,17 +269,6 @@ export default function NotificationsPage() {
               </div>
               
               <div className="space-y-4">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <input
-                    type="text"
-                    placeholder="Search notifications..."
-                    className="w-full pl-9 pr-4 py-2.5 text-sm border border-border/50 bg-background/80 backdrop-blur-sm text-foreground rounded-lg focus:outline-none focus:ring-2 focus:ring-[#01ae79] focus:border-[#01ae79] transition-all"
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                  />
-                </div>
-                
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                   <div className="flex space-x-2">
                     {(['all', 'unread'] as NotificationFilter[]).map(filter => (
@@ -139,6 +289,16 @@ export default function NotificationsPage() {
                   </div>
                   
                   <div className="flex space-x-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => fetchNotifications(false, true)} 
+                      disabled={loading || isRefreshing}
+                      className="border-[#01ae79]/30 hover:bg-[#01ae79]/5 dark:border-[#01ae79]/40 dark:hover:bg-[#01ae79]/10 text-sm"
+                    >
+                      <RefreshCw className={`h-4 w-4 mr-1 ${loading || isRefreshing ? 'animate-spin' : ''}`} /> 
+                      Refresh
+                    </Button>
                     <Button 
                       variant="outline" 
                       size="sm" 
@@ -159,12 +319,6 @@ export default function NotificationsPage() {
                     </Button>
                   </div>
                 </div>
-                
-                {searchTerm.trim() && (
-                  <p className="text-sm text-muted-foreground">
-                    {filteredNotifications.length} results for &ldquo;{searchTerm}&rdquo;
-                  </p>
-                )}
               </div>
             </div>
 
@@ -175,7 +329,7 @@ export default function NotificationsPage() {
                   {filteredNotifications.map(notification => (
                     <div
                       key={notification.id}
-                      onClick={() => !notification.isRead && markAsRead(notification.id)}
+                      onClick={() => handleNotificationClick(notification)}
                       className={`group p-4 rounded-lg border transition-all duration-200 cursor-pointer hover:shadow-sm ${
                         notification.isRead 
                           ? 'bg-card/70 dark:bg-card/50 hover:bg-card border-border/40 hover:border-[#01ae79]/20 dark:hover:border-[#01ae79]/30' 
@@ -194,10 +348,15 @@ export default function NotificationsPage() {
                         )}
                         
                         <div className="flex-shrink-0 mt-0.5">
-                          {notification.actorAvatar ? (
+                          {notification.actorImageUrl && 
+                           notification.actorImageUrl !== 'undefined' && 
+                           !notification.actorImageUrl.startsWith('undefined/') &&
+                           (notification.actorImageUrl.startsWith('http://') || 
+                            notification.actorImageUrl.startsWith('https://') || 
+                            notification.actorImageUrl.startsWith('/')) ? (
                             <div className="relative">
                               <Image 
-                                src={notification.actorAvatar} 
+                                src={notification.actorImageUrl} 
                                 alt={notification.actorName || 'Notification'} 
                                 width={40} 
                                 height={40} 
@@ -219,7 +378,7 @@ export default function NotificationsPage() {
                                   <span className="font-semibold text-[#01ae79] dark:text-[#01ae79]">
                                     {notification.actorName}
                                   </span>
-                                )} {notification.text}
+                                )} {notification.message}
                               </p>
                               <p className={`text-xs mt-1 ${
                                 notification.isRead 
@@ -234,10 +393,11 @@ export default function NotificationsPage() {
                               {notification.link && (
                                 <Link 
                                   href={notification.link} 
-                                  className="inline-flex items-center text-xs text-[#01ae79] hover:text-[#01ae79]/80 dark:text-[#01ae79] dark:hover:text-[#01ae79]/80 hover:underline transition-colors font-medium" 
+                                  className="inline-flex items-center gap-1 px-3 py-1.5 text-xs bg-[#01ae79]/10 hover:bg-[#01ae79]/20 text-[#01ae79] dark:text-[#01ae79] rounded-md transition-colors font-medium group/button" 
                                   onClick={(e) => e.stopPropagation()}
                                 >
-                                  View →
+                                  View
+                                  <ArrowRight className="h-3 w-3 transition-transform group-hover/button:translate-x-0.5" />
                                 </Link>
                               )}
                             </div>
@@ -248,21 +408,21 @@ export default function NotificationsPage() {
                   ))}
                 </div>
               ) : (
-                <div className="flex-grow flex flex-col items-center justify-center text-center p-8">
-                  <div className="w-20 h-20 rounded-full bg-[#01ae79]/10 dark:bg-[#01ae79]/20 flex items-center justify-center mb-6">
-                    <Bell className="h-10 w-10 text-[#01ae79] dark:text-[#01ae79]" />
-                  </div>
-                  <h3 className="text-xl font-semibold text-foreground mb-2">
-                    {activeFilter === 'unread' ? "No unread notifications" : "You're all caught up!"}
-                  </h3>
-                  <p className="text-muted-foreground max-w-md mx-auto">
-                    {searchTerm 
-                      ? "No notifications match your search. Try adjusting your search terms."
-                      : activeFilter === 'unread' 
+                <div className="flex-grow flex items-center justify-center p-8">
+                  <div className="text-center max-w-md mx-auto">
+                    <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-[#01ae79]/10 dark:bg-[#01ae79]/20 flex items-center justify-center">
+                      <Bell className="h-8 w-8 text-[#01ae79] dark:text-[#01ae79]" />
+                    </div>
+                    <h3 className="text-lg font-semibold text-foreground mb-2">
+                      {activeFilter === 'unread' ? "No unread notifications" : "You're all caught up!"}
+                    </h3>
+                    <p className="text-muted-foreground text-sm">
+                      {activeFilter === 'unread'
                         ? "All your notifications have been read. New notifications will appear here when received."
                         : "No new notifications. We'll notify you when there's something important to share."
-                    }
-                  </p>
+                      }
+                    </p>
+                  </div>
                 </div>
               )}
             </div>
