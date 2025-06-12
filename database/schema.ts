@@ -312,11 +312,13 @@ export const notifications = pgTable('notifications', {
   metadata: jsonb('metadata'), // Additional data like userIds, messageIds, connectionIds
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
   readAt: timestamp('read_at', { withTimezone: true }),
+  dismissedAt: timestamp('dismissed_at', { withTimezone: true }),
 }, (table) => [
   index('idx_notifications_user_id').on(table.userId),
   index('idx_notifications_is_read').on(table.isRead),
   index('idx_notifications_type').on(table.type),
   index('idx_notifications_created_at').on(table.createdAt),
+  index('idx_notifications_dismissed_at').on(table.dismissedAt),
 ]);
 
 export const usersRelations = relations(users, ({ one, many }) => ({

@@ -78,10 +78,15 @@ const useNotificationsStore = create(
   )
 );
 
+// Constants outside the hook to prevent recreation
+const FETCH_COOLDOWN = 5 * 60 * 1000; // 5 minutes
+const POLLING_INTERVAL = 10 * 60 * 1000; // 10 minutes
+
 // React hook to use the store and fetch data
 export const useNotifications = () => {
   const { 
     unreadCount, 
+    lastFetched,
     hasCheckedOnStartup, 
     isFetching,
     fetchUnreadCount, 
@@ -94,15 +99,22 @@ export const useNotifications = () => {
   const isOnNotificationsPage = pathname === '/notifications';
   const lastFetchRef = useRef<number>(0);
 
-  const fetchWithToken = useCallback(async () => {
-    // Don't fetch if we're on the notifications page (let the page handle it)
-    if (isOnNotificationsPage) return;
-    
-    // Prevent rapid successive calls with longer debounce
-    const now = Date.now();
-    if (now - lastFetchRef.current < 30000) { // 30 second debounce (increased from 10)
+  const fetchWithToken = useCallback(async (force = false) => {
+    // Don't fetch if we're on the notifications page (banner count is cleared there)
+    if (pathname === '/notifications') {
+      // Clear the count immediately when on notifications page
+      setUnreadCount(0);
       return;
     }
+    
+    // Check if we need to respect cooldown
+    const now = Date.now();
+    const timeSinceLastFetch = now - lastFetchRef.current;
+    
+    if (!force && timeSinceLastFetch < FETCH_COOLDOWN) {
+      return; // Too soon to fetch again
+    }
+    
     lastFetchRef.current = now;
     
     const windowWithClerk = window as WindowWithClerk;
@@ -119,7 +131,7 @@ export const useNotifications = () => {
         setLocalIsFetching(false);
       }
     }
-  }, [fetchUnreadCount, isOnNotificationsPage]);
+  }, [pathname, fetchUnreadCount, setUnreadCount]);
 
   // Check once on app startup/login
   useEffect(() => {
@@ -131,7 +143,7 @@ export const useNotifications = () => {
       !hasCheckedOnStartup &&
       windowWithClerk.Clerk?.session
     ) {
-      fetchWithToken();
+      fetchWithToken(true); // Force initial fetch
       setHasCheckedOnStartup(true);
     }
   }, [hasCheckedOnStartup, fetchWithToken, setHasCheckedOnStartup]);
@@ -144,24 +156,28 @@ export const useNotifications = () => {
       intervalRef.current = null;
     }
 
+    // Clear banner count immediately when on notifications page
+    if (isOnNotificationsPage) {
+      setUnreadCount(0);
+      return; // Don't set up polling when on notifications page
+    }
+
     // Only set up polling if not on notifications page and user is authenticated
-    if (!isOnNotificationsPage) {
-      const windowWithClerk = window as WindowWithClerk;
+    const windowWithClerk = window as WindowWithClerk;
+    
+    if (typeof windowWithClerk !== 'undefined' && windowWithClerk.Clerk?.session) {
+      // Only fetch on page navigation if it's been a while since last fetch
+      const now = Date.now();
+      if (now - lastFetchRef.current > FETCH_COOLDOWN) {
+        fetchWithToken();
+      }
       
-      if (typeof windowWithClerk !== 'undefined' && windowWithClerk.Clerk?.session) {
-        // Only fetch on navigation if we haven't fetched recently (avoid duplicate calls)
-        const now = Date.now();
-        if (now - lastFetchRef.current > 30000) { // 30 second cooldown between navigation fetches
+      // Set up interval for periodic polling (every 10 minutes)
+      intervalRef.current = setInterval(() => {
+        if (!document.hidden && !isOnNotificationsPage) {
           fetchWithToken();
         }
-        
-        // Set up interval for periodic polling (every 2 minutes)
-        intervalRef.current = setInterval(() => {
-          if (!document.hidden && !isOnNotificationsPage) {
-            fetchWithToken();
-          }
-        }, 2 * 60 * 1000); // 2 minutes
-      }
+      }, POLLING_INTERVAL);
     }
 
     // Cleanup interval when component unmounts or dependencies change
@@ -171,13 +187,13 @@ export const useNotifications = () => {
         intervalRef.current = null;
       }
     };
-  }, [pathname, isOnNotificationsPage, fetchWithToken]);
+  }, [pathname, fetchWithToken, isOnNotificationsPage, setUnreadCount]);
 
-  // Handle page visibility changes
+  // Handle page visibility changes (less aggressive)
   useEffect(() => {
     const handleVisibilityChange = () => {
       if (document.hidden) {
-        // Page is hidden, clear interval
+        // Page is hidden, clear interval to save resources
         if (intervalRef.current) {
           clearInterval(intervalRef.current);
           intervalRef.current = null;
@@ -185,19 +201,23 @@ export const useNotifications = () => {
       } else {
         // Page is visible, restart polling if not on notifications page
         if (!isOnNotificationsPage) {
-          // Only fetch if we haven't fetched very recently
+          // Only fetch if it's been a very long time since last fetch (double cooldown for visibility changes)
           const now = Date.now();
-          if (now - lastFetchRef.current > 30000) { // 30 second cooldown
+          if (now - lastFetchRef.current > (FETCH_COOLDOWN * 2)) {
             fetchWithToken();
           }
           
+          // Restart polling if not already running
           if (!intervalRef.current) {
             intervalRef.current = setInterval(() => {
               if (!document.hidden && !isOnNotificationsPage) {
                 fetchWithToken();
               }
-            }, 2 * 60 * 1000); // 2 minutes
+            }, POLLING_INTERVAL);
           }
+        } else {
+          // Clear banner count when becoming visible on notifications page
+          setUnreadCount(0);
         }
       }
     };
@@ -207,11 +227,10 @@ export const useNotifications = () => {
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
-  }, [fetchWithToken, isOnNotificationsPage]);
+  }, [fetchWithToken, isOnNotificationsPage, setUnreadCount]);
 
   const refetch = useCallback(() => {
-    lastFetchRef.current = 0; // Reset debounce
-    return fetchWithToken();
+    return fetchWithToken(true); // Force immediate fetch
   }, [fetchWithToken]);
 
   // Reset startup check when user logs out (pathname changes to non-authenticated pages)
@@ -226,10 +245,26 @@ export const useNotifications = () => {
     }
   }, [pathname, setHasCheckedOnStartup]);
 
+  // Listen for dismissal events to force refetch
+  useEffect(() => {
+    const handleNotificationsDismissed = () => {
+      // Force immediate refetch after dismissal
+      fetchWithToken(true);
+    };
+
+    window.addEventListener('notifications-dismissed', handleNotificationsDismissed);
+    
+    return () => {
+      window.removeEventListener('notifications-dismissed', handleNotificationsDismissed);
+    };
+  }, [fetchWithToken]);
+
   return { 
-    unreadCount, 
+    // Return 0 for unread count when on notifications page to hide banner
+    unreadCount: isOnNotificationsPage ? 0 : unreadCount, 
     isFetching: isFetching || localIsFetching, 
     refetch, 
-    setUnreadCount 
+    setUnreadCount,
+    lastFetched
   };
 }; 

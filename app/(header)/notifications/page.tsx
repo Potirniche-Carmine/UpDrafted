@@ -1,14 +1,15 @@
 "use client";
 
-import Link from 'next/link';
+
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Badge } from "@/components/ui/badge";
-import { Bell, UserPlus, MessageCircle, Trash2, Circle, Check, ArrowRight, RefreshCw } from 'lucide-react';
+import { Bell, UserPlus, MessageCircle, Trash2, Circle, Check } from 'lucide-react';
 import { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { AuthWrapper } from '../../../components/auth-wrapper';
 import { useNotifications } from '@/hooks/use-notifications';
 import { useAuth } from '@clerk/nextjs';
+import { useRouter } from 'next/navigation';
 
 interface Notification {
   id: number;
@@ -40,13 +41,13 @@ export default function NotificationsPage() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [activeFilter, setActiveFilter] = useState<NotificationFilter>('all');
   const [loading, setLoading] = useState(true);
-  const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const hasFetchedRef = useRef(false);
   const isRequestInProgressRef = useRef(false);
   
   const { getToken } = useAuth();
-  const { refetch: refetchUnreadCount, setUnreadCount } = useNotifications();
+  const { setUnreadCount } = useNotifications();
+  const router = useRouter();
 
   const filteredNotifications = useMemo(() => {
     let filtered = notifications;
@@ -61,7 +62,7 @@ export default function NotificationsPage() {
 
   const unreadCount = notifications.filter(n => !n.isRead).length;
 
-  const fetchNotifications = useCallback(async (unreadOnly = false, isManualRefresh = false) => {
+  const fetchNotifications = useCallback(async (unreadOnly = false) => {
     // Prevent duplicate calls
     if (isRequestInProgressRef.current) {
       return;
@@ -70,11 +71,7 @@ export default function NotificationsPage() {
     isRequestInProgressRef.current = true;
     
     try {
-      if (isManualRefresh) {
-        setIsRefreshing(true);
-      } else {
-        setLoading(true);
-      }
+      setLoading(true);
       
       const token = await getToken();
       
@@ -105,9 +102,8 @@ export default function NotificationsPage() {
       if (data.success) {
         setNotifications(data.notifications);
         setError(null);
-        // Update the unread count in the hook's store
-        const currentUnreadCount = data.notifications.filter((n: Notification) => !n.isRead).length;
-        setUnreadCount(currentUnreadCount);
+        // Clear the banner count when visiting the notifications page
+        setUnreadCount(0);
       } else {
         throw new Error(data.error || 'Failed to fetch notifications');
       }
@@ -115,7 +111,6 @@ export default function NotificationsPage() {
       setError(err instanceof Error ? err.message : 'Failed to fetch notifications');
     } finally {
       setLoading(false);
-      setIsRefreshing(false);
       isRequestInProgressRef.current = false;
     }
   }, [getToken, setUnreadCount]);
@@ -140,13 +135,11 @@ export default function NotificationsPage() {
 
       if (response.ok) {
         setNotifications(prev => prev.map(n => n.id === id ? { ...n, isRead: true, readAt: new Date() } : n));
-        // Update unread count in the hook
-        refetchUnreadCount();
       }
     } catch {
       // Silently handle error
     }
-  }, [getToken, refetchUnreadCount]);
+  }, [getToken]);
 
   const markAllAsRead = useCallback(async () => {
     try {
@@ -175,25 +168,62 @@ export default function NotificationsPage() {
   }, [getToken, setUnreadCount]);
 
   const deleteAllNotifications = useCallback(async () => {
-    // For now, just clear locally. You could implement a deleteAll API endpoint if needed
-    setNotifications([]);
-    setUnreadCount(0);
-  }, [setUnreadCount]);
+    try {
+      const token = await getToken();
+      
+      if (!token) return;
+
+      const response = await fetch('/api/notifications', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ 
+          operation: 'dismissAllNotifications'
+        })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) {
+          // Clear notifications locally after successful dismissal
+          setNotifications([]);
+          setUnreadCount(0);
+          // Force a refetch of the notification count for other components
+          window.dispatchEvent(new CustomEvent('notifications-dismissed'));
+        } else {
+          console.error('Failed to dismiss notifications:', data.error);
+        }
+              } else {
+          console.error('Failed to dismiss notifications:', response.statusText);
+        }
+      } catch (error) {
+        console.error('Error dismissing notifications:', error);
+      }
+  }, [getToken, setUnreadCount]);
 
   useEffect(() => {
     if (!hasFetchedRef.current) {
       hasFetchedRef.current = true;
+      // Clear banner count immediately when visiting this page
+      setUnreadCount(0);
+      // Fetch notifications without calling createNotifications again
       fetchNotifications();
     }
-  }, [fetchNotifications]); // Include fetchNotifications dependency
-
-  // Removed page visibility listener to prevent automatic API calls when switching tabs
+  }, [fetchNotifications, setUnreadCount]);
 
   const handleNotificationClick = useCallback((notification: Notification) => {
+    // Mark as read if not already read
     if (!notification.isRead) {
       markAsRead(notification.id);
     }
-  }, [markAsRead]);
+    
+    // Navigate to the link if it exists
+    if (notification.link) {
+      router.push(notification.link);
+    }
+  }, [markAsRead, router]);
 
   if (loading) {
     return (
@@ -289,16 +319,6 @@ export default function NotificationsPage() {
                   </div>
                   
                   <div className="flex space-x-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => fetchNotifications(false, true)} 
-                      disabled={loading || isRefreshing}
-                      className="border-[#01ae79]/30 hover:bg-[#01ae79]/5 dark:border-[#01ae79]/40 dark:hover:bg-[#01ae79]/10 text-sm"
-                    >
-                      <RefreshCw className={`h-4 w-4 mr-1 ${loading || isRefreshing ? 'animate-spin' : ''}`} /> 
-                      Refresh
-                    </Button>
                     <Button 
                       variant="outline" 
                       size="sm" 
@@ -371,37 +391,20 @@ export default function NotificationsPage() {
                         </div>
                         
                         <div className="flex-1 min-w-0">
-                          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
-                            <div className="flex-1">
-                              <p className="text-sm text-foreground leading-relaxed">
-                                {notification.actorName && (
-                                  <span className="font-semibold text-[#01ae79] dark:text-[#01ae79]">
-                                    {notification.actorName}
-                                  </span>
-                                )} {notification.message}
-                              </p>
-                              <p className={`text-xs mt-1 ${
-                                notification.isRead 
-                                  ? 'text-muted-foreground' 
-                                  : 'text-[#01ae79] dark:text-[#01ae79] font-medium'
-                              }`}>
-                                {notification.timestamp}
-                              </p>
-                            </div>
-                            
-                            <div className="flex-shrink-0">
-                              {notification.link && (
-                                <Link 
-                                  href={notification.link} 
-                                  className="inline-flex items-center gap-1 px-3 py-1.5 text-xs bg-[#01ae79]/10 hover:bg-[#01ae79]/20 text-[#01ae79] dark:text-[#01ae79] rounded-md transition-colors font-medium group/button" 
-                                  onClick={(e) => e.stopPropagation()}
-                                >
-                                  View
-                                  <ArrowRight className="h-3 w-3 transition-transform group-hover/button:translate-x-0.5" />
-                                </Link>
-                              )}
-                            </div>
-                          </div>
+                          <p className="text-sm text-foreground leading-relaxed">
+                            {notification.actorName && (
+                              <span className="font-semibold text-[#01ae79] dark:text-[#01ae79]">
+                                {notification.actorName}
+                              </span>
+                            )} {notification.message}
+                          </p>
+                          <p className={`text-xs mt-1 ${
+                            notification.isRead 
+                              ? 'text-muted-foreground' 
+                              : 'text-[#01ae79] dark:text-[#01ae79] font-medium'
+                          }`}>
+                            {notification.timestamp}
+                          </p>
                         </div>
                       </div>
                     </div>

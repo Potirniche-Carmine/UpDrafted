@@ -6,7 +6,7 @@ import { requireAnyRole } from '@/utils/roles';
 import { eq, desc, and, count, sql } from 'drizzle-orm';
 import { profileOperations, messageOperations, connectionOperations } from '@/database/db-utils';
 
-type Operation = 'getNotifications' | 'markAsRead' | 'markAllAsRead' | 'getUnreadCount' | 'createNotifications';
+type Operation = 'getNotifications' | 'markAsRead' | 'markAllAsRead' | 'getUnreadCount' | 'createNotifications' | 'dismissAllNotifications' | 'cleanupOldNotifications';
 
 interface BaseRequestBody {
   operation: Operation;
@@ -69,6 +69,12 @@ export async function POST(request: NextRequest) {
       case 'createNotifications':
         return await handleCreateNotifications(userId);
       
+      case 'dismissAllNotifications':
+        return await handleDismissAllNotifications(userId);
+      
+      case 'cleanupOldNotifications':
+        return await handleCleanupOldNotifications(userId);
+      
       default:
         return NextResponse.json({
           success: false,
@@ -88,9 +94,9 @@ export async function POST(request: NextRequest) {
 // Create notifications based on actual unread messages and pending connections
 async function handleCreateNotifications(userId: string) {
   try {
-    // Get existing notifications from the last 24 hours to prevent duplicates
-    const yesterday = new Date();
-    yesterday.setHours(yesterday.getHours() - 24);
+    // Get existing notifications from the last 7 days to prevent duplicates
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
     
     const existingNotifications = await db
       .select({
@@ -98,12 +104,13 @@ async function handleCreateNotifications(userId: string) {
         type: notifications.type,
         metadata: notifications.metadata,
         createdAt: notifications.createdAt,
+        dismissedAt: notifications.dismissedAt,
       })
       .from(notifications)
       .where(
         and(
           eq(notifications.userId, userId),
-          sql`${notifications.createdAt} >= ${yesterday}`
+          sql`${notifications.createdAt} >= ${sevenDaysAgo}`
         )
       );
 
@@ -120,13 +127,21 @@ async function handleCreateNotifications(userId: string) {
       );
 
       if (conversationsWithUnread.length > 0) {
-        // Check if we already have a message notification in the last 24 hours
-        const hasRecentMessageNotification = existingNotifications.some(notif => 
-          notif.type === 'newMessage' && 
-          new Date(notif.createdAt) > yesterday
-        );
+        // Check if we have an active (non-dismissed) notification for any of these conversations
+        const hasActiveMessageNotification = existingNotifications.some(notif => {
+          if (notif.type === 'newMessage' && notif.dismissedAt === null) {
+            // Check if this notification is for one of the current unread conversations
+            const metadata = notif.metadata as Record<string, unknown>;
+            if (metadata?.conversationId) {
+              return conversationsWithUnread.some(conv => conv.id === metadata.conversationId);
+            }
+            // For general message notifications, consider them active if recent
+            return new Date(notif.createdAt) > sevenDaysAgo;
+          }
+          return false;
+        });
 
-        if (!hasRecentMessageNotification) {
+        if (!hasActiveMessageNotification) {
           // Group by sender to create meaningful messages
           const senderCounts = new Map();
           
@@ -201,11 +216,22 @@ async function handleCreateNotifications(userId: string) {
     );
 
     if (pendingRequests.length > 0) {
-      // Check if we already have a connection notification in the last 24 hours
-      const hasRecentConnectionNotification = existingNotifications.some(notif => 
-        notif.type === 'newConnection' && 
-        new Date(notif.createdAt) > yesterday
-      );
+      // Check if we already have ANY notification (dismissed or not) for any of these specific pending requests recently
+      const hasRecentConnectionNotification = existingNotifications.some(notif => {
+        if (notif.type === 'newConnection') {
+          const metadata = notif.metadata as Record<string, unknown>;
+          if (metadata?.connectionId) {
+            // If we have a notification for this specific connection request, don't create another
+            return pendingRequests.some(req => req.id === metadata.connectionId);
+          } else if (metadata?.actorUserId) {
+            // If we have a notification from this specific user recently, don't create another
+            return pendingRequests.some(req => req.fromUserId === metadata.actorUserId) && 
+                   new Date(notif.createdAt) > sevenDaysAgo;
+          }
+          return false;
+        }
+        return false;
+      });
 
       if (!hasRecentConnectionNotification) {
         if (pendingRequests.length === 1) {
@@ -275,9 +301,6 @@ async function handleGetNotifications(userId: string, body: GetNotificationsRequ
   try {
     const { limit = 20, offset = 0, unreadOnly = false } = body;
 
-    // First, create/update notifications based on current state
-    await handleCreateNotifications(userId);
-
     const query = db
       .select({
         id: notifications.id,
@@ -288,12 +311,20 @@ async function handleGetNotifications(userId: string, body: GetNotificationsRequ
         metadata: notifications.metadata,
         createdAt: notifications.createdAt,
         readAt: notifications.readAt,
+        dismissedAt: notifications.dismissedAt,
       })
       .from(notifications)
       .where(
         unreadOnly 
-          ? and(eq(notifications.userId, userId), eq(notifications.isRead, false))
-          : eq(notifications.userId, userId)
+          ? and(
+              eq(notifications.userId, userId), 
+              eq(notifications.isRead, false),
+              sql`${notifications.dismissedAt} IS NULL`
+            )
+          : and(
+              eq(notifications.userId, userId),
+              sql`${notifications.dismissedAt} IS NULL`
+            )
       )
       .orderBy(desc(notifications.createdAt))
       .limit(limit)
@@ -341,7 +372,7 @@ async function handleGetNotifications(userId: string, body: GetNotificationsRequ
           } else if (notification.type === 'newConnection') {
             enhancedData = {
               ...enhancedData,
-              link: '/connections?tab=pending',
+              link: '/connections?tab=requests',
             };
           }
         }
@@ -425,7 +456,10 @@ async function handleMarkAllAsRead(userId: string) {
 
 async function handleGetUnreadCount(userId: string) {
   try {
-    // Create/update notifications first
+    // First, cleanup old dismissed notifications (runs periodically)
+    await handleCleanupOldNotifications(userId);
+    
+    // Then create/update notifications based on current state
     await handleCreateNotifications(userId);
 
     const result = await db
@@ -434,7 +468,8 @@ async function handleGetUnreadCount(userId: string) {
       .where(
         and(
           eq(notifications.userId, userId),
-          eq(notifications.isRead, false)
+          eq(notifications.isRead, false),
+          sql`${notifications.dismissedAt} IS NULL`
         )
       );
 
@@ -449,6 +484,90 @@ async function handleGetUnreadCount(userId: string) {
     return NextResponse.json({
       success: false,
       error: 'Failed to fetch unread count'
+    }, { status: 500 });
+  }
+}
+
+async function handleDismissAllNotifications(userId: string) {
+  try {
+    // First run cleanup of old dismissed notifications (7+ days old)
+    await handleCleanupOldNotifications(userId);
+    
+    // Get count of active (non-dismissed) notifications before dismissing
+    const countResult = await db
+      .select({ count: count() })
+      .from(notifications)
+      .where(
+        and(
+          eq(notifications.userId, userId),
+          sql`${notifications.dismissedAt} IS NULL`
+        )
+      );
+    
+    const notificationCount = countResult[0]?.count || 0;
+    
+    if (notificationCount === 0) {
+      return NextResponse.json({
+        success: true,
+        dismissedCount: 0,
+      });
+    }
+    
+    // Mark notifications as dismissed and read when clearing all
+    const dismissedNotifications = await db
+      .update(notifications)
+      .set({ 
+        dismissedAt: new Date(),
+        isRead: true,
+        readAt: new Date()
+      })
+      .where(
+        and(
+          eq(notifications.userId, userId),
+          sql`${notifications.dismissedAt} IS NULL`
+        )
+      )
+      .returning({ id: notifications.id });
+
+    return NextResponse.json({
+      success: true,
+      dismissedCount: dismissedNotifications.length,
+    });
+  } catch (error) {
+    console.error('Error dismissing all notifications:', error);
+    return NextResponse.json({
+      success: false,
+      error: 'Failed to dismiss notifications'
+    }, { status: 500 });
+  }
+}
+
+async function handleCleanupOldNotifications(userId: string) {
+  try {
+    // Delete dismissed notifications that were dismissed more than 7 days ago
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+    
+    const deletedNotifications = await db
+      .delete(notifications)
+      .where(
+        and(
+          eq(notifications.userId, userId),
+          sql`${notifications.dismissedAt} IS NOT NULL`,
+          sql`${notifications.dismissedAt} < ${sevenDaysAgo}`
+        )
+      )
+      .returning({ id: notifications.id });
+
+    return NextResponse.json({
+      success: true,
+      deletedCount: deletedNotifications.length,
+    });
+  } catch (error) {
+    console.error('Error cleaning up old notifications:', error);
+    return NextResponse.json({
+      success: false,
+      error: 'Failed to cleanup old notifications'
     }, { status: 500 });
   }
 }
