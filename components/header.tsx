@@ -120,7 +120,15 @@ export function Header() {
   const hasCompletedOnboarding = userRole && ['athlete', 'coach', 'recruiter', 'admin'].includes(userRole);
 
   // Determine home URL based on authentication status and onboarding completion
-  const homeUrl = isSignedIn && hasCompletedOnboarding ? '/dashboard' : '/';
+  // Use window.location to avoid Next.js router conflicts when clicking logo
+  const handleLogoClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    if (isSignedIn && hasCompletedOnboarding) {
+      window.location.href = '/dashboard';
+    } else {
+      window.location.href = '/';
+    }
+  };
 
   const navItems: NavItem[] = [
     { key: "discover", href: "/discover", label: "Discover", icon: <Search className="h-5 w-5" />, requiresAuth: true },
@@ -148,7 +156,7 @@ export function Header() {
     <header className="sticky top-0 z-50 w-full border-b border-[#01ae79]/20 dark:border-[#01ae79]/30 bg-white/95 dark:bg-gray-950/95 backdrop-blur supports-[backdrop-filter]:bg-white/80 dark:supports-[backdrop-filter]:bg-gray-950/80">
       <div className="container mx-auto flex h-16 max-w-screen-2xl items-center justify-between px-4 sm:px-6 lg:px-8">
         {/* Logo */}
-        <Link href={homeUrl} className="flex items-center space-x-2 flex-shrink-0">
+        <a href="#" onClick={handleLogoClick} className="flex items-center space-x-2 flex-shrink-0">
           <Image
             src="/logo.png"
             alt="UpDrafted Logo"
@@ -167,7 +175,7 @@ export function Header() {
               maxHeight: "50px"
             }}
           />
-        </Link>
+        </a>
 
         {/* Desktop Search Bar - Only show when signed in and onboarded */}
         {isSignedIn && hasCompletedOnboarding && (

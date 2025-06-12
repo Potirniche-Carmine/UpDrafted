@@ -5,6 +5,7 @@ import { requireAnyRole } from '@/utils/roles';
 import { decryptMessage } from '@/utils/encryption';
 import { sanitizeText } from '@/utils/sanitization';
 import { User } from '@/database/schema';
+import { MessageValidation, validateSchema, ValidationError } from '@/utils/validation';
 
 interface ConversationData {
   id: number;
@@ -94,36 +95,80 @@ export async function POST(request: NextRequest) {
 
     const { userId } = authResult;
     
-    // Parse request body and get operation type
-    const body = await request.json();
-    const { operation } = body as BaseRequestBody;
+    // Parse request body and validate
+    const rawBody = await request.json();
     
-    if (!operation) {
+    // Validate operation first
+    if (!rawBody.operation) {
       return NextResponse.json({
         success: false,
         error: 'Missing operation parameter'
       }, { status: 400 });
     }
+
+    // Validate based on operation type
+    let validatedBody;
+    try {
+      switch (rawBody.operation) {
+        case 'sendMessage':
+          validatedBody = validateSchema(MessageValidation.sendMessage, rawBody);
+          break;
+        case 'getMessages':
+          validatedBody = validateSchema(MessageValidation.getMessages, rawBody);
+          break;
+        case 'markRead':
+          validatedBody = validateSchema(MessageValidation.markRead, rawBody);
+          break;
+        case 'getConversations':
+          validatedBody = validateSchema(MessageValidation.getConversations, rawBody);
+          break;
+        case 'getUnreadCount':
+          validatedBody = validateSchema(MessageValidation.getUnreadCount, rawBody);
+          break;
+        case 'getOrCreateConversation':
+          validatedBody = validateSchema(MessageValidation.getOrCreateConversation, rawBody);
+          break;
+        default:
+          return NextResponse.json({
+            success: false,
+            error: 'Invalid operation'
+          }, { status: 400 });
+      }
+    } catch (error) {
+      if (error instanceof ValidationError) {
+        return NextResponse.json({
+          success: false,
+          error: error.message,
+          field: error.field
+        }, { status: 400 });
+      }
+      return NextResponse.json({
+        success: false,
+        error: 'Invalid request data'
+      }, { status: 400 });
+    }
+
+    const { operation } = validatedBody;
     
     // Route to appropriate handler based on operation
     switch (operation) {
       case 'getConversations':
-        return await handleGetConversations(userId, body as GetConversationsRequestBody);
+        return await handleGetConversations(userId, validatedBody as GetConversationsRequestBody);
       
       case 'getMessages':
-        return await handleGetMessages(userId, body as GetMessagesRequestBody);
+        return await handleGetMessages(userId, validatedBody as GetMessagesRequestBody);
       
       case 'sendMessage':
-        return await handleSendMessage(userId, body as SendMessageRequestBody);
+        return await handleSendMessage(userId, validatedBody as SendMessageRequestBody);
       
       case 'markRead':
-        return await handleMarkRead(userId, body as MarkReadRequestBody);
+        return await handleMarkRead(userId, validatedBody as MarkReadRequestBody);
       
       case 'getUnreadCount':
         return await handleGetUnreadCount(userId);
       
       case 'getOrCreateConversation':
-        return await handleGetOrCreateConversation(userId, body as GetOrCreateConversationRequestBody);
+        return await handleGetOrCreateConversation(userId, validatedBody as GetOrCreateConversationRequestBody);
       
       default:
         return NextResponse.json({
@@ -416,6 +461,15 @@ async function handleSendMessage(userId: string, body: SendMessageRequestBody) {
       ? parseInt(conversationId, 10) 
       : conversationId;
     
+    // Validate word count (400 words max)
+    const wordCount = message.trim().split(/\s+/).filter(word => word.length > 0).length;
+    if (wordCount > 400) {
+      return NextResponse.json({
+        success: false,
+        error: `Message too long. Maximum 400 words allowed, received ${wordCount} words.`
+      }, { status: 400 });
+    }
+
     // Sanitize message content
     const sanitizedMessage = sanitizeText(message);
     

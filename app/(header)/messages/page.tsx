@@ -377,10 +377,22 @@ export default function MessagingPage() {
     }
   }, [messages.length, scrollToBottom]);
 
+  // Word count helper function
+  const getWordCount = (text: string) => {
+    return text.trim().split(/\s+/).filter(word => word.length > 0).length;
+  };
+
   // Handle sending a new message
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newMessage.trim() || !selectedConversationId || sendingMessage || !activeConversation?.connectionActive) return;
+    
+    // Check word limit (400 words max)
+    const wordCount = getWordCount(newMessage);
+    if (wordCount > 400) {
+      alert(`Message too long! Please limit your message to 400 words. Current count: ${wordCount} words.`);
+      return;
+    }
     
     setSendingMessage(true);
     const messageContent = newMessage.trim();
@@ -865,6 +877,18 @@ export default function MessagingPage() {
                           rows={1}
                           disabled={sendingMessage || !activeConversation?.connectionActive}
                         />
+                        {/* Word Count Display */}
+                        {newMessage.trim() && (
+                          <div className={`absolute -bottom-6 right-0 text-xs ${
+                            getWordCount(newMessage) > 400 
+                              ? 'text-red-500' 
+                              : getWordCount(newMessage) > 350 
+                                ? 'text-yellow-500' 
+                                : 'text-gray-400'
+                          }`}>
+                            {getWordCount(newMessage)}/400 words
+                          </div>
+                        )}
                       </div>
                       <Button 
                         type="submit" 
@@ -879,6 +903,18 @@ export default function MessagingPage() {
                         )}
                       </Button>
                     </div>
+                    {newMessage.trim() && (
+                      <div className="flex justify-between items-center mt-2 text-xs">
+                        <span className={`text-muted-foreground ${getWordCount(newMessage) > 400 ? 'text-red-500' : ''}`}>
+                          {getWordCount(newMessage)} / 400 words
+                        </span>
+                        {getWordCount(newMessage) > 400 && (
+                          <span className="text-red-500 font-medium">
+                            Exceeds word limit
+                          </span>
+                        )}
+                      </div>
+                    )}
                     {error && (
                       <p className="mt-2 text-xs text-red-500">Error: {error}</p>
                     )}

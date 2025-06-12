@@ -930,12 +930,16 @@ export const messageOperations = {
     return conversation;
   },
 
-  // Get all conversations for a user
+  // Get all conversations for a user 
   async getUserConversations(userId: string) {
-    // Get conversations where user is either user1 or user2
-    const conversationsAsUser1 = await db.query.conversations.findMany({
-      where: eq(conversations.user1Id, userId),
+    // Single optimized query using OR condition instead of two separate queries
+    const allConversations = await db.query.conversations.findMany({
+      where: or(
+        eq(conversations.user1Id, userId),
+        eq(conversations.user2Id, userId)
+      ),
       with: {
+        user1: true,
         user2: true,
         messages: {
           orderBy: [desc(messages.createdAt)],
@@ -943,28 +947,6 @@ export const messageOperations = {
         }
       },
       orderBy: [desc(conversations.lastMessageAt)]
-    });
-    
-    const conversationsAsUser2 = await db.query.conversations.findMany({
-      where: eq(conversations.user2Id, userId),
-      with: {
-        user1: true,
-        messages: {
-          orderBy: [desc(messages.createdAt)],
-          limit: 1,
-        }
-      },
-      orderBy: [desc(conversations.lastMessageAt)]
-    });
-    
-    // Combine and sort all conversations by lastMessageAt
-    const allConversations = [
-      ...conversationsAsUser1,
-      ...conversationsAsUser2
-    ].sort((a, b) => {
-      if (!a.lastMessageAt) return 1;
-      if (!b.lastMessageAt) return -1;
-      return new Date(b.lastMessageAt).getTime() - new Date(a.lastMessageAt).getTime();
     });
     
     return allConversations;
@@ -978,125 +960,145 @@ export const messageOperations = {
       .returning();
   },
 
-  // Get messages for a conversation with pagination
+  // Get messages for a conversation with pagination (OPTIMIZED)
   async getMessages(conversationId: number, limit = 50, offset = 0) {
     return await db.query.messages.findMany({
       where: eq(messages.conversationId, conversationId),
       orderBy: [desc(messages.createdAt)],
-      limit,
+      limit: Math.min(limit, 100), // Cap at 100 for performance
       offset,
-      with: {
-        sender: true
+      // Remove sender info to reduce payload size - frontend can get sender from conversation
+      // with: { sender: true } // Commented out for performance
+    });
+  },
+  
+  // Send a new message (OPTIMIZED with transaction)
+  async sendMessage(conversationId: number, senderId: string, content: string) {
+    // Use database transaction for consistency and performance
+    return await db.transaction(async (tx) => {
+      // Sanitize and encrypt the message
+      const { encryptedText, iv } = sanitizeAndEncryptMessage(content);
+      
+      // Get only what we need from conversation (optimized query)
+      const conversation = await tx.query.conversations.findFirst({
+        where: eq(conversations.id, conversationId),
+        columns: {
+          id: true,
+          user1Id: true,
+          user2Id: true,
+        }
+      });
+      
+      if (!conversation) {
+        throw new Error('Conversation not found');
+      }
+      
+      // Determine if sender is user1 or user2
+      const isUser1 = conversation.user1Id === senderId;
+      
+      // Insert the new message first
+      const [message] = await tx.insert(messages)
+        .values({
+          conversationId,
+          senderId,
+          encryptedContent: encryptedText,
+          contentIV: iv,
+          messageType: 'text',
+          createdAt: new Date()
+        })
+        .returning();
+      
+      // Update conversation with new last message time and increment unread count
+      if (isUser1) {
+        await tx.update(conversations)
+          .set({ 
+            lastMessageAt: new Date(),
+            user2UnreadCount: sql`${conversations.user2UnreadCount} + 1`
+          })
+          .where(eq(conversations.id, conversationId));
+      } else {
+        await tx.update(conversations)
+          .set({ 
+            lastMessageAt: new Date(),
+            user1UnreadCount: sql`${conversations.user1UnreadCount} + 1`
+          })
+          .where(eq(conversations.id, conversationId));
+      }
+      
+      return message;
+    });
+  },
+  
+  // Mark messages as read (OPTIMIZED with transaction)
+  async markMessagesAsRead(conversationId: number, userId: string) {
+    return await db.transaction(async (tx) => {
+      // Get only what we need from conversation
+      const conversation = await tx.query.conversations.findFirst({
+        where: eq(conversations.id, conversationId),
+        columns: {
+          id: true,
+          user1Id: true,
+          user2Id: true,
+        }
+      });
+      
+      if (!conversation) {
+        throw new Error('Conversation not found');
+      }
+      
+      const isUser1 = conversation.user1Id === userId;
+      
+      // Mark messages as read where this user is NOT the sender (batch update)
+      await tx.update(messages)
+        .set({ 
+          isRead: true,
+          readAt: new Date()
+        })
+        .where(and(
+          eq(messages.conversationId, conversationId),
+          sql`${messages.senderId} != ${userId}`,
+          eq(messages.isRead, false)
+        ));
+      
+      // Reset unread count in conversation
+      if (isUser1) {
+        await tx.update(conversations)
+          .set({ user1UnreadCount: 0 })
+          .where(eq(conversations.id, conversationId));
+      } else {
+        await tx.update(conversations)
+          .set({ user2UnreadCount: 0 })
+          .where(eq(conversations.id, conversationId));
       }
     });
   },
   
-  // Send a new message
-  async sendMessage(conversationId: number, senderId: string, content: string) {
-    // Sanitize and encrypt the message
-    const { encryptedText, iv } = sanitizeAndEncryptMessage(content);
-    
-    // Get the conversation to determine who's who
-    const conversation = await this.getConversationById(conversationId);
-    
-    if (!conversation) {
-      throw new Error('Conversation not found');
-    }
-    
-    // Determine if sender is user1 or user2 and update unread counts accordingly
-    const isUser1 = conversation.user1Id === senderId;
-    
-    // Update conversation with new last message time and increment unread count
-    if (isUser1) {
-      await db.update(conversations)
-        .set({ 
-          lastMessageAt: new Date(),
-          user2UnreadCount: sql`${conversations.user2UnreadCount} + 1`
-        })
-        .where(eq(conversations.id, conversationId));
-    } else {
-      await db.update(conversations)
-        .set({ 
-          lastMessageAt: new Date(),
-          user1UnreadCount: sql`${conversations.user1UnreadCount} + 1`
-        })
-        .where(eq(conversations.id, conversationId));
-    }
-    
-    // Insert the new message
-    const [message] = await db.insert(messages)
-      .values({
-        conversationId,
-        senderId,
-        encryptedContent: encryptedText,
-        contentIV: iv,
-        messageType: 'text',
-        createdAt: new Date()
-      })
-      .returning();
-    
-    return message;
-  },
-  
-  // Mark messages as read
-  async markMessagesAsRead(conversationId: number, userId: string) {
-    // Get the conversation to determine who's who
-    const conversation = await this.getConversationById(conversationId);
-    
-    if (!conversation) {
-      throw new Error('Conversation not found');
-    }
-    
-    const isUser1 = conversation.user1Id === userId;
-    
-    // Mark messages as read where this user is NOT the sender
-    await db.update(messages)
-      .set({ 
-        isRead: true,
-        readAt: new Date()
-      })
-      .where(and(
-        eq(messages.conversationId, conversationId),
-        sql`${messages.senderId} != ${userId}`,
-        eq(messages.isRead, false)
-      ));
-    
-    // Reset unread count in conversation
-    if (isUser1) {
-      await db.update(conversations)
-        .set({ user1UnreadCount: 0 })
-        .where(eq(conversations.id, conversationId));
-    } else {
-      await db.update(conversations)
-        .set({ user2UnreadCount: 0 })
-        .where(eq(conversations.id, conversationId));
-    }
-    
-    return { success: true };
-  },
-  
-  // Get total unread message count for a user
+  // Get total unread message count for a user (OPTIMIZED single query)
   async getUnreadMessageCount(userId: string) {
-    // Check for unread messages where user is user1
-    const resultAsUser1 = await db.select({
-      count: sql`sum(${conversations.user1UnreadCount})`
-    })
-    .from(conversations)
-    .where(eq(conversations.user1Id, userId));
-    
-    const unreadCountAsUser1 = Number(resultAsUser1[0]?.count || 0);
-    
-    // Check for unread messages where user is user2
-    const resultAsUser2 = await db.select({
-      count: sql`sum(${conversations.user2UnreadCount})`
-    })
-    .from(conversations)
-    .where(eq(conversations.user2Id, userId));
-    
-    const unreadCountAsUser2 = Number(resultAsUser2[0]?.count || 0);
-    
-    // Return the total unread count
-    return unreadCountAsUser1 + unreadCountAsUser2;
+    const result = await db
+      .select({
+        total: sql<number>`
+          COALESCE(
+            SUM(
+              CASE 
+                WHEN ${conversations.user1Id} = ${userId} THEN ${conversations.user1UnreadCount}
+                WHEN ${conversations.user2Id} = ${userId} THEN ${conversations.user2UnreadCount}
+                ELSE 0
+              END
+            ), 
+            0
+          )
+        `.as('total')
+      })
+      .from(conversations)
+      .where(
+        or(
+          eq(conversations.user1Id, userId),
+          eq(conversations.user2Id, userId)
+        )
+      );
+
+    return Number(result[0]?.total || 0);
   },
 
   // Get the partner user ID from a conversation

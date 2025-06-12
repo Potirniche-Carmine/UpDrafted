@@ -196,6 +196,10 @@ export const connections = pgTable('connections', {
 }, (table) => [
   index('idx_connections_from_user_id').on(table.fromUserId),
   index('idx_connections_to_user_id').on(table.toUserId),
+  index('idx_connections_status').on(table.status),
+  // Compound indexes for optimized connection queries
+  index('idx_connections_from_status').on(table.fromUserId, table.status),
+  index('idx_connections_to_status').on(table.toUserId, table.status),
   unique('connections_users_unique').on(table.fromUserId, table.toUserId),
 ]);
 
@@ -226,6 +230,9 @@ export const conversations = pgTable('conversations', {
   index('idx_conversations_user2_id').on(table.user2Id),
   index('idx_conversations_last_message_at').on(table.lastMessageAt),
   index('idx_conversations_connection_active').on(table.connectionActive),
+  // Compound indexes for optimized conversation queries
+  index('idx_conversations_user1_lastmessage').on(table.user1Id, table.lastMessageAt.desc()),
+  index('idx_conversations_user2_lastmessage').on(table.user2Id, table.lastMessageAt.desc()),
   unique('conversations_users_unique').on(table.user1Id, table.user2Id),
 ]);
 
@@ -245,6 +252,10 @@ export const messages = pgTable('messages', {
   index('idx_messages_sender_id').on(table.senderId),
   index('idx_messages_created_at').on(table.createdAt),
   index('idx_messages_is_read').on(table.isRead),
+  // Compound indexes for optimized message queries
+  index('idx_messages_conversation_created').on(table.conversationId, table.createdAt.desc()),
+  index('idx_messages_sender_read').on(table.senderId, table.isRead),
+  index('idx_messages_conversation_read').on(table.conversationId, table.isRead),
 ]);
 
 export const verificationRequests = pgTable('verification_requests', {
