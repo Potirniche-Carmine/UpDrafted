@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireAnyRole } from '@/utils/roles';
 import { db } from '@/database/db';
 import { users, athleteProfiles, coachProfiles, recruitingProfiles, connections } from '@/database/schema';
-import { and, eq, or, not, ilike, isNull, exists, ne, sql } from 'drizzle-orm';
+import { and, eq, or, not, ilike, isNull, exists, ne } from 'drizzle-orm';
 import { sanitizeText, sanitizeNumber } from '@/utils/sanitization';
 import { rateLimitMiddleware, addRateLimitHeaders } from '@/utils/rate-limiting';
 
@@ -14,8 +14,8 @@ export async function GET(request: NextRequest) {
     // SECURITY: Validate request size and URL length to prevent DoS attacks
     const url = new URL(request.url);
     
-    // Limit total URL length (including query params)
-    const MAX_URL_LENGTH = 2048; // Standard browser limit
+    // Limit total URL length (increased for multiple filters)
+    const MAX_URL_LENGTH = 8192; // Increased from 2048 to handle multiple filters
     if (request.url.length > MAX_URL_LENGTH) {
       return NextResponse.json(
         { error: 'URL too long' },
@@ -23,8 +23,8 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Limit query string size
-    const MAX_QUERY_LENGTH = 1024;
+    // Limit query string size (increased for multiple filters)
+    const MAX_QUERY_LENGTH = 4096; // Increased from 1024
     if (url.search.length > MAX_QUERY_LENGTH) {
       return NextResponse.json(
         { error: 'Query parameters too long' },
@@ -32,8 +32,8 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Limit number of query parameters to prevent parameter pollution
-    const MAX_QUERY_PARAMS = 10;
+    // Limit number of query parameters to prevent parameter pollution (increased for filters)
+    const MAX_QUERY_PARAMS = 100; // Increased from 10 to handle multiple filter selections
     if (url.searchParams.size > MAX_QUERY_PARAMS) {
       return NextResponse.json(
         { error: 'Too many query parameters' },
@@ -55,7 +55,7 @@ export async function GET(request: NextRequest) {
     // Sanitize and validate query parameters
     const query = sanitizeText(searchParams.get('query') || '');
     const page = Math.min(Math.max(sanitizeNumber(searchParams.get('page'), 1, 100) || 1, 1), 100); // Limit page numbers
-    const pageSize = Math.min(Math.max(sanitizeNumber(searchParams.get('pageSize'), 1, 50) || 9, 1), 50); // Limit page size
+    const pageSize = Math.min(Math.max(sanitizeNumber(searchParams.get('pageSize'), 1, 50) || 10, 1), 50); // Default to 10, limit to 50
     const requestedRole = searchParams.get('role') as 'athlete' | 'coach' | 'recruiter' | null;
 
     // Validate role if specified
@@ -65,6 +65,11 @@ export async function GET(request: NextRequest) {
         { status: 400 }
       );
     }
+
+    // Get filter parameters
+    const sports = searchParams.getAll('sports').map(s => sanitizeText(s)).filter(Boolean);
+    const divisions = searchParams.getAll('divisions').map(d => sanitizeText(d)).filter(Boolean);
+    const states = searchParams.getAll('states').map(s => sanitizeText(s)).filter(Boolean);
 
     const offset = (page - 1) * pageSize;
 
@@ -145,6 +150,41 @@ export async function GET(request: NextRequest) {
       )
     ] : [];
 
+    // Filter conditions
+    const filterConditions = [];
+    
+    // Sports filter
+    if (sports.length > 0) {
+      filterConditions.push(
+        or(
+          and(not(isNull(athleteProfiles.userId)), or(...sports.map(sport => eq(athleteProfiles.sport, sport)))),
+          and(not(isNull(coachProfiles.userId)), or(...sports.map(sport => eq(coachProfiles.sportCoaching, sport)))),
+          and(not(isNull(recruitingProfiles.userId)), or(...sports.map(sport => eq(recruitingProfiles.sportRecruiting, sport))))
+        )
+      );
+    }
+
+    // Divisions filter
+    if (divisions.length > 0) {
+      filterConditions.push(
+        or(
+          and(not(isNull(coachProfiles.userId)), or(...divisions.map(div => eq(coachProfiles.division, div)))),
+          and(not(isNull(recruitingProfiles.userId)), or(...divisions.map(div => eq(recruitingProfiles.division, div))))
+        )
+      );
+    }
+
+    // States filter
+    if (states.length > 0) {
+      filterConditions.push(
+        or(
+          and(not(isNull(athleteProfiles.userId)), or(...states.map(state => eq(athleteProfiles.state, state)))),
+          and(not(isNull(coachProfiles.userId)), or(...states.map(state => eq(coachProfiles.state, state)))),
+          and(not(isNull(recruitingProfiles.userId)), or(...states.map(state => eq(recruitingProfiles.state, state))))
+        )
+      );
+    }
+
     // Execute the search query using Drizzle's query builder with relations
     const results = await db
       .select({
@@ -167,21 +207,9 @@ export async function GET(request: NextRequest) {
       .leftJoin(athleteProfiles, eq(athleteProfiles.userId, users.id))
       .leftJoin(coachProfiles, eq(coachProfiles.userId, users.id))
       .leftJoin(recruitingProfiles, eq(recruitingProfiles.userId, users.id))
-      .where(and(...baseExcludeConditions, ...searchConditions))
+      .where(and(...baseExcludeConditions, ...searchConditions, ...filterConditions))
       .limit(pageSize)
       .offset(offset);
-
-    // Get total count for pagination
-    const totalResults = await db
-      .select({ count: sql<number>`count(*)` })
-      .from(users)
-      .leftJoin(athleteProfiles, eq(athleteProfiles.userId, users.id))
-      .leftJoin(coachProfiles, eq(coachProfiles.userId, users.id))
-      .leftJoin(recruitingProfiles, eq(recruitingProfiles.userId, users.id))
-      .where(and(...baseExcludeConditions, ...searchConditions));
-
-    const total = Number(totalResults[0]?.count || 0);
-    const totalPages = Math.ceil(total / pageSize);
 
     // Process results using a similar approach as the connections API
     const processedResults = results.map(user => {
@@ -281,10 +309,8 @@ export async function GET(request: NextRequest) {
       JSON.stringify({
         success: true,
         results: processedResults,
-        total,
-        currentPage: page,
-        totalPages,
-        pageSize
+        total: processedResults.length,
+        hasMore: processedResults.length === pageSize
       }),
       { 
         status: 200,

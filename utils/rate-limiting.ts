@@ -61,7 +61,6 @@ interface RateLimitResult {
   reason?: string;
 }
 
-// In-memory store (in production, use Redis or similar)
 class RateLimitStore {
   private static instance: RateLimitStore;
   private store = new Map<string, RateLimitEntry>();

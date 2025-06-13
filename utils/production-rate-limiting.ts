@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { PRODUCTION_CONFIG, ProductionLogger } from './production-config';
 
 // Types for rate limiting
 interface RateLimitResult {
@@ -24,6 +23,13 @@ interface RateLimitConfig {
   skipFailedRequests?: boolean;
 }
 
+// Simple logger replacement
+const logger = {
+  info: (message: string, data?: unknown) => console.log(`[INFO] ${message}`, data || ''),
+  warn: (message: string, data?: unknown) => console.warn(`[WARN] ${message}`, data || ''),
+  error: (message: string, error?: unknown, data?: unknown) => console.error(`[ERROR] ${message}`, error || '', data || ''),
+};
+
 /**
  * Production-ready rate limiting with Vercel KV support
  * Falls back to memory storage for development
@@ -32,8 +38,7 @@ export class ProductionRateLimiter {
   private static instance: ProductionRateLimiter;
   private memoryStore = new Map<string, RateLimitEntry>();
   private blacklist = new Set<string>();
-  private logger = ProductionLogger.getInstance();
-  private kv: any = null; // Will be initialized if Vercel KV is available
+  private kv: unknown = null; // Will be initialized if Vercel KV is available
   
   // Rate limit configurations by endpoint type
   private configs: Record<string, RateLimitConfig> = {
@@ -74,16 +79,8 @@ export class ProductionRateLimiter {
   }
   
   private async initializeKV() {
-    if (PRODUCTION_CONFIG.rateLimit.useRedis && PRODUCTION_CONFIG.rateLimit.redisUrl) {
-      try {
-        // Initialize Vercel KV if available
-        const { kv } = await import('@vercel/kv');
-        this.kv = kv;
-        this.logger.info('Vercel KV initialized for rate limiting');
-      } catch (error) {
-        this.logger.warn('Failed to initialize Vercel KV, falling back to memory', { error });
-      }
-    }
+    // KV functionality disabled for now
+    // Can be re-enabled when @vercel/kv is properly configured
   }
   
   /**
@@ -141,7 +138,7 @@ export class ProductionRateLimiter {
       // Blacklist if too many strikes
       if (entry.strikes >= 5) {
         this.blacklist.add(key);
-        this.logger.warn('IP blacklisted due to repeated violations', { key, strikes: entry.strikes });
+        logger.warn('IP blacklisted due to repeated violations', { key, strikes: entry.strikes });
       }
       
       await this.setEntry(key, entry);
@@ -196,14 +193,10 @@ export class ProductionRateLimiter {
    */
   private async getEntry(key: string): Promise<RateLimitEntry | null> {
     try {
-      if (this.kv) {
-        const data = await this.kv.get(key);
-        return data ? JSON.parse(data) : null;
-      } else {
-        return this.memoryStore.get(key) || null;
-      }
+      // Use memory store only for now
+      return this.memoryStore.get(key) || null;
     } catch (error) {
-      this.logger.error('Failed to get rate limit entry', error, { key });
+      logger.error('Failed to get rate limit entry', error, { key });
       return null;
     }
   }
@@ -213,14 +206,10 @@ export class ProductionRateLimiter {
    */
   private async setEntry(key: string, entry: RateLimitEntry): Promise<void> {
     try {
-      if (this.kv) {
-        // Set with TTL of 2 hours
-        await this.kv.setex(key, 2 * 60 * 60, JSON.stringify(entry));
-      } else {
-        this.memoryStore.set(key, entry);
-      }
+      // Use memory store only for now
+      this.memoryStore.set(key, entry);
     } catch (error) {
-      this.logger.error('Failed to set rate limit entry', error, { key });
+      logger.error('Failed to set rate limit entry', error, { key });
     }
   }
   

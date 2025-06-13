@@ -1031,12 +1031,6 @@ function App() {
   return (
     <div className="container py-8">
       <div className="max-w-6xl mx-auto">
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-foreground mb-2">Connections</h1>
-          <p className="text-muted-foreground">Manage your network of athletes, coaches, and recruiters</p>
-        </div>
-
         {/* Search */}
         <div className="relative mb-6">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" size={20} />

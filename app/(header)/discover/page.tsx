@@ -1,51 +1,39 @@
 "use client";
 
-import React, { useState, useEffect, Suspense, useCallback, useMemo } from "react";
+import React, { useState, useEffect, Suspense, useCallback, useMemo, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { User, Users, Target, MapPin, Shield, GraduationCap, Send, ChevronLeft, ChevronRight, Search, X, Clock, Building2} from "lucide-react";
+import { User, Users, Target, MapPin, Shield, GraduationCap, Send, ChevronDown, X, Clock, Building2, Filter, Search} from "lucide-react";
 import { useSearchParams } from 'next/navigation';
 import Link from "next/link";
 import { AuthWrapper } from '@/components/auth-wrapper';
 import { useRoleView } from '@/hooks/use-role-view';
-import MultipleSelector from '@/components/ui/multi-select';
-import type { Option as FilterOption } from '@/components/ui/multi-select';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { sanitizeText } from '@/utils/sanitization';
+import { getSportsList, DIVISIONS, US_STATES } from '@/lib/sports-data';
+import { 
+  Popover, 
+  PopoverContent, 
+  PopoverTrigger 
+} from "@/components/ui/popover";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import { Checkbox } from "@/components/ui/checkbox";
 
-// Safe getters with fallbacks
-const getSafeSpotsList = () => {
-  return [
-    'Football', 'Basketball (M)', 'Basketball (W)', 'Baseball', 'Softball',
-    'Soccer (M)', 'Soccer (W)', 'Volleyball (M)', 'Volleyball (W)', 'Track & Field',
-    'Cross Country', 'Swimming', 'Tennis (M)', 'Tennis (W)', 'Golf (M)', 'Golf (W)',
-    'Wrestling', 'Hockey', 'Lacrosse (M)', 'Lacrosse (W)', 'Field Hockey'
-  ];
-};
-
-const getSafeStates = () => {
-  return [
-    'Alabama', 'Alaska', 'Arizona', 'Arkansas', 'California', 'Colorado', 'Connecticut',
-    'Delaware', 'Florida', 'Georgia', 'Hawaii', 'Idaho', 'Illinois', 'Indiana', 'Iowa',
-    'Kansas', 'Kentucky', 'Louisiana', 'Maine', 'Maryland', 'Massachusetts', 'Michigan',
-    'Minnesota', 'Mississippi', 'Missouri', 'Montana', 'Nebraska', 'Nevada', 'New Hampshire',
-    'New Jersey', 'New Mexico', 'New York', 'North Carolina', 'North Dakota', 'Ohio',
-    'Oklahoma', 'Oregon', 'Pennsylvania', 'Rhode Island', 'South Carolina', 'South Dakota',
-    'Tennessee', 'Texas', 'Utah', 'Vermont', 'Virginia', 'Washington', 'West Virginia',
-    'Wisconsin', 'Wyoming'
-  ];
-};
-
-const getSafeDivisions = () => {
-  return [
-    'NCAA Division I', 'NCAA Division II', 'NCAA Division III',
-    'NAIA', 'NJCAA Division I', 'NJCAA Division II', 'NJCAA Division III',
-    'High School', 'Club Sports', 'Community College', 'Junior College'
-  ];
-};
+// Filter option interface
+interface FilterOption {
+  value: string;
+  label: string;
+}
 
 // API response types
 interface DiscoverUser {
@@ -68,12 +56,134 @@ interface DiscoverUser {
 interface DiscoverResponse {
   results: DiscoverUser[];
   total: number;
-  currentPage: number;
-  totalPages: number;
-  pageSize: number;
+  hasMore: boolean;
 }
 
 type TabValue = 'all' | 'athletes' | 'coaches' | 'recruiters';
+
+// Get ordered divisions based on user role
+const getOrderedDivisions = (userRole: string) => {
+  if (userRole === 'coach' || userRole === 'recruiter') {
+    // Put High School first for coaches and recruiters
+    const highSchoolFirst = ['High School', ...DIVISIONS.filter(d => d !== 'High School')];
+    return highSchoolFirst;
+  }
+  return DIVISIONS;
+};
+
+// Multi-select filter component
+interface MultiSelectFilterProps {
+  options: FilterOption[];
+  selected: FilterOption[];
+  onSelectionChange: (selected: FilterOption[]) => void;
+  placeholder: string;
+  searchPlaceholder?: string;
+  className?: string;
+}
+
+function MultiSelectFilter({ 
+  options, 
+  selected, 
+  onSelectionChange, 
+  placeholder, 
+  searchPlaceholder = "Search...",
+  className 
+}: MultiSelectFilterProps) {
+  const [open, setOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+
+  const filteredOptions = useMemo(() => {
+    if (!searchTerm) return options;
+    return options.filter(option => 
+      option.label.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  }, [options, searchTerm]);
+
+  const handleSelectAll = () => {
+    if (selected.length === options.length) {
+      onSelectionChange([]);
+    } else {
+      onSelectionChange(options);
+    }
+  };
+
+  const handleToggleOption = (option: FilterOption) => {
+    const isSelected = selected.some(s => s.value === option.value);
+    if (isSelected) {
+      onSelectionChange(selected.filter(s => s.value !== option.value));
+    } else {
+      onSelectionChange([...selected, option]);
+    }
+  };
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button 
+          variant="outline" 
+          role="combobox" 
+          aria-expanded={open}
+          className={cn("w-full justify-between text-left font-normal", className)}
+        >
+          <span className="truncate">
+            {selected.length === 0 
+              ? placeholder 
+              : selected.length === 1 
+                ? selected[0].label 
+                : `${selected.length} selected`
+            }
+          </span>
+          <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-[280px] sm:w-[var(--radix-popover-trigger-width)] max-w-[90vw] p-0" align="center" side="bottom" sideOffset={4}>
+        <Command>
+          <CommandInput 
+            placeholder={searchPlaceholder} 
+            value={searchTerm}
+            onValueChange={setSearchTerm}
+          />
+          <CommandList>
+            <CommandEmpty>No options found.</CommandEmpty>
+            <CommandGroup>
+              {/* Select All Option */}
+              <CommandItem
+                onSelect={handleSelectAll}
+                className="cursor-pointer"
+              >
+                <Checkbox
+                  checked={selected.length === options.length}
+                  className="mr-2"
+                />
+                <span className="font-medium">
+                  {selected.length === options.length ? 'Deselect All' : 'Select All'}
+                </span>
+              </CommandItem>
+              
+              {/* Individual Options */}
+              {filteredOptions.map((option) => {
+                const isSelected = selected.some(s => s.value === option.value);
+                return (
+                  <CommandItem
+                    key={option.value}
+                    onSelect={() => handleToggleOption(option)}
+                    className="cursor-pointer"
+                  >
+                    <Checkbox
+                      checked={isSelected}
+                      className="mr-2"
+                    />
+                    <span>{option.label}</span>
+                  </CommandItem>
+                );
+              })}
+            </CommandGroup>
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
+  );
+}
 
 // Get available tabs based on user role
 const getAvailableTabs = (userRole: string) => {
@@ -102,71 +212,82 @@ const getAvailableTabs = (userRole: string) => {
   }
 };
 
+// Helper function to convert tab to role
+const getTabRole = (tab: TabValue): string | null => {
+  switch (tab) {
+    case 'athletes':
+      return 'athlete';
+    case 'coaches':
+      return 'coach';
+    case 'recruiters':
+      return 'recruiter';
+    default:
+      return null;
+  }
+};
+
 function SearchPageContent() {
   const searchParams = useSearchParams();
   const { effectiveRole } = useRoleView();
   const [activeTab, setActiveTab] = useState<TabValue>(searchParams?.get('tab') as TabValue || 'all');
+  
+  // Filter states
   const [selectedSports, setSelectedSports] = useState<FilterOption[]>([]);
   const [selectedDivisions, setSelectedDivisions] = useState<FilterOption[]>([]);
   const [selectedStates, setSelectedStates] = useState<FilterOption[]>([]);
-  const [selectedYears, setSelectedYears] = useState<FilterOption[]>([]);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   
-  const [allUsers, setAllUsers] = useState<DiscoverUser[]>([]);
-  const [displayedUsers, setDisplayedUsers] = useState<DiscoverUser[]>([]);
-
-  const [appliedFilters, setAppliedFilters] = useState({
-    sports: [] as FilterOption[],
-    divisions: [] as FilterOption[],
-    states: [] as FilterOption[],
-    years: [] as FilterOption[]
-  });
+  // Data and loading states
+  const [users, setUsers] = useState<DiscoverUser[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [initialLoading, setInitialLoading] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
+  
+  // Filter states
+  const [showMobileFilters, setShowMobileFilters] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
-  const resultsPerPage = 12;
+  
+  // Refs for infinite scroll
+  const observerRef = useRef<IntersectionObserver | null>(null);
+  const loadMoreRef = useRef<HTMLDivElement | null>(null);
 
   const availableTabs = useMemo(() => 
     getAvailableTabs(effectiveRole)
   , [effectiveRole]);
 
+  // Filter options
   const sportsOptions = useMemo(() => 
-    getSafeSpotsList().map(sport => ({
+    getSportsList().map(sport => ({
       value: sport,
       label: sport
     }))
   , []);
 
   const divisionsOptions = useMemo(() => 
-    getSafeDivisions().map(division => ({
+    getOrderedDivisions(effectiveRole).map(division => ({
       value: division,
       label: division
     }))
-  , []);
+  , [effectiveRole]);
 
   const statesOptions = useMemo(() => 
-    getSafeStates().map(state => ({
+    US_STATES.map(state => ({
       value: state,
       label: state
     }))
   , []);
 
-  useEffect(() => {
-    if (!hasSearched) return;
-
-    let filtered = allUsers;
-    if (activeTab !== 'all') {
-        const roleToFilter = activeTab.slice(0, -1); // 'athletes' -> 'athlete'
-        filtered = allUsers.filter(user => user.role === roleToFilter);
-    }
-    setDisplayedUsers(filtered);
-    setCurrentPage(1); // Reset to first page on tab change
-  }, [activeTab, allUsers, hasSearched]);
-
-  // Load discover results
-  const loadResults = useCallback(async () => {
+  // Load users function - only called when discover button is clicked
+  const loadUsers = useCallback(async (pageNum: number, isNewSearch = false) => {
     try {
-      setLoading(true);
+      if (isNewSearch) {
+        setInitialLoading(true);
+        setUsers([]); // Clear previous results
+        setHasSearched(true);
+      } else {
+        setLoading(true);
+      }
       setError(null);
 
       const windowWithClerk = window as unknown as {
@@ -179,539 +300,598 @@ function SearchPageContent() {
       const token = await windowWithClerk.Clerk?.session?.getToken();
 
       const params = new URLSearchParams({
-        page: '1', // Always fetch from the beginning
-        pageSize: '200' // Fetch a large number of results for client-side filtering
+        page: pageNum.toString(),
+        pageSize: '10' // Show 10 profiles per load
       });
 
-      // Add filters - sanitize all filter values
-      if (appliedFilters.sports.length > 0) {
-        appliedFilters.sports.forEach(sport => 
-          params.append('sports', sanitizeText(sport.value))
-        );
+      // Add role filter based on active tab
+      const tabRole = getTabRole(activeTab);
+      if (tabRole) {
+        params.append('role', tabRole);
       }
 
-      if (appliedFilters.divisions.length > 0) {
-        appliedFilters.divisions.forEach(div => 
-          params.append('divisions', sanitizeText(div.value))
-        );
-      }
-
-      if (appliedFilters.states.length > 0) {
-        appliedFilters.states.forEach(state => 
-          params.append('states', sanitizeText(state.value))
-        );
-      }
-
-      if (appliedFilters.years.length > 0) {
-        appliedFilters.years.forEach(year => 
-          params.append('graduationYears', sanitizeText(year.value))
-        );
-      }
+      // Add filters
+      selectedSports.forEach(sport => 
+        params.append('sports', sanitizeText(sport.value))
+      );
+      selectedDivisions.forEach(div => 
+        params.append('divisions', sanitizeText(div.value))
+      );
+      selectedStates.forEach(state => 
+        params.append('states', sanitizeText(state.value))
+      );
 
       const response = await fetch(`/api/discover?${params.toString()}`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
-          'Accept': 'application/json'
         },
-        credentials: 'same-origin'
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to load discover results');
+        throw new Error('Failed to load users');
       }
 
-      const data = await response.json() as DiscoverResponse;
+      const data: DiscoverResponse = await response.json();
       
-      setAllUsers(data.results);
-      setHasSearched(true);
-
-    } catch (err: unknown) {
-      console.error("Discover Error:", err);
-      const message = err instanceof Error ? err.message : 'An unexpected error occurred.';
-      setError(message);
+      if (isNewSearch) {
+        setUsers(data.results);
+        setPage(1);
+      } else {
+        setUsers(prev => [...prev, ...data.results]);
+      }
+      
+      setHasMore(data.results.length === 10); // If we got less than 10, no more pages
+      
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to load users');
     } finally {
       setLoading(false);
+      setInitialLoading(false);
     }
-  }, [appliedFilters]);
+  }, [activeTab, selectedSports, selectedDivisions, selectedStates]);
 
-  // Pagination logic
-  const paginatedResults = useMemo(() => {
-    const startIndex = (currentPage - 1) * resultsPerPage;
-    return displayedUsers.slice(startIndex, startIndex + resultsPerPage);
-  }, [displayedUsers, currentPage]);
+  // Clear search results when tab changes
+  useEffect(() => {
+    setUsers([]);
+    setHasSearched(false);
+    setError(null);
+  }, [activeTab]);
 
-  const totalPages = useMemo(() => {
-    return Math.ceil(displayedUsers.length / resultsPerPage);
-  }, [displayedUsers]);
-
-
-  const handleNextPage = () => {
-    if (currentPage < totalPages) {
-      setCurrentPage(currentPage + 1);
+  // Discover/Search function
+  const handleDiscover = () => {
+    // Require at least one filter to be selected
+    if (activeFiltersCount === 0) {
+      setError('Please select at least one filter before discovering.');
+      return;
     }
+    
+    setShowMobileFilters(false);
+    loadUsers(1, true);
   };
 
-  const handlePreviousPage = () => {
-    if (currentPage > 1) {
-      setCurrentPage(currentPage - 1);
-    }
-  };
-
+  // Clear filters
   const clearFilters = () => {
     setSelectedSports([]);
     setSelectedDivisions([]);
     setSelectedStates([]);
-    setSelectedYears([]);
-    setAppliedFilters({
-      sports: [],
-      divisions: [],
-      states: [],
-      years: []
-    });
-    setAllUsers([]);
-    setDisplayedUsers([]);
+    setShowMobileFilters(false);
+    setUsers([]);
     setHasSearched(false);
     setError(null);
   };
-  
-  const handleDiscover = () => {
-    setCurrentPage(1);
-    setAppliedFilters({
-      sports: selectedSports,
-      divisions: selectedDivisions,
-      states: selectedStates,
-      years: selectedYears
-    });
-    setHasSearched(true);
-    // loadResults will be called by the useEffect watching appliedFilters
-  };
 
+  // Infinite scroll setup
   useEffect(() => {
-    if (hasSearched) {
-        loadResults();
+    if (observerRef.current) {
+      observerRef.current.disconnect();
     }
-  }, [appliedFilters, hasSearched, loadResults]);
 
+    observerRef.current = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && hasMore && !loading && !initialLoading && hasSearched) {
+          const nextPage = page + 1;
+          setPage(nextPage);
+          loadUsers(nextPage, false);
+        }
+      },
+      { threshold: 0.1 }
+    );
 
+    if (loadMoreRef.current) {
+      observerRef.current.observe(loadMoreRef.current);
+    }
+
+    return () => {
+      if (observerRef.current) {
+        observerRef.current.disconnect();
+      }
+    };
+  }, [hasMore, loading, initialLoading, page, loadUsers, hasSearched]);
+
+  // Profile image helper
   const getProfileImageUrl = (profileImage: string | null) => {
-    if (!profileImage) {
-      return null;
-    }
+    if (!profileImage) return null;
     
-    // If it's already a full URL, return as is
     if (profileImage.startsWith('http')) {
       return profileImage;
     }
     
-    // Construct the full R2 URL using environment variable or fallback to known R2 domain
     const baseUrl = process.env.NEXT_PUBLIC_R2_PUBLIC_URL || 'https://pub-19c0754937db426497ca014f0e2a297c.r2.dev';
     return `${baseUrl}/${profileImage}`;
   };
 
+  // Role badge helper
   const getRoleBadge = (user: DiscoverUser) => {
-    let roleText = '';
-    let roleColor = '';
+    const roleConfig = {
+      athlete: { 
+        color: 'bg-blue-500/10 text-blue-600 border-blue-200 dark:bg-blue-500/20 dark:text-blue-300 dark:border-blue-700', 
+        icon: <User className="h-3 w-3" />,
+        label: 'Athlete'
+      },
+      coach: { 
+        color: 'bg-emerald-500/10 text-emerald-600 border-emerald-200 dark:bg-emerald-500/20 dark:text-emerald-300 dark:border-emerald-700', 
+        icon: <GraduationCap className="h-3 w-3" />,
+        label: 'Coach'
+      },
+      recruiter: { 
+        color: 'bg-purple-500/10 text-purple-600 border-purple-200 dark:bg-purple-500/20 dark:text-purple-300 dark:border-purple-700', 
+        icon: <Target className="h-3 w-3" />,
+        label: 'Recruiter'
+      }
+    };
 
-    if (user.role === 'athlete') {
-      if (user.educationLevel === 'high_school') {
-        roleText = 'HS Athlete';
-        roleColor = 'bg-blue-500/10 text-blue-700 border-blue-200 dark:bg-blue-500/20 dark:text-blue-300 dark:border-blue-700';
-      } else if (user.educationLevel === 'undergraduate') {
-        roleText = 'College Athlete';
-        roleColor = 'bg-purple-500/10 text-purple-700 border-purple-200 dark:bg-purple-500/20 dark:text-purple-300 dark:border-purple-700';
-      } else if (user.educationLevel === 'associate') {
-        roleText = 'JC Athlete';
-        roleColor = 'bg-orange-500/10 text-orange-700 border-orange-200 dark:bg-orange-500/20 dark:text-orange-300 dark:border-orange-700';
-      } else if (user.educationLevel === 'graduate') {
-        roleText = 'Grad Athlete';
-        roleColor = 'bg-indigo-500/10 text-indigo-700 border-indigo-200 dark:bg-indigo-500/20 dark:text-indigo-300 dark:border-indigo-700';
-      } else {
-        roleText = 'Athlete';
-        roleColor = 'bg-blue-500/10 text-blue-700 border-blue-200 dark:bg-blue-500/20 dark:text-blue-300 dark:border-blue-700';
-      }
-    } else if (user.role === 'coach') {
-      if (user.division === 'High School') {
-        roleText = 'HS Coach';
-        roleColor = 'bg-blue-500/10 text-blue-700 border-blue-200 dark:bg-blue-500/20 dark:text-blue-300 dark:border-blue-700';
-      } else if (user.division === 'Club Sports') {
-        roleText = 'Club Coach';
-        roleColor = 'bg-green-500/10 text-green-700 border-green-200 dark:bg-green-500/20 dark:text-green-300 dark:border-green-700';
-      } else if (user.division === 'Community College' || user.division === 'Junior College' || user.division?.includes('NJCAA')) {
-        roleText = 'JC Coach';
-        roleColor = 'bg-orange-500/10 text-orange-700 border-orange-200 dark:bg-orange-500/20 dark:text-orange-300 dark:border-orange-700';
-      } else if (user.division?.includes('NCAA') || user.division === 'NAIA') {
-        roleText = 'College Coach';
-        roleColor = 'bg-purple-500/10 text-purple-700 border-purple-200 dark:bg-purple-500/20 dark:text-purple-300 dark:border-purple-700';
-      } else {
-        roleText = 'Coach';
-        roleColor = 'bg-gray-500/10 text-gray-700 border-gray-200 dark:bg-gray-500/20 dark:text-gray-300 dark:border-gray-700';
-      }
-    } else if (user.role === 'recruiter') {
-      if (user.division === 'High School') {
-        roleText = 'HS Recruiter';
-        roleColor = 'bg-blue-500/10 text-blue-700 border-blue-200 dark:bg-blue-500/20 dark:text-blue-300 dark:border-blue-700';
-      } else if (user.division === 'Club Sports') {
-        roleText = 'Club Recruiter';
-        roleColor = 'bg-green-500/10 text-green-700 border-green-200 dark:bg-green-500/20 dark:text-green-300 dark:border-green-700';
-      } else if (user.division === 'Community College' || user.division === 'Junior College' || user.division?.includes('NJCAA')) {
-        roleText = 'JC Recruiter';
-        roleColor = 'bg-orange-500/10 text-orange-700 border-orange-200 dark:bg-orange-500/20 dark:text-orange-300 dark:border-orange-700';
-      } else if (user.division?.includes('NCAA') || user.division === 'NAIA') {
-        roleText = 'College Recruiter';
-        roleColor = 'bg-purple-500/10 text-purple-700 border-purple-200 dark:bg-purple-500/20 dark:text-purple-300 dark:border-purple-700';
-      } else {
-        roleText = 'Recruiter';
-        roleColor = 'bg-gray-500/10 text-gray-700 border-gray-200 dark:bg-gray-500/20 dark:text-gray-300 dark:border-gray-700';
-      }
-    }
-
-    return <Badge variant="outline" className={`text-xs font-medium px-2 py-0.5 border ${roleColor} whitespace-nowrap`}>{roleText}</Badge>;
+    const config = roleConfig[user.role];
+    
+    return (
+      <Badge 
+        variant="outline" 
+        className={cn("text-xs font-medium border flex items-center gap-1", config.color)}
+      >
+        {config.icon}
+        {config.label}
+      </Badge>
+    );
   };
 
-  // Handle connect button click
-  const handleConnect = useCallback(async (userId: string, event: React.MouseEvent) => {
-    // Prevent default link behavior and event propagation
-    event.preventDefault();
-    event.stopPropagation();
-     
-    try {
-      // Get auth token
-      const windowWithClerk = window as unknown as {
-        Clerk?: {
-          session?: {
-            getToken: () => Promise<string>;
-          };
-        };
-      };
-      const token = await windowWithClerk.Clerk?.session?.getToken();
-
-      // Sanitize userId before sending to API
-      const sanitizedUserId = sanitizeText(userId);
-      
-      const response = await fetch('/api/connections', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-          'Accept': 'application/json',
-        },
-        body: JSON.stringify({ targetUserId: sanitizedUserId }),
-        credentials: 'same-origin'
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to send connection request');
-      }
-
-      const result = await response.json();
-      if (result.success) {
-        // Show success notification
-        const notification = document.createElement('div');
-        notification.className = 'fixed top-4 right-4 bg-green-500 text-white px-4 py-2 rounded-lg shadow-lg z-50';
-        notification.textContent = 'Connection request sent successfully!';
-        document.body.appendChild(notification);
-        setTimeout(() => {
-          document.body.removeChild(notification);
-        }, 3000);
-
-        // Refresh results to update UI
-        loadResults();
-      } else {
-        throw new Error(result.error || 'Failed to send connection request');
-      }
-    } catch (error) {
-      console.error('Error sending connection request:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Failed to send connection request';
-      const notification = document.createElement('div');
-      notification.className = 'fixed top-4 right-4 bg-red-500 text-white px-4 py-2 rounded-lg shadow-lg z-50';
-      notification.textContent = errorMessage;
-      document.body.appendChild(notification);
-      setTimeout(() => {
-        document.body.removeChild(notification);
-      }, 3000);
-    }
-  }, [loadResults]);
-
-  // Memoize the handler creation to prevent re-renders
-  const createConnectHandler = useCallback((userId: string) => (e: React.MouseEvent) => {
-    handleConnect(userId, e);
-  }, [handleConnect]);
-
+  // User card component
   const renderUserCard = (user: DiscoverUser) => (
-    <Card className="group transition-all duration-200 hover:shadow-xl hover:shadow-[#01ae79]/15 border border-border hover:border-[#01ae79]/40 dark:hover:border-[#01ae79]/50 overflow-hidden">
-      <CardContent className="p-3 sm:p-4 md:p-5">
-        {/* Header Section */}
-        <div className="flex items-start justify-between mb-3 md:mb-4">
-          <div className="flex items-start gap-2 md:gap-3 lg:gap-4 flex-1 min-w-0">
-            <div className="relative flex-shrink-0">
-              <Avatar className="w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 ring-2 ring-[#01ae79]/20 group-hover:ring-[#01ae79]/50 transition-all duration-200">
-                <AvatarImage 
-                  src={getProfileImageUrl(user.profileImage) || undefined} 
-                  alt={user.fullName || 'User'}
-                  className="object-cover"
-                />
-                <AvatarFallback className="text-xs sm:text-sm font-semibold bg-gradient-to-br from-[#01ae79]/10 to-[#01ae79]/20 text-[#01ae79]">
-                  {user.fullName ? user.fullName.split(' ').map(n => n[0]).join('').toUpperCase() : 'U'}
-                </AvatarFallback>
-              </Avatar>
-              {user.isVerified && (
-                <div className="absolute -top-1 -right-1 w-4 h-4 sm:w-5 sm:h-5 bg-green-500 rounded-full flex items-center justify-center shadow-md">
-                  <Shield className="w-2 h-2 sm:w-3 sm:h-3 text-white" />
+    <Card key={user.id} className="group hover:shadow-lg transition-all duration-200 border-0 shadow-md bg-gradient-to-br from-emerald-50 to-green-50 dark:from-emerald-900/20 dark:to-green-900/20 hover:shadow-xl hover:from-emerald-100 hover:to-green-100 dark:hover:from-emerald-800/30 dark:hover:to-green-800/30">
+      <CardContent className="p-6">
+        <div className="flex items-start space-x-4">
+          {/* Avatar */}
+          <div className="relative flex-shrink-0">
+            <Avatar className="h-16 w-16 ring-2 ring-emerald-200 dark:ring-emerald-700">
+              <AvatarImage 
+                src={getProfileImageUrl(user.profileImage) || undefined} 
+                alt={user.fullName}
+                className="object-cover"
+              />
+              <AvatarFallback className="bg-gradient-to-br from-[#01ae79] to-emerald-600 text-white font-semibold text-lg">
+                {user.fullName.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
+              </AvatarFallback>
+            </Avatar>
+            {user.isVerified && (
+              <div className="absolute -bottom-1 -right-1 bg-[#01ae79] rounded-full p-1">
+                <Shield className="h-4 w-4 text-white" />
+              </div>
+            )}
+          </div>
+
+          {/* Content */}
+          <div className="flex-1 min-w-0">
+            <div className="flex items-start justify-between gap-2 mb-3">
+              <div className="min-w-0 flex-1">
+                <h3 className="font-semibold text-gray-900 dark:text-white truncate text-base">
+                  {user.fullName}
+                </h3>
+                <p className="text-sm text-gray-600 dark:text-gray-300 truncate">
+                  {user.organizationName}
+                </p>
+              </div>
+              {getRoleBadge(user)}
+            </div>
+
+            {/* Details */}
+            <div className="space-y-2 mb-4">
+              {user.sport && (
+                <div className="flex items-center text-sm text-gray-600 dark:text-gray-300">
+                  <Building2 className="h-4 w-4 mr-2 flex-shrink-0" />
+                  <span className="truncate">{user.sport}</span>
+                </div>
+              )}
+              
+              <div className="flex items-center text-sm text-gray-600 dark:text-gray-300">
+                <MapPin className="h-4 w-4 mr-2 flex-shrink-0" />
+                <span className="truncate">{user.city}, {user.state}</span>
+              </div>
+
+              {user.division && (
+                <div className="flex items-center text-sm text-gray-600 dark:text-gray-300">
+                  <GraduationCap className="h-4 w-4 mr-2 flex-shrink-0" />
+                  <span className="truncate">{user.division}</span>
+                </div>
+              )}
+
+              {user.title && (
+                <div className="flex items-center text-sm text-gray-600 dark:text-gray-300">
+                  <Clock className="h-4 w-4 mr-2 flex-shrink-0" />
+                  <span className="truncate">{user.title}</span>
                 </div>
               )}
             </div>
 
-            <div className="flex-1 min-w-0 space-y-2">
-              <h3 className="font-semibold text-sm md:text-base text-foreground leading-tight truncate">
-                {user.fullName}
-              </h3>
-              <div className="flex items-center gap-2 flex-wrap pt-1.5">
-                  {getRoleBadge(user)}
-              </div>
-              <p className="text-xs md:text-sm font-medium text-[#01ae79] truncate">
-                {user.role === 'athlete' ? user.sport : user.title}
-              </p>
-            </div>
+            {/* Action Button */}
+            <Link href={`/profile/${user.id}`}>
+              <Button 
+                size="sm" 
+                className="w-full bg-[#01ae79] hover:bg-[#01ae79]/90 text-white border-0 shadow-sm"
+                disabled={user.hasPendingRequest}
+              >
+                {user.hasPendingRequest ? (
+                  <>
+                    <Clock className="h-4 w-4 mr-2" />
+                    Request Sent
+                  </>
+                ) : (
+                  <>
+                    <Send className="h-4 w-4 mr-2" />
+                    View Profile
+                  </>
+                )}
+              </Button>
+            </Link>
           </div>
-        </div>
-
-        {/* Info Section */}
-        <div className="space-y-2 md:space-y-3 mb-3 md:mb-4">
-          <div className="flex items-center gap-1.5 sm:gap-2 text-xs md:text-sm text-muted-foreground">
-            <MapPin className="w-3 h-3 md:w-4 md:h-4 flex-shrink-0" />
-            <span className="truncate">{user.city}, {user.state}</span>
-          </div>
-          {user.role === 'athlete' ? (
-            <div className="flex items-center gap-1.5 sm:gap-2 text-xs md:text-sm text-muted-foreground">
-              <GraduationCap className="w-3 h-3 md:w-4 md:h-4 flex-shrink-0" />
-              <span className="truncate">Class of {user.graduationYear}</span>
-            </div>
-          ) : (
-            <div className="flex items-center gap-1.5 sm:gap-2 text-xs md:text-sm text-muted-foreground">
-              <Building2 className="w-3 h-3 md:w-4 md:h-4 flex-shrink-0" />
-              <span className="truncate">{user.division || 'No Division'}</span>
-            </div>
-          )}
-          <p className="text-xs md:text-sm text-muted-foreground truncate font-medium">
-            {user.organizationName}
-          </p>
-        </div>
-
-        {/* Connect Button */}
-        <div className="pt-3 md:pt-4 border-t border-border/50">
-          <Button
-            onClick={createConnectHandler(user.id)}
-            disabled={user.hasPendingRequest}
-            className={cn(
-              "w-full h-8 sm:h-8 md:h-9 text-xs sm:text-sm font-medium transition-all duration-200 hover:scale-[1.02]",
-              user.hasPendingRequest
-                ? "bg-muted text-muted-foreground cursor-not-allowed"
-                : "bg-[#01ae79] hover:bg-[#01ae79]/90 text-white"
-            )}
-          >
-            {user.hasPendingRequest ? (
-              <>
-                <Clock size={14} className="mr-1.5 sm:mr-2" />
-                Request Pending
-              </>
-            ) : (
-              <>
-                <Send size={14} className="mr-1.5 sm:mr-2" />
-                Connect
-              </>
-            )}
-          </Button>
         </div>
       </CardContent>
     </Card>
   );
 
+  // Active filters count
+  const activeFiltersCount = selectedSports.length + selectedDivisions.length + selectedStates.length;
+
   return (
-    <div className="container py-8">
-      <div className="max-w-6xl mx-auto">
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-foreground mb-2">Discover</h1>
-          <p className="text-muted-foreground">Find and connect with athletes, coaches, and recruiters</p>
-        </div>
-
-        {/* Tabs */}
-        <Tabs value={activeTab} onValueChange={(value: string) => setActiveTab(value as TabValue)} className="space-y-6">
-          <div className="relative">
-            <TabsList className="inline-flex h-12 items-center justify-center rounded-xl bg-muted/30 p-1 text-muted-foreground w-full max-w-2xl mx-auto backdrop-blur-sm border border-border/50">
-              {availableTabs.map((tab) => (
-                <TabsTrigger
-                  key={tab.value}
-                  value={tab.value}
-                  className="group relative inline-flex items-center justify-center whitespace-nowrap rounded-lg px-4 py-2.5 text-[10px] md:text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm hover:bg-muted/50 data-[state=active]:hover:bg-background min-w-0 flex-1"
-                >
-                  <div className="flex items-center gap-2">
-                    <div className="relative">
-                      {tab.icon}
-                    </div>
-                    <span className="transition-colors group-data-[state=active]:text-[#01ae79] group-data-[state=active]:font-semibold">
-                      {tab.label}
-                    </span>
-                  </div>
-                  <div className="absolute bottom-0 left-1/2 h-0.5 w-0 bg-[#01ae79] transition-all duration-300 group-data-[state=active]:w-8 group-data-[state=active]:-translate-x-1/2 rounded-full"></div>
-                </TabsTrigger>
-              ))}
-            </TabsList>
-          </div>
-
-          {/* Content */}
-          <TabsContent value={activeTab} className="mt-6 min-h-[400px]">
-            {/* Filters */}
-            <div className="flex flex-col gap-6">
-              <div className="flex flex-wrap gap-4">
-                <div className="flex-1 min-w-[200px]">
-                  <label className="text-sm font-medium mb-2 block">Sports</label>
-                  <MultipleSelector
-                    value={selectedSports}
-                    onChange={setSelectedSports}
-                    defaultOptions={sportsOptions}
-                    placeholder="Select sports..."
-                    className="w-full"
-                  />
-                </div>
-
-                <div className="flex-1 min-w-[200px]">
-                  <label className="text-sm font-medium mb-2 block">Divisions</label>
-                  <MultipleSelector
-                    value={selectedDivisions}
-                    onChange={setSelectedDivisions}
-                    defaultOptions={divisionsOptions}
-                    placeholder="Select divisions..."
-                    className="w-full"
-                  />
-                </div>
-
-                <div className="flex-1 min-w-[200px]">
-                  <label className="text-sm font-medium mb-2 block">States</label>
-                  <MultipleSelector
-                    value={selectedStates}
-                    onChange={setSelectedStates}
-                    defaultOptions={statesOptions}
-                    placeholder="Select states..."
-                    className="w-full"
-                  />
-                </div>
-              </div>
-
-              {/* Action Buttons */}
-              <div className="flex items-center justify-end gap-4">
-                <Button
-                  variant="outline"
-                  onClick={clearFilters}
-                  className="text-sm"
-                >
-                  Clear Filters
-                </Button>
-                <Button
-                  onClick={handleDiscover}
-                  className="bg-[#01ae79] hover:bg-[#01ae79]/90 text-white text-sm min-w-[120px]"
-                >
-                  <Search className="w-4 h-4 mr-2" />
-                  Discover
-                </Button>
-              </div>
-            </div>
-
-            {/* Results */}
-            <div className="mt-8">
-              {loading ? (
-                <div className="text-center py-12">
-                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#01ae79] mx-auto"></div>
-                  <p className="mt-4 text-muted-foreground">Loading results...</p>
-                </div>
-              ) : error ? (
-                <div className="text-center py-12">
-                  <div className="w-12 h-12 bg-red-100 dark:bg-red-900/20 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <X className="w-6 h-6 text-red-500" />
-                  </div>
-                  <h3 className="text-lg font-semibold text-foreground mb-2">Error Loading Results</h3>
-                  <p className="text-muted-foreground">{error}</p>
-                  <button
-                    onClick={() => {
-                      setError(null);
-                      loadResults();
-                    }}
-                    className="mt-4 inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-[#01ae79] hover:bg-[#01ae79]/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#01ae79]"
-                  >
-                    Try Again
-                  </button>
-                </div>
-              ) : !hasSearched && paginatedResults.length === 0 ? (
-                <div className="text-center py-12">
-                   <div className="w-24 h-24 bg-gradient-to-br from-muted to-muted/60 rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm">
-                     <Users className="w-12 h-12 text-muted-foreground" />
-                   </div>
-                   <h3 className="text-lg font-semibold text-foreground mb-2">
-                    Discover Your Network
-                   </h3>
-                   <p className="text-muted-foreground max-w-md mx-auto">
-                    Use the filters above and click &apos;Discover&apos; to find new connections.
-                   </p>
-                 </div>
-              ) : hasSearched && paginatedResults.length === 0 ? (
-                <div className="text-center py-12">
-                  <div className="w-24 h-24 bg-gradient-to-br from-muted to-muted/60 rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm">
-                    <Users className="w-12 h-12 text-muted-foreground" />
-                  </div>
-                  <h3 className="text-lg font-semibold text-foreground mb-2">
-                    No results found
-                  </h3>
-                  <p className="text-muted-foreground max-w-md mx-auto">
-                    Try adjusting your filters
+    <div className="min-h-screen bg-background p-4 md:p-6">
+      <div className="max-w-7xl mx-auto">
+        <div className="flex flex-col lg:flex-row gap-6">
+          {/* Desktop Filters Sidebar */}
+          <div className="hidden sm:block w-full lg:w-80 flex-shrink-0">
+            <div className="bg-card rounded-lg shadow-sm border border-border p-6 sticky top-6">
+              <div className="flex items-center justify-between mb-6">
+                <div>
+                  <h1 className="text-xl font-bold text-foreground mb-1">
+                    Discover
+                  </h1>
+                  <p className="text-sm text-muted-foreground">
+                    Find athletes, coaches & recruiters
                   </p>
                 </div>
-              ) : (
-                <>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {paginatedResults.map((user) => (
-                      <Link href={`/profile/${user.id}`} key={user.id}>
-                        {renderUserCard(user)}
-                      </Link>
-                    ))}
+                
+                {/* Mobile Filter Button */}
+                <Button
+                  onClick={() => setShowMobileFilters(!showMobileFilters)}
+                  variant="outline"
+                  className="sm:hidden relative"
+                >
+                  <Filter className="h-4 w-4 mr-2" />
+                  Filters
+                  {activeFiltersCount > 0 && (
+                    <Badge className="ml-2 bg-[#01ae79] text-white">
+                      {activeFiltersCount}
+                    </Badge>
+                  )}
+                </Button>
+              </div>
+
+              <div className="flex items-center justify-between mb-4 h-6">
+                <h2 className="text-sm font-medium text-foreground">Filters</h2>
+                {activeFiltersCount > 0 && (
+                  <Button 
+                    onClick={clearFilters}
+                    variant="ghost" 
+                    size="sm"
+                    className="text-muted-foreground hover:text-foreground text-xs"
+                  >
+                    Clear All
+                  </Button>
+                )}
+              </div>
+
+              <div className="space-y-4">
+                {/* Sports Filter */}
+                <div>
+                  <label className="block text-sm font-medium text-foreground mb-2">
+                    Sports
+                  </label>
+                  <MultiSelectFilter
+                    options={sportsOptions}
+                    selected={selectedSports}
+                    onSelectionChange={setSelectedSports}
+                    placeholder="Select sports..."
+                    searchPlaceholder="Search sports..."
+                  />
+                </div>
+
+                {/* Divisions Filter */}
+                <div>
+                  <label className="block text-sm font-medium text-foreground mb-2">
+                    Division/Level
+                  </label>
+                  <MultiSelectFilter
+                    options={divisionsOptions}
+                    selected={selectedDivisions}
+                    onSelectionChange={setSelectedDivisions}
+                    placeholder="Select divisions..."
+                    searchPlaceholder="Search divisions..."
+                  />
+                </div>
+
+                {/* States Filter */}
+                <div>
+                  <label className="block text-sm font-medium text-foreground mb-2">
+                    Location
+                  </label>
+                  <MultiSelectFilter
+                    options={statesOptions}
+                    selected={selectedStates}
+                    onSelectionChange={setSelectedStates}
+                    placeholder="Select states..."
+                    searchPlaceholder="Search states..."
+                  />
+                </div>
+
+                <Button 
+                  onClick={handleDiscover}
+                  disabled={activeFiltersCount === 0}
+                  className="w-full bg-[#01ae79] hover:bg-[#01ae79]/90 text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <Search className="h-4 w-4 mr-2" />
+                  Discover
+                </Button>
+                
+                <div className="h-6 flex items-center justify-center mt-2">
+                  {activeFiltersCount === 0 && (
+                    <p className="text-xs text-muted-foreground text-center">
+                      Select at least one filter to discover profiles
+                    </p>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Mobile Header - Only visible on mobile */}
+          <div className="sm:hidden mb-4">
+            <div className="flex items-center justify-between mb-4 min-h-[4rem]">
+              <div className="flex-1">
+                <h1 className="text-2xl font-bold text-foreground mb-1">
+                  Discover
+                </h1>
+                <p className="text-sm text-muted-foreground">
+                  Find athletes, coaches & recruiters
+                </p>
+              </div>
+              
+              {/* Mobile Filter Button */}
+              <Button
+                onClick={() => setShowMobileFilters(!showMobileFilters)}
+                variant="outline"
+                className="relative flex-shrink-0 w-[120px] justify-center"
+              >
+                <Filter className="h-4 w-4 mr-2" />
+                <span className="truncate">
+                  {activeFiltersCount > 0 ? `${activeFiltersCount} Filter${activeFiltersCount !== 1 ? 's' : ''}` : 'Filters'}
+                </span>
+              </Button>
+            </div>
+          </div>
+
+          {/* Mobile Filters Overlay */}
+          {showMobileFilters && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 z-50 sm:hidden flex items-center justify-center p-4">
+              <div className="w-full max-w-md bg-card rounded-lg p-6 max-h-[90vh] overflow-y-auto">
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-lg font-semibold text-foreground">Filters</h2>
+                  <Button 
+                    onClick={() => setShowMobileFilters(false)}
+                    variant="ghost" 
+                    size="sm"
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+
+                <div className="space-y-4">
+                  {/* Sports Filter */}
+                  <div>
+                    <label className="block text-sm font-medium text-foreground mb-2">
+                      Sports
+                    </label>
+                    <MultiSelectFilter
+                      options={sportsOptions}
+                      selected={selectedSports}
+                      onSelectionChange={setSelectedSports}
+                      placeholder="Select sports..."
+                      searchPlaceholder="Search sports..."
+                    />
+                  </div>
+
+                  {/* Divisions Filter */}
+                  <div>
+                    <label className="block text-sm font-medium text-foreground mb-2">
+                      Division/Level
+                    </label>
+                    <MultiSelectFilter
+                      options={divisionsOptions}
+                      selected={selectedDivisions}
+                      onSelectionChange={setSelectedDivisions}
+                      placeholder="Select divisions..."
+                      searchPlaceholder="Search divisions..."
+                    />
+                  </div>
+
+                  {/* States Filter */}
+                  <div>
+                    <label className="block text-sm font-medium text-foreground mb-2">
+                      Location
+                    </label>
+                    <MultiSelectFilter
+                      options={statesOptions}
+                      selected={selectedStates}
+                      onSelectionChange={setSelectedStates}
+                      placeholder="Select states..."
+                      searchPlaceholder="Search states..."
+                    />
+                  </div>
+
+                  <div className="flex gap-3 pt-4">
+                    <Button 
+                      onClick={clearFilters}
+                      variant="outline"
+                      className="flex-1"
+                    >
+                      Clear All
+                    </Button>
+                    <Button 
+                      onClick={handleDiscover}
+                      disabled={activeFiltersCount === 0}
+                      className="flex-1 bg-[#01ae79] hover:bg-[#01ae79]/90 text-white disabled:opacity-50"
+                    >
+                      <Search className="h-4 w-4 mr-2" />
+                      Discover
+                    </Button>
                   </div>
                   
-                  {/* Pagination */}
-                  {totalPages > 1 && (
-                    <div className="mt-8 flex justify-center gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={handlePreviousPage}
-                        disabled={currentPage === 1}
-                        className="h-8 w-8 p-0"
-                      >
-                        <ChevronLeft className="h-4 w-4" />
-                      </Button>
-                      <div className="flex items-center gap-2 text-sm">
-                        <span className="text-muted-foreground">Page</span>
-                        <span className="font-medium">{currentPage}</span>
-                        <span className="text-muted-foreground">of</span>
-                        <span className="font-medium">{totalPages}</span>
-                      </div>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={handleNextPage}
-                        disabled={currentPage === totalPages}
-                        className="h-8 w-8 p-0"
-                      >
-                        <ChevronRight className="h-4 w-4" />
+                  <div className="h-6 flex items-center justify-center mt-2">
+                    {activeFiltersCount === 0 && (
+                      <p className="text-xs text-muted-foreground text-center">
+                        Select at least one filter to discover profiles
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Main Content */}
+          <div className="flex-1">
+            {/* Tabs */}
+            <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as TabValue)}>
+              <TabsList className="grid w-full mb-6 bg-card border border-border" style={{ gridTemplateColumns: `repeat(${availableTabs.length}, minmax(0, 1fr))` }}>
+                {availableTabs.map((tab) => (
+                  <TabsTrigger 
+                    key={tab.value} 
+                    value={tab.value}
+                    className="flex items-center gap-2 data-[state=active]:bg-[#01ae79] data-[state=active]:text-white text-xs sm:text-sm px-2 sm:px-4"
+                  >
+                    {tab.icon}
+                    <span className="text-xs sm:text-sm">{tab.label}</span>
+                  </TabsTrigger>
+                ))}
+              </TabsList>
+
+              {availableTabs.map((tab) => (
+                <TabsContent key={tab.value} value={tab.value} className="mt-0">
+                  {/* Results */}
+                  {initialLoading ? (
+                    <div className="flex items-center justify-center py-12">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#01ae79]"></div>
+                    </div>
+                  ) : error ? (
+                    <div className="text-center py-12">
+                      <p className="text-muted-foreground mb-4">{error}</p>
+                      <Button onClick={() => loadUsers(1, true)} variant="outline">
+                        Try Again
                       </Button>
                     </div>
+                  ) : !hasSearched ? (
+                    <div className="text-center py-12">
+                      <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                      <h3 className="text-lg font-medium text-foreground mb-2">Ready to discover</h3>
+                      <p className="text-muted-foreground mb-4">
+                        Select your filters and click &quot;Discover&quot; to find athletes, coaches, and recruiters.
+                      </p>
+                      <Button 
+                        onClick={handleDiscover} 
+                        disabled={activeFiltersCount === 0}
+                        className="bg-[#01ae79] hover:bg-[#01ae79]/90 text-white disabled:opacity-50"
+                      >
+                        <Search className="h-4 w-4 mr-2" />
+                        Discover
+                      </Button>
+                      <div className="h-6 flex items-center justify-center mt-2">
+                        {activeFiltersCount === 0 && (
+                          <p className="text-xs text-muted-foreground text-center">
+                            Select at least one filter to get started
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  ) : users.length === 0 ? (
+                    <div className="text-center py-12">
+                      <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                      <h3 className="text-lg font-medium text-foreground mb-2">No users found</h3>
+                      <p className="text-muted-foreground mb-4">
+                        {activeFiltersCount > 0 
+                          ? "Try adjusting your filters to see more results."
+                          : "No users match your current search criteria."
+                        }
+                      </p>
+                      {activeFiltersCount > 0 && (
+                        <Button onClick={clearFilters} variant="outline">
+                          Clear Filters
+                        </Button>
+                      )}
+                    </div>
+                  ) : (
+                    <>
+                      {/* Results Count */}
+                      <div className="mb-4">
+                        <p className="text-sm text-muted-foreground">
+                          Showing {users.length}
+                          {activeFiltersCount > 0 && (
+                            <span className="ml-2">
+                              • <span className="font-medium">{activeFiltersCount}</span> filter{activeFiltersCount !== 1 ? 's' : ''} applied
+                            </span>
+                          )}
+                        </p>
+                      </div>
+
+                      {/* User Grid */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                        {users.map(renderUserCard)}
+                      </div>
+
+                      {/* Infinite Scroll Trigger */}
+                      {hasMore && (
+                        <div 
+                          ref={loadMoreRef}
+                          className="text-center py-4"
+                        >
+                          {loading ? (
+                            <div className="flex items-center justify-center">
+                              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-[#01ae79] mr-2"></div>
+                              <span className="text-muted-foreground">Loading more...</span>
+                            </div>
+                          ) : (
+                            <p className="text-muted-foreground text-sm">Scroll down to load more</p>
+                          )}
+                        </div>
+                      )}
+
+                      {!hasMore && users.length > 10 && (
+                        <div className="text-center py-4">
+                          <p className="text-muted-foreground text-sm">You&apos;ve reached the end!</p>
+                        </div>
+                      )}
+                    </>
                   )}
-                </>
-              )}
-            </div>
-          </TabsContent>
-        </Tabs>
+                </TabsContent>
+              ))}
+            </Tabs>
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -719,8 +899,12 @@ function SearchPageContent() {
 
 export default function SearchPage() {
   return (
-    <AuthWrapper>
-      <Suspense fallback={<div>Loading...</div>}>
+    <AuthWrapper requireRole={['athlete', 'coach', 'recruiter']}>
+      <Suspense fallback={
+        <div className="min-h-screen bg-background flex items-center justify-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#01ae79]"></div>
+        </div>
+      }>
         <SearchPageContent />
       </Suspense>
     </AuthWrapper>
