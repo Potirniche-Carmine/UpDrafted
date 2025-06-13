@@ -4,11 +4,11 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import Link from "next/link";
-import { Scale, Info, UserCheck, AlertTriangle, FileText, Mail, Shield, ArrowRight } from "lucide-react";
+import { Scale, Info, UserCheck, AlertTriangle, FileText, Mail, Shield, ArrowRight, MessageCircle, Crown } from "lucide-react";
 
 export default function TermsOfServicePage() {
-    const lastUpdated = "June 2025";
-    const effectiveDate = "June 2025";
+    const lastUpdated = "January 2025";
+    const effectiveDate = "January 2025";
 
     return (
         <div className="flex flex-col">
@@ -65,9 +65,72 @@ export default function TermsOfServicePage() {
                             </CardContent>
                         </Card>
 
+                        <Card className="border border-blue-200 dark:border-blue-800 bg-blue-50/50 dark:bg-blue-950/30">
+                            <CardContent className="p-6">
+                                <TermsSection
+                                    icon={<MessageCircle className="h-6 w-6 text-blue-600 dark:text-blue-400" />}
+                                    title="3. Messaging System and Privacy"
+                                    isHighlighted={true}
+                                >
+                                    <p className="font-medium text-blue-800 dark:text-blue-200">
+                                        <strong>Encrypted Messaging:</strong> All messages on our platform are encrypted to protect your privacy.
+                                    </p>
+                                    <p>By using our messaging system, you acknowledge and agree that:</p>
+                                    <ul className="list-disc list-inside space-y-2 pl-4 mt-4">
+                                        <li><strong>Safety Access:</strong> We may access and review encrypted messages only when a safety report is submitted and we need to verify and investigate potential violations of our Terms or harmful behavior.</li>
+                                        <li><strong>Limited Access:</strong> Message content is accessed solely for safety verification purposes, not for general monitoring or commercial purposes.</li>
+                                        <li><strong>Report-Based Review:</strong> Access to message content occurs only in response to user reports of harassment, inappropriate behavior, threats, or other safety concerns.</li>
+                                        <li><strong>Data Protection:</strong> During safety investigations, message data is handled with strict confidentiality and is only accessible to authorized personnel involved in the investigation.</li>
+                                    </ul>
+                                    <p className="mt-4">You consent to this limited access to encrypted messages for safety purposes as a condition of using our messaging features.</p>
+                                </TermsSection>
+                            </CardContent>
+                        </Card>
+
+                        <Card className="border border-purple-200 dark:border-purple-800 bg-purple-50/50 dark:bg-purple-950/30">
+                            <CardContent className="p-6">
+                                <TermsSection
+                                    icon={<Crown className="h-6 w-6 text-purple-600 dark:text-purple-400" />}
+                                    title="4. Data Tracking and Premium Features"
+                                    isHighlighted={true}
+                                >
+                                    <p className="font-medium text-purple-800 dark:text-purple-200">
+                                        <strong>Universal Data Tracking:</strong> UpDrafted continuously collects and analyzes user activity data for all users to improve our platform and provide enhanced services.
+                                    </p>
+                                    <p><strong>By using our platform, you automatically consent to comprehensive data tracking including:</strong></p>
+                                    <ul className="list-disc list-inside space-y-2 pl-4 mt-4">
+                                        <li><strong>Activity Monitoring:</strong> We continuously track and record your website activity, including pages visited, time spent on profiles, user interactions, click patterns, and engagement metrics.</li>
+                                        <li><strong>Profile Viewing Data:</strong> We track and store information about whose profiles you view, when you view them, how long you spend viewing them, and what sections you access.</li>
+                                        <li><strong>Message Analytics:</strong> We track message read status, response times, messaging patterns, and communication behaviors across all users.</li>
+                                        <li><strong>Session Data:</strong> We collect detailed information about your login sessions, including login/logout times, session duration, device information, and activity patterns during sessions.</li>
+                                        <li><strong>Search and Discovery Patterns:</strong> We analyze your search queries, filters used, profiles viewed from search results, and interaction preferences.</li>
+                                        <li><strong>Cross-Platform Analytics:</strong> We connect your activity across different sessions, devices, and time periods to create comprehensive usage profiles.</li>
+                                    </ul>
+                                    <p className="mt-4"><strong>Premium Feature Access:</strong> While we collect this data from all users, only users with active premium subscriptions can access and view detailed analytics, including:</p>
+                                    <ul className="list-disc list-inside space-y-2 pl-4 mt-4">
+                                        <li>Who has viewed their profile and when</li>
+                                        <li>Read receipts and message analytics</li>
+                                        <li>Detailed activity insights and engagement metrics</li>
+                                        <li>Advanced search and discovery analytics</li>
+                                        <li>Priority customer support and platform features</li>
+                                    </ul>
+                                    <p className="mt-4"><strong>Data Usage and Liability:</strong> We use collected data to improve platform functionality, provide personalized experiences, enable premium features, and for business analytics. You acknowledge that:</p>
+                                    <ul className="list-disc list-inside space-y-2 pl-4 mt-4">
+                                        <li>UpDrafted is not liable for any consequences resulting from data collection or analysis</li>
+                                        <li>You consent to all data tracking as a condition of using our platform</li>
+                                        <li>Data collection occurs automatically and continuously while using our services</li>
+                                        <li>We may use aggregated, anonymized data for business purposes and platform improvements</li>
+                                    </ul>
+                                    <p className="mt-4 font-medium text-purple-800 dark:text-purple-200">
+                                        <strong>Opt-Out Options:</strong> If you do not consent to this comprehensive data tracking, please contact us at <a href="mailto:support@updrafted.us" className="text-[#01ae79] hover:underline">support@updrafted.us</a> to discuss account limitations or termination. Continued use of the platform constitutes acceptance of all data collection practices.
+                                    </p>
+                                </TermsSection>
+                            </CardContent>
+                        </Card>
+
                         <TermsSection
                             icon={<FileText className="h-6 w-6 text-[#01ae79]" />}
-                            title="3. User Conduct and Content"
+                            title="5. User Conduct and Content"
                         >
                             <p>You are solely responsible for all content (information, data, text, software, music, sound, photographs, graphics, video, messages, or other materials - &quot;Content&quot;) that you upload, post, publish, display, or otherwise transmit via the Service. You agree not to use the Service to:</p>
                             <ul className="list-disc list-inside space-y-2 pl-4 mt-4">
@@ -75,28 +138,29 @@ export default function TermsOfServicePage() {
                                 <li>Impersonate any person or entity or falsely state or otherwise misrepresent your affiliation with a person or entity.</li>
                                 <li>Upload any Content that you do not have a right to transmit under any law or under contractual or fiduciary relationships.</li>
                                 <li>Violate any applicable local, state, national, or international law, or any regulations having the force of law, including NCAA and NJCAA rules and regulations.</li>
+                                <li>Attempt to circumvent or disable our safety monitoring systems or encrypted messaging protections.</li>
                             </ul>
                             <p className="mt-4">We reserve the right to remove any Content and/or terminate user accounts for any conduct that we deem inappropriate or harmful, without prior notice.</p>
                         </TermsSection>
 
                         <TermsSection
                             icon={<Info className="h-6 w-6 text-[#01ae79]" />}
-                            title="4. Use of the Platform"
+                            title="6. Use of the Platform"
                         >
                             <p>UpDrafted provides a platform for athletes to showcase their talents and for college programs to find potential recruits. We do not guarantee any specific outcomes, such as scholarships, team placements, or recruitment offers. We are not a party to any agreements entered into between athletes and college programs. Athletes and college programs are responsible for their own due diligence and compliance with all applicable rules and regulations (e.g., NCAA, NJCAA eligibility).</p>
-                            <p className="mt-4">Our platform offers a free tier of service, with optional premium features available for a subscription fee. Details of premium features and pricing will be clearly presented within the Service.</p>
+                            <p className="mt-4">Our platform offers a free tier of service, with optional premium features available for a subscription fee. Premium features include enhanced profile analytics, profile view tracking, advanced messaging features, and priority support. Details of premium features and pricing will be clearly presented within the Service.</p>
                         </TermsSection>
 
                         <TermsSection
                             icon={<Shield className="h-6 w-6 text-[#01ae79]" />}
-                            title="5. Intellectual Property"
+                            title="7. Intellectual Property"
                         >
                             <p>The Service and its original content (excluding Content provided by users), features, and functionality are and will remain the exclusive property of UpDrafted and its licensors. You grant UpDrafted a non-exclusive, worldwide, royalty-free, sublicensable, transferable license to use, reproduce, distribute, prepare derivative works of, display, and perform the Content you post to the Service solely for the purposes of operating and providing the Service.</p>
                         </TermsSection>
 
                         <TermsSection
                             icon={<AlertTriangle className="h-6 w-6 text-[#01ae79]" />}
-                            title="6. Disclaimers and Limitation of Liability"
+                            title="8. Disclaimers and Limitation of Liability"
                         >
                             <p>THE SERVICE IS PROVIDED ON AN &quot;AS IS&quot; AND &quot;AS AVAILABLE&quot; BASIS. UPDRAFTED EXPRESSLY DISCLAIMS ALL WARRANTIES OF ANY KIND, WHETHER EXPRESS OR IMPLIED, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, AND NON-INFRINGEMENT.</p>
                             <p className="mt-4">UPDRAFTED WILL NOT BE LIABLE FOR ANY INDIRECT, INCIDENTAL, SPECIAL, CONSEQUENTIAL, OR PUNITIVE DAMAGES, INCLUDING WITHOUT LIMITATION, LOSS OF PROFITS, DATA, USE, GOODWILL, OR OTHER INTANGIBLE LOSSES, RESULTING FROM YOUR USE OF THE SERVICE.</p>
@@ -104,29 +168,29 @@ export default function TermsOfServicePage() {
 
                         <TermsSection
                             icon={<Scale className="h-6 w-6 text-[#01ae79]" />}
-                            title="7. Termination"
+                            title="9. Termination"
                         >
-                            <p>We may terminate or suspend your account and bar access to the Service immediately, without prior notice or liability, under our sole discretion, for any reason whatsoever, including but not limited to a breach of the Terms.</p>
+                            <p>We may terminate or suspend your account and bar access to the Service immediately, without prior notice or liability, under our sole discretion, for any reason whatsoever, including but not limited to a breach of the Terms. Upon termination, your right to use the Service will cease immediately, and we may delete your account and all associated data, including encrypted messages, after a reasonable retention period for safety and legal compliance purposes.</p>
                         </TermsSection>
 
                         <TermsSection
                             icon={<Info className="h-6 w-6 text-[#01ae79]" />}
-                            title="8. Changes to Terms"
+                            title="10. Changes to Terms"
                         >
                             <p>We reserve the right, at our sole discretion, to modify or replace these Terms at any time. If a revision is material, we will provide at least 30 days&apos; notice prior to any new terms taking effect. What constitutes a material change will be determined at our sole discretion.</p>
                         </TermsSection>
 
                         <TermsSection
                             icon={<Mail className="h-6 w-6 text-[#01ae79]" />}
-                            title="9. Contact Us"
+                            title="11. Contact Us"
                         >
-                            <p>If you have any questions about these Terms, please contact us at <a href="mailto:potirnichecarmine@gmail.com" className="text-[#01ae79] hover:underline font-medium">potirnichecarmine@gmail.com</a>.</p>
+                            <p>If you have any questions about these Terms, please contact us at <a href="mailto:support@updrafted.us" className="text-[#01ae79] hover:underline font-medium">support@updrafted.us</a>.</p>
                         </TermsSection>
 
                         <Card className="border border-amber-200 dark:border-amber-800 bg-amber-50/50 dark:bg-amber-950/30">
                             <CardContent className="p-6">
                                 <p className="text-sm text-amber-800 dark:text-amber-200">
-                                    <strong>Legal Disclaimer:</strong> Please be aware that this Terms of Service is a provisional document and has not yet been reviewed or approved by legal counsel. It is provided for informational purposes only and is subject to revision. It does not constitute legal advice and should not be relied upon as such.
+                                    <strong>Legal Disclaimer:</strong> Please be aware that this Terms of Service is a provisional document and has not yet been reviewed or approved by legal counsel. It is provided for informational purposes only and is subject to revision. It does not constitute legal advice and should not be relied upon as such. We strongly recommend consulting with qualified legal counsel before relying on these terms for any legal purposes.
                                 </p>
                             </CardContent>
                         </Card>
