@@ -45,13 +45,11 @@ const useNotificationsStore = create(
         
         set({ isFetching: true });
         try {
-          const response = await fetch('/api/notifications', {
-            method: 'POST',
+          const response = await fetch('/api/notifications?operation=getUnreadCount', {
+            method: 'GET',
             headers: {
-              'Authorization': `Bearer ${token}`,
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ operation: 'getUnreadCount' })
+              'Authorization': `Bearer ${token}`
+            }
           });
 
           if (response.ok) {

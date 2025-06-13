@@ -456,7 +456,7 @@ function SearchPageContent() {
 
   // User card component
   const renderUserCard = (user: DiscoverUser) => (
-    <Card key={user.id} className="group hover:shadow-lg transition-all duration-200 border-0 shadow-md bg-gradient-to-br from-emerald-50 to-green-50 dark:from-emerald-900/20 dark:to-green-900/20 hover:shadow-xl hover:from-emerald-100 hover:to-green-100 dark:hover:from-emerald-800/30 dark:hover:to-green-800/30">
+    <Card key={user.id} className="group hover:shadow-lg transition-all duration-200 border-0 shadow-md bg-gradient-to-br from-emerald-50 to-green-50 dark:from-emerald-900/20 dark:to-green-900/20 hover:from-emerald-100 hover:to-green-100 dark:hover:from-emerald-800/30 dark:hover:to-green-800/30">
       <CardContent className="p-6">
         <div className="flex items-start space-x-4">
           {/* Avatar */}

@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAnyRole } from '@/utils/roles';
 import { profileOperations } from '@/database/db-utils';
-import { withRateLimit, getCached, setCached, PRODUCTION_CONFIG, createErrorResponse, createSuccessResponse } from '@/utils/production-config';
+import { withRateLimit } from '@/utils/rate-limiting';
+import { getCachedWithType, setCachedWithType, createErrorResponse, createSuccessResponse } from '@/utils/security-cache';
 
 // Force Node.js runtime for database operations
 export const runtime = 'nodejs';
@@ -21,7 +22,7 @@ export async function GET(request: NextRequest) {
 
     // Try cache first
     const cacheKey = `profile:${targetUserId}`;
-    const cachedProfile = await getCached<Record<string, unknown>>(cacheKey);
+    const cachedProfile = await getCachedWithType<Record<string, unknown>>(cacheKey);
     
     if (cachedProfile) {
       return createSuccessResponse({
@@ -38,7 +39,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Cache the result
-    await setCached(cacheKey, profileInfo, PRODUCTION_CONFIG.cache.profileInfo);
+    await setCachedWithType(cacheKey, profileInfo, 'profileInfo');
 
     return createSuccessResponse({
       profile: profileInfo,

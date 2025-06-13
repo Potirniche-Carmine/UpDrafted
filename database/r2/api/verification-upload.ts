@@ -4,14 +4,20 @@ import { uploadVerificationFile } from '../uploads';
 import { db } from '@/database/db';
 import { verificationFiles, verificationRequests } from '@/database/schema';
 import { eq } from 'drizzle-orm';
+import { withRateLimit } from '@/utils/rate-limiting';
+import { createErrorResponse, createSuccessResponse, validateFile, scanContent } from '@/utils/security-cache';
 
-export async function handleVerificationUpload(request: NextRequest) {
+export async function handleVerificationUpload(request: NextRequest): Promise<NextResponse> {
   try {
     // Only authenticated users can upload verification files
     const auth = await requireRole(['admin', 'athlete', 'coach', 'recruiter']);
     if (auth instanceof NextResponse) return auth;
 
-    const { userId } = auth;
+    const { userId, role } = auth;
+
+    // Apply rate limiting for file uploads
+    const rateLimitCheck = await withRateLimit(request, 'fileUpload', userId, role);
+    if (!rateLimitCheck.success && rateLimitCheck.response) return rateLimitCheck.response;
 
     // Parse form data
     const formData = await request.formData();
@@ -21,17 +27,25 @@ export async function handleVerificationUpload(request: NextRequest) {
 
     // Validate inputs
     if (!file) {
-      return NextResponse.json(
-        { error: 'No file provided' },
-        { status: 400 }
-      );
+      return createErrorResponse('No file provided', 400);
+    }
+
+    // File validation
+    const validation = validateFile(file);
+    if (!validation.valid) {
+      return createErrorResponse(validation.error || 'Invalid file', 400);
+    }
+
+    // Content scanning
+    const buffer = await file.arrayBuffer();
+    const scanResult = await scanContent(buffer);
+    
+    if (!scanResult.safe) {
+      return createErrorResponse(`File security check failed: ${scanResult.reason}`, 400);
     }
 
     if (!verificationRequestIdStr || !/^\d+$/.test(verificationRequestIdStr)) {
-      return NextResponse.json(
-        { error: 'Invalid verification request ID' },
-        { status: 400 }
-      );
+      return createErrorResponse('Invalid verification request ID', 400);
     }
 
     const verificationRequestId = parseInt(verificationRequestIdStr);
@@ -45,17 +59,11 @@ export async function handleVerificationUpload(request: NextRequest) {
         .limit(1);
 
       if (!verificationRequest.length) {
-        return NextResponse.json(
-          { error: 'Verification request not found' },
-          { status: 404 }
-        );
+        return createErrorResponse('Verification request not found', 404);
       }
 
       if (verificationRequest[0].userId !== userId) {
-        return NextResponse.json(
-          { error: 'Forbidden - You can only upload files to your own verification requests' },
-          { status: 403 }
-        );
+        return createErrorResponse('Forbidden - You can only upload files to your own verification requests', 403);
       }
 
       // Upload file to R2
@@ -66,10 +74,7 @@ export async function handleVerificationUpload(request: NextRequest) {
       );
 
       if (!uploadResult.success) {
-        return NextResponse.json(
-          { error: uploadResult.error || 'Upload failed' },
-          { status: 500 }
-        );
+        return createErrorResponse(uploadResult.error || 'Upload failed', 500);
       }
 
       // Save file record to database
@@ -81,24 +86,18 @@ export async function handleVerificationUpload(request: NextRequest) {
         description: description || null,
       }).returning();
 
-      return NextResponse.json({
+      return createSuccessResponse({
         success: true,
         file: fileRecord[0],
-      });
+      }, rateLimitCheck.headers);
 
     } catch (dbError) {
       console.error('Database error during verification upload:', dbError);
-      return NextResponse.json(
-        { error: 'Failed to save file record' },
-        { status: 500 }
-      );
+      return createErrorResponse('Failed to save file record', 500);
     }
 
   } catch (error) {
     console.error('Error in verification upload API:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+    return createErrorResponse('Internal server error', 500);
   }
 } 

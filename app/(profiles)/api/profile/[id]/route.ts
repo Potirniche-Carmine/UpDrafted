@@ -7,6 +7,7 @@ import { db } from '@/database/db';
 import { eq } from 'drizzle-orm';
 import { sanitizeProfileData } from '@/utils/sanitization';
 import { EducationLevel } from '@/app/(onboarding)/lib/onboarding';
+import { withRateLimit } from '@/utils/rate-limiting';
 
 // Force Node.js runtime to avoid expensive edge function costs
 export const runtime = 'nodejs';
@@ -280,6 +281,12 @@ export async function GET(
     if (auth instanceof NextResponse) return auth;
 
     const { userId: currentUserId, role: currentUserRole } = auth;
+
+    // Rate limiting
+    const rateLimitResult = await withRateLimit(request, 'general', currentUserId, currentUserRole);
+    if (!rateLimitResult.success) {
+      return rateLimitResult.response;
+    }
     const { id: profileUserId } = await params;
 
     // Validate the profile user ID format

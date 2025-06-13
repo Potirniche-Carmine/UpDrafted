@@ -4,6 +4,8 @@ import { db } from '@/database/db';
 import { users, athleteProfiles, coachProfiles, recruitingProfiles } from '@/database/schema';
 import { or, eq, ilike, sql, and, ne } from 'drizzle-orm';
 import { R2_PUBLIC_URL } from '@/database/r2';
+import { withRateLimit } from '@/utils/rate-limiting';
+import { getCachedWithType, setCachedWithType, createErrorResponse, createSuccessResponse } from '@/utils/security-cache';
 
 // Force Node.js runtime
 export const runtime = 'nodejs';
@@ -30,37 +32,51 @@ export async function GET(request: NextRequest) {
     const url = new URL(request.url);
     const MAX_URL_LENGTH = 2048;
     if (request.url.length > MAX_URL_LENGTH) {
-      return NextResponse.json(
-        { error: 'URL too long' },
-        { status: 414 }
-      );
+      return createErrorResponse('URL too long', 414);
     }
 
     // Require authentication
     const auth = await requireAnyRole();
     if (auth instanceof NextResponse) return auth;
 
+    const { userId, role } = auth;
+
+    // Apply rate limiting
+    const rateLimitCheck = await withRateLimit(request, 'search', userId, role);
+    if (!rateLimitCheck.success) return rateLimitCheck.response;
+
     const searchParams = url.searchParams;
     const query = searchParams.get('q')?.trim();
     const page = parseInt(searchParams.get('page') || '1');
     const pageSize = Math.min(parseInt(searchParams.get('pageSize') || '12'), 50); // Cap at 50 per page
-    const role = searchParams.get('role'); // Optional role filter
+    const roleFilter = searchParams.get('role'); // Optional role filter
 
     // Validate minimum search length
     if (!query || query.length < 3) {
-      return NextResponse.json({
+      return createSuccessResponse({
         results: [],
         total: 0,
         message: query ? 'Search query must be at least 3 characters long' : 'Search query is required'
-      });
+      }, rateLimitCheck.headers);
     }
 
     // Validate query length (prevent very long queries)
     if (query.length > 100) {
-      return NextResponse.json(
-        { error: 'Search query too long' },
-        { status: 400 }
-      );
+      return createErrorResponse('Search query too long', 400);
+    }
+
+    // Try cache first
+    const cacheKey = `search:${query}:${roleFilter || 'all'}:${page}:${pageSize}:${userId}`;
+    const cachedResults = await getCachedWithType<{
+      results: SearchResult[];
+      total: number;
+      page: number;
+      pageSize: number;
+      hasMore: boolean;
+    }>(cacheKey);
+
+    if (cachedResults) {
+      return createSuccessResponse(cachedResults, rateLimitCheck.headers);
     }
 
     const searchTerm = `%${query.toLowerCase()}%`;
@@ -71,7 +87,7 @@ export async function GET(request: NextRequest) {
     const offset = (page - 1) * pageSize;
 
     // Search athletes if no role filter or role is athlete
-    if (!role || role === 'athlete') {
+    if (!roleFilter || roleFilter === 'athlete') {
       const athleteResults = await db
         .select({
           id: users.id,
@@ -143,7 +159,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Search coaches if no role filter or role is coach
-    if (!role || role === 'coach') {
+    if (!roleFilter || roleFilter === 'coach') {
       const coachResults = await db
         .select({
           id: users.id,
@@ -217,7 +233,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Search recruiters if no role filter or role is recruiter
-    if (!role || role === 'recruiter') {
+    if (!roleFilter || roleFilter === 'recruiter') {
       const recruiterResults = await db
         .select({
           id: users.id,
@@ -235,13 +251,17 @@ export async function GET(request: NextRequest) {
         .from(recruitingProfiles)
         .innerJoin(users, eq(users.id, recruitingProfiles.userId))
         .where(
-          or(
-            ilike(recruitingProfiles.fullName, searchTerm),
-            ilike(recruitingProfiles.sportRecruiting, searchTerm),
-            ilike(recruitingProfiles.organizationName, searchTerm),
-            ilike(recruitingProfiles.city, searchTerm),
-            ilike(recruitingProfiles.state, searchTerm),
-            ilike(recruitingProfiles.title, searchTerm)
+          and(
+            or(
+              ilike(recruitingProfiles.fullName, searchTerm),
+              ilike(recruitingProfiles.sportRecruiting, searchTerm),
+              ilike(recruitingProfiles.organizationName, searchTerm),
+              ilike(recruitingProfiles.city, searchTerm),
+              ilike(recruitingProfiles.state, searchTerm),
+              ilike(recruitingProfiles.title, searchTerm)
+            ),
+            // Exclude current user's profile
+            ne(users.id, auth.userId)
           )
         )
         .offset(offset)
@@ -253,13 +273,17 @@ export async function GET(request: NextRequest) {
         .from(recruitingProfiles)
         .innerJoin(users, eq(users.id, recruitingProfiles.userId))
         .where(
-          or(
-            ilike(recruitingProfiles.fullName, searchTerm),
-            ilike(recruitingProfiles.sportRecruiting, searchTerm),
-            ilike(recruitingProfiles.organizationName, searchTerm),
-            ilike(recruitingProfiles.city, searchTerm),
-            ilike(recruitingProfiles.state, searchTerm),
-            ilike(recruitingProfiles.title, searchTerm)
+          and(
+            or(
+              ilike(recruitingProfiles.fullName, searchTerm),
+              ilike(recruitingProfiles.sportRecruiting, searchTerm),
+              ilike(recruitingProfiles.organizationName, searchTerm),
+              ilike(recruitingProfiles.city, searchTerm),
+              ilike(recruitingProfiles.state, searchTerm),
+              ilike(recruitingProfiles.title, searchTerm)
+            ),
+            // Exclude current user's profile
+            ne(users.id, auth.userId)
           )
         );
 
@@ -282,27 +306,21 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Sort results by verification status and name
-    results.sort((a, b) => {
-      if (a.isVerified && !b.isVerified) return -1;
-      if (!a.isVerified && b.isVerified) return 1;
-      return a.fullName.localeCompare(b.fullName);
-    });
-
-    return NextResponse.json({
+    const responseData = {
       results,
       total: totalResults,
-      currentPage: page,
-      totalPages: Math.ceil(totalResults / pageSize),
+      page,
       pageSize,
-      query,
-    });
+      hasMore: (page * pageSize) < totalResults,
+    };
+
+    // Cache the results
+    await setCachedWithType(cacheKey, responseData, 'searchResults');
+
+    return createSuccessResponse(responseData, rateLimitCheck.headers);
 
   } catch (error) {
     console.error('Search API error:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+    return createErrorResponse('Search failed', 500);
   }
 } 

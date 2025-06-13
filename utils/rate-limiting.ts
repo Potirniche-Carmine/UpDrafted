@@ -1,349 +1,334 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-// Rate limit configurations for different endpoint types
-export const RATE_LIMIT_CONFIGS = {
-  // General API endpoints
-  general: {
-    athlete: { requests: 100, windowMs: 60 * 60 * 1000 }, // 100 req/hour
-    coach: { requests: 200, windowMs: 60 * 60 * 1000 },   // 200 req/hour
-    recruiter: { requests: 200, windowMs: 60 * 60 * 1000 }, // 200 req/hour
-    admin: { requests: 1000, windowMs: 60 * 60 * 1000 }     // 1000 req/hour
+// ==================== CONFIGURATION ====================
+
+const isDev = process.env.NODE_ENV === 'development';
+
+export const RATE_LIMIT_CONFIG = {
+  redis: {
+    url: process.env.REDIS_URL,
+    enabled: !!process.env.REDIS_URL,
   },
-  
-  // File upload endpoints (more restrictive)
-  fileUpload: {
-    athlete: { requests: 10, windowMs: 60 * 60 * 1000 },    // 10 uploads/hour
-    coach: { requests: 25, windowMs: 60 * 60 * 1000 },      // 25 uploads/hour
-    recruiter: { requests: 25, windowMs: 60 * 60 * 1000 },  // 25 uploads/hour
-    admin: { requests: 100, windowMs: 60 * 60 * 1000 }      // 100 uploads/hour
-  },
-  
-  // Messaging endpoints (moderate)
-  messaging: {
-    athlete: { requests: 50, windowMs: 60 * 60 * 1000 },    // 50 messages/hour
-    coach: { requests: 100, windowMs: 60 * 60 * 1000 },     // 100 messages/hour
-    recruiter: { requests: 100, windowMs: 60 * 60 * 1000 }, // 100 messages/hour
-    admin: { requests: 500, windowMs: 60 * 60 * 1000 }      // 500 messages/hour
-  },
-  
-  // Search/Discovery endpoints (more permissive)
-  search: {
-    athlete: { requests: 200, windowMs: 60 * 60 * 1000 },   // 200 searches/hour
-    coach: { requests: 300, windowMs: 60 * 60 * 1000 },     // 300 searches/hour
-    recruiter: { requests: 300, windowMs: 60 * 60 * 1000 }, // 300 searches/hour
-    admin: { requests: 1000, windowMs: 60 * 60 * 1000 }     // 1000 searches/hour
-  },
-  
-  // Connection operations (moderate)
-  connections: {
-    athlete: { requests: 30, windowMs: 60 * 60 * 1000 },    // 30 connections/hour
-    coach: { requests: 50, windowMs: 60 * 60 * 1000 },      // 50 connections/hour
-    recruiter: { requests: 50, windowMs: 60 * 60 * 1000 },  // 50 connections/hour
-    admin: { requests: 200, windowMs: 60 * 60 * 1000 }      // 200 connections/hour
+  limits: {
+    // More generous limits for dev, stricter for production
+    fileUpload: {
+      athlete: { requests: isDev ? 50 : 20, windowMs: 60 * 60 * 1000 },
+      coach: { requests: isDev ? 100 : 30, windowMs: 60 * 60 * 1000 },
+      recruiter: { requests: isDev ? 100 : 30, windowMs: 60 * 60 * 1000 },
+      admin: { requests: isDev ? 200 : 100, windowMs: 60 * 60 * 1000 }
+    },
+    general: {
+      athlete: { requests: isDev ? 500 : 200, windowMs: 15 * 60 * 1000 },
+      coach: { requests: isDev ? 1000 : 300, windowMs: 15 * 60 * 1000 },
+      recruiter: { requests: isDev ? 1000 : 300, windowMs: 15 * 60 * 1000 },
+      admin: { requests: isDev ? 2000 : 1000, windowMs: 15 * 60 * 1000 }
+    },
+    messaging: {
+      athlete: { requests: isDev ? 200 : 100, windowMs: 60 * 60 * 1000 },
+      coach: { requests: isDev ? 300 : 150, windowMs: 60 * 60 * 1000 },
+      recruiter: { requests: isDev ? 300 : 150, windowMs: 60 * 60 * 1000 },
+      admin: { requests: isDev ? 1000 : 500, windowMs: 60 * 60 * 1000 }
+    },
+    search: {
+      athlete: { requests: isDev ? 1000 : 300, windowMs: 60 * 60 * 1000 },
+      coach: { requests: isDev ? 1500 : 500, windowMs: 60 * 60 * 1000 },
+      recruiter: { requests: isDev ? 1500 : 500, windowMs: 60 * 60 * 1000 },
+      admin: { requests: isDev ? 3000 : 1000, windowMs: 60 * 60 * 1000 }
+    },
+    connections: {
+      athlete: { requests: isDev ? 100 : 50, windowMs: 60 * 60 * 1000 },
+      coach: { requests: isDev ? 150 : 75, windowMs: 60 * 60 * 1000 },
+      recruiter: { requests: isDev ? 150 : 75, windowMs: 60 * 60 * 1000 },
+      admin: { requests: isDev ? 500 : 200, windowMs: 60 * 60 * 1000 }
+    },
+    notifications: {
+      athlete: { requests: isDev ? 200 : 100, windowMs: 60 * 60 * 1000 },
+      coach: { requests: isDev ? 300 : 150, windowMs: 60 * 60 * 1000 },
+      recruiter: { requests: isDev ? 300 : 150, windowMs: 60 * 60 * 1000 },
+      admin: { requests: isDev ? 1000 : 500, windowMs: 60 * 60 * 1000 }
+    },
+    reports: {
+      athlete: { requests: isDev ? 20 : 10, windowMs: 60 * 60 * 1000 },
+      coach: { requests: isDev ? 50 : 25, windowMs: 60 * 60 * 1000 },
+      recruiter: { requests: isDev ? 50 : 25, windowMs: 60 * 60 * 1000 },
+      admin: { requests: isDev ? 200 : 100, windowMs: 60 * 60 * 1000 }
+    }
   }
 } as const;
 
-type RateLimitType = keyof typeof RATE_LIMIT_CONFIGS;
-type UserRole = 'athlete' | 'coach' | 'recruiter' | 'admin';
+// ==================== REDIS CLIENT ====================
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let redisClient: any = null;
+
+async function getRedisClient() {
+  if (!RATE_LIMIT_CONFIG.redis.enabled || !RATE_LIMIT_CONFIG.redis.url) return null;
+  
+  if (!redisClient) {
+    try {
+      const Redis = (await import('ioredis')).default;
+      redisClient = new Redis(RATE_LIMIT_CONFIG.redis.url);
+    } catch (error) {
+      console.warn('Redis connection failed, falling back to memory:', error);
+      return null;
+    }
+  }
+  
+  return redisClient;
+}
+
+// ==================== TYPES ====================
+
+export type UserRole = 'athlete' | 'coach' | 'recruiter' | 'admin';
+export type RateLimitType = keyof typeof RATE_LIMIT_CONFIG.limits;
 
 interface RateLimitEntry {
   count: number;
   resetTime: number;
-  firstRequest: number;
-  strikes: number; // For tracking repeated violations
+  strikes: number;
 }
 
-interface RateLimitResult {
+export interface RateLimitResult {
   allowed: boolean;
-  remainingRequests?: number;
-  resetTime?: number;
+  remaining: number;
+  resetTime: number;
   retryAfter?: number;
-  reason?: string;
 }
 
-class RateLimitStore {
-  private static instance: RateLimitStore;
-  private store = new Map<string, RateLimitEntry>();
-  private blacklist = new Set<string>(); // For temporarily banned IPs/users
-  
-  static getInstance(): RateLimitStore {
-    if (!RateLimitStore.instance) {
-      RateLimitStore.instance = new RateLimitStore();
+// ==================== RATE LIMITING ====================
+
+class RateLimiter {
+  private static instance: RateLimiter;
+  private memoryStore = new Map<string, RateLimitEntry>();
+  private blacklist = new Set<string>();
+
+  static getInstance(): RateLimiter {
+    if (!RateLimiter.instance) {
+      RateLimiter.instance = new RateLimiter();
     }
-    return RateLimitStore.instance;
+    return RateLimiter.instance;
   }
-  
+
   private constructor() {
-    // Cleanup expired entries every 5 minutes
-    setInterval(() => this.cleanup(), 5 * 60 * 1000);
+    // Cleanup every 10 minutes
+    setInterval(() => this.cleanup(), 10 * 60 * 1000);
   }
-  
-  private generateKey(identifier: string, limitType: RateLimitType): string {
-    return `${limitType}:${identifier}`;
-  }
-  
-  get(identifier: string, limitType: RateLimitType): RateLimitEntry | undefined {
-    const key = this.generateKey(identifier, limitType);
-    return this.store.get(key);
-  }
-  
-  set(identifier: string, limitType: RateLimitType, entry: RateLimitEntry): void {
-    const key = this.generateKey(identifier, limitType);
-    this.store.set(key, entry);
-  }
-  
-  isBlacklisted(identifier: string): boolean {
-    return this.blacklist.has(identifier);
-  }
-  
-  addToBlacklist(identifier: string, durationMs: number = 24 * 60 * 60 * 1000): void {
-    this.blacklist.add(identifier);
-    // Remove from blacklist after duration
-    setTimeout(() => {
-      this.blacklist.delete(identifier);
-    }, durationMs);
-  }
-  
-  cleanup(): void {
-    const now = Date.now();
-    for (const [key, entry] of this.store.entries()) {
-      if (now > entry.resetTime) {
-        this.store.delete(key);
-      }
-    }
-  }
-  
-  delete(identifier: string, limitType: RateLimitType): void {
-    const key = this.generateKey(identifier, limitType);
-    this.store.delete(key);
-  }
-}
 
-/**
- * Main rate limiting class
- */
-export class RateLimit {
-  private static store = RateLimitStore.getInstance();
-  
-  /**
-   * Check if a request should be allowed based on rate limits
-   */
-  static checkLimit(
-    userId: string,
-    userRole: UserRole,
+  async checkLimit(
+    key: string,
     limitType: RateLimitType,
-    ipAddress?: string
-  ): RateLimitResult {
-    const now = Date.now();
-    const config = RATE_LIMIT_CONFIGS[limitType][userRole];
-    
-    // Check if user/IP is blacklisted
-    if (this.store.isBlacklisted(userId) || (ipAddress && this.store.isBlacklisted(ipAddress))) {
+    userRole: UserRole
+  ): Promise<RateLimitResult> {
+    // Check blacklist first
+    if (this.blacklist.has(key)) {
       return {
         allowed: false,
-        reason: 'Access temporarily suspended due to violations',
-        retryAfter: 24 * 60 * 60 // 24 hours
+        remaining: 0,
+        resetTime: Date.now() + 24 * 60 * 60 * 1000,
+        retryAfter: 24 * 60 * 60
       };
     }
+
+    const config = RATE_LIMIT_CONFIG.limits[limitType][userRole];
+    const now = Date.now();
+    const windowStart = Math.floor(now / config.windowMs) * config.windowMs;
+
+    const redis = await getRedisClient();
     
-    // Primary check by userId
-    const userEntry = this.store.get(userId, limitType);
-    const result = this.processRateLimit(userId, userEntry, config, now, limitType);
-    
-    // Secondary check by IP if provided (to prevent abuse via multiple accounts)
-    if (result.allowed && ipAddress) {
-      const ipEntry = this.store.get(ipAddress, limitType);
-      const ipConfig = {
-        requests: config.requests * 3, // Allow 3x for IP-based limiting
-        windowMs: config.windowMs
-      };
-      const ipResult = this.processRateLimit(ipAddress, ipEntry, ipConfig, now, limitType);
+    if (redis) {
+      return this.checkLimitRedis(redis, key, config, windowStart, now);
+    } else {
+      return this.checkLimitMemory(key, config, windowStart, now);
+    }
+  }
+
+  private async checkLimitRedis(
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    redis: any,
+    key: string,
+    config: { requests: number; windowMs: number },
+    windowStart: number,
+    now: number
+  ): Promise<RateLimitResult> {
+    try {
+      const redisKey = `ratelimit:${key}:${windowStart}`;
+      const current = await redis.incr(redisKey);
       
-      if (!ipResult.allowed) {
+      if (current === 1) {
+        await redis.expire(redisKey, Math.ceil(config.windowMs / 1000));
+      }
+
+      const resetTime = windowStart + config.windowMs;
+      
+      if (current > config.requests) {
+        // Track violations in Redis
+        const violationKey = `violations:${key}`;
+        const violations = await redis.incr(violationKey);
+        await redis.expire(violationKey, 24 * 60 * 60); // 24 hours
+
+        if (violations >= 5) {
+          this.blacklist.add(key);
+        }
+
         return {
           allowed: false,
-          reason: 'Too many requests from this IP address',
-          retryAfter: ipResult.retryAfter
+          remaining: 0,
+          resetTime,
+          retryAfter: Math.ceil((resetTime - now) / 1000)
         };
       }
+
+      return {
+        allowed: true,
+        remaining: Math.max(0, config.requests - current),
+        resetTime
+      };
+    } catch (error) {
+      console.warn('Redis rate limit check failed, falling back to memory:', error);
+      return this.checkLimitMemory(key, config, windowStart, now);
     }
-    
-    return result;
   }
-  
-  private static processRateLimit(
-    identifier: string,
-    entry: RateLimitEntry | undefined,
+
+  private checkLimitMemory(
+    key: string,
     config: { requests: number; windowMs: number },
-    now: number,
-    limitType: RateLimitType
+    windowStart: number,
+    now: number
   ): RateLimitResult {
-    if (!entry || now > entry.resetTime) {
-      // First request or window expired
+    const entry = this.memoryStore.get(key);
+    const resetTime = windowStart + config.windowMs;
+
+    if (!entry || entry.resetTime <= now) {
       const newEntry: RateLimitEntry = {
         count: 1,
-        resetTime: now + config.windowMs,
-        firstRequest: now,
+        resetTime,
         strikes: 0
       };
-      this.store.set(identifier, limitType, newEntry);
+      this.memoryStore.set(key, newEntry);
       
       return {
         allowed: true,
-        remainingRequests: config.requests - 1,
-        resetTime: newEntry.resetTime
+        remaining: config.requests - 1,
+        resetTime
       };
     }
-    
+
     if (entry.count >= config.requests) {
-      // Rate limit exceeded
-      entry.strikes++;
+      entry.strikes += 1;
       
-      // If too many strikes, add to blacklist
       if (entry.strikes >= 5) {
-        this.store.addToBlacklist(identifier);
-        return {
-          allowed: false,
-          reason: 'Account temporarily suspended due to repeated violations',
-          retryAfter: 24 * 60 * 60 // 24 hours
-        };
+        this.blacklist.add(key);
       }
-      
-      // Calculate exponential backoff
-      const baseRetryAfter = Math.ceil((entry.resetTime - now) / 1000);
-      const backoffMultiplier = Math.pow(2, entry.strikes - 1);
-      const retryAfter = Math.min(baseRetryAfter * backoffMultiplier, 3600); // Max 1 hour
-      
+
       return {
         allowed: false,
-        remainingRequests: 0,
+        remaining: 0,
         resetTime: entry.resetTime,
-        retryAfter,
-        reason: `Rate limit exceeded. Try again in ${retryAfter} seconds.`
+        retryAfter: Math.ceil((entry.resetTime - now) / 1000)
       };
     }
-    
-    // Increment counter
-    entry.count++;
-    
+
+    entry.count += 1;
+    this.memoryStore.set(key, entry);
+
     return {
       allowed: true,
-      remainingRequests: config.requests - entry.count,
+      remaining: config.requests - entry.count,
       resetTime: entry.resetTime
     };
   }
-  
-  /**
-   * Get rate limit headers for HTTP responses
-   */
-  static getRateLimitHeaders(
-    userId: string,
-    userRole: UserRole,
-    limitType: RateLimitType
-  ): Record<string, string> {
-    const config = RATE_LIMIT_CONFIGS[limitType][userRole];
-    const entry = this.store.get(userId, limitType);
+
+  private cleanup(): void {
     const now = Date.now();
-    
-    if (!entry || now > entry.resetTime) {
-      return {
-        'X-RateLimit-Limit': config.requests.toString(),
-        'X-RateLimit-Remaining': config.requests.toString(),
-        'X-RateLimit-Reset': new Date(now + config.windowMs).toISOString()
-      };
-    }
-    
-    return {
-      'X-RateLimit-Limit': config.requests.toString(),
-      'X-RateLimit-Remaining': Math.max(0, config.requests - entry.count).toString(),
-      'X-RateLimit-Reset': new Date(entry.resetTime).toISOString()
-    };
-  }
-  
-  /**
-   * Clear rate limit for a user (admin function)
-   */
-  static clearUserLimit(userId: string, limitType?: RateLimitType): void {
-    if (limitType) {
-      this.store.delete(userId, limitType);
-    } else {
-      // Clear all limits for user
-      for (const type of Object.keys(RATE_LIMIT_CONFIGS) as RateLimitType[]) {
-        this.store.delete(userId, type);
+    for (const [key, entry] of this.memoryStore.entries()) {
+      if (now > entry.resetTime) {
+        this.memoryStore.delete(key);
       }
     }
   }
 }
 
-/**
- * Express/Next.js middleware function for rate limiting
- */
-export function rateLimitMiddleware(limitType: RateLimitType) {
-  return async (
-    request: NextRequest,
-    userId: string,
-    userRole: UserRole
-  ): Promise<NextResponse | null> => {
-    // Get IP address from request
-    const forwardedFor = request.headers.get('x-forwarded-for');
-    const realIp = request.headers.get('x-real-ip');
-    const ipAddress = forwardedFor?.split(',')[0] || realIp || 'unknown';
+// ==================== MAIN UTILITIES ====================
+
+export function getClientIP(request: NextRequest): string {
+  const forwarded = request.headers.get('x-forwarded-for');
+  const realIP = request.headers.get('x-real-ip');
+  
+  if (forwarded) {
+    return forwarded.split(',')[0].trim();
+  }
+  if (realIP) {
+    return realIP;
+  }
+  
+  return 'unknown';
+}
+
+export function generateRateLimitKey(userId: string | null, ip: string, endpoint: string): string {
+  return userId ? `user:${userId}:${endpoint}` : `ip:${ip}:${endpoint}`;
+}
+
+export async function withRateLimit(
+  request: NextRequest,
+  limitType: RateLimitType,
+  userId?: string,
+  userRole: UserRole = 'athlete'
+): Promise<{ success: boolean; response?: NextResponse; headers: Record<string, string> }> {
+  const rateLimiter = RateLimiter.getInstance();
+  const ip = getClientIP(request);
+  const key = generateRateLimitKey(userId || null, ip, limitType);
+
+  const result = await rateLimiter.checkLimit(key, limitType, userRole);
+
+  const headers: Record<string, string> = {
+    'X-RateLimit-Limit': RATE_LIMIT_CONFIG.limits[limitType][userRole].requests.toString(),
+    'X-RateLimit-Remaining': result.remaining.toString(),
+    'X-RateLimit-Reset': new Date(result.resetTime).toISOString(),
+  };
+
+  if (!result.allowed) {
+    headers['Retry-After'] = result.retryAfter?.toString() || '60';
     
-    const result = RateLimit.checkLimit(userId, userRole, limitType, ipAddress);
-    
-    if (!result.allowed) {
-      const headers = RateLimit.getRateLimitHeaders(userId, userRole, limitType);
-      
-      if (result.retryAfter) {
-        headers['Retry-After'] = result.retryAfter.toString();
-      }
-      
-      return NextResponse.json(
-        {
-          error: result.reason || 'Rate limit exceeded',
-          retryAfter: result.retryAfter
+    return {
+      success: false,
+      response: NextResponse.json(
+        { 
+          error: 'Rate limit exceeded',
+          retryAfter: result.retryAfter 
         },
-        {
-          status: 429,
-          headers
-        }
-      );
-    }
-    
-    return null; // Allow request to continue
+        { status: 429, headers }
+      ),
+      headers
+    };
+  }
+
+  return { success: true, headers };
+}
+
+export function createErrorResponse(message: string, status: number = 500): NextResponse {
+  return NextResponse.json({ error: message }, { status });
+}
+
+export function createSuccessResponse<T = Record<string, unknown>>(
+  data: T,
+  headers?: Record<string, string>
+): NextResponse {
+  return NextResponse.json(data, { headers });
+}
+
+// Legacy middleware for backward compatibility
+export function rateLimitMiddleware(limitType: RateLimitType) {
+  return async (request: NextRequest, userId?: string, userRole: UserRole = 'athlete') => {
+    return withRateLimit(request, limitType, userId, userRole);
   };
 }
 
-/**
- * Utility function to add rate limit headers to successful responses
- */
 export function addRateLimitHeaders(
   response: NextResponse,
-  userId: string,
-  userRole: UserRole,
-  limitType: RateLimitType
+  headers: Record<string, string>
 ): NextResponse {
-  const headers = RateLimit.getRateLimitHeaders(userId, userRole, limitType);
-  
   Object.entries(headers).forEach(([key, value]) => {
     response.headers.set(key, value);
   });
-  
   return response;
-}
-
-/**
- * Get client IP address helper
- */
-export function getClientIP(request: NextRequest): string {
-  const forwardedFor = request.headers.get('x-forwarded-for');
-  const realIp = request.headers.get('x-real-ip');
-  const remoteAddr = request.headers.get('x-vercel-forwarded-for');
-  
-  return (
-    forwardedFor?.split(',')[0]?.trim() ||
-    realIp ||
-    remoteAddr ||
-    'unknown'
-  );
 } 

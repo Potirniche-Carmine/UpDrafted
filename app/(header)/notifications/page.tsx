@@ -79,18 +79,18 @@ export default function NotificationsPage() {
         throw new Error('No authentication token available');
       }
 
-      const response = await fetch('/api/notifications', {
-        method: 'POST',
+      const params = new URLSearchParams({
+        operation: 'getNotifications',
+        limit: '50',
+        offset: '0',
+        unreadOnly: unreadOnly.toString()
+      });
+      
+      const response = await fetch(`/api/notifications?${params.toString()}`, {
+        method: 'GET',
         headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ 
-          operation: 'getNotifications',
-          limit: 50,
-          offset: 0,
-          unreadOnly
-        })
+          'Authorization': `Bearer ${token}`
+        }
       });
 
       if (!response.ok) {

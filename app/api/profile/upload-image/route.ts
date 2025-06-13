@@ -3,7 +3,8 @@ import { requireOwnershipOrAdmin } from '@/utils/roles';
 import { uploadProfilePicture, uploadOrganizationLogo } from '@/database/r2/uploads';
 import { deleteFromR2, getR2KeyFromUrl } from '@/database/r2/config';
 import { coachOperations, athleteOperations, recruitingOperations, userOperations } from '@/database/db-utils';
-import { withRateLimit, scanContent, createErrorResponse, createSuccessResponse, validateFile, invalidateCache } from '@/utils/production-config';
+import { withRateLimit } from '@/utils/rate-limiting';
+import { validateFile, scanContent, createErrorResponse, createSuccessResponse, invalidateCache } from '@/utils/security-cache';
 
 export const runtime = 'nodejs';
 
@@ -64,17 +65,17 @@ export async function POST(request: NextRequest) {
           await recruitingOperations.updateRecruitingProfile(userId, updateData);
         }
 
-                 // Invalidate profile cache
-         await invalidateCache(`profile:${userId}`);
-         
-         return createSuccessResponse({
-           removed: true,
-           message: 'Image removed successfully'
-         }, rateLimitCheck.headers);
+        // Invalidate profile cache
+        await invalidateCache(`profile:${userId}`);
+        
+        return createSuccessResponse({
+          removed: true,
+          message: 'Image removed successfully'
+        }, rateLimitCheck.headers);
 
-       } catch {
-         return createErrorResponse('Failed to remove image', 500);
-       }
+      } catch {
+        return createErrorResponse('Failed to remove image', 500);
+      }
     }
 
     // Validate file for upload
@@ -82,71 +83,71 @@ export async function POST(request: NextRequest) {
       return createErrorResponse('Missing file for upload', 400);
     }
 
-         // File validation
-     const validation = validateFile(file);
-     if (!validation.valid) {
-       return createErrorResponse(validation.error || 'Invalid file', 400);
-     }
+    // File validation
+    const validation = validateFile(file);
+    if (!validation.valid) {
+      return createErrorResponse(validation.error || 'Invalid file', 400);
+    }
 
-     // Content scanning
-     const buffer = await file.arrayBuffer();
-     const scanResult = await scanContent(buffer);
-     
-     if (!scanResult.safe) {
-       return createErrorResponse(`File security check failed: ${scanResult.reason}`, 400);
-     }
+    // Content scanning
+    const buffer = await file.arrayBuffer();
+    const scanResult = await scanContent(buffer);
+    
+    if (!scanResult.safe) {
+      return createErrorResponse(`File security check failed: ${scanResult.reason}`, 400);
+    }
 
-           try {
-         // Delete old image if exists
-         if (currentImageUrl) {
-           try {
-             const oldKey = getR2KeyFromUrl(currentImageUrl);
-             await deleteFromR2(oldKey, false);
-           } catch {
-             // Continue if old image deletion fails
-           }
-         }
+    try {
+      // Delete old image if exists
+      if (currentImageUrl) {
+        try {
+          const oldKey = getR2KeyFromUrl(currentImageUrl);
+          await deleteFromR2(oldKey, false);
+        } catch {
+          // Continue if old image deletion fails
+        }
+      }
 
-         // Upload new image
-         const uploadResult = imageType === 'profile'
-           ? await uploadProfilePicture(file, userId)
-           : await uploadOrganizationLogo(file, userId);
+      // Upload new image
+      const uploadResult = imageType === 'profile'
+        ? await uploadProfilePicture(file, userId)
+        : await uploadOrganizationLogo(file, userId);
 
-         // Update database
-         const userWithProfile = await userOperations.getUserWithProfile(userId);
-         if (!userWithProfile) {
-           return createErrorResponse('User not found', 404);
-         }
+      // Update database
+      const userWithProfile = await userOperations.getUserWithProfile(userId);
+      if (!userWithProfile) {
+        return createErrorResponse('User not found', 404);
+      }
 
-         const updateData = imageType === 'profile'
-           ? { profileImageR3Key: uploadResult.key }
-           : { organizationLogoR3Key: uploadResult.key };
+      const updateData = imageType === 'profile'
+        ? { profileImageR3Key: uploadResult.key }
+        : { organizationLogoR3Key: uploadResult.key };
 
-         if (userWithProfile.role === 'athlete' && imageType === 'profile') {
-           await athleteOperations.updateAthleteProfile(userId, updateData);
-         } else if (userWithProfile.role === 'coach') {
-           await coachOperations.updateCoachProfile(userId, updateData);
-         } else if (userWithProfile.role === 'recruiter') {
-           await recruitingOperations.updateRecruitingProfile(userId, updateData);
-         } else {
-           return createErrorResponse(`Unsupported operation for role: ${userWithProfile.role}`, 400);
-         }
+      if (userWithProfile.role === 'athlete' && imageType === 'profile') {
+        await athleteOperations.updateAthleteProfile(userId, updateData);
+      } else if (userWithProfile.role === 'coach') {
+        await coachOperations.updateCoachProfile(userId, updateData);
+      } else if (userWithProfile.role === 'recruiter') {
+        await recruitingOperations.updateRecruitingProfile(userId, updateData);
+      } else {
+        return createErrorResponse(`Unsupported operation for role: ${userWithProfile.role}`, 400);
+      }
 
-         // Invalidate profile cache
-         await invalidateCache(`profile:${userId}`);
+      // Invalidate profile cache
+      await invalidateCache(`profile:${userId}`);
 
-         return createSuccessResponse({
-           success: true,
-           imageUrl: uploadResult.url,
-           key: uploadResult.key,
-           message: 'Image uploaded successfully'
-         }, rateLimitCheck.headers);
+      return createSuccessResponse({
+        success: true,
+        imageUrl: uploadResult.url,
+        key: uploadResult.key,
+        message: 'Image uploaded successfully'
+      }, rateLimitCheck.headers);
 
-       } catch {
-         return createErrorResponse('Failed to upload image', 500);
-       }
+    } catch {
+      return createErrorResponse('Failed to upload image', 500);
+    }
 
-     } catch {
-       return createErrorResponse('Internal server error', 500);
-     }
+  } catch {
+    return createErrorResponse('Internal server error', 500);
+  }
 } 

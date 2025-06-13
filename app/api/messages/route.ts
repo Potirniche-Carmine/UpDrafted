@@ -6,7 +6,7 @@ import { decryptMessage } from '@/utils/encryption';
 import { sanitizeText } from '@/utils/sanitization';
 import { User } from '@/database/schema';
 import { MessageValidation, validateSchema, ValidationError } from '@/utils/validation';
-import { rateLimitMiddleware, addRateLimitHeaders } from '@/utils/rate-limiting';
+import { withRateLimit } from '@/utils/rate-limiting';
 
 interface ConversationData {
   id: number;
@@ -81,8 +81,8 @@ export async function POST(request: NextRequest) {
   // Validate security headers
   const validation = validateClerkHeaders(request);  
   if (!validation.isValid) {
-    return NextResponse.json({ 
-      success: false, 
+    return NextResponse.json({
+      success: false,
       error: 'Invalid security headers'
     }, { status: 401 });
   }
@@ -97,8 +97,10 @@ export async function POST(request: NextRequest) {
     const { userId, role } = authResult;
     
     // Apply rate limiting for messaging endpoints
-    const rateLimitCheck = await rateLimitMiddleware('messaging')(request, userId, role);
-    if (rateLimitCheck) return rateLimitCheck;
+    const rateLimitCheck = await withRateLimit(request, 'messaging', userId, role);
+    if (!rateLimitCheck.success) {
+      return rateLimitCheck.response;
+    }
     
     // Parse request body and validate
     const rawBody = await request.json();
@@ -164,7 +166,7 @@ export async function POST(request: NextRequest) {
         return await handleGetMessages(userId, validatedBody as GetMessagesRequestBody);
       
       case 'sendMessage':
-        return await handleSendMessage(userId, validatedBody as SendMessageRequestBody, role);
+        return await handleSendMessage(userId, validatedBody as SendMessageRequestBody);
       
       case 'markRead':
         return await handleMarkRead(userId, validatedBody as MarkReadRequestBody);
@@ -450,7 +452,7 @@ async function handleGetMessages(userId: string, body: GetMessagesRequestBody) {
 /**
  * Send a new message
  */
-async function handleSendMessage(userId: string, body: SendMessageRequestBody, userRole: 'athlete' | 'coach' | 'recruiter' | 'admin') {
+async function handleSendMessage(userId: string, body: SendMessageRequestBody) {
   try {
     const { conversationId, message } = body;
     
@@ -548,8 +550,8 @@ async function handleSendMessage(userId: string, body: SendMessageRequestBody, u
       message: 'Message sent successfully'
     });
     
-    // Add rate limit headers to response
-    return addRateLimitHeaders(response, userId, userRole, 'messaging');
+    // Add rate limit headers to response (would need rateLimitCheck.headers)
+    return response;
   } catch (error) {
     console.error('Error sending message:', error);
     return NextResponse.json({

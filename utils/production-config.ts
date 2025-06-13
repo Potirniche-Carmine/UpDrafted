@@ -19,7 +19,7 @@ export const PRODUCTION_CONFIG = {
   },
 } as const;
 
-// Redis client (will be initialized once)
+// Redis client
 let redisClient: unknown = null;
 
 async function getRedisClient() {

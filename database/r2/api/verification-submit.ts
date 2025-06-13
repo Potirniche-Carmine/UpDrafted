@@ -3,24 +3,27 @@ import { requireRole } from '@/utils/roles';
 import { db } from '@/database/db';
 import { verificationRequests, verificationFiles } from '@/database/schema';
 import { eq } from 'drizzle-orm';
+import { withRateLimit } from '@/utils/rate-limiting';
+import { createErrorResponse, createSuccessResponse, invalidateCache } from '@/utils/security-cache';
 
-export async function handleVerificationSubmit(request: NextRequest) {
+export async function handleVerificationSubmit(request: NextRequest): Promise<NextResponse> {
   try {
     // Require authentication and valid role
     const auth = await requireRole(['admin', 'athlete', 'coach', 'recruiter']);
     if (auth instanceof NextResponse) return auth;
 
-    const { userId } = auth;
+    const { userId, role: userRole } = auth;
+
+    // Apply rate limiting
+    const rateLimitCheck = await withRateLimit(request, 'general', userId, userRole);
+    if (!rateLimitCheck.success && rateLimitCheck.response) return rateLimitCheck.response;
 
     // Parse request body
     const { role, additionalInfo, links } = await request.json();
 
     // Validate role
     if (!role || !['athlete', 'coach', 'recruiter'].includes(role)) {
-      return NextResponse.json(
-        { error: 'Invalid role' },
-        { status: 400 }
-      );
+      return createErrorResponse('Invalid role', 400);
     }
 
     try {
@@ -69,22 +72,18 @@ export async function handleVerificationSubmit(request: NextRequest) {
             );
           }
 
-          return NextResponse.json({
+          // Invalidate verification cache
+          await invalidateCache(`verification:${userId}`);
+
+          return createSuccessResponse({
             success: true,
             verificationRequest: updatedRequest[0],
             reapplication: true
-          });
+          }, rateLimitCheck.headers);
         }
         
         // Block if request is pending or approved
-        return NextResponse.json(
-          { 
-            error: 'You already have a verification request',
-            details: `Your verification request is currently ${request.status}. Please wait for the review to complete.`,
-            existingRequest: request
-          },
-          { status: 409 } // Conflict status code
-        );
+        return createErrorResponse(`You already have a verification request that is currently ${request.status}. Please wait for the review to complete.`, 409);
       }
 
       // Create verification request
@@ -108,24 +107,21 @@ export async function handleVerificationSubmit(request: NextRequest) {
         );
       }
 
-      return NextResponse.json({
+      // Invalidate verification cache
+      await invalidateCache(`verification:${userId}`);
+
+      return createSuccessResponse({
         success: true,
         verificationRequest: verificationRequest[0],
-      });
+      }, rateLimitCheck.headers);
 
     } catch (dbError) {
       console.error('Database error creating verification request:', dbError);
-      return NextResponse.json(
-        { error: 'Failed to create verification request' },
-        { status: 500 }
-      );
+      return createErrorResponse('Failed to create verification request', 500);
     }
 
   } catch (error) {
     console.error('Error in verification submit API:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+    return createErrorResponse('Internal server error', 500);
   }
 } 

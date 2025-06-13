@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, Suspense, useCallback } from "react";
+import { useState, useEffect, Suspense, useCallback, useRef } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { Search, MapPin, Calendar, School, Shield, Users } from "lucide-react";
 import Image from "next/image";
@@ -118,6 +118,10 @@ function SearchPageContent() {
   const [lastLoadedPage, setLastLoadedPage] = useState(0);
   const { getToken } = useAuth();
 
+  // Add debounce and prevent duplicate calls
+  const searchRequestRef = useRef<AbortController | null>(null);
+  const lastSearchParamsRef = useRef<string>('');
+
   // Fetch search results from API
   const searchUsers = useCallback(async (query: string, page: number) => {
     if (!query || query.length < 3) {
@@ -127,6 +131,23 @@ function SearchPageContent() {
       setTotalPages(1);
       return;
     }
+
+    // Create unique identifier for the search request
+    const searchParams = `${query}-${Math.ceil(page / PAGES_TO_LOAD)}`;
+    
+    // Prevent duplicate requests
+    if (lastSearchParamsRef.current === searchParams) {
+      return;
+    }
+    
+    // Cancel previous request if still pending
+    if (searchRequestRef.current) {
+      searchRequestRef.current.abort();
+    }
+    
+    // Create new abort controller for this request
+    searchRequestRef.current = new AbortController();
+    lastSearchParamsRef.current = searchParams;
 
     setIsLoading(true);
     try {
@@ -141,6 +162,7 @@ function SearchPageContent() {
         headers: {
           'Authorization': `Bearer ${token}`,
         },
+        signal: searchRequestRef.current.signal
       });
       
       if (response.ok) {
@@ -161,22 +183,31 @@ function SearchPageContent() {
         console.error('Search API error:', response.status, response.statusText);
       }
     } catch (error) {
+      if (error instanceof Error && error.name === 'AbortError') {
+        // Request was cancelled, which is expected behavior
+        return;
+      }
       console.error('Search error:', error);
     } finally {
       setIsLoading(false);
+      searchRequestRef.current = null;
     }
   }, [getToken]);
 
-  // Initial load when coming from header search
+  // Track if initial search has been performed
+  const hasPerformedInitialSearch = useRef(false);
+
+  // Initial load when coming from header search - only once
   useEffect(() => {
-    if (initialQuery && initialQuery.length >= 3) {
+    if (initialQuery && initialQuery.length >= 3 && !hasPerformedInitialSearch.current) {
+      hasPerformedInitialSearch.current = true;
       searchUsers(initialQuery, 1);
     }
   }, [initialQuery, searchUsers]); // Empty dependency array - only runs once on mount
 
   // Load more results if needed when page changes
   useEffect(() => {
-    if (currentPage > lastLoadedPage - PAGES_TO_LOAD && searchTerm.length >= 3) {
+    if (currentPage > lastLoadedPage - PAGES_TO_LOAD && searchTerm.length >= 3 && hasPerformedInitialSearch.current) {
       searchUsers(searchTerm, currentPage);
     }
   }, [currentPage, lastLoadedPage, searchTerm, searchUsers]);

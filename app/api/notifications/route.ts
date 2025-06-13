@@ -4,8 +4,10 @@ import { notifications } from '@/database/schema';
 import { validateClerkHeaders } from '@/utils/clerk-security';
 import { requireAnyRole } from '@/utils/roles';
 import { eq, desc, and, count, sql } from 'drizzle-orm';
-import { profileOperations, messageOperations, connectionOperations } from '@/database/db-utils';
-import { rateLimitMiddleware, addRateLimitHeaders } from '@/utils/rate-limiting';
+import { profileOperations, messageOperations, connectionOperations, notificationOperations } from '@/database/db-utils';
+import { withRateLimit } from '@/utils/rate-limiting';
+import { createErrorResponse } from '@/utils/security-cache';
+// Removed unused imports - getCachedWithType, setCachedWithType, createErrorResponse, createSuccessResponse
 
 type Operation = 'getNotifications' | 'markAsRead' | 'markAllAsRead' | 'getUnreadCount' | 'createNotifications' | 'dismissAllNotifications' | 'cleanupOldNotifications';
 
@@ -21,6 +23,62 @@ interface GetNotificationsRequestBody extends BaseRequestBody {
 
 interface MarkAsReadRequestBody extends BaseRequestBody {
   notificationId: number;
+}
+
+// Utility function for formatting time ago
+function formatTimeAgo(date: Date): string {
+  const now = new Date();
+  const diffInMs = now.getTime() - date.getTime();
+  const diffInMins = Math.floor(diffInMs / (1000 * 60));
+  const diffInHours = Math.floor(diffInMins / 60);
+  const diffInDays = Math.floor(diffInHours / 24);
+
+  if (diffInMins < 1) return 'Just now';
+  if (diffInMins < 60) return `${diffInMins}m ago`;
+  if (diffInHours < 24) return `${diffInHours}h ago`;
+  if (diffInDays < 7) return `${diffInDays}d ago`;
+  
+  return date.toLocaleDateString();
+}
+
+export async function GET(request: NextRequest) {
+  // Validate security headers
+  const validation = validateClerkHeaders(request);  
+  if (!validation.isValid) {
+    return NextResponse.json({ 
+      success: false, 
+      error: 'Invalid security headers'
+    }, { status: 401 });
+  }
+
+  try {
+    // Require authentication
+    const auth = await requireAnyRole();
+    if (auth instanceof NextResponse) return auth;
+
+    const { userId, role } = auth;
+
+    // Apply rate limiting
+    const rateLimitCheck = await withRateLimit(request, 'general', userId, role);
+    if (!rateLimitCheck.success) return rateLimitCheck.response;
+
+    const { searchParams } = new URL(request.url);
+    const operation = searchParams.get('operation') || 'getNotifications';
+    const limit = parseInt(searchParams.get('limit') || '50');
+    const offset = parseInt(searchParams.get('offset') || '0');
+    const unreadOnly = searchParams.get('unreadOnly') === 'true';
+
+    if (operation === 'getNotifications') {
+      return await handleGetNotifications(userId, { operation: 'getNotifications', limit, offset, unreadOnly }, rateLimitCheck.headers);
+    } else if (operation === 'getUnreadCount') {
+      return await handleGetUnreadCount(userId, rateLimitCheck.headers);
+    } else {
+      return createErrorResponse('Invalid operation', 400);
+    }
+  } catch (error) {
+    console.error('Notifications API error:', error);
+    return createErrorResponse('Internal server error', 500);
+  }
 }
 
 export async function POST(request: NextRequest) {
@@ -42,9 +100,9 @@ export async function POST(request: NextRequest) {
 
     const { userId, role } = authResult;
     
-    // Apply rate limiting for general operations
-    const rateLimitCheck = await rateLimitMiddleware('general')(request, userId, role);
-    if (rateLimitCheck) return rateLimitCheck;
+    // Apply rate limiting for notifications operations
+    const rateLimitCheck = await withRateLimit(request, 'general', userId, role);
+    if (!rateLimitCheck.success) return rateLimitCheck.response;
     
     // Parse request body and get operation type
     const body = await request.json();
@@ -59,17 +117,11 @@ export async function POST(request: NextRequest) {
     
     // Route to appropriate handler based on operation
     switch (operation) {
-      case 'getNotifications':
-        return await handleGetNotifications(userId, body as GetNotificationsRequestBody, role);
-      
       case 'markAsRead':
         return await handleMarkAsRead(userId, body as MarkAsReadRequestBody);
       
       case 'markAllAsRead':
         return await handleMarkAllAsRead(userId);
-      
-      case 'getUnreadCount':
-        return await handleGetUnreadCount(userId);
 
       case 'createNotifications':
         return await handleCreateNotifications(userId);
@@ -302,7 +354,7 @@ async function handleCreateNotifications(userId: string) {
   }
 }
 
-async function handleGetNotifications(userId: string, body: GetNotificationsRequestBody, userRole: 'athlete' | 'coach' | 'recruiter' | 'admin') {
+async function handleGetNotifications(userId: string, body: GetNotificationsRequestBody, rateLimitHeaders: Record<string, string>) {
   try {
     const { limit = 20, offset = 0, unreadOnly = false } = body;
 
@@ -396,7 +448,10 @@ async function handleGetNotifications(userId: string, body: GetNotificationsRequ
     });
     
     // Add rate limit headers to response
-    return addRateLimitHeaders(response, userId, userRole, 'general');
+    for (const [header, value] of Object.entries(rateLimitHeaders)) {
+      response.headers.set(header, value);
+    }
+    return response;
   } catch (error) {
     console.error('Error fetching notifications:', error);
     return NextResponse.json({
@@ -410,18 +465,7 @@ async function handleMarkAsRead(userId: string, body: MarkAsReadRequestBody) {
   try {
     const { notificationId } = body;
 
-    await db
-      .update(notifications)
-      .set({ 
-        isRead: true, 
-        readAt: new Date() 
-      })
-      .where(
-        and(
-          eq(notifications.id, notificationId),
-          eq(notifications.userId, userId)
-        )
-      );
+    await notificationOperations.markNotificationAsRead(userId, notificationId);
 
     return NextResponse.json({
       success: true,
@@ -437,18 +481,7 @@ async function handleMarkAsRead(userId: string, body: MarkAsReadRequestBody) {
 
 async function handleMarkAllAsRead(userId: string) {
   try {
-    await db
-      .update(notifications)
-      .set({ 
-        isRead: true, 
-        readAt: new Date() 
-      })
-      .where(
-        and(
-          eq(notifications.userId, userId),
-          eq(notifications.isRead, false)
-        )
-      );
+    await notificationOperations.markAllNotificationsAsRead(userId);
 
     return NextResponse.json({
       success: true,
@@ -462,7 +495,7 @@ async function handleMarkAllAsRead(userId: string) {
   }
 }
 
-async function handleGetUnreadCount(userId: string) {
+async function handleGetUnreadCount(userId: string, rateLimitHeaders: Record<string, string>) {
   try {
     // First, cleanup old dismissed notifications (runs periodically)
     await handleCleanupOldNotifications(userId);
@@ -470,23 +503,18 @@ async function handleGetUnreadCount(userId: string) {
     // Then create/update notifications based on current state
     await handleCreateNotifications(userId);
 
-    const result = await db
-      .select({ count: count() })
-      .from(notifications)
-      .where(
-        and(
-          eq(notifications.userId, userId),
-          eq(notifications.isRead, false),
-          sql`${notifications.dismissedAt} IS NULL`
-        )
-      );
+    const unreadCount = await notificationOperations.getUnreadNotificationCount(userId);
 
-    const unreadCount = result[0]?.count || 0;
-
-    return NextResponse.json({
+    const response = NextResponse.json({
       success: true,
       unreadCount,
     });
+    
+    // Add rate limit headers to response
+    for (const [header, value] of Object.entries(rateLimitHeaders)) {
+      response.headers.set(header, value);
+    }
+    return response;
   } catch (error) {
     console.error('Error fetching unread count:', error);
     return NextResponse.json({
@@ -578,19 +606,4 @@ async function handleCleanupOldNotifications(userId: string) {
       error: 'Failed to cleanup old notifications'
     }, { status: 500 });
   }
-}
-
-function formatTimeAgo(date: Date): string {
-  const now = new Date();
-  const diffInMs = now.getTime() - date.getTime();
-  const diffInMinutes = Math.floor(diffInMs / (1000 * 60));
-  const diffInHours = Math.floor(diffInMinutes / 60);
-  const diffInDays = Math.floor(diffInHours / 24);
-
-  if (diffInMinutes < 1) return 'Just now';
-  if (diffInMinutes < 60) return `${diffInMinutes}m ago`;
-  if (diffInHours < 24) return `${diffInHours}h ago`;
-  if (diffInDays < 7) return `${diffInDays}d ago`;
-  if (diffInDays < 30) return `${Math.floor(diffInDays / 7)}w ago`;
-  return date.toLocaleDateString();
 } 

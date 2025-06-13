@@ -2,9 +2,45 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireAnyRole } from '@/utils/roles';
 import { connectionOperations, userOperations } from '@/database/db-utils';
 import { sanitizeText } from '@/utils/sanitization';
-import { rateLimitMiddleware, addRateLimitHeaders } from '@/utils/rate-limiting';
+import { withRateLimit } from '@/utils/rate-limiting';
+import { getCachedWithType, setCachedWithType, invalidateCachePattern, createErrorResponse, createSuccessResponse } from '@/utils/security-cache';
 
 export const runtime = 'nodejs';
+
+interface ConnectionData {
+  id: number;
+  status: string;
+  initiatedBy: string;
+  createdAt: Date;
+  notes: string | null;
+  isInitiator: boolean;
+  otherUser: {
+    userId: string;
+    fullName: string;
+    profileImage: string | null;
+    organizationName: string;
+    title: string;
+    sport: string;
+    city: string;
+    state: string;
+    graduationYear: number | null;
+    educationLevel: string;
+    division: string;
+    isVerified: boolean;
+    role: string;
+  };
+}
+
+interface ConnectionsResponse {
+  connected: ConnectionData[];
+  incoming: ConnectionData[];
+  outgoing: ConnectionData[];
+  counts: { 
+    connected: number; 
+    incoming: number; 
+    outgoing: number; 
+  };
+}
 
 // Create a new connection request
 export async function POST(request: NextRequest) {
@@ -16,8 +52,8 @@ export async function POST(request: NextRequest) {
     const { userId: currentUserId, role } = authResult;
     
     // Apply rate limiting for connection operations
-    const rateLimitCheck = await rateLimitMiddleware('connections')(request, currentUserId, role);
-    if (rateLimitCheck) return rateLimitCheck;
+    const rateLimitCheck = await withRateLimit(request, 'connections', currentUserId, role);
+    if (!rateLimitCheck.success) return rateLimitCheck.response;
 
     // Parse request body with size limits
     const body = await request.json();
@@ -25,18 +61,12 @@ export async function POST(request: NextRequest) {
 
     // Validate required fields
     if (!targetUserId) {
-      return NextResponse.json(
-        { error: 'Target user ID is required' },
-        { status: 400 }
-      );
+      return createErrorResponse('Target user ID is required', 400);
     }
 
     // SECURITY: Prevent self-connections
     if (currentUserId === targetUserId) {
-      return NextResponse.json(
-        { error: 'Cannot connect to yourself' },
-        { status: 400 }
-      );
+      return createErrorResponse('Cannot connect to yourself', 400);
     }
 
     // Sanitize the note to prevent XSS
@@ -44,10 +74,7 @@ export async function POST(request: NextRequest) {
     
     // Validate note length
     if (sanitizedNote && sanitizedNote.length > 500) {
-      return NextResponse.json(
-        { error: 'Note must be 500 characters or less' },
-        { status: 400 }
-      );
+      return createErrorResponse('Note must be 500 characters or less', 400);
     }
 
     // Get both users' profiles to determine types and validate connection rules
@@ -57,18 +84,12 @@ export async function POST(request: NextRequest) {
     ]);
 
     if (!currentUser || !targetUser) {
-      return NextResponse.json(
-        { error: 'One or both users not found' },
-        { status: 404 }
-      );
+      return createErrorResponse('One or both users not found', 404);
     }
 
     // SECURITY: Only prevent athlete-to-athlete connections
     if (currentUser.role === 'athlete' && targetUser.role === 'athlete') {
-      return NextResponse.json(
-        { error: 'Athletes cannot connect to other athletes' },
-        { status: 400 }
-      );
+      return createErrorResponse('Athletes cannot connect to other athletes', 400);
     }
 
     // Create the connection using user IDs
@@ -79,7 +100,13 @@ export async function POST(request: NextRequest) {
       sanitizedNote
     );
 
-    const response = NextResponse.json({
+    // Invalidate connections cache for both users
+    await Promise.all([
+      invalidateCachePattern(`connections:${currentUserId}*`),
+      invalidateCachePattern(`connections:${targetUserId}*`)
+    ]);
+
+    const response = createSuccessResponse({
       success: true,
       connection: {
         id: connection.id,
@@ -88,74 +115,57 @@ export async function POST(request: NextRequest) {
         createdAt: connection.createdAt,
         notes: connection.notes
       }
-    });
+    }, rateLimitCheck.headers);
     
-    // Add rate limit headers to response
-    return addRateLimitHeaders(response, currentUserId, role, 'connections');
+    return response;
 
   } catch (error) {
     console.error('Error creating connection:', error);
     
     // Handle database constraint violations (e.g., duplicate connection)
     if (error instanceof Error && error.message.includes('unique')) {
-      return NextResponse.json(
-        { error: 'Connection already exists between these users' },
-        { status: 409 }
-      );
+      return createErrorResponse('Connection already exists between these users', 409);
     }
     
-    return NextResponse.json(
-      { error: 'Failed to create connection' },
-      { status: 500 }
-    );
+    return createErrorResponse('Failed to create connection', 500);
   }
 }
 
 // Get user's connections
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
     // Verify authentication
     const authResult = await requireAnyRole();
     if (authResult instanceof NextResponse) return authResult;
 
-    const { userId: currentUserId } = authResult;
+    const { userId: currentUserId, role } = authResult;
+
+    // Apply rate limiting
+    const rateLimitCheck = await withRateLimit(request, 'connections', currentUserId, role);
+    if (!rateLimitCheck.success) return rateLimitCheck.response;
+
+    // Try cache first
+    const cacheKey = `connections:${currentUserId}:all`;
+    const cachedConnections = await getCachedWithType<ConnectionsResponse>(cacheKey);
+    
+    if (cachedConnections) {
+      return createSuccessResponse(cachedConnections, rateLimitCheck.headers);
+    }
 
     // Get connections based on user type - now using the new user-based approach
     const allConnections = await connectionOperations.getUserConnections(currentUserId);
 
     // Separate connected vs pending, and incoming vs outgoing pending
-    const connectedConnections: {
-      id: number;
-      status: string;
-      initiatedBy: string;
-      createdAt: Date;
-      notes: string | null;
-      isInitiator: boolean;
-      otherUser: {
-        userId: string;
-        fullName: string;
-        profileImage: string | null;
-        organizationName: string;
-        title: string;
-        sport: string;
-        city: string;
-        state: string;
-        graduationYear: number | null;
-        educationLevel: string;
-        division: string;
-        isVerified: boolean;
-        role: string;
-      };
-    }[] = [];
-    const incomingPendingRequests: typeof connectedConnections = [];
-    const outgoingPendingRequests: typeof connectedConnections = [];
+    const connectedConnections: ConnectionData[] = [];
+    const incomingPendingRequests: ConnectionData[] = [];
+    const outgoingPendingRequests: ConnectionData[] = [];
 
     allConnections.forEach(connection => {
       // Determine which user is the "other" user
       const isFromUser = connection.fromUserId === currentUserId;
       const otherUser = isFromUser ? connection.toUser : connection.fromUser;
       
-      const formattedConnection = {
+      const formattedConnection: ConnectionData = {
         id: connection.id,
         status: connection.status,
         initiatedBy: connection.initiatedBy,
@@ -198,130 +208,124 @@ export async function GET() {
         connectedConnections.push(formattedConnection);
       } else if (connection.status === 'pending') {
         if (isFromUser) {
-          // This user initiated the request (outgoing)
           outgoingPendingRequests.push(formattedConnection);
         } else {
-          // The other user initiated the request (incoming)
           incomingPendingRequests.push(formattedConnection);
         }
       }
     });
 
-    return NextResponse.json({
-      success: true,
-      connections: connectedConnections,
-      pendingRequests: incomingPendingRequests,
-      sentRequests: outgoingPendingRequests
-    });
+    const result: ConnectionsResponse = {
+      connected: connectedConnections,
+      incoming: incomingPendingRequests,
+      outgoing: outgoingPendingRequests,
+      counts: {
+        connected: connectedConnections.length,
+        incoming: incomingPendingRequests.length,
+        outgoing: outgoingPendingRequests.length
+      }
+    };
+
+    // Cache the result
+    await setCachedWithType(cacheKey, result, 'userConnections');
+
+    return createSuccessResponse(result, rateLimitCheck.headers);
 
   } catch (error) {
     console.error('Error fetching connections:', error);
-    return NextResponse.json(
-      { error: 'Failed to fetch connections' },
-      { status: 500 }
-    );
+    return createErrorResponse('Failed to fetch connections', 500);
   }
 }
 
-// Delete a connection
+// Delete/reject a connection
 export async function DELETE(request: NextRequest) {
   try {
     // Verify authentication
     const authResult = await requireAnyRole();
     if (authResult instanceof NextResponse) return authResult;
 
-    const { userId: currentUserId } = authResult;
+    const { userId: currentUserId, role } = authResult;
+    
+    // Apply rate limiting for connection operations
+    const rateLimitCheck = await withRateLimit(request, 'connections', currentUserId, role);
+    if (!rateLimitCheck.success) return rateLimitCheck.response;
 
-    // Parse request body
-    const body = await request.json();
-    const { targetUserId } = body;
+    const { searchParams } = new URL(request.url);
+    const connectionId = searchParams.get('connectionId');
 
-    // Validate required fields
-    if (!targetUserId) {
-      return NextResponse.json(
-        { error: 'Target user ID is required' },
-        { status: 400 }
-      );
+    if (!connectionId) {
+      return createErrorResponse('Connection ID is required', 400);
     }
 
-    // Delete the connection using user IDs
-    const deletedConnection = await connectionOperations.deleteConnection(
-      currentUserId, 
-      targetUserId
-    );
+    // Delete the connection
+    const deleted = await connectionOperations.deleteConnection(connectionId, currentUserId);
 
-    if (!deletedConnection) {
-      return NextResponse.json(
-        { error: 'Connection not found' },
-        { status: 404 }
-      );
+    if (!deleted) {
+      return createErrorResponse('Connection not found or unauthorized', 404);
     }
 
-    return NextResponse.json({
+    // Invalidate connections cache
+    await invalidateCachePattern(`connections:${currentUserId}*`);
+
+    return createSuccessResponse({
       success: true,
-      message: 'Connection removed successfully'
-    });
+      message: 'Connection deleted successfully'
+    }, rateLimitCheck.headers);
 
   } catch (error) {
     console.error('Error deleting connection:', error);
-    return NextResponse.json(
-      { error: 'Failed to delete connection' },
-      { status: 500 }
-    );
+    return createErrorResponse('Failed to delete connection', 500);
   }
 }
 
-// Accept a pending connection request
+// Accept a connection request
 export async function PUT(request: NextRequest) {
   try {
     // Verify authentication
     const authResult = await requireAnyRole();
     if (authResult instanceof NextResponse) return authResult;
 
-    const { userId: currentUserId } = authResult;
+    const { userId: currentUserId, role } = authResult;
+    
+    // Apply rate limiting for connection operations
+    const rateLimitCheck = await withRateLimit(request, 'connections', currentUserId, role);
+    if (!rateLimitCheck.success) return rateLimitCheck.response;
 
-    // Parse request body
     const body = await request.json();
-    const { fromUserId } = body;
+    const { connectionId } = body;
 
-    // Validate required fields
-    if (!fromUserId) {
-      return NextResponse.json(
-        { error: 'From user ID is required' },
-        { status: 400 }
-      );
+    if (!connectionId) {
+      return createErrorResponse('Connection ID is required', 400);
     }
 
     // Update the connection status from pending to connected
-    const updatedConnection = await connectionOperations.updateConnectionStatus(
-      fromUserId, 
+    const connection = await connectionOperations.updateConnectionStatus(
+      connectionId.toString(),
       currentUserId,
       'connected'
     );
 
-    if (!updatedConnection) {
-      return NextResponse.json(
-        { error: 'Pending connection not found' },
-        { status: 404 }
-      );
+    if (!connection) {
+      return createErrorResponse('Connection not found or unauthorized', 404);
     }
 
-    return NextResponse.json({
+    // Invalidate connections cache for both users
+    await Promise.all([
+      invalidateCachePattern(`connections:${currentUserId}*`),
+      invalidateCachePattern(`connections:*`)
+    ]);
+
+    return createSuccessResponse({
       success: true,
-      message: 'Connection request accepted successfully',
       connection: {
-        id: updatedConnection.id,
-        status: updatedConnection.status,
-        initiatedBy: updatedConnection.initiatedBy,
-        createdAt: updatedConnection.createdAt
+        id: connection.id,
+        status: connection.status,
+        createdAt: connection.createdAt
       }
-    });
+    }, rateLimitCheck.headers);
 
   } catch (error) {
     console.error('Error accepting connection:', error);
-    return NextResponse.json(
-      { error: 'Failed to accept connection' },
-      { status: 500 }
-    );
+    return createErrorResponse('Failed to accept connection', 500);
   }
 } 
