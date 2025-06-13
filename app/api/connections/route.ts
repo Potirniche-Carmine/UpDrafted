@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireAnyRole } from '@/utils/roles';
 import { connectionOperations, userOperations } from '@/database/db-utils';
 import { sanitizeText } from '@/utils/sanitization';
+import { rateLimitMiddleware, addRateLimitHeaders } from '@/utils/rate-limiting';
 
 export const runtime = 'nodejs';
 
@@ -12,7 +13,11 @@ export async function POST(request: NextRequest) {
     const authResult = await requireAnyRole();
     if (authResult instanceof NextResponse) return authResult;
 
-    const { userId: currentUserId } = authResult;
+    const { userId: currentUserId, role } = authResult;
+    
+    // Apply rate limiting for connection operations
+    const rateLimitCheck = await rateLimitMiddleware('connections')(request, currentUserId, role);
+    if (rateLimitCheck) return rateLimitCheck;
 
     // Parse request body with size limits
     const body = await request.json();
@@ -74,7 +79,7 @@ export async function POST(request: NextRequest) {
       sanitizedNote
     );
 
-    return NextResponse.json({
+    const response = NextResponse.json({
       success: true,
       connection: {
         id: connection.id,
@@ -84,6 +89,9 @@ export async function POST(request: NextRequest) {
         notes: connection.notes
       }
     });
+    
+    // Add rate limit headers to response
+    return addRateLimitHeaders(response, currentUserId, role, 'connections');
 
   } catch (error) {
     console.error('Error creating connection:', error);

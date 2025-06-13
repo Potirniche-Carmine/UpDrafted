@@ -4,6 +4,7 @@ import { db } from '@/database/db';
 import { users, athleteProfiles, coachProfiles, recruitingProfiles, connections } from '@/database/schema';
 import { and, eq, or, not, ilike, isNull, exists, ne, sql } from 'drizzle-orm';
 import { sanitizeText, sanitizeNumber } from '@/utils/sanitization';
+import { rateLimitMiddleware, addRateLimitHeaders } from '@/utils/rate-limiting';
 
 // Force Node.js runtime
 export const runtime = 'nodejs';
@@ -45,6 +46,10 @@ export async function GET(request: NextRequest) {
     if (auth instanceof NextResponse) return auth;
 
     const { userId, role } = auth;
+    
+    // Apply rate limiting for search operations
+    const rateLimitCheck = await rateLimitMiddleware('search')(request, userId, role);
+    if (rateLimitCheck) return rateLimitCheck;
     const { searchParams } = url;
 
     // Sanitize and validate query parameters
@@ -272,7 +277,7 @@ export async function GET(request: NextRequest) {
       'Cache-Control': 'no-store, max-age=0'
     });
 
-    return new NextResponse(
+    const response = new NextResponse(
       JSON.stringify({
         success: true,
         results: processedResults,
@@ -286,6 +291,9 @@ export async function GET(request: NextRequest) {
         headers
       }
     );
+    
+    // Add rate limit headers to response
+    return addRateLimitHeaders(response, userId, role, 'search');
   } catch (error) {
     console.error('Discover API error:', error);
     return NextResponse.json(

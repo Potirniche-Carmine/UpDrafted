@@ -3,38 +3,32 @@ import { requireOwnershipOrAdmin } from '@/utils/roles';
 import { uploadProfilePicture, uploadOrganizationLogo } from '@/database/r2/uploads';
 import { deleteFromR2, getR2KeyFromUrl } from '@/database/r2/config';
 import { coachOperations, athleteOperations, recruitingOperations, userOperations } from '@/database/db-utils';
+import { withRateLimit, scanContent, createErrorResponse, createSuccessResponse, validateFile, invalidateCache } from '@/utils/production-config';
 
 export const runtime = 'nodejs';
 
 export async function POST(request: NextRequest) {
   try {
+    // Rate limiting for file uploads
+    const rateLimitCheck = await withRateLimit(request, 'fileUpload');
+    if (!rateLimitCheck.success) {
+      return rateLimitCheck.response;
+    }
+
+    // Parse form data
     const formData = await request.formData();
-    const file = formData.get('file') as File;
     const userId = formData.get('userId') as string;
+    const file = formData.get('file') as File;
     const imageType = formData.get('imageType') as 'profile' | 'organization';
     const currentImageUrl = formData.get('currentImageUrl') as string | null;
     const removeOnly = formData.get('removeOnly') as string | null;
 
-    if (!userId || !imageType) {
-      return NextResponse.json(
-        { error: 'Missing required fields' },
-        { status: 400 }
-      );
+    if (!userId) {
+      return createErrorResponse('Missing user ID', 400);
     }
 
-    // If removeOnly is true, we only need userId, imageType, and currentImageUrl
-    if (removeOnly === 'true') {
-      if (!currentImageUrl) {
-        return NextResponse.json(
-          { error: 'No image to remove' },
-          { status: 400 }
-        );
-      }
-    } else if (!file) {
-      return NextResponse.json(
-        { error: 'Missing file for upload' },
-        { status: 400 }
-      );
+    if (!imageType) {
+      return createErrorResponse('Missing image type', 400);
     }
 
     // Verify ownership or admin access
@@ -43,186 +37,116 @@ export async function POST(request: NextRequest) {
 
     // Handle remove-only operation
     if (removeOnly === 'true') {
-      // Delete the image from R2
-      try {
-        const oldKey = getR2KeyFromUrl(currentImageUrl!);
-        await deleteFromR2(oldKey, false);
-      } catch (error) {
-        console.error('Remove-only: Failed to delete image from R2:', error);
+      if (!currentImageUrl) {
+        return createErrorResponse('No image to remove', 400);
       }
 
-      // Update database to remove image reference
       try {
-        // First, get the user's role from their profile
-        const userWithProfile = await userOperations.getUserWithProfile(userId);
-        
-        if (!userWithProfile) {
-          return NextResponse.json(
-            { success: false, error: 'User not found' },
-            { status: 404 }
-          );
-        }
-
-        const userRole = userWithProfile.role;
-        
-        if (imageType === 'profile') {
-          if (userRole === 'athlete') {
-            await athleteOperations.updateAthleteProfile(userId, {
-              profileImageR3Key: null
-            });
-          } else if (userRole === 'coach') {
-            await coachOperations.updateCoachProfile(userId, {
-              profileImageR3Key: null
-            });
-          } else if (userRole === 'recruiter') {
-            await recruitingOperations.updateRecruitingProfile(userId, {
-              profileImageR3Key: null
-            });
-          } else {
-            throw new Error(`Unsupported user role: ${userRole}`);
-          }
-        } else if (imageType === 'organization') {
-          // Organization logos are only for coaches and recruiters
-          if (userRole === 'coach') {
-            await coachOperations.updateCoachProfile(userId, {
-              organizationLogoR3Key: null
-            });
-          } else if (userRole === 'recruiter') {
-            await recruitingOperations.updateRecruitingProfile(userId, {
-              organizationLogoR3Key: null
-            });
-          } else {
-            throw new Error(`Organization logos are not supported for role: ${userRole}`);
-          }
-        }
-      } catch (error) {
-        console.error('Database update error during removal:', error);
-        return NextResponse.json(
-          { error: 'Failed to remove image from profile' },
-          { status: 500 }
-        );
-      }
-
-      return NextResponse.json({
-        success: true,
-        removed: true,
-        message: 'Image removed successfully'
-      });
-    }
-
-    // Continue with regular upload logic...
-    // Validate file type
-    if (!file.type.startsWith('image/')) {
-      return NextResponse.json(
-        { error: 'Only image files are allowed' },
-        { status: 400 }
-      );
-    }
-
-    // Validate file size (5MB limit)
-    if (file.size > 5 * 1024 * 1024) {
-      return NextResponse.json(
-        { error: 'File size must be less than 5MB' },
-        { status: 400 }
-      );
-    }
-
-    // Delete old image if it exists
-    if (currentImageUrl) {
-      try {
+        // Delete from R2
         const oldKey = getR2KeyFromUrl(currentImageUrl);
-        await deleteFromR2(oldKey, false); // false for public bucket
-      } catch (error) {
-        console.error('Failed to delete old image from R2:', error);
-        // Continue with upload even if deletion fails
-      }
-    }
+        await deleteFromR2(oldKey, false);
 
-    // Upload new image
-    let uploadResult;
-    try {
-      if (imageType === 'profile') {
-        uploadResult = await uploadProfilePicture(file, userId);
-      } else {
-        uploadResult = await uploadOrganizationLogo(file, userId);
-      }
-    } catch (error) {
-      console.error('Upload error:', error);
-      return NextResponse.json(
-        { error: 'Failed to upload image' },
-        { status: 500 }
-      );
-    }
-
-    // Update database with new image key
-    try {
-      // First, get the user's role from their profile
-      const userWithProfile = await userOperations.getUserWithProfile(userId);
-      
-      if (!userWithProfile) {
-        return NextResponse.json(
-          { success: false, error: 'User not found' },
-          { status: 404 }
-        );
-      }
-
-      const userRole = userWithProfile.role;
-      
-      if (imageType === 'profile') {
-        if (userRole === 'athlete') {
-          await athleteOperations.updateAthleteProfile(userId, {
-            profileImageR3Key: uploadResult.key
-          });
-        } else if (userRole === 'coach') {
-          await coachOperations.updateCoachProfile(userId, {
-            profileImageR3Key: uploadResult.key
-          });
-        } else if (userRole === 'recruiter') {
-          await recruitingOperations.updateRecruitingProfile(userId, {
-            profileImageR3Key: uploadResult.key
-          });
-        } else {
-          throw new Error(`Unsupported user role: ${userRole}`);
+        // Update database
+        const userWithProfile = await userOperations.getUserWithProfile(userId);
+        if (!userWithProfile) {
+          return createErrorResponse('User not found', 404);
         }
-      } else if (imageType === 'organization') {
-        // Organization logos are only for coaches and recruiters
-        if (userRole === 'coach') {
-          await coachOperations.updateCoachProfile(userId, {
-            organizationLogoR3Key: uploadResult.key
-          });
-        } else if (userRole === 'recruiter') {
-          await recruitingOperations.updateRecruitingProfile(userId, {
-            organizationLogoR3Key: uploadResult.key
-          });
-        } else {
-          throw new Error(`Organization logos are not supported for role: ${userRole}`);
+
+        const updateData = imageType === 'profile' 
+          ? { profileImageR3Key: null }
+          : { organizationLogoR3Key: null };
+
+        if (userWithProfile.role === 'athlete' && imageType === 'profile') {
+          await athleteOperations.updateAthleteProfile(userId, updateData);
+        } else if (userWithProfile.role === 'coach') {
+          await coachOperations.updateCoachProfile(userId, updateData);
+        } else if (userWithProfile.role === 'recruiter') {
+          await recruitingOperations.updateRecruitingProfile(userId, updateData);
         }
-      }
-    } catch (error) {
-      console.error('Database update error:', error);
-      // Clean up uploaded file if database update fails
-      try {
-        await deleteFromR2(uploadResult.key, false);
-      } catch (cleanupError) {
-        console.error('Failed to cleanup uploaded file:', cleanupError);
-      }
-      return NextResponse.json(
-        { error: 'Failed to update profile with new image' },
-        { status: 500 }
-      );
+
+                 // Invalidate profile cache
+         await invalidateCache(`profile:${userId}`);
+         
+         return createSuccessResponse({
+           removed: true,
+           message: 'Image removed successfully'
+         }, rateLimitCheck.headers);
+
+       } catch {
+         return createErrorResponse('Failed to remove image', 500);
+       }
     }
 
-    return NextResponse.json({
-      success: true,
-      imageUrl: uploadResult.url,
-      key: uploadResult.key
-    });
+    // Validate file for upload
+    if (!file) {
+      return createErrorResponse('Missing file for upload', 400);
+    }
 
-  } catch (error) {
-    console.error('Error uploading image:', error);
-    return NextResponse.json(
-      { error: 'Failed to upload image' },
-      { status: 500 }
-    );
-  }
+         // File validation
+     const validation = validateFile(file);
+     if (!validation.valid) {
+       return createErrorResponse(validation.error || 'Invalid file', 400);
+     }
+
+     // Content scanning
+     const buffer = await file.arrayBuffer();
+     const scanResult = await scanContent(buffer);
+     
+     if (!scanResult.safe) {
+       return createErrorResponse(`File security check failed: ${scanResult.reason}`, 400);
+     }
+
+           try {
+         // Delete old image if exists
+         if (currentImageUrl) {
+           try {
+             const oldKey = getR2KeyFromUrl(currentImageUrl);
+             await deleteFromR2(oldKey, false);
+           } catch {
+             // Continue if old image deletion fails
+           }
+         }
+
+         // Upload new image
+         const uploadResult = imageType === 'profile'
+           ? await uploadProfilePicture(file, userId)
+           : await uploadOrganizationLogo(file, userId);
+
+         // Update database
+         const userWithProfile = await userOperations.getUserWithProfile(userId);
+         if (!userWithProfile) {
+           return createErrorResponse('User not found', 404);
+         }
+
+         const updateData = imageType === 'profile'
+           ? { profileImageR3Key: uploadResult.key }
+           : { organizationLogoR3Key: uploadResult.key };
+
+         if (userWithProfile.role === 'athlete' && imageType === 'profile') {
+           await athleteOperations.updateAthleteProfile(userId, updateData);
+         } else if (userWithProfile.role === 'coach') {
+           await coachOperations.updateCoachProfile(userId, updateData);
+         } else if (userWithProfile.role === 'recruiter') {
+           await recruitingOperations.updateRecruitingProfile(userId, updateData);
+         } else {
+           return createErrorResponse(`Unsupported operation for role: ${userWithProfile.role}`, 400);
+         }
+
+         // Invalidate profile cache
+         await invalidateCache(`profile:${userId}`);
+
+         return createSuccessResponse({
+           success: true,
+           imageUrl: uploadResult.url,
+           key: uploadResult.key,
+           message: 'Image uploaded successfully'
+         }, rateLimitCheck.headers);
+
+       } catch {
+         return createErrorResponse('Failed to upload image', 500);
+       }
+
+     } catch {
+       return createErrorResponse('Internal server error', 500);
+     }
 } 

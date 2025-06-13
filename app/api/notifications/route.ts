@@ -5,6 +5,7 @@ import { validateClerkHeaders } from '@/utils/clerk-security';
 import { requireAnyRole } from '@/utils/roles';
 import { eq, desc, and, count, sql } from 'drizzle-orm';
 import { profileOperations, messageOperations, connectionOperations } from '@/database/db-utils';
+import { rateLimitMiddleware, addRateLimitHeaders } from '@/utils/rate-limiting';
 
 type Operation = 'getNotifications' | 'markAsRead' | 'markAllAsRead' | 'getUnreadCount' | 'createNotifications' | 'dismissAllNotifications' | 'cleanupOldNotifications';
 
@@ -39,7 +40,11 @@ export async function POST(request: NextRequest) {
       return authResult;
     }
 
-    const { userId } = authResult;
+    const { userId, role } = authResult;
+    
+    // Apply rate limiting for general operations
+    const rateLimitCheck = await rateLimitMiddleware('general')(request, userId, role);
+    if (rateLimitCheck) return rateLimitCheck;
     
     // Parse request body and get operation type
     const body = await request.json();
@@ -55,7 +60,7 @@ export async function POST(request: NextRequest) {
     // Route to appropriate handler based on operation
     switch (operation) {
       case 'getNotifications':
-        return await handleGetNotifications(userId, body as GetNotificationsRequestBody);
+        return await handleGetNotifications(userId, body as GetNotificationsRequestBody, role);
       
       case 'markAsRead':
         return await handleMarkAsRead(userId, body as MarkAsReadRequestBody);
@@ -297,7 +302,7 @@ async function handleCreateNotifications(userId: string) {
   }
 }
 
-async function handleGetNotifications(userId: string, body: GetNotificationsRequestBody) {
+async function handleGetNotifications(userId: string, body: GetNotificationsRequestBody, userRole: 'athlete' | 'coach' | 'recruiter' | 'admin') {
   try {
     const { limit = 20, offset = 0, unreadOnly = false } = body;
 
@@ -385,10 +390,13 @@ async function handleGetNotifications(userId: string, body: GetNotificationsRequ
       })
     );
 
-    return NextResponse.json({
+    const response = NextResponse.json({
       success: true,
       notifications: enhancedNotifications,
     });
+    
+    // Add rate limit headers to response
+    return addRateLimitHeaders(response, userId, userRole, 'general');
   } catch (error) {
     console.error('Error fetching notifications:', error);
     return NextResponse.json({
