@@ -28,6 +28,11 @@ const isProtectedApiRoute = createRouteMatcher([
   '/api/notifications(.*)'
 ]);
 
+// Define public routes that should NOT require authentication
+const isPublicApiRoute = createRouteMatcher([
+  '/api/webhooks/clerk'
+]);
+
 // Security middleware for mutation operations
 const securityMiddleware = async (request: NextRequest) => {
   // Only apply security checks to mutation methods
@@ -106,6 +111,12 @@ const securityMiddleware = async (request: NextRequest) => {
 
 // Combine Clerk middleware with security middleware
 export default clerkMiddleware(async (auth, req) => {
+  // Skip auth for public routes like Clerk webhook
+  if (isPublicApiRoute(req)) {
+    // Don't protect public routes
+    return;
+  }
+
   // Check if it's a protected API route
   if (isProtectedApiRoute(req)) {
     // Protect all routes except search
