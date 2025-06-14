@@ -111,10 +111,10 @@ const securityMiddleware = async (request: NextRequest) => {
 
 // Combine Clerk middleware with security middleware
 export default clerkMiddleware(async (auth, req) => {
-  // Skip auth for public routes like Clerk webhook
+  // Skip ALL middleware for public routes like Clerk webhook
   if (isPublicApiRoute(req)) {
-    // Don't protect public routes
-    return;
+    // Completely bypass all middleware for webhooks
+    return NextResponse.next();
   }
 
   // Check if it's a protected API route
@@ -125,7 +125,7 @@ export default clerkMiddleware(async (auth, req) => {
     }
   }
 
-  // Apply security middleware for API routes
+  // Apply security middleware for API routes (except public routes)
   if (req.nextUrl.pathname.startsWith('/api/')) {
     const securityResult = await securityMiddleware(req);
     if (securityResult.status !== 200) {

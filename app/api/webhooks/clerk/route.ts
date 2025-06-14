@@ -31,15 +31,41 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(
       { message: 'Webhook processed successfully' },
-      { status: 200 }
+      { 
+        status: 200, 
+        headers: {
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Methods': 'POST',
+          'Access-Control-Allow-Headers': 'Content-Type, svix-id, svix-timestamp, svix-signature',
+        }
+      }
     );
 
   } catch {
     return NextResponse.json(
       { error: 'Webhook processing failed' },
-      { status: 500 }
+      { 
+        status: 500,
+        headers: {
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Methods': 'POST',
+          'Access-Control-Allow-Headers': 'Content-Type, svix-id, svix-timestamp, svix-signature',
+        }
+      }
     );
   }
+}
+
+// Handle OPTIONS requests for CORS preflight
+export async function OPTIONS() {
+  return new NextResponse(null, {
+    status: 200,
+    headers: {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'POST, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, svix-id, svix-timestamp, svix-signature',
+    },
+  });
 }
 
 async function handleUserDeleted(evt: WebhookEvent) {
