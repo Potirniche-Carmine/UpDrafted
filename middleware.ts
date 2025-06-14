@@ -30,7 +30,8 @@ const isProtectedApiRoute = createRouteMatcher([
 
 // Define public routes that should NOT require authentication
 const isPublicApiRoute = createRouteMatcher([
-  '/api/webhooks/clerk'
+  '/api/webhooks/clerk',
+  '/api/webhooks/clerk/'
 ]);
 
 // Security middleware for mutation operations
