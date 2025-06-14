@@ -136,8 +136,9 @@ export const config = {
   matcher: [
     // Skip all files in the public folder
     '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
-    // Run middleware on all API routes except for webhooks
-    '/(api|trpc)(?!/webhooks)(.*)',
+    // Run middleware on API routes (webhooks will be excluded in the middleware function)
+    '/api/(.*)',
+    '/trpc/(.*)',
   ]
 };
 
