@@ -6,48 +6,24 @@ import { users, athleteProfiles, coachProfiles, recruitingProfiles, verification
 import { eq } from 'drizzle-orm';
 import { deleteFromR2 } from '@/database/r2/config';
 
-// Add GET handler for debugging
-export async function GET() {
-  return new Response(JSON.stringify({ 
-    message: 'Clerk webhook endpoint is ready',
-    timestamp: new Date().toISOString(),
-    methods: ['POST', 'OPTIONS'],
-    hasSecret: !!process.env.CLERK_WEBHOOK_SIGNING_SECRET
-  }), {
-    status: 200,
-    headers: {
-      'Content-Type': 'application/json',
-    },
-  });
-}
-
 export async function POST(req: NextRequest) {
   try {
-    console.log('=== CLERK WEBHOOK RECEIVED ===');
-    console.log('Method:', req.method);
-    console.log('URL:', req.url);
-    console.log('Headers:', Object.fromEntries(req.headers.entries()));
-    
-         // Verify the webhook using Clerk's built-in function
-     const event = await verifyWebhook(req);
-     
-     console.log('Webhook verified successfully');
-     console.log('Received webhook:', event.type, 'for user:', event.data.id);
+    // Verify the webhook using Clerk's built-in function
+    const event = await verifyWebhook(req);
 
     // Handle different webhook events
     switch (event.type) {
       case 'user.deleted':
         await handleUserDeleted(event);
-        console.log('User deleted successfully:', event.data.id);
         break;
       
       case 'user.created':
       case 'user.updated':
-        console.log('User event received (no action needed):', event.type);
+        // No action needed - users only stored after onboarding
         break;
       
       default:
-        console.log('Unhandled webhook type:', event.type);
+        // Unhandled webhook type - no action needed
         break;
     }
 
@@ -58,8 +34,7 @@ export async function POST(req: NextRequest) {
       },
     });
 
-  } catch (error) {
-    console.error('Webhook error:', error);
+  } catch {
     return new Response(JSON.stringify({ error: 'Internal server error' }), {
       status: 500,
       headers: {
@@ -71,7 +46,6 @@ export async function POST(req: NextRequest) {
 
 // Handle OPTIONS requests for CORS preflight
 export async function OPTIONS() {
-  console.log('=== OPTIONS REQUEST FOR CLERK WEBHOOK ===');
   return new Response(null, {
     status: 200,
     headers: {
@@ -86,11 +60,8 @@ async function handleUserDeleted(evt: WebhookEvent) {
   try {
     const userId = evt.data.id;
     if (!userId) {
-      console.log('No user ID in webhook data');
       return;
     }
-
-    console.log('Processing user deletion for:', userId);
 
     // Check if user exists in our database
     const existingUser = await db
@@ -100,7 +71,6 @@ async function handleUserDeleted(evt: WebhookEvent) {
       .limit(1);
 
     if (existingUser.length === 0) {
-      console.log('User not found in database:', userId);
       return;
     }
 
@@ -109,11 +79,8 @@ async function handleUserDeleted(evt: WebhookEvent) {
 
     // Delete user from our database (this will cascade delete all related data)
     await db.delete(users).where(eq(users.id, userId));
-    
-    console.log('User and associated data deleted successfully:', userId);
 
-  } catch (error) {
-    console.error('Error in handleUserDeleted:', error);
+  } catch {
     // Don't throw the error - we want the webhook to return 200
     // This prevents Clerk from retrying the webhook unnecessarily
   }
@@ -121,8 +88,6 @@ async function handleUserDeleted(evt: WebhookEvent) {
 
 async function cleanupUserFiles(userId: string) {
   try {
-    console.log('Cleaning up files for user:', userId);
-
     // Get all file references for this user before deletion
     const [athlete, coach, recruiter, verificationFilesList] = await Promise.all([
       // Get athlete profile image
@@ -187,8 +152,6 @@ async function cleanupUserFiles(userId: string) {
       }
     });
 
-    console.log(`Found ${filesToDelete.length} files to delete for user:`, userId);
-
     // Delete all files from R2 storage
     await Promise.allSettled(
       filesToDelete.map(async (fileKey) => {
@@ -196,18 +159,13 @@ async function cleanupUserFiles(userId: string) {
           // Determine if file is private based on key pattern
           const isPrivateFile = fileKey.includes('verification') || fileKey.includes('users/');
           await deleteFromR2(fileKey, isPrivateFile);
-          console.log('Deleted file:', fileKey);
-        } catch (error) {
-          console.error('Error deleting file:', fileKey, error);
+        } catch {
           // Silent fail for individual file deletions to avoid blocking user deletion
         }
       })
     );
 
-    console.log('File cleanup completed for user:', userId);
-
-  } catch (error) {
-    console.error('Error in cleanupUserFiles:', error);
+  } catch {
     // Silent fail - file cleanup is optional and shouldn't block user deletion
   }
 } 
