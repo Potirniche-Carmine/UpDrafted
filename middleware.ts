@@ -1,4 +1,4 @@
-import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server';
+import { clerkMiddleware } from '@clerk/nextjs/server';
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
@@ -14,12 +14,6 @@ setInterval(() => {
     }
   }
 }, 60000); // Clean every minute
-
-// Define webhook routes that don't require authentication
-const isWebhookRoute = createRouteMatcher([
-  '/api/webhooks/(.*)'
-]);
-
 
 // Security middleware for mutation operations
 const securityMiddleware = async (request: NextRequest) => {
@@ -99,12 +93,7 @@ const securityMiddleware = async (request: NextRequest) => {
 
 // Combine Clerk middleware with security middleware
 export default clerkMiddleware(async (auth, req) => {
-  // Skip authentication for webhook routes only
-  if (isWebhookRoute(req)) {
-    return NextResponse.next();
-  }
-
-  // Protect all API routes (except webhooks)
+  // Protect all API routes (webhooks are excluded by matcher)
   if (req.nextUrl.pathname.startsWith('/api/')) {
     await auth.protect();
     
@@ -121,10 +110,10 @@ export default clerkMiddleware(async (auth, req) => {
 // Optimized matcher configuration
 export const config = {
   matcher: [
-    // Skip all files in the public folder
-    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
-    // Run middleware on all API routes
-    '/api/(.*)',
+    // Skip all files in the public folder and webhook routes
+    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$|api/webhooks/).*)',
+    // Run middleware on all API routes EXCEPT webhooks
+    '/api/(?!webhooks).*',
     '/trpc/(.*)',
   ]
 };
