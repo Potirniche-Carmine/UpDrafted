@@ -5,10 +5,30 @@ import { users, athleteProfiles, coachProfiles, recruitingProfiles, verification
 import { eq } from 'drizzle-orm';
 import { deleteFromR2 } from '@/database/r2/config';
 
+// Add GET handler for debugging
+export async function GET() {
+  return new Response(JSON.stringify({ 
+    message: 'Clerk webhook endpoint is ready',
+    timestamp: new Date().toISOString(),
+    methods: ['POST', 'OPTIONS']
+  }), {
+    status: 200,
+    headers: {
+      'Content-Type': 'application/json',
+    },
+  });
+}
+
 export async function POST(req: NextRequest) {
   try {
+    console.log('=== CLERK WEBHOOK RECEIVED ===');
+    console.log('Method:', req.method);
+    console.log('URL:', req.url);
+    console.log('Headers:', Object.fromEntries(req.headers.entries()));
+    
     // Get the raw body
     const body = await req.text();
+    console.log('Body length:', body.length);
     
     // Parse the webhook payload
     const event: WebhookEvent = JSON.parse(body);
@@ -52,6 +72,7 @@ export async function POST(req: NextRequest) {
 
 // Handle OPTIONS requests for CORS preflight
 export async function OPTIONS() {
+  console.log('=== OPTIONS REQUEST FOR CLERK WEBHOOK ===');
   return new Response(null, {
     status: 200,
     headers: {
