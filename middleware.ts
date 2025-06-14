@@ -15,17 +15,9 @@ setInterval(() => {
   }
 }, 60000); // Clean every minute
 
-// Define protected routes that require authentication
-const isProtectedApiRoute = createRouteMatcher([
-  '/api/profile/(.*)',
-  '/api/connections(.*)',
-  '/api/verification(.*)',
-  '/api/onboarding(.*)',
-  '/api/search(.*)',
-  '/api/discover(.*)',
-  '/api/messages(.*)',
-  '/api/messages/(.*)',
-  '/api/notifications(.*)'
+// Define webhook routes that don't require authentication
+const isWebhookRoute = createRouteMatcher([
+  '/api/webhooks/(.*)'
 ]);
 
 
@@ -107,21 +99,16 @@ const securityMiddleware = async (request: NextRequest) => {
 
 // Combine Clerk middleware with security middleware
 export default clerkMiddleware(async (auth, req) => {
-  // Skip all processing for webhook routes
-  if (req.nextUrl.pathname.startsWith('/api/webhooks/')) {
+  // Skip authentication for webhook routes only
+  if (isWebhookRoute(req)) {
     return NextResponse.next();
   }
 
-  // Check if it's a protected API route
-  if (isProtectedApiRoute(req)) {
-    // Protect all routes except search
-    if (!req.nextUrl.pathname.startsWith('/api/search')) {
-      await auth.protect();
-    }
-  }
-
-  // Apply security middleware for API routes (except public routes)
+  // Protect all API routes (except webhooks)
   if (req.nextUrl.pathname.startsWith('/api/')) {
+    await auth.protect();
+    
+    // Apply security middleware for mutation operations
     const securityResult = await securityMiddleware(req);
     if (securityResult.status !== 200) {
       return securityResult;
@@ -136,7 +123,7 @@ export const config = {
   matcher: [
     // Skip all files in the public folder
     '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
-    // Run middleware on API routes (webhooks will be excluded in the middleware function)
+    // Run middleware on all API routes
     '/api/(.*)',
     '/trpc/(.*)',
   ]
