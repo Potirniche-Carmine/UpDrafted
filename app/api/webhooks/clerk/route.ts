@@ -1,4 +1,5 @@
 import { NextRequest } from 'next/server';
+import { verifyWebhook } from '@clerk/nextjs/webhooks';
 import { WebhookEvent } from '@clerk/nextjs/server';
 import { db } from '@/database/db';
 import { users, athleteProfiles, coachProfiles, recruitingProfiles, verificationFiles, verificationRequests } from '@/database/schema';
@@ -10,7 +11,8 @@ export async function GET() {
   return new Response(JSON.stringify({ 
     message: 'Clerk webhook endpoint is ready',
     timestamp: new Date().toISOString(),
-    methods: ['POST', 'OPTIONS']
+    methods: ['POST', 'OPTIONS'],
+    hasSecret: !!process.env.CLERK_WEBHOOK_SIGNING_SECRET
   }), {
     status: 200,
     headers: {
@@ -26,14 +28,11 @@ export async function POST(req: NextRequest) {
     console.log('URL:', req.url);
     console.log('Headers:', Object.fromEntries(req.headers.entries()));
     
-    // Get the raw body
-    const body = await req.text();
-    console.log('Body length:', body.length);
-    
-    // Parse the webhook payload
-    const event: WebhookEvent = JSON.parse(body);
-    
-    console.log('Received webhook:', event.type, event.data);
+         // Verify the webhook using Clerk's built-in function
+     const event = await verifyWebhook(req);
+     
+     console.log('Webhook verified successfully');
+     console.log('Received webhook:', event.type, 'for user:', event.data.id);
 
     // Handle different webhook events
     switch (event.type) {
