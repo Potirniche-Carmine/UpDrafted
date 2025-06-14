@@ -65,7 +65,7 @@ const nextConfig: NextConfig = {
     middlewarePrefetch: 'flexible',
   },
   // Force static optimization where possible
-  trailingSlash: true,
+  trailingSlash: false,
   compress: true,
   // Optimize headers
   headers: async () => [

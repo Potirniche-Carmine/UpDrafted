@@ -107,6 +107,10 @@ const securityMiddleware = async (request: NextRequest) => {
 
 // Combine Clerk middleware with security middleware
 export default clerkMiddleware(async (auth, req) => {
+  // Skip all processing for webhook routes
+  if (req.nextUrl.pathname.startsWith('/api/webhooks/')) {
+    return NextResponse.next();
+  }
 
   // Check if it's a protected API route
   if (isProtectedApiRoute(req)) {
@@ -130,8 +134,10 @@ export default clerkMiddleware(async (auth, req) => {
 // Optimized matcher configuration
 export const config = {
   matcher: [
-    // Run middleware on all API routes except for the Clerk webhook
-    '/api/((?!webhooks/clerk).*)',
+    // Skip all files in the public folder
+    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+    // Run middleware on all API routes except for webhooks
+    '/(api|trpc)(?!/webhooks)(.*)',
   ]
 };
 

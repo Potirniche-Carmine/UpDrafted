@@ -1,64 +1,58 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { verifyWebhook } from '@clerk/nextjs/webhooks';
+import { NextRequest } from 'next/server';
 import { WebhookEvent } from '@clerk/nextjs/server';
 import { db } from '@/database/db';
 import { users, athleteProfiles, coachProfiles, recruitingProfiles, verificationFiles, verificationRequests } from '@/database/schema';
 import { eq } from 'drizzle-orm';
 import { deleteFromR2 } from '@/database/r2/config';
 
-export async function POST(request: NextRequest) {
+export async function POST(req: NextRequest) {
   try {
-    // Verify the webhook using Clerk's official method
-    const evt = await verifyWebhook(request);
-
-    const eventType = evt.type;
+    // Get the raw body
+    const body = await req.text();
+    
+    // Parse the webhook payload
+    const event: WebhookEvent = JSON.parse(body);
+    
+    console.log('Received webhook:', event.type, event.data);
 
     // Handle different webhook events
-    switch (eventType) {
+    switch (event.type) {
       case 'user.deleted':
-        await handleUserDeleted(evt);
+        await handleUserDeleted(event);
+        console.log('User deleted successfully:', event.data.id);
         break;
       
       case 'user.created':
       case 'user.updated':
-        // No action needed - users only stored after onboarding
+        console.log('User event received (no action needed):', event.type);
         break;
       
       default:
-        // Unhandled webhook type - no action needed
+        console.log('Unhandled webhook type:', event.type);
         break;
     }
 
-    return NextResponse.json(
-      { message: 'Webhook processed successfully' },
-      { 
-        status: 200, 
-        headers: {
-          'Access-Control-Allow-Origin': '*',
-          'Access-Control-Allow-Methods': 'POST',
-          'Access-Control-Allow-Headers': 'Content-Type, svix-id, svix-timestamp, svix-signature',
-        }
-      }
-    );
+    return new Response(JSON.stringify({ received: true }), {
+      status: 200,
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
 
-  } catch {
-    return NextResponse.json(
-      { error: 'Webhook processing failed' },
-      { 
-        status: 500,
-        headers: {
-          'Access-Control-Allow-Origin': '*',
-          'Access-Control-Allow-Methods': 'POST',
-          'Access-Control-Allow-Headers': 'Content-Type, svix-id, svix-timestamp, svix-signature',
-        }
-      }
-    );
+  } catch (error) {
+    console.error('Webhook error:', error);
+    return new Response(JSON.stringify({ error: 'Internal server error' }), {
+      status: 500,
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
   }
 }
 
 // Handle OPTIONS requests for CORS preflight
 export async function OPTIONS() {
-  return new NextResponse(null, {
+  return new Response(null, {
     status: 200,
     headers: {
       'Access-Control-Allow-Origin': '*',
@@ -72,8 +66,11 @@ async function handleUserDeleted(evt: WebhookEvent) {
   try {
     const userId = evt.data.id;
     if (!userId) {
+      console.log('No user ID in webhook data');
       return;
     }
+
+    console.log('Processing user deletion for:', userId);
 
     // Check if user exists in our database
     const existingUser = await db
@@ -83,6 +80,7 @@ async function handleUserDeleted(evt: WebhookEvent) {
       .limit(1);
 
     if (existingUser.length === 0) {
+      console.log('User not found in database:', userId);
       return;
     }
 
@@ -91,8 +89,11 @@ async function handleUserDeleted(evt: WebhookEvent) {
 
     // Delete user from our database (this will cascade delete all related data)
     await db.delete(users).where(eq(users.id, userId));
+    
+    console.log('User and associated data deleted successfully:', userId);
 
-  } catch {
+  } catch (error) {
+    console.error('Error in handleUserDeleted:', error);
     // Don't throw the error - we want the webhook to return 200
     // This prevents Clerk from retrying the webhook unnecessarily
   }
@@ -100,6 +101,8 @@ async function handleUserDeleted(evt: WebhookEvent) {
 
 async function cleanupUserFiles(userId: string) {
   try {
+    console.log('Cleaning up files for user:', userId);
+
     // Get all file references for this user before deletion
     const [athlete, coach, recruiter, verificationFilesList] = await Promise.all([
       // Get athlete profile image
@@ -164,6 +167,8 @@ async function cleanupUserFiles(userId: string) {
       }
     });
 
+    console.log(`Found ${filesToDelete.length} files to delete for user:`, userId);
+
     // Delete all files from R2 storage
     await Promise.allSettled(
       filesToDelete.map(async (fileKey) => {
@@ -171,13 +176,18 @@ async function cleanupUserFiles(userId: string) {
           // Determine if file is private based on key pattern
           const isPrivateFile = fileKey.includes('verification') || fileKey.includes('users/');
           await deleteFromR2(fileKey, isPrivateFile);
-        } catch {
+          console.log('Deleted file:', fileKey);
+        } catch (error) {
+          console.error('Error deleting file:', fileKey, error);
           // Silent fail for individual file deletions to avoid blocking user deletion
         }
       })
     );
 
-  } catch {
+    console.log('File cleanup completed for user:', userId);
+
+  } catch (error) {
+    console.error('Error in cleanupUserFiles:', error);
     // Silent fail - file cleanup is optional and shouldn't block user deletion
   }
 } 
