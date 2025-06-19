@@ -1,6 +1,7 @@
 import { clerkMiddleware } from '@clerk/nextjs/server';
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
+import { SecurityEvents } from './utils/security-monitoring';
 
 // Simple in-memory rate limiting for MVP (would use Redis in production)
 const rateLimit = new Map<string, { count: number; resetTime: number }>();
@@ -22,6 +23,36 @@ const securityMiddleware = async (request: NextRequest) => {
     return NextResponse.next();
   }
 
+  // Request body size limits for security
+  const contentLength = request.headers.get('content-length');
+  if (contentLength) {
+    const size = parseInt(contentLength);
+    const maxSize = 50 * 1024 * 1024; // 50MB max for file uploads
+    const standardMaxSize = 10 * 1024 * 1024; // 10MB for regular requests
+    
+    // Higher limit for file upload endpoints
+    const isFileUpload = request.nextUrl.pathname.includes('/upload') || 
+                        request.nextUrl.pathname.includes('/verification');
+    const sizeLimit = isFileUpload ? maxSize : standardMaxSize;
+    
+    if (size > sizeLimit) {
+      // Log security event
+      SecurityEvents.requestTooLarge(request, size, sizeLimit);
+      
+      return NextResponse.json(
+        { error: `Request too large. Maximum size: ${Math.round(sizeLimit / 1024 / 1024)}MB` },
+        { 
+          status: 413, // Payload Too Large
+          headers: {
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': 'POST, PUT, DELETE, PATCH',
+            'Access-Control-Allow-Headers': 'Content-Type, Authorization'
+          }
+        }
+      );
+    }
+  }
+
   // Rate limiting for mutation operations
   const clientIP = request.headers.get('x-forwarded-for')?.split(',')[0] || 
                   request.headers.get('x-real-ip') || 
@@ -33,6 +64,9 @@ const securityMiddleware = async (request: NextRequest) => {
   const current = rateLimit.get(clientIP);
   if (current && now < current.resetTime) {
     if (current.count >= maxRequests) {
+      // Log security event
+      SecurityEvents.rateLimitExceeded(request, undefined, maxRequests);
+      
       return NextResponse.json(
         { error: 'Too many requests. Please try again later.' },
         { 
@@ -59,7 +93,9 @@ const securityMiddleware = async (request: NextRequest) => {
     try {
       const originUrl = new URL(origin);
       if (originUrl.host !== host) {
-        console.warn(`CSRF attempt blocked: origin=${origin}, host=${host}`);
+        // Log security event
+        SecurityEvents.csrfAttempt(request, origin, host);
+        
         return NextResponse.json(
           { error: 'Invalid request origin' },
           { 

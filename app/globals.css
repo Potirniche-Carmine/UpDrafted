@@ -3,6 +3,17 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* Prevent logo background flash */
+.logo-no-flash {
+  background-color: transparent !important;
+  background-image: none !important;
+}
+
+.logo-no-flash img {
+  background-color: transparent !important;
+  background-image: none !important;
+}
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);

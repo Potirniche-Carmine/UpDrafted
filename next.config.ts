@@ -1,5 +1,11 @@
 import type { NextConfig } from "next";
 
+// CORS configuration based on environment
+const isDevelopment = process.env.NODE_ENV === 'development';
+const allowedOrigins = isDevelopment 
+  ? ['http://localhost:3000', 'http://127.0.0.1:3000']
+  : ['https://updrafted.us', 'https://www.updrafted.us'];
+
 const nextConfig: NextConfig = {
   // Move serverComponentsExternalPackages to root level (outside experimental)
   serverExternalPackages: ['@neondatabase/serverless'],
@@ -59,7 +65,7 @@ const nextConfig: NextConfig = {
     optimizePackageImports: ['lucide-react', '@radix-ui/react-icons'],
     // Optimize for Node.js runtime where possible
     serverActions: {
-      allowedOrigins: ['localhost:3000', 'updrafted.carmine.live'],
+      allowedOrigins: ['localhost:3000', 'updrafted.us'],
     },
     // Minimize middleware processing
     middlewarePrefetch: 'flexible',
@@ -67,7 +73,7 @@ const nextConfig: NextConfig = {
   // Force static optimization where possible
   trailingSlash: false,
   compress: true,
-  // Optimize headers
+  // Optimize headers with CORS and security
   headers: async () => [
     {
       source: '/:path*',
@@ -79,6 +85,48 @@ const nextConfig: NextConfig = {
         {
           key: 'X-Frame-Options',
           value: 'DENY'
+        },
+        {
+          key: 'X-Content-Type-Options',
+          value: 'nosniff'
+        },
+        {
+          key: 'X-XSS-Protection',
+          value: '1; mode=block'
+        },
+        {
+          key: 'Referrer-Policy',
+          value: 'strict-origin-when-cross-origin'
+        },
+        {
+          key: 'Permissions-Policy',
+          value: 'camera=(), microphone=(), geolocation=()'
+        }
+      ],
+    },
+    // CORS headers for API routes
+    {
+      source: '/api/(.*)',
+      headers: [
+        {
+          key: 'Access-Control-Allow-Origin',
+          value: allowedOrigins.join(',')
+        },
+        {
+          key: 'Access-Control-Allow-Methods',
+          value: 'GET, POST, PUT, DELETE, OPTIONS'
+        },
+        {
+          key: 'Access-Control-Allow-Headers',
+          value: 'Content-Type, Authorization, X-Requested-With'
+        },
+        {
+          key: 'Access-Control-Allow-Credentials',
+          value: 'true'
+        },
+        {
+          key: 'Access-Control-Max-Age',
+          value: '86400' // 24 hours
         }
       ],
     },
