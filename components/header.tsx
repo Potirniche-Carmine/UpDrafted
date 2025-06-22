@@ -120,14 +120,17 @@ export function Header() {
   const hasCompletedOnboarding = userRole && ['athlete', 'coach', 'recruiter', 'admin'].includes(userRole);
 
   // Determine home URL based on authentication status and onboarding completion
-  // Use window.location to avoid Next.js router conflicts when clicking logo
+  // Use Next.js router for proper navigation
   const handleLogoClick = (e: React.MouseEvent) => {
     e.preventDefault();
-    if (isSignedIn && hasCompletedOnboarding) {
-      window.location.href = '/dashboard';
-    } else {
-      window.location.href = '/';
-    }
+    // Add a small delay to prevent rapid clicking causing issues
+    setTimeout(() => {
+      if (isSignedIn && hasCompletedOnboarding) {
+        window.location.href = '/dashboard';
+      } else {
+        window.location.href = '/';
+      }
+    }, 100);
   };
 
   const navItems: NavItem[] = [

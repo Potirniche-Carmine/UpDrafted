@@ -65,7 +65,7 @@ const nextConfig: NextConfig = {
     optimizePackageImports: ['lucide-react', '@radix-ui/react-icons'],
     // Optimize for Node.js runtime where possible
     serverActions: {
-      allowedOrigins: isDevelopment ? ['localhost:3000'] : ['updrafted.us', 'www.updrafted.us'],
+      allowedOrigins: ['localhost:3000', 'updrafted.us'],
     },
     // Minimize middleware processing
     middlewarePrefetch: 'flexible',
@@ -101,28 +101,16 @@ const nextConfig: NextConfig = {
         {
           key: 'Permissions-Policy',
           value: 'camera=(), microphone=(), geolocation=()'
-        },
-        // Add HSTS for HTTPS enforcement
-        {
-          key: 'Strict-Transport-Security',
-          value: isDevelopment ? '' : 'max-age=31536000; includeSubDomains; preload'
-        },
-        // Add basic CSP
-        {
-          key: 'Content-Security-Policy',
-          value: isDevelopment 
-            ? "default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob:; img-src 'self' data: https:; connect-src 'self' https:; font-src 'self' data:;"
-            : "default-src 'self'; script-src 'self' 'unsafe-inline' https://clerk.updrafted.us; img-src 'self' data: https: blob:; connect-src 'self' https:; font-src 'self' data:; style-src 'self' 'unsafe-inline';"
         }
       ],
     },
-    // CORS headers for API routes - FIXED: No wildcard origins
+    // CORS headers for API routes
     {
       source: '/api/(.*)',
       headers: [
         {
           key: 'Access-Control-Allow-Origin',
-          value: allowedOrigins[0]
+          value: allowedOrigins.join(',')
         },
         {
           key: 'Access-Control-Allow-Methods',
