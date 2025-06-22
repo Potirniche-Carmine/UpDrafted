@@ -499,7 +499,7 @@ export default function CoachRecruiterForm({ data, onInputChange }: CoachRecruit
             min="0"
             max="100"
             placeholder="Number of scholarships"
-            value={data.scholarshipsAvailable || ''}
+            value={data.scholarshipsAvailable ?? ''}
             onChange={(e) => validateAndUpdateField('scholarshipsAvailable', e.target.value ? parseInt(e.target.value) : null)}
             className={`h-11 bg-background ${validationErrors.scholarshipsAvailable ? 'border-red-500' : ''}`}
           />

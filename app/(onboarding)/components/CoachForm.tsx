@@ -517,7 +517,7 @@ export default function CoachForm({ data, onInputChange }: CoachFormProps) {
               min="0"
               max="100"
               placeholder="e.g., 5"
-              value={data.scholarshipsAvailable || ''}
+              value={data.scholarshipsAvailable ?? ''}
               onChange={(e) => validateAndUpdateField('scholarshipsAvailable', e.target.value ? parseInt(e.target.value) : null)}
               className={`h-11 bg-background ${validationErrors.scholarshipsAvailable ? 'border-red-500' : ''}`}
             />

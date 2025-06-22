@@ -133,31 +133,31 @@ export function RecruiterLevelBanner({
   // Standard layout for other recruiter types
   return (
     <Card className={`bg-gradient-to-r ${config.bgColor} border ${config.borderColor}`}>
-      <CardContent className="p-4">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-          <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-            <div className={`w-12 h-12 rounded-full bg-white dark:bg-gray-800 flex items-center justify-center border ${config.borderColor} mx-auto sm:mx-0`}>
-              <Icon className={`w-6 h-6 ${config.iconColor}`} />
+      <CardContent className="p-3 md:p-4">
+        <div className="flex flex-col gap-3">
+          <div className="flex items-center gap-3">
+            <div className={`w-10 h-10 md:w-12 md:h-12 rounded-full bg-white dark:bg-gray-800 flex items-center justify-center border ${config.borderColor} flex-shrink-0`}>
+              <Icon className={`w-5 h-5 md:w-6 md:h-6 ${config.iconColor}`} />
             </div>
-            <div className="text-center sm:text-left">
-              <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-1">
-                <h3 className={`font-semibold ${config.textColor}`}>
+            <div className="flex-1 min-w-0">
+              <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 mb-1">
+                <h3 className={`font-semibold text-sm md:text-base ${config.textColor} truncate`}>
                   {config.label}
                 </h3>
-                <div className="flex items-center justify-center sm:justify-start gap-2">
+                <div className="flex items-center gap-1 sm:gap-2 flex-wrap">
                   {config.showDivisionBadge && (
-                    <Badge variant={config.badgeVariant} className="text-xs">
+                    <Badge variant={config.badgeVariant} className="text-xs px-2 py-0.5">
                       {division}
                     </Badge>
                   )}
                   {conference && (
-                    <Badge variant="outline" className="text-xs bg-white/50">
+                    <Badge variant="outline" className="text-xs bg-white/50 px-2 py-0.5">
                       {conference}
                     </Badge>
                   )}
                 </div>
               </div>
-              <p className={`text-sm ${config.textColor} opacity-80`}>
+              <p className={`text-xs md:text-sm ${config.textColor} opacity-80 truncate`}>
                 {sportRecruiting} • {organizationName}
               </p>
             </div>

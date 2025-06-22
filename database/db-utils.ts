@@ -327,7 +327,7 @@ export const recruitingOperations = {
       sportSpecificNeeds[need.sport] = {
         graduationYears: need.graduationYears,
         positions: need.positions,
-        scholarshipsAvailable: need.scholarshipsAvailable || undefined,
+        scholarshipsAvailable: need.scholarshipsAvailable ?? undefined,
         recruitingPhilosophy: need.recruitingPhilosophy || undefined
       };
     });
@@ -668,6 +668,16 @@ export const onboardingOperations = {
       weight: profileData.weight!,
       positions: profileData.positions!,
       division: profileData.division,
+      gpa: profileData.gpa ? parseFloat(profileData.gpa) : undefined,
+      satScore: profileData.satScore || undefined,
+      actScore: profileData.actScore || undefined,
+      intendedMajor: profileData.intendedMajor || undefined,
+      gender: profileData.gender || undefined,
+      maxprepsUrl: profileData.maxprepsUrl || undefined,
+      hudlUrl: profileData.hudlUrl || undefined,
+      instagramHandle: profileData.instagramHandle || undefined,
+      twitterHandle: profileData.twitterHandle || undefined,
+      personalStatement: profileData.personalStatement || undefined,
     };
     
     const athleteProfile = await athleteOperations.createAthleteProfile(newProfile);
@@ -711,7 +721,7 @@ export const onboardingOperations = {
         coachId: coachProfile.id,
         graduationYears: profileData.recruitingGraduationYears,
         positions: profileData.recruitingPositions,
-        scholarshipsAvailable: profileData.scholarshipsAvailable || undefined,
+        scholarshipsAvailable: profileData.scholarshipsAvailable ?? undefined,
         recruitingPhilosophy: profileData.recruitingPhilosophy || undefined
       });
     }
@@ -759,7 +769,7 @@ export const onboardingOperations = {
             sport: sport,
             graduationYears: needs.graduationYears,
             positions: needs.positions,
-            scholarshipsAvailable: needs.scholarshipsAvailable || undefined,
+            scholarshipsAvailable: needs.scholarshipsAvailable ?? undefined,
             recruitingPhilosophy: needs.recruitingPhilosophy || undefined
           });
           recruitingProfileNeeds.push(profileNeeds);

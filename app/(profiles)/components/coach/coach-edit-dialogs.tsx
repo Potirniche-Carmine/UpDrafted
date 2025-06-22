@@ -92,7 +92,7 @@ export function CoachEditDialogs({
         setEditData({
           graduationYears: profileData.recruitingNeeds?.graduationYears || [],
           positions: profileData.recruitingNeeds?.positions || [],
-          scholarshipsAvailable: profileData.recruitingNeeds?.scholarshipsAvailable || '',
+          scholarshipsAvailable: profileData.recruitingNeeds?.scholarshipsAvailable ?? '',
           recruitingPhilosophy: profileData.recruitingNeeds?.recruitingPhilosophy || ''
         });
         break;
@@ -616,7 +616,7 @@ export function CoachEditDialogs({
               <Input
                 id="scholarshipsAvailable"
                 type="number"
-                value={editData.scholarshipsAvailable || ''}
+                value={editData.scholarshipsAvailable ?? ''}
                 onChange={(e) => handleFieldChange('scholarshipsAvailable', e.target.value)}
                 placeholder="Number of scholarships available"
                 min="0"

@@ -12,8 +12,8 @@ import {
   FileText,
   Info,
   MessageSquare,
-  Search,
   Users,
+  BarChart3,
 } from "lucide-react"
 import Link from "next/link"
 import { useRoleView } from '@/hooks/use-role-view'
@@ -86,7 +86,7 @@ const getUserContent = (role: string, handleViewProfile: () => void, profileNavi
           { 
             label: "Discover", 
             href: "/discover", 
-            icon: Search, 
+            icon: Users, 
             description: "Find schools and coaches", 
             color: "#4f46e5" 
           },
@@ -112,10 +112,10 @@ const getUserContent = (role: string, handleViewProfile: () => void, profileNavi
             color: "#ef4444" 
           },
           { 
-            label: "Search", 
-            href: "/search", 
-            icon: Search, 
-            description: "Search for athletes, coaches, and schools", 
+            label: "Activity", 
+            href: "/activity", 
+            icon: BarChart3, 
+            description: "Track profile views and insights", 
             color: "#8b5cf6" 
           }
         ]
@@ -136,7 +136,7 @@ const getUserContent = (role: string, handleViewProfile: () => void, profileNavi
           { 
             label: "Discover", 
             href: "/discover", 
-            icon: Search, 
+            icon: Users, 
             description: "Find talented athletes", 
             color: "#4f46e5" 
           },
@@ -162,10 +162,10 @@ const getUserContent = (role: string, handleViewProfile: () => void, profileNavi
             color: "#ef4444" 
           },
           { 
-            label: "Search", 
-            href: "/search", 
-            icon: Search, 
-            description: "Search for athletes and coaches", 
+            label: "Activity", 
+            href: "/activity", 
+            icon: BarChart3, 
+            description: "Track profile views and insights", 
             color: "#8b5cf6" 
           }
         ]
@@ -186,7 +186,7 @@ const getUserContent = (role: string, handleViewProfile: () => void, profileNavi
           { 
             label: "Discover", 
             href: "/discover", 
-            icon: Search, 
+            icon: Users, 
             description: "Find talented athletes", 
             color: "#4f46e5" 
           },
@@ -212,10 +212,10 @@ const getUserContent = (role: string, handleViewProfile: () => void, profileNavi
             color: "#ef4444" 
           },
           { 
-            label: "Search", 
-            href: "/search", 
-            icon: Search, 
-            description: "Search for athletes and coaches", 
+            label: "Activity", 
+            href: "/activity", 
+            icon: BarChart3, 
+            description: "Track profile views and insights", 
             color: "#8b5cf6" 
           }
         ]
@@ -236,7 +236,7 @@ const getUserContent = (role: string, handleViewProfile: () => void, profileNavi
           { 
             label: "Discover", 
             href: "/discover", 
-            icon: Search, 
+            icon: Users, 
             description: "Explore UpDrafted", 
             color: "#4f46e5" 
           },
@@ -262,10 +262,10 @@ const getUserContent = (role: string, handleViewProfile: () => void, profileNavi
             color: "#ef4444" 
           },
           { 
-            label: "Search", 
-            href: "/search", 
-            icon: Search, 
-            description: "Search UpDrafted", 
+            label: "Activity", 
+            href: "/activity", 
+            icon: BarChart3, 
+            description: "Track profile views and insights", 
             color: "#8b5cf6" 
           }
         ]
@@ -361,7 +361,7 @@ function DashboardContent({
                 <CardTitle className="text-foreground">Quick Navigation</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-4">
                   {userContent.primaryNav.map((item, index) => (
                     <NavCard key={index} item={item} profileNavigating={profileNavigating} />
                   ))}
@@ -447,7 +447,7 @@ function NavCard({
         }`} 
         onClick={shouldDisable ? undefined : item.onClick}
       >
-        <CardContent className="flex flex-col items-center text-center p-4">
+        <CardContent className="flex flex-col items-center text-center p-4 min-h-[120px] justify-center">
           <div className={`h-10 w-10 rounded-full bg-[${item.color}]/10 flex items-center justify-center mb-3 ${
             profileNavigating && isViewProfileAction ? 'animate-pulse' : ''
           }`}>
@@ -455,8 +455,8 @@ function NavCard({
               className={`h-5 w-5 text-[${item.color}]`} 
             />
           </div>
-          <h3 className="font-medium text-foreground mb-1">{item.label}</h3>
-          <p className="text-xs text-muted-foreground">{item.description}</p>
+          <h3 className="font-medium text-foreground mb-1 text-sm">{item.label}</h3>
+          <p className="text-xs text-muted-foreground line-clamp-2">{item.description}</p>
         </CardContent>
       </Card>
     );
@@ -464,15 +464,15 @@ function NavCard({
   
   return (
     <Link href={item.href}>
-      <Card className="group transition-all duration-300 hover:shadow-lg hover:shadow-[#01ae79]/5 border-border/50 hover:border-[#01ae79]/20 dark:hover:border-[#01ae79]/30 cursor-pointer">
-        <CardContent className="flex flex-col items-center text-center p-4">
+      <Card className="group transition-all duration-300 hover:shadow-lg hover:shadow-[#01ae79]/5 border-border/50 hover:border-[#01ae79]/20 dark:hover:border-[#01ae79]/30 cursor-pointer h-full">
+        <CardContent className="flex flex-col items-center text-center p-4 min-h-[120px] justify-center">
           <div className={`h-10 w-10 rounded-full bg-[${item.color}]/10 flex items-center justify-center mb-3`}>
             <IconComponent 
               className={`h-5 w-5 text-[${item.color}]`} 
             />
           </div>
-          <h3 className="font-medium text-foreground mb-1">{item.label}</h3>
-          <p className="text-xs text-muted-foreground">{item.description}</p>
+          <h3 className="font-medium text-foreground mb-1 text-sm">{item.label}</h3>
+          <p className="text-xs text-muted-foreground line-clamp-2">{item.description}</p>
         </CardContent>
       </Card>
     </Link>

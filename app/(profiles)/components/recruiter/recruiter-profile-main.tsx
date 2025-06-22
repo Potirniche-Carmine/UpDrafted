@@ -138,7 +138,7 @@ const SportSpecificNeedsSection = ({
   const hasAnyNeeds = currentNeeds && (
     (currentNeeds.graduationYears && currentNeeds.graduationYears.length > 0) ||
     (currentNeeds.positions && currentNeeds.positions.length > 0) ||
-    currentNeeds.scholarshipsAvailable ||
+    (currentNeeds.scholarshipsAvailable !== null && currentNeeds.scholarshipsAvailable !== undefined) ||
     currentNeeds.recruitingPhilosophy
   );
 
@@ -219,7 +219,7 @@ const SportSpecificNeedsSection = ({
               )}
 
               {/* Scholarships */}
-              {currentNeeds.scholarshipsAvailable && (
+              {(currentNeeds.scholarshipsAvailable !== null && currentNeeds.scholarshipsAvailable !== undefined) && (
                 <div className="text-center">
                   <p className="text-sm text-muted-foreground mb-2">Scholarships Available</p>
                   <div className="bg-green-50 dark:bg-green-950 p-4 rounded-lg">
@@ -676,26 +676,26 @@ export function RecruiterProfile({
         isConnecting={isConnecting}
       />
 
-      <div className="container py-4 md:py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8">
+      <div className="container py-4 md:py-6 lg:py-8 px-4 sm:px-6 lg:px-8">
+        <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 md:gap-6 lg:gap-8 max-w-screen-2xl mx-auto">
           {/* Sidebar - Basic Info */}
-          <div className="space-y-4 md:space-y-6">
+          <div className="space-y-4 md:space-y-6 xl:sticky xl:top-24 xl:self-start">
             {/* Profile Card */}
-            <Card>
+            <Card className="overflow-hidden">
               <CardContent className="p-4 md:p-6">
-                <div className="text-center">
-                  <div className="relative w-24 h-24 md:w-32 md:h-32 mx-auto mb-4">
+                <div className="text-center space-y-4">
+                  <div className="relative w-20 h-20 md:w-28 md:h-28 lg:w-32 lg:h-32 mx-auto">
                     {profileData.profileImage ? (
                       <Image
                         src={profileData.profileImage.includes('?') ? profileData.profileImage : `${profileData.profileImage}?v=1`}
                         alt={profileData.fullName || "Profile picture"}
                         fill
                         className="rounded-full object-cover"
-                        sizes="(max-width: 768px) 96px, 128px"
+                        sizes="(max-width: 768px) 80px, (max-width: 1024px) 112px, 128px"
                       />
                     ) : (
                       <div className="w-full h-full bg-muted rounded-full flex items-center justify-center">
-                        <span className="text-lg md:text-xl font-semibold text-muted-foreground">
+                        <span className="text-base md:text-lg lg:text-xl font-semibold text-muted-foreground">
                           {profileData.fullName?.split(' ').map((n: string) => n[0]).join('') || '?'}
                         </span>
                       </div>
@@ -725,30 +725,47 @@ export function RecruiterProfile({
                   </div>
 
                   <div className="space-y-2">
-                    <div className="flex items-center justify-center gap-2">
-                      <h1 className="text-lg md:text-xl font-bold">{profileData.fullName}</h1>
-                      {profileData.isVerified ? (
-                        <Badge className="bg-green-600 text-white text-xs">
-                          <Shield className="w-3 h-3 mr-1" />
-                          Verified
-                        </Badge>
-                      ) : (
-                        <Badge variant="outline" className="border-orange-300 text-orange-600 text-xs">
-                          <AlertTriangle className="w-3 h-3 mr-1" />
-                          Unverified
-                        </Badge>
-                      )}
-                      {isOwnProfile && (
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          className="p-1 h-6 w-6"
-                          onClick={() => handleEditSection('basic-info')}
-                        >
-                          <Edit className="w-3 h-3" />
-                        </Button>
-                      )}
-                    </div>
+                    {isOwnProfile ? (
+                      <div className="flex items-center justify-center gap-2 flex-wrap">
+                        <h1 className="text-lg md:text-xl lg:text-2xl font-bold text-center break-words">{profileData.fullName}</h1>
+                        <div className="flex items-center gap-2 flex-wrap justify-center">
+                          {profileData.isVerified ? (
+                            <Badge className="bg-green-600 text-white text-xs whitespace-nowrap">
+                              <Shield className="w-3 h-3 mr-1 flex-shrink-0" />
+                              Verified
+                            </Badge>
+                          ) : (
+                            <Badge variant="outline" className="border-orange-300 text-orange-600 text-xs whitespace-nowrap">
+                              <AlertTriangle className="w-3 h-3 mr-1 flex-shrink-0" />
+                              Unverified
+                            </Badge>
+                          )}
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="p-1 h-6 w-6 flex-shrink-0"
+                            onClick={() => handleEditSection('basic-info')}
+                          >
+                            <Edit className="w-3 h-3" />
+                          </Button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="flex items-center justify-center gap-2 flex-wrap">
+                        <h1 className="text-lg md:text-xl lg:text-2xl font-bold text-center break-words">{profileData.fullName}</h1>
+                        {profileData.isVerified ? (
+                          <Badge className="bg-green-600 text-white text-xs whitespace-nowrap">
+                            <Shield className="w-3 h-3 mr-1 flex-shrink-0" />
+                            Verified
+                          </Badge>
+                        ) : (
+                          <Badge variant="outline" className="border-orange-300 text-orange-600 text-xs whitespace-nowrap">
+                            <AlertTriangle className="w-3 h-3 mr-1 flex-shrink-0" />
+                            Unverified
+                          </Badge>
+                        )}
+                      </div>
+                    )}
                     
                     <p className="text-sm md:text-base text-muted-foreground">
                       {profileData.title}
@@ -908,7 +925,7 @@ export function RecruiterProfile({
           </div>
 
           {/* Main Content */}
-          <div className="lg:col-span-2 space-y-6">
+          <div className="xl:col-span-2 space-y-4 md:space-y-6 min-w-0">
             {/* About Recruiter Section - uses personalStatement from database */}
             {profileData.personalStatement ? (
               <Card>

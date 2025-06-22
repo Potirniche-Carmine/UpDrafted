@@ -617,7 +617,7 @@ export default function RecruiterForm({ data, onInputChange }: RecruiterFormProp
                     min="0"
                     max="100"
                     placeholder="e.g., 5"
-                    value={data.sportSpecificNeeds[activeSportForNeeds]?.scholarshipsAvailable || ''}
+                    value={data.sportSpecificNeeds[activeSportForNeeds]?.scholarshipsAvailable ?? ''}
                     onChange={(e) => updateSportSpecificNeeds(activeSportForNeeds, 'scholarshipsAvailable', e.target.value ? parseInt(e.target.value) : null)}
                     className="h-11 bg-background"
                   />

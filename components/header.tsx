@@ -157,7 +157,7 @@ export function Header() {
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-[#01ae79]/20 dark:border-[#01ae79]/30 bg-white/95 dark:bg-gray-950/95 backdrop-blur supports-[backdrop-filter]:bg-white/80 dark:supports-[backdrop-filter]:bg-gray-950/80">
-      <div className="container mx-auto flex h-16 max-w-screen-2xl items-center justify-between px-4 sm:px-6 lg:px-8">
+      <div className="container mx-auto flex h-14 lg:h-16 max-w-screen-2xl items-center justify-between px-3 sm:px-4 lg:px-6 xl:px-8">
         {/* Logo */}
         <a href="#" onClick={handleLogoClick} className="flex items-center space-x-2 flex-shrink-0 logo-no-flash">
           <Image
@@ -168,26 +168,26 @@ export function Header() {
             priority
             quality={90}
             placeholder="empty"
-            sizes="(max-width: 768px) 110px, 150px"
-            className="mr-3"
+            sizes="(max-width: 640px) 100px, (max-width: 768px) 120px, (max-width: 1024px) 140px, 150px"
+            className="mr-2 lg:mr-3"
             style={{
               width: "auto",
               height: "auto",
-              maxWidth: "clamp(110px, 12vw, 150px)",
-              maxHeight: "50px"
+              maxWidth: "clamp(100px, 15vw, 150px)",
+              maxHeight: "40px"
             }}
           />
         </a>
 
         {/* Desktop Search Bar - Only show when signed in and onboarded */}
         {isSignedIn && hasCompletedOnboarding && (
-          <div className="hidden md:flex flex-1 justify-center px-6 max-w-md">
+          <div className="hidden lg:flex flex-1 justify-center px-4 xl:px-6 max-w-lg">
             <SearchBar />
           </div>
         )}
 
         {/* Desktop Navigation */}
-        <nav className="hidden md:flex items-center space-x-2">
+        <nav className="hidden md:flex items-center space-x-1 lg:space-x-2">
           {navItemsToDisplay.map((item) => (
             <NavItem
               key={item.key}

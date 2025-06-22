@@ -1,7 +1,7 @@
 "use client";
 
 import { Button } from '@/components/ui/button';
-import { MessageSquare, Send, Search, PlusCircle, Users, ArrowLeft, Lock} from 'lucide-react';
+import { MessageSquare, Send, Search, PlusCircle, Users, ArrowLeft, Lock, Flag} from 'lucide-react';
 import { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import { Badge } from "@/components/ui/badge";
 import Link from 'next/link';
@@ -14,6 +14,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { ReportDialog } from '../../(profiles)/components/shared/report-dialog';
 
 // Define real API types
 interface Conversation {
@@ -160,6 +161,7 @@ export default function MessagingPage() {
   const [loadingConnections, setLoadingConnections] = useState(false);
   const [connectionSearchTerm, setConnectionSearchTerm] = useState("");
   const [initialLoadComplete, setInitialLoadComplete] = useState(false);
+  const [reportDialogOpen, setReportDialogOpen] = useState(false);
   
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
@@ -780,13 +782,23 @@ export default function MessagingPage() {
                         </Avatar>
                       </Link>
                       <div className="flex-1">
-                        <div className="flex items-center">
-                          <Link href={`/profile/${activeConversation?.partnerId}`} className="cursor-pointer hover:opacity-80 transition-opacity">
-                            <h2 className="text-lg font-semibold text-foreground">{activeConversation?.partnerName}</h2>
-                          </Link>
-                          <div className="ml-2 cursor-help flex items-center" title="Messages are encrypted. UpDrafted may access them only to monitor for safety violations such as harassment, hate speech, or spam.">
-                            <Lock size={14} className="text-muted-foreground" />
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center">
+                            <Link href={`/profile/${activeConversation?.partnerId}`} className="cursor-pointer hover:opacity-80 transition-opacity">
+                              <h2 className="text-lg font-semibold text-foreground">{activeConversation?.partnerName}</h2>
+                            </Link>
+                            <div className="ml-2 cursor-help flex items-center" title="Messages are encrypted. UpDrafted may access them only to monitor for safety violations such as harassment, hate speech, or spam.">
+                              <Lock size={14} className="text-muted-foreground" />
+                            </div>
                           </div>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setReportDialogOpen(true)}
+                            className="hover:bg-red-50 dark:hover:bg-red-950 text-red-600 dark:text-red-400"
+                          >
+                            <Flag size={16} />
+                          </Button>
                         </div>
                         <div className="flex items-center gap-2 flex-wrap pt-1.5">
                           {activeConversation && getRoleBadge(activeConversation.partnerRole, activeConversation.division, activeConversation.educationLevel)}
@@ -1004,6 +1016,17 @@ export default function MessagingPage() {
             </div>
           </DialogContent>
         </Dialog>
+
+        {/* Report Dialog */}
+        {activeConversation && (
+          <ReportDialog
+            open={reportDialogOpen}
+            onOpenChange={setReportDialogOpen}
+            profileName={activeConversation.partnerName}
+            profileType={activeConversation.partnerRole as "athlete" | "coach" | "recruiter"}
+            reportedUserId={activeConversation.partnerId}
+          />
+        )}
       </div>
     </AuthWrapper>
   );

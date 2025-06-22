@@ -96,7 +96,7 @@ export function RecruiterEditDialogs({
         setEditData({
           graduationYears: currentNeeds?.graduationYears || [],
           positions: currentNeeds?.positions || [],
-          scholarshipsAvailable: currentNeeds?.scholarshipsAvailable || '',
+          scholarshipsAvailable: currentNeeds?.scholarshipsAvailable ?? '',
           recruitingPhilosophy: currentNeeds?.recruitingPhilosophy || '',
           sport: currentSport
         });
@@ -658,7 +658,7 @@ export function RecruiterEditDialogs({
               <Input
                 id="scholarshipsAvailable"
                 type="number"
-                value={editData.scholarshipsAvailable || ''}
+                value={editData.scholarshipsAvailable ?? ''}
                 onChange={(e) => handleFieldChange('scholarshipsAvailable', e.target.value)}
                 placeholder="Number of scholarships"
                 min={NUMERIC_LIMITS.SCHOLARSHIPS_AVAILABLE.min}

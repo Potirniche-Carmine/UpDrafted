@@ -148,7 +148,7 @@ export function convertFormDataToProfileData(formData: OnboardingFormData): Onbo
     recruitingPhilosophy: formData.recruitingPhilosophy.trim(),
     recruitingGraduationYears: formData.recruitingGraduationYears,
     recruitingPositions: formData.recruitingPositions,
-    scholarshipsAvailable: formData.scholarshipsAvailable || undefined,
+    scholarshipsAvailable: formData.scholarshipsAvailable ?? undefined,
     sportSpecificNeeds: formData.sportSpecificNeeds,
     whatLookingFor: formData.whatLookingFor.trim(),
   };

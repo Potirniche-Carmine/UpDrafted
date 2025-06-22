@@ -92,19 +92,21 @@ export default function CommonFields({
         <Label className="text-base font-medium">Profile Picture</Label>
         <div className="space-y-4">
           {profileImagePreview ? (
-            <div className="relative w-32 h-32 mx-auto">
-              <Image
-                src={profileImagePreview}
-                alt="Profile preview"
-                width={128}
-                height={128}
-                className="rounded-lg object-cover border border-border/50"
-              />
+            <div className="relative w-32 h-32 mx-auto p-2">
+              <div className="relative w-full h-full overflow-hidden rounded-lg border border-border/50">
+                <Image
+                  src={profileImagePreview}
+                  alt="Profile preview"
+                  fill
+                  className="object-cover"
+                  sizes="128px"
+                />
+              </div>
               <Button
                 type="button"
                 variant="destructive"
                 size="sm"
-                className="absolute -top-2 -right-2 w-6 h-6 p-0 rounded-full"
+                className="absolute -top-1 -right-1 w-6 h-6 p-0 rounded-full z-10"
                 onClick={removeImage}
               >
                 <X className="w-3 h-3" />

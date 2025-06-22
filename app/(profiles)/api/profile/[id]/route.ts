@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAnyRole, requireOwnershipOrAdmin } from '@/utils/roles';
-import { userOperations, athleteOperations, coachOperations, recruitingOperations, recruitingNeedsOperations, connectionOperations } from '@/database/db-utils';
+import { userOperations, athleteOperations, coachOperations, recruitingOperations, recruitingNeedsOperations, connectionOperations, activityOperations, notificationOperations } from '@/database/db-utils';
 import { R2_PUBLIC_URL } from '@/database/r2';
 import { NewAthleteProfile, NewAthleteMeasurable, NewAthleteVideo, NewCoachProfile, NewRecruitingProfile, verificationRequests, AthleteProfile, CoachProfile, RecruitingProfile } from '@/database/schema';
 import { db } from '@/database/db';
@@ -308,6 +308,22 @@ export async function GET(
     // Check if the current user is viewing their own profile
     const isOwnProfile = currentUserId === profileUserId;
     const isAdmin = currentUserRole === 'admin';
+
+    // Track profile view if not viewing own profile
+    if (!isOwnProfile) {
+      try {
+        await activityOperations.logActivity(currentUserId, profileUserId, 'profile_view', {
+          viewerRole: currentUserRole,
+          timestamp: new Date().toISOString()
+        });
+        
+        // Create notification for profile view
+        await notificationOperations.createProfileViewNotification(profileUserId, currentUserId);
+      } catch (error) {
+        // Log error but don't fail the request
+        console.error('Failed to log profile view:', error);
+      }
+    }
 
     // Get the user with their profile data
     const userWithProfile = await userOperations.getUserWithProfile(profileUserId);
@@ -762,7 +778,7 @@ export async function PUT(
         const recruitingNeedsData = {
           graduationYears: recruitingNeeds.graduationYears || [],
           positions: recruitingNeeds.positions || [],
-          scholarshipsAvailable: recruitingNeeds.scholarshipsAvailable || null,
+          scholarshipsAvailable: recruitingNeeds.scholarshipsAvailable ?? null,
           recruitingPhilosophy: recruitingNeeds.recruitingPhilosophy || null
         };
         
@@ -828,7 +844,7 @@ export async function PUT(
             sport: sport,
             graduationYears: needs.graduationYears || [],
             positions: needs.positions || [],
-            scholarshipsAvailable: needs.scholarshipsAvailable || null,
+            scholarshipsAvailable: needs.scholarshipsAvailable ?? null,
             recruitingPhilosophy: needs.recruitingPhilosophy || null
           };
           
