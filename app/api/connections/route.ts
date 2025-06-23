@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAnyRole } from '@/utils/roles';
-import { connectionOperations, userOperations, messageOperations } from '@/database/db-utils';
+import { connectionOperations, userOperations, messageOperations, notificationOperations } from '@/database/db-utils';
 import { sanitizeText } from '@/utils/sanitization';
 import { withRateLimit } from '@/utils/rate-limiting';
 import { getCachedWithType, setCachedWithType, invalidateCachePattern, createErrorResponse, createSuccessResponse } from '@/utils/security-cache';
@@ -99,6 +99,19 @@ export async function POST(request: NextRequest) {
       currentUser.role === 'athlete' ? 'athlete' : 'coach',
       sanitizedNote
     );
+
+    // Create notification for the recipient of the connection request
+    try {
+      await notificationOperations.createConnectionNotification(
+        targetUserId, 
+        currentUserId, 
+        'newConnection',
+        connection.id
+      );
+    } catch (notificationError) {
+      console.error('Error creating connection notification:', notificationError);
+      // Don't fail the connection creation if notification fails
+    }
 
     // Invalidate connections cache for both users
     await Promise.all([
@@ -326,6 +339,20 @@ export async function PUT(request: NextRequest) {
 
     if (!connection) {
       return createErrorResponse('Connection not found or unauthorized', 404);
+    }
+
+    // Create notification for the original requester that their connection was accepted
+    const originalRequesterId = connection.fromUserId === currentUserId ? connection.toUserId : connection.fromUserId;
+    try {
+      await notificationOperations.createConnectionNotification(
+        originalRequesterId,
+        currentUserId,
+        'connectionAccepted',
+        connection.id
+      );
+    } catch (notificationError) {
+      console.error('Error creating connection accepted notification:', notificationError);
+      // Don't fail the connection acceptance if notification fails
     }
 
     // Invalidate connections cache for both users

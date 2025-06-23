@@ -640,14 +640,44 @@ export const connectionOperations = {
 
 // Activity logging
 export const activityOperations = {
-  // Log activity
+  // Log activity - Updates existing record if same viewer/viewed/action, otherwise creates new
   async logActivity(viewerId: string, viewedUserId: string, action: string, metadata?: Record<string, unknown>) {
-    await db.insert(activityLog).values({
-      viewerId,
-      viewedUserId,
-      action,
-      metadata
+    // Don't log if viewer and viewed are the same (self-viewing)
+    if (viewerId === viewedUserId) {
+      return { action: 'skipped', reason: 'self-view' };
+    }
+
+    // Check if a record already exists for this combination
+    const existingRecord = await db.query.activityLog.findFirst({
+      where: and(
+        eq(activityLog.viewerId, viewerId),
+        eq(activityLog.viewedUserId, viewedUserId),
+        eq(activityLog.action, action)
+      )
     });
+
+    if (existingRecord) {
+      // Update the existing record with new timestamp and metadata
+      await db
+        .update(activityLog)
+        .set({
+          createdAt: new Date(),
+          metadata
+        })
+        .where(eq(activityLog.id, existingRecord.id));
+      
+      return { action: 'updated', recordId: existingRecord.id };
+    } else {
+      // Create a new record
+      const [newRecord] = await db.insert(activityLog).values({
+        viewerId,
+        viewedUserId,
+        action,
+        metadata
+      }).returning({ id: activityLog.id });
+      
+      return { action: 'created', recordId: newRecord.id };
+    }
   },
 
   // Get user activity
@@ -1333,11 +1363,36 @@ export const notificationOperations = {
     return deletedNotification;
   },
 
-  // Helper function to create profile view notification
+  // Delete all notifications for a user (clear all)
+  async deleteAllNotifications(userId: string) {
+    const deletedNotifications = await db
+      .delete(notifications)
+      .where(eq(notifications.userId, userId))
+      .returning({ id: notifications.id });
+    return deletedNotifications;
+  },
+
+  // Helper function to create profile view notification (first time only)
   async createProfileViewNotification(viewedUserId: string, viewerUserId: string) {
     const viewerInfo = await profileOperations.getUserProfileInfo(viewerUserId);
     if (!viewerInfo) return null;
 
+    // Check if this viewer has EVER viewed this profile before (notification exists)
+    const existingNotification = await db.query.notifications.findFirst({
+      where: and(
+        eq(notifications.userId, viewedUserId),
+        eq(notifications.type, 'profileView'),
+        sql`${notifications.metadata}->>'actorUserId' = ${viewerUserId}`
+      )
+    });
+
+    // If a notification already exists, don't create a new one or update it
+    // Users can see recent activity on the /activity page
+    if (existingNotification) {
+      return null; // No notification needed - not first time
+    }
+
+    // Only create notification for first-time profile views
     return await this.createNotification(
       viewedUserId,
       'profileView',

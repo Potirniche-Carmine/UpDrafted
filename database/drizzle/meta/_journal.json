@@ -225,6 +225,13 @@
       "when": 1749694691655,
       "tag": "0031_overjoyed_adam_warlock",
       "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "7",
+      "when": 1750720421650,
+      "tag": "0032_flippant_doctor_doom",
+      "breakpoints": true
     }
   ]
 }
