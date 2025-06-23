@@ -603,8 +603,7 @@ export async function PUT(
         const url = maxPrepsUrl.trim();
         // Check if it's a valid MaxPreps URL
         if (url.includes('maxpreps.com')) {
-          // Allow verification to be set
-          console.log('Auto-verifying user due to valid MaxPreps URL:', maxPrepsUrl);
+          // Allow verification to be set (auto verified due to valid MaxPreps URL)
         } else {
           // Invalid MaxPreps URL, don't allow verification
           delete sanitizedData.isVerified;

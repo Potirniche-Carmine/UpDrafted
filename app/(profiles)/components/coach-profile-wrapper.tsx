@@ -20,13 +20,10 @@ export function CoachProfileWrapper({
   hasPendingVerification,
   pendingSubmittedAt 
 }: CoachProfileWrapperProps) {
-  const handleConnect = () => {
-    console.log('Connect clicked');
-  };
+  // Placeholder handlers – integrate real logic when available
+  const handleConnect = () => {};
 
-  const handleShare = () => {
-    console.log('Share clicked');
-  };
+  const handleShare = () => {};
 
   return (
     <CoachProfile

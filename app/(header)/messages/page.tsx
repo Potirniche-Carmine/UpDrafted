@@ -1,7 +1,7 @@
 "use client";
 
 import { Button } from '@/components/ui/button';
-import { MessageSquare, Send, Search, PlusCircle, Users, ArrowLeft, Lock, Flag} from 'lucide-react';
+import { MessageSquare, Send, Search, Users, ArrowLeft, Lock, Flag} from 'lucide-react';
 import { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import { Badge } from "@/components/ui/badge";
 import Link from 'next/link';
@@ -220,37 +220,128 @@ export default function MessagingPage() {
         return;
       }
       
-      const response = await fetch('/api/messages', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          operation: 'getConversations',
-          includeFirstConversationMessages: false,
+      // Fetch both conversations and connections in parallel
+      const [conversationsResponse, connectionsResponse] = await Promise.all([
+        fetch('/api/messages', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            operation: 'getConversations',
+            includeFirstConversationMessages: false,
+          })
+        }),
+        fetch('/api/connections', {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
         })
-      });
+      ]);
       
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Failed to fetch conversations (${response.status}): ${errorText.substring(0, 100)}`);
+      // Check conversations response
+      if (!conversationsResponse.ok) {
+        const errorText = await conversationsResponse.text();
+        console.error('Conversations API failed:', conversationsResponse.status, errorText);
+        throw new Error(`Failed to fetch conversations (${conversationsResponse.status}): ${errorText.substring(0, 100)}`);
+      }
+
+      // Check connections response
+      if (!connectionsResponse.ok) {
+        const errorText = await connectionsResponse.text();
+        console.error('Connections API failed:', connectionsResponse.status, errorText);
+        throw new Error(`Failed to fetch connections (${connectionsResponse.status}): ${errorText.substring(0, 100)}`);
       }
       
-      const result = await response.json();
+      const conversationsResult = await conversationsResponse.json();
+      const connectionsResult = await connectionsResponse.json();
       
-      if (result.success) {
-        const conversationsData = result.conversations || [];
-        setConversations(conversationsData);
-        
-        // Mark initial load as complete
-        setInitialLoadComplete(true);
-      } else {
-        throw new Error(result.error || 'Failed to fetch conversations');
+      // Debug logging removed for production
+      
+      // Check for API-level errors
+      if (!conversationsResult.success) {
+        console.error('Conversations API returned error:', conversationsResult.error);
+        throw new Error(`Conversations API error: ${conversationsResult.error}`);
       }
+      
+      if (!connectionsResult.success) {
+        console.error('Connections API returned error:', connectionsResult.error);
+        throw new Error(`Connections API error: ${connectionsResult.error}`);
+      }
+      
+      // Process the data
+      const existingConversations = conversationsResult.conversations || [];
+      const connectedUsers = connectionsResult.connected || [];
+      
+      // Get list of partner IDs from existing conversations
+      const existingPartnerIds = existingConversations.map((convo: Conversation) => convo.partnerId);
+      
+      // Find connected users who don't have conversations yet
+      const missingConversations = connectedUsers
+        .filter((conn: ApiConnection) => !existingPartnerIds.includes(conn.otherUser.userId))
+        .map((conn: ApiConnection) => ({
+          id: 0, // Temporary ID for users without conversations
+          partnerId: conn.otherUser.userId,
+          partnerName: conn.otherUser.fullName,
+          partnerImageUrl: conn.otherUser.profileImage,
+          partnerRole: conn.otherUser.role,
+          lastMessagePreview: '',
+          lastMessageTime: null,
+          unreadCount: 0,
+          connectionActive: true,
+          createdAt: new Date().toISOString(),
+          division: conn.otherUser.division,
+          educationLevel: conn.otherUser.educationLevel,
+        }));
+      
+      // Combine existing conversations with missing connections
+      const allConversations = [...existingConversations, ...missingConversations];
+      
+      // Removed verbose logging for production
+      
+      setConversations(allConversations);
+      
+      // Mark initial load as complete
+      setInitialLoadComplete(true);
     } catch (error) {
       console.error('Error fetching conversations:', error);
       setError(error instanceof Error ? error.message : 'Failed to fetch conversations');
+      
+      // Fall back to just loading conversations if connections fail
+      try {
+        // Attempting fallback to conversations only (silently)
+        const windowWithClerk = window as WindowWithClerk;
+        const token = await windowWithClerk.Clerk?.session?.getToken();
+        
+        if (token) {
+          const fallbackResponse = await fetch('/api/messages', {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              operation: 'getConversations',
+              includeFirstConversationMessages: false,
+            })
+          });
+          
+          if (fallbackResponse.ok) {
+            const fallbackResult = await fallbackResponse.json();
+            if (fallbackResult.success) {
+              // Fallback successful
+              setConversations(fallbackResult.conversations || []);
+              setInitialLoadComplete(true);
+              return;
+            }
+          }
+        }
+      } catch (fallbackError) {
+        console.error('Fallback also failed:', fallbackError);
+      }
+      
       setConversations([]);
       setInitialLoadComplete(true); // Still mark as complete to prevent infinite loading
     } finally {
@@ -514,9 +605,8 @@ export default function MessagingPage() {
     return conversations;
   }, [searchTerm, conversations]);
 
-
-
   // Fetch user connections for the new message dialog
+  /* eslint-disable-next-line @typescript-eslint/no-unused-vars */
   const fetchConnections = useCallback(async () => {
     setLoadingConnections(true);
     
@@ -546,13 +636,17 @@ export default function MessagingPage() {
       const result = await response.json();
       
       if (result.success) {
-        // Filter to only include 'connected' users, then map to a simpler object
-        const connectedUsers = result.connections
-          .filter((conn: ApiConnection) => conn.status === 'connected')
-          .map((conn: ApiConnection) => ({
+        if (!result.success || !Array.isArray(result.connections)) {
+          setConnections([]);
+          return;
+        }
+
+        const connectedUsers = (result.connections as ApiConnection[])
+          .filter((conn) => conn.status === 'connected')
+          .map((conn) => ({
             id: conn.otherUser.userId,
             name: conn.otherUser.fullName || 'Unknown User',
-            imageUrl: conn.otherUser.profileImage,
+            imageUrl: conn.otherUser.profileImage || null,
             role: conn.otherUser.role || 'user',
             division: conn.otherUser.division,
             educationLevel: conn.otherUser.educationLevel,
@@ -561,7 +655,7 @@ export default function MessagingPage() {
         // Get list of partner IDs from existing conversations
         const existingPartnerIds = conversations.map(convo => convo.partnerId);
         
-        // Filter out connections that already have conversations
+        // Filter out connections that already have conversations or are already shown
         const filteredUsers = connectedUsers.filter(
           (conn: {id: string}) => !existingPartnerIds.includes(conn.id)
         );
@@ -577,7 +671,7 @@ export default function MessagingPage() {
   
   // Start new conversation with a user
   const startConversation = useCallback(async (userId: string) => {
-    console.log('Starting conversation with user ID:', userId);
+    // Starting conversation – production log removed
     setIsNewMessageDialogOpen(false);
     setLoading(true);
     
@@ -607,11 +701,11 @@ export default function MessagingPage() {
 
       if (result.success) {
         const newConversationId = result.conversationId;
-        // Refetch conversations to update the list, which will happen automatically
-        // when we switch to the new conversation due to useEffect dependencies.
-        await fetchConversations();
-        // Select the new conversation
+        // Immediately select the new conversation so the UI updates without waiting
         setSelectedConversationId(newConversationId);
+
+        // Refresh conversations list in the background (no await to avoid blocking)
+        fetchConversations();
       } else {
         throw new Error(result.error || 'Failed to start conversation');
       }
@@ -623,6 +717,17 @@ export default function MessagingPage() {
       setLoading(false);
     }
   }, [fetchConversations]);
+
+  // Handle clicking on a conversation (including ones without existing messages)
+  const handleConversationClick = useCallback(async (conversation: Conversation) => {
+    if (conversation.id === 0) {
+      // This is a connected user without a conversation yet, create one
+      await startConversation(conversation.partnerId);
+    } else {
+      // This is an existing conversation, just select it
+      setSelectedConversationId(conversation.id);
+    }
+  }, [startConversation]);
   
   // Filter connections based on search
   const filteredConnections = useMemo(() => {
@@ -631,12 +736,6 @@ export default function MessagingPage() {
       conn.name.toLowerCase().includes(connectionSearchTerm.toLowerCase())
     );
   }, [connections, connectionSearchTerm]);
-  
-  // Open dialog and fetch connections
-  const handleNewMessageClick = useCallback(() => {
-    setIsNewMessageDialogOpen(true);
-    fetchConnections();
-  }, [fetchConnections]);
 
   return (
     <AuthWrapper>
@@ -666,14 +765,7 @@ export default function MessagingPage() {
                       </Badge>
                     </div>
                   </div>
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    className="border-[#01ae79]/30 hover:border-[#01ae79]/50 hover:bg-[#01ae79]/5 dark:border-[#01ae79]/40 dark:hover:border-[#01ae79]/60 dark:hover:bg-[#01ae79]/10"
-                    onClick={handleNewMessageClick}
-                  >
-                    <PlusCircle className="h-4 w-4 mr-2"/> New
-                  </Button>
+                  {/* New conversation button removed – all connections already appear in the list */}
                 </div>
                 
                 <div className="relative">
@@ -699,8 +791,8 @@ export default function MessagingPage() {
                   <div className="space-y-1 p-2">
                     {filteredConversations.map(convo => (
                       <div
-                        key={convo.id}
-                        onClick={() => setSelectedConversationId(convo.id)}
+                        key={`${convo.id}-${convo.partnerId}`}
+                        onClick={() => handleConversationClick(convo)}
                         className={`p-4 rounded-lg cursor-pointer transition-all duration-200 ${
                           selectedConversationId === convo.id
                             ? 'bg-[#01ae79]/10 dark:bg-[#01ae79]/20 border border-[#01ae79]/30 dark:border-[#01ae79]/40 shadow-sm'
@@ -733,7 +825,7 @@ export default function MessagingPage() {
                             </div>
                             <div className="flex justify-between items-center">
                               <p className="text-xs text-muted-foreground truncate">
-                                {convo.lastMessagePreview || 'No messages yet'}
+                                {convo.lastMessagePreview || (convo.id === 0 ? 'Click to start messaging' : 'No messages yet')}
                               </p>
                               {convo.unreadCount > 0 && (
                                 <span className="ml-2 bg-[#01ae79] text-white text-xs font-bold px-2 py-1 rounded-full flex-shrink-0">{convo.unreadCount}</span>
@@ -817,11 +909,7 @@ export default function MessagingPage() {
                     ref={messagesContainerRef}
                     className="flex-grow p-4 space-y-4 overflow-y-auto bg-gradient-to-b from-transparent to-[#01ae79]/5 dark:to-[#01ae79]/5"
                   >
-                    {loading && !initialLoadComplete ? (
-                      <div className="h-full flex items-center justify-center">
-                        <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-[#01ae79] border-r-transparent align-[-0.125em] motion-reduce:animate-[spin_1.5s_linear_infinite]" />
-                      </div>
-                    ) : loading && messages.length === 0 ? (
+                    {loading && messages.length === 0 ? (
                       <div className="h-full flex items-center justify-center">
                         <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-[#01ae79] border-r-transparent align-[-0.125em] motion-reduce:animate-[spin_1.5s_linear_infinite]" />
                       </div>

@@ -1139,6 +1139,37 @@ export const messageOperations = {
     if (!conversation) return null;
 
     return conversation.user1Id === userId ? conversation.user2Id : conversation.user1Id;
+  },
+
+  // Create missing conversations for existing connections
+  async createMissingConversationsForConnections() {
+    try {
+      // Get all connected connections
+      const connectedConnections = await db.query.connections.findMany({
+        where: eq(connections.status, 'connected'),
+      });
+
+      let createdCount = 0;
+      
+      for (const connection of connectedConnections) {
+        // Check if a conversation already exists between these users
+        const existingConversation = await this.getConversationByUsers(
+          connection.fromUserId,
+          connection.toUserId
+        );
+        
+        if (!existingConversation) {
+          // Create the missing conversation
+          await this.createConversation(connection.fromUserId, connection.toUserId);
+          createdCount++;
+        }
+      }
+      
+      return createdCount;
+    } catch (error) {
+      console.error('Error creating missing conversations:', error);
+      throw error;
+    }
   }
 };
 

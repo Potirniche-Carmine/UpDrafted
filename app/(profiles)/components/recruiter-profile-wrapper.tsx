@@ -27,13 +27,10 @@ export function RecruiterProfileWrapper({
   rejectionReason,
   rejectedAt
 }: RecruiterProfileWrapperProps) {
-  const handleConnect = () => {
-    console.log('Connect clicked');
-  };
+  // Placeholder handlers – integrate real logic when available
+  const handleConnect = () => {};
 
-  const handleShare = () => {
-    console.log('Share clicked');
-  };
+  const handleShare = () => {};
 
   return (
     <RecruiterProfile

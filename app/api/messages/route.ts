@@ -36,7 +36,7 @@ interface Message {
   messageType: string;
 }
 
-type Operation = 'getConversations' | 'getMessages' | 'sendMessage' | 'markRead' | 'getUnreadCount' | 'getOrCreateConversation';
+type Operation = 'getConversations' | 'getMessages' | 'sendMessage' | 'markRead' | 'getUnreadCount' | 'getOrCreateConversation' | 'fixMissingConversations';
 
 interface BaseRequestBody {
   operation: Operation;
@@ -135,6 +135,9 @@ export async function POST(request: NextRequest) {
         case 'getOrCreateConversation':
           validatedBody = validateSchema(MessageValidation.getOrCreateConversation, rawBody);
           break;
+        case 'fixMissingConversations':
+          validatedBody = rawBody; // No additional validation needed
+          break;
         default:
           return NextResponse.json({
             success: false,
@@ -176,6 +179,9 @@ export async function POST(request: NextRequest) {
       
       case 'getOrCreateConversation':
         return await handleGetOrCreateConversation(userId, validatedBody as GetOrCreateConversationRequestBody);
+      
+      case 'fixMissingConversations':
+        return await handleFixMissingConversations();
       
       default:
         return NextResponse.json({
@@ -676,6 +682,28 @@ async function handleGetOrCreateConversation(userId: string, body: GetOrCreateCo
   } catch (error) {
     console.error('Error in getOrCreateConversation:', error);
     return NextResponse.json({ success: false, error: 'Failed to get or create conversation' }, { status: 500 });
+  }
+}
+
+/**
+ * Fix missing conversations for existing connections
+ */
+async function handleFixMissingConversations() {
+  try {
+    // Only allow this operation for development/admin purposes
+    const createdCount = await messageOperations.createMissingConversationsForConnections();
+    
+    return NextResponse.json({
+      success: true,
+      message: `Created ${createdCount} missing conversations`,
+      createdCount
+    });
+  } catch (error) {
+    console.error('Error fixing missing conversations:', error);
+    return NextResponse.json({
+      success: false,
+      error: 'Failed to fix missing conversations'
+    }, { status: 500 });
   }
 }
 

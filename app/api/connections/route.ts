@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAnyRole } from '@/utils/roles';
-import { connectionOperations, userOperations } from '@/database/db-utils';
+import { connectionOperations, userOperations, messageOperations } from '@/database/db-utils';
 import { sanitizeText } from '@/utils/sanitization';
 import { withRateLimit } from '@/utils/rate-limiting';
 import { getCachedWithType, setCachedWithType, invalidateCachePattern, createErrorResponse, createSuccessResponse } from '@/utils/security-cache';
@@ -149,7 +149,10 @@ export async function GET(request: NextRequest) {
     const cachedConnections = await getCachedWithType<ConnectionsResponse>(cacheKey);
     
     if (cachedConnections) {
-      return createSuccessResponse(cachedConnections, rateLimitCheck.headers);
+      return createSuccessResponse({
+        success: true,
+        ...cachedConnections
+      }, rateLimitCheck.headers);
     }
 
     // Get connections based on user type - now using the new user-based approach
@@ -229,7 +232,10 @@ export async function GET(request: NextRequest) {
     // Cache the result
     await setCachedWithType(cacheKey, result, 'userConnections');
 
-    return createSuccessResponse(result, rateLimitCheck.headers);
+    return createSuccessResponse({
+      success: true,
+      ...result
+    }, rateLimitCheck.headers);
 
   } catch (error) {
     console.error('Error fetching connections:', error);
@@ -327,6 +333,17 @@ export async function PUT(request: NextRequest) {
       invalidateCachePattern(`connections:${currentUserId}*`),
       invalidateCachePattern(`connections:*`)
     ]);
+
+    // Create a conversation when the status is updated to 'connected'
+    // Check if a conversation already exists between these users
+    const existingConversation = await messageOperations.getConversationByUsers(
+      currentUserId, 
+      connection.toUserId
+    );
+    
+    if (!existingConversation) {
+      await messageOperations.createConversation(currentUserId, connection.toUserId);
+    }
 
     return createSuccessResponse({
       success: true,
