@@ -431,6 +431,14 @@ async function handleGetNotifications(userId: string, body: GetNotificationsRequ
               ...enhancedData,
               link: '/connections?tab=requests',
             };
+          } else if (notification.type === 'profileView') {
+            // For profile view notifications, link to the viewer's profile
+            if (metadata.actorUserId) {
+              enhancedData = {
+                ...enhancedData,
+                link: `/profile/${metadata.actorUserId}`,
+              };
+            }
           }
         }
 

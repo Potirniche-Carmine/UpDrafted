@@ -250,15 +250,28 @@ export async function DELETE(request: NextRequest) {
     const rateLimitCheck = await withRateLimit(request, 'connections', currentUserId, role);
     if (!rateLimitCheck.success) return rateLimitCheck.response;
 
+    // Try to get connectionId from query params first, then from body
     const { searchParams } = new URL(request.url);
-    const connectionId = searchParams.get('connectionId');
+    let connectionId = searchParams.get('connectionId');
+    let targetUserId = null;
 
+    // If no connectionId in query params, try to get from request body
     if (!connectionId) {
-      return createErrorResponse('Connection ID is required', 400);
+      try {
+        const body = await request.json();
+        connectionId = body.connectionId;
+        targetUserId = body.targetUserId;
+      } catch {
+        // Body might not be JSON
+      }
+    }
+
+    if (!connectionId && !targetUserId) {
+      return createErrorResponse('Connection ID or Target User ID is required', 400);
     }
 
     // Delete the connection
-    const deleted = await connectionOperations.deleteConnection(connectionId, currentUserId);
+    const deleted = await connectionOperations.deleteConnection(currentUserId, targetUserId || '');
 
     if (!deleted) {
       return createErrorResponse('Connection not found or unauthorized', 404);
@@ -299,8 +312,8 @@ export async function PUT(request: NextRequest) {
     }
 
     // Update the connection status from pending to connected
-    const connection = await connectionOperations.updateConnectionStatus(
-      connectionId.toString(),
+    const connection = await connectionOperations.updateConnectionStatusById(
+      parseInt(connectionId),
       currentUserId,
       'connected'
     );

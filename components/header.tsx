@@ -179,14 +179,16 @@ export function Header() {
           />
         </a>
 
-        {/* Desktop Search Bar - Only show when signed in and onboarded */}
+        {/* Desktop & Tablet Search Bar - Show on medium screens and up (includes iPads) */}
         {isSignedIn && hasCompletedOnboarding && (
-          <div className="hidden lg:flex flex-1 justify-center px-4 xl:px-6 max-w-lg">
-            <SearchBar />
+          <div className="hidden md:flex flex-1 justify-center px-4 xl:px-6 max-w-lg min-w-0">
+            <div className="w-full max-w-md min-w-0">
+              <SearchBar userRole={userRole} />
+            </div>
           </div>
         )}
 
-        {/* Desktop Navigation */}
+        {/* Desktop/Tablet Navigation - Show on medium screens and up, with labels only on large+ */}
         <nav className="hidden md:flex items-center space-x-1 lg:space-x-2">
           {navItemsToDisplay.map((item) => (
             <NavItem
@@ -237,18 +239,18 @@ export function Header() {
             <SignInButton mode="modal">
               <Button variant="default" size="sm" className="flex items-center space-x-2 ml-2 bg-[#01ae79] hover:bg-[#01ae79]/90 text-white">
                 <LogIn className="h-4 w-4" />
-                <span>Sign In</span>
+                <span className="hidden lg:inline">Sign In</span>
               </Button>
             </SignInButton>
             <SignUpButton mode="modal">
               <Button variant="outline" size="sm" className="ml-2 border-[#01ae79]/30 hover:bg-[#01ae79]/5 dark:border-[#01ae79]/30 dark:hover:bg-[#01ae79]/10 text-[#01ae79] hover:text-[#01ae79]">
-                Sign Up
+                <span className="hidden lg:inline">Sign Up</span>
               </Button>
             </SignUpButton>
           </SignedOut>
         </nav>
 
-        {/* Mobile Navigation */}
+        {/* Mobile Navigation - Show only on small screens */}
         <div className="md:hidden flex items-center space-x-2">
           <ThemeToggle />
 
@@ -272,8 +274,8 @@ export function Header() {
                   <div className="mt-6 space-y-4">
                     {/* Mobile Search */}
                     <div className="pb-4 border-b border-border">
-                      <div className="px-1">
-                        <SearchBar />
+                      <div className="px-1 min-w-0">
+                        <SearchBar userRole={userRole} />
                       </div>
                     </div>
 

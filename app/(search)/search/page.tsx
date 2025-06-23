@@ -3,13 +3,13 @@
 import { useState, useEffect, Suspense, useCallback, useRef } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { Search, MapPin, Calendar, School, Shield, Users } from "lucide-react";
-import Image from "next/image";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent } from "@/components/ui/card";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { AuthWrapper } from '../../../components/auth-wrapper';
 import { useAuth } from "@clerk/nextjs";
 import { getSportsList } from "@/lib/sports-data";
@@ -411,19 +411,16 @@ function SearchPageContent() {
                 <CardContent className="p-4 md:p-6">
                   <div className="flex items-start gap-3 md:gap-4">
                     <div className="relative flex-shrink-0">
-                      {user.profileImage ? (
-                        <Image
-                          src={getProfileImageUrl(user.profileImage)!}
+                      <Avatar className="w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 ring-2 ring-[#01ae79]/20 group-hover:ring-[#01ae79]/50 transition-all duration-200">
+                        <AvatarImage 
+                          src={getProfileImageUrl(user.profileImage) || undefined} 
                           alt={user.fullName}
-                          width={60}
-                          height={60}
-                          className="rounded-full object-cover ring-2 ring-green-100 dark:ring-green-900 group-hover:ring-green-200 dark:group-hover:ring-green-800 transition-colors"
+                          className="object-cover"
                         />
-                      ) : (
-                        <div className="w-[60px] h-[60px] rounded-full bg-muted flex items-center justify-center ring-2 ring-green-100 dark:ring-green-900 group-hover:ring-green-200 dark:group-hover:ring-green-800 transition-colors">
-                          <Users className="w-6 h-6 text-muted-foreground" />
-                        </div>
-                      )}
+                        <AvatarFallback className="bg-muted text-muted-foreground">
+                          <Users className="w-6 h-6" />
+                        </AvatarFallback>
+                      </Avatar>
                       {user.isVerified && (
                         <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-green-500 rounded-full flex items-center justify-center ring-2 ring-background">
                           <Shield className="h-3 w-3 text-white stroke-[4]" />

@@ -86,61 +86,128 @@ export async function GET(request: NextRequest) {
     // Calculate offset for pagination
     const offset = (page - 1) * pageSize;
 
+    // Use Promise.all for parallel execution instead of sequential queries
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const searchPromises: Promise<any[]>[] = [];
+
     // Search athletes if no role filter or role is athlete
     if (!roleFilter || roleFilter === 'athlete') {
-      const athleteResults = await db
-        .select({
-          id: users.id,
-          fullName: athleteProfiles.fullName,
-          role: users.role,
-          sport: athleteProfiles.sport,
-          profileImageR3Key: athleteProfiles.profileImageR3Key,
-          organizationName: athleteProfiles.organizationName,
-          city: athleteProfiles.city,
-          state: athleteProfiles.state,
-          isVerified: athleteProfiles.isVerified,
-          graduationYear: athleteProfiles.graduationYear,
-          educationLevel: athleteProfiles.educationLevel,
-        })
-        .from(athleteProfiles)
-        .innerJoin(users, eq(users.id, athleteProfiles.userId))
-        .where(
-          and(
-            or(
-              ilike(athleteProfiles.fullName, searchTerm),
-              ilike(athleteProfiles.sport, searchTerm),
-              ilike(athleteProfiles.organizationName, searchTerm),
-              ilike(athleteProfiles.city, searchTerm),
-              ilike(athleteProfiles.state, searchTerm)
-            ),
-            // Exclude current user's profile
-            ne(users.id, auth.userId)
+      searchPromises.push(
+        db
+          .select({
+            id: users.id,
+            fullName: athleteProfiles.fullName,
+            role: users.role,
+            sport: athleteProfiles.sport,
+            profileImageR3Key: athleteProfiles.profileImageR3Key,
+            organizationName: athleteProfiles.organizationName,
+            city: athleteProfiles.city,
+            state: athleteProfiles.state,
+            isVerified: athleteProfiles.isVerified,
+            graduationYear: athleteProfiles.graduationYear,
+            educationLevel: athleteProfiles.educationLevel,
+          })
+          .from(athleteProfiles)
+          .innerJoin(users, eq(users.id, athleteProfiles.userId))
+          .where(
+            and(
+              or(
+                ilike(athleteProfiles.fullName, searchTerm),
+                ilike(athleteProfiles.sport, searchTerm),
+                ilike(athleteProfiles.organizationName, searchTerm),
+                ilike(athleteProfiles.city, searchTerm),
+                ilike(athleteProfiles.state, searchTerm)
+              ),
+              ne(users.id, auth.userId)
+            )
           )
-        )
-        .offset(offset)
-        .limit(pageSize);
+          .offset(offset)
+          .limit(pageSize)
+      );
+    }
 
-      // Get total count for athletes
-      const athleteCount = await db
-        .select({ count: sql<number>`count(*)` })
-        .from(athleteProfiles)
-        .innerJoin(users, eq(users.id, athleteProfiles.userId))
-        .where(
-          and(
-            or(
-              ilike(athleteProfiles.fullName, searchTerm),
-              ilike(athleteProfiles.sport, searchTerm),
-              ilike(athleteProfiles.organizationName, searchTerm),
-              ilike(athleteProfiles.city, searchTerm),
-              ilike(athleteProfiles.state, searchTerm)
-            ),
-            // Exclude current user's profile
-            ne(users.id, auth.userId)
+    // Search coaches if no role filter or role is coach
+    if (!roleFilter || roleFilter === 'coach') {
+      searchPromises.push(
+        db
+          .select({
+            id: users.id,
+            fullName: coachProfiles.fullName,
+            role: users.role,
+            sport: coachProfiles.sportCoaching,
+            profileImageR3Key: coachProfiles.profileImageR3Key,
+            organizationName: coachProfiles.organizationName,
+            city: coachProfiles.city,
+            state: coachProfiles.state,
+            isVerified: coachProfiles.isVerified,
+            title: coachProfiles.title,
+            division: coachProfiles.division,
+          })
+          .from(coachProfiles)
+          .innerJoin(users, eq(users.id, coachProfiles.userId))
+          .where(
+            and(
+              or(
+                ilike(coachProfiles.fullName, searchTerm),
+                ilike(coachProfiles.sportCoaching, searchTerm),
+                ilike(coachProfiles.organizationName, searchTerm),
+                ilike(coachProfiles.city, searchTerm),
+                ilike(coachProfiles.state, searchTerm),
+                ilike(coachProfiles.title, searchTerm)
+              ),
+              ne(users.id, auth.userId)
+            )
           )
-        );
+          .offset(offset)
+          .limit(pageSize)
+      );
+    }
 
-      totalResults += Number(athleteCount[0]?.count || 0);
+    // Search recruiters if no role filter or role is recruiter
+    if (!roleFilter || roleFilter === 'recruiter') {
+      searchPromises.push(
+        db
+          .select({
+            id: users.id,
+            fullName: recruitingProfiles.fullName,
+            role: users.role,
+            sport: recruitingProfiles.sportRecruiting,
+            profileImageR3Key: recruitingProfiles.profileImageR3Key,
+            organizationName: recruitingProfiles.organizationName,
+            city: recruitingProfiles.city,
+            state: recruitingProfiles.state,
+            isVerified: recruitingProfiles.isVerified,
+            title: recruitingProfiles.title,
+            division: recruitingProfiles.division,
+          })
+          .from(recruitingProfiles)
+          .innerJoin(users, eq(users.id, recruitingProfiles.userId))
+          .where(
+            and(
+              or(
+                ilike(recruitingProfiles.fullName, searchTerm),
+                ilike(recruitingProfiles.sportRecruiting, searchTerm),
+                ilike(recruitingProfiles.organizationName, searchTerm),
+                ilike(recruitingProfiles.city, searchTerm),
+                ilike(recruitingProfiles.state, searchTerm),
+                ilike(recruitingProfiles.title, searchTerm)
+              ),
+              ne(users.id, auth.userId)
+            )
+          )
+          .offset(offset)
+          .limit(pageSize)
+      );
+    }
 
+    // Execute all search queries in parallel
+    const searchResults = await Promise.all(searchPromises);
+
+    // Process results from each search
+    let searchIndex = 0;
+    
+    if (!roleFilter || roleFilter === 'athlete') {
+      const athleteResults = searchResults[searchIndex++];
       for (const athlete of athleteResults) {
         results.push({
           id: athlete.id,
@@ -158,63 +225,8 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Search coaches if no role filter or role is coach
     if (!roleFilter || roleFilter === 'coach') {
-      const coachResults = await db
-        .select({
-          id: users.id,
-          fullName: coachProfiles.fullName,
-          role: users.role,
-          sport: coachProfiles.sportCoaching,
-          profileImageR3Key: coachProfiles.profileImageR3Key,
-          organizationName: coachProfiles.organizationName,
-          city: coachProfiles.city,
-          state: coachProfiles.state,
-          isVerified: coachProfiles.isVerified,
-          title: coachProfiles.title,
-          division: coachProfiles.division,
-        })
-        .from(coachProfiles)
-        .innerJoin(users, eq(users.id, coachProfiles.userId))
-        .where(
-          and(
-            or(
-              ilike(coachProfiles.fullName, searchTerm),
-              ilike(coachProfiles.sportCoaching, searchTerm),
-              ilike(coachProfiles.organizationName, searchTerm),
-              ilike(coachProfiles.city, searchTerm),
-              ilike(coachProfiles.state, searchTerm),
-              ilike(coachProfiles.title, searchTerm)
-            ),
-            // Exclude current user's profile
-            ne(users.id, auth.userId)
-          )
-        )
-        .offset(offset)
-        .limit(pageSize);
-
-      // Get total count for coaches
-      const coachCount = await db
-        .select({ count: sql<number>`count(*)` })
-        .from(coachProfiles)
-        .innerJoin(users, eq(users.id, coachProfiles.userId))
-        .where(
-          and(
-            or(
-              ilike(coachProfiles.fullName, searchTerm),
-              ilike(coachProfiles.sportCoaching, searchTerm),
-              ilike(coachProfiles.organizationName, searchTerm),
-              ilike(coachProfiles.city, searchTerm),
-              ilike(coachProfiles.state, searchTerm),
-              ilike(coachProfiles.title, searchTerm)
-            ),
-            // Exclude current user's profile
-            ne(users.id, auth.userId)
-          )
-        );
-
-      totalResults += Number(coachCount[0]?.count || 0);
-
+      const coachResults = searchResults[searchIndex++];
       for (const coach of coachResults) {
         results.push({
           id: coach.id,
@@ -232,63 +244,8 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Search recruiters if no role filter or role is recruiter
     if (!roleFilter || roleFilter === 'recruiter') {
-      const recruiterResults = await db
-        .select({
-          id: users.id,
-          fullName: recruitingProfiles.fullName,
-          role: users.role,
-          sport: recruitingProfiles.sportRecruiting,
-          profileImageR3Key: recruitingProfiles.profileImageR3Key,
-          organizationName: recruitingProfiles.organizationName,
-          city: recruitingProfiles.city,
-          state: recruitingProfiles.state,
-          isVerified: recruitingProfiles.isVerified,
-          title: recruitingProfiles.title,
-          division: recruitingProfiles.division,
-        })
-        .from(recruitingProfiles)
-        .innerJoin(users, eq(users.id, recruitingProfiles.userId))
-        .where(
-          and(
-            or(
-              ilike(recruitingProfiles.fullName, searchTerm),
-              ilike(recruitingProfiles.sportRecruiting, searchTerm),
-              ilike(recruitingProfiles.organizationName, searchTerm),
-              ilike(recruitingProfiles.city, searchTerm),
-              ilike(recruitingProfiles.state, searchTerm),
-              ilike(recruitingProfiles.title, searchTerm)
-            ),
-            // Exclude current user's profile
-            ne(users.id, auth.userId)
-          )
-        )
-        .offset(offset)
-        .limit(pageSize);
-
-      // Get total count for recruiters
-      const recruiterCount = await db
-        .select({ count: sql<number>`count(*)` })
-        .from(recruitingProfiles)
-        .innerJoin(users, eq(users.id, recruitingProfiles.userId))
-        .where(
-          and(
-            or(
-              ilike(recruitingProfiles.fullName, searchTerm),
-              ilike(recruitingProfiles.sportRecruiting, searchTerm),
-              ilike(recruitingProfiles.organizationName, searchTerm),
-              ilike(recruitingProfiles.city, searchTerm),
-              ilike(recruitingProfiles.state, searchTerm),
-              ilike(recruitingProfiles.title, searchTerm)
-            ),
-            // Exclude current user's profile
-            ne(users.id, auth.userId)
-          )
-        );
-
-      totalResults += Number(recruiterCount[0]?.count || 0);
-
+      const recruiterResults = searchResults[searchIndex++];
       for (const recruiter of recruiterResults) {
         results.push({
           id: recruiter.id,
@@ -305,6 +262,79 @@ export async function GET(request: NextRequest) {
         });
       }
     }
+
+    // Get count in parallel using combined query for better performance
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const countPromises: Promise<any>[] = [];
+
+    if (!roleFilter || roleFilter === 'athlete') {
+      countPromises.push(
+        db
+          .select({ count: sql<number>`count(*)` })
+          .from(athleteProfiles)
+          .innerJoin(users, eq(users.id, athleteProfiles.userId))
+          .where(
+            and(
+              or(
+                ilike(athleteProfiles.fullName, searchTerm),
+                ilike(athleteProfiles.sport, searchTerm),
+                ilike(athleteProfiles.organizationName, searchTerm),
+                ilike(athleteProfiles.city, searchTerm),
+                ilike(athleteProfiles.state, searchTerm)
+              ),
+              ne(users.id, auth.userId)
+            )
+          )
+      );
+    }
+
+    if (!roleFilter || roleFilter === 'coach') {
+      countPromises.push(
+        db
+          .select({ count: sql<number>`count(*)` })
+          .from(coachProfiles)
+          .innerJoin(users, eq(users.id, coachProfiles.userId))
+          .where(
+            and(
+              or(
+                ilike(coachProfiles.fullName, searchTerm),
+                ilike(coachProfiles.sportCoaching, searchTerm),
+                ilike(coachProfiles.organizationName, searchTerm),
+                ilike(coachProfiles.city, searchTerm),
+                ilike(coachProfiles.state, searchTerm),
+                ilike(coachProfiles.title, searchTerm)
+              ),
+              ne(users.id, auth.userId)
+            )
+          )
+      );
+    }
+
+    if (!roleFilter || roleFilter === 'recruiter') {
+      countPromises.push(
+        db
+          .select({ count: sql<number>`count(*)` })
+          .from(recruitingProfiles)
+          .innerJoin(users, eq(users.id, recruitingProfiles.userId))
+          .where(
+            and(
+              or(
+                ilike(recruitingProfiles.fullName, searchTerm),
+                ilike(recruitingProfiles.sportRecruiting, searchTerm),
+                ilike(recruitingProfiles.organizationName, searchTerm),
+                ilike(recruitingProfiles.city, searchTerm),
+                ilike(recruitingProfiles.state, searchTerm),
+                ilike(recruitingProfiles.title, searchTerm)
+              ),
+              ne(users.id, auth.userId)
+            )
+          )
+      );
+    }
+
+    // Execute count queries in parallel
+    const countResults = await Promise.all(countPromises);
+    totalResults = countResults.reduce((total, result) => total + Number(result[0]?.count || 0), 0);
 
     const responseData = {
       results,

@@ -1,10 +1,9 @@
 "use client";
 
-
-import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Badge } from "@/components/ui/badge";
-import { Bell, UserPlus, MessageCircle, Trash2, Circle, Check } from 'lucide-react';
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Bell, UserPlus, MessageCircle, Trash2, Circle, Check, User } from 'lucide-react';
 import { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { AuthWrapper } from '../../../components/auth-wrapper';
 import { useNotifications } from '@/hooks/use-notifications';
@@ -13,7 +12,7 @@ import { useRouter } from 'next/navigation';
 
 interface Notification {
   id: number;
-  type: 'newMessage' | 'newConnection';
+  type: 'newMessage' | 'newConnection' | 'profileView';
   title: string;
   message: string;
   isRead: boolean;
@@ -31,6 +30,7 @@ const getNotificationIcon = (type: Notification['type']) => {
   switch (type) {
     case 'newConnection': return <UserPlus className="h-5 w-5 text-green-500" />;
     case 'newMessage': return <MessageCircle className="h-5 w-5 text-purple-500" />;
+    case 'profileView': return <User className="h-5 w-5 text-blue-500" />;
     default: return <Bell className="h-5 w-5 text-gray-500" />;
   }
 };
@@ -250,9 +250,9 @@ export default function NotificationsPage() {
   if (error) {
     return (
       <AuthWrapper>
-        <div className="min-h-screen bg-background p-4 md:p-6">
-          <div className="max-w-5xl mx-auto h-[calc(100vh-2rem)] md:h-[calc(100vh-3rem)]">
-            <div className="h-full flex flex-col border border-border/50 rounded-xl shadow-lg bg-card overflow-hidden">
+        <div className="bg-background p-4 md:p-6">
+          <div className="max-w-5xl mx-auto">
+            <div className="flex flex-col border border-border/50 rounded-xl shadow-lg bg-card overflow-hidden">
               <div className="p-6 border-b border-border/50">
                 <h1 className="text-2xl md:text-3xl font-bold">Notifications</h1>
               </div>
@@ -273,8 +273,8 @@ export default function NotificationsPage() {
 
   return (
     <AuthWrapper>
-      <div className="min-h-screen bg-background p-4 md:p-6">
-        <div className="max-w-5xl mx-auto h-[calc(100vh-2rem)] md:h-[calc(100vh-3rem)]">
+      <div className="bg-background p-4 md:p-6">
+        <div className="max-w-5xl mx-auto">
           {/* Unified notifications panel */}
           <div className="h-full flex flex-col border border-border/50 rounded-xl shadow-lg bg-card overflow-hidden">
             
@@ -374,15 +374,16 @@ export default function NotificationsPage() {
                            (notification.actorImageUrl.startsWith('http://') || 
                             notification.actorImageUrl.startsWith('https://') || 
                             notification.actorImageUrl.startsWith('/')) ? (
-                            <div className="relative">
-                              <Image 
+                            <Avatar className="w-10 h-10 ring-2 ring-[#01ae79]/20 dark:ring-[#01ae79]/30 group-hover:ring-[#01ae79]/40 dark:group-hover:ring-[#01ae79]/50 transition-colors">
+                              <AvatarImage 
                                 src={notification.actorImageUrl} 
-                                alt={notification.actorName || 'Notification'} 
-                                width={40} 
-                                height={40} 
-                                className="rounded-full object-cover ring-2 ring-[#01ae79]/20 dark:ring-[#01ae79]/30 group-hover:ring-[#01ae79]/40 dark:group-hover:ring-[#01ae79]/50 transition-colors"
+                                alt={notification.actorName || 'Notification'}
+                                className="object-cover"
                               />
-                            </div>
+                              <AvatarFallback className="bg-[#01ae79]/10 dark:bg-[#01ae79]/20">
+                                {getNotificationIcon(notification.type)}
+                              </AvatarFallback>
+                            </Avatar>
                           ) : (
                             <div className="w-10 h-10 rounded-full bg-[#01ae79]/10 dark:bg-[#01ae79]/20 flex items-center justify-center ring-2 ring-[#01ae79]/30 dark:ring-[#01ae79]/40">
                               {getNotificationIcon(notification.type)}

@@ -489,6 +489,25 @@ export const connectionOperations = {
     return connection;
   },
 
+  // Update connection status by connection ID with authorization check
+  async updateConnectionStatusById(connectionId: number, currentUserId: string, status: 'connected' | 'pending') {
+    const [connection] = await db
+      .update(connections)
+      .set({ status })
+      .where(
+        and(
+          eq(connections.id, connectionId),
+          // Ensure the current user is the recipient (toUserId) for accepting requests
+          or(
+            eq(connections.toUserId, currentUserId),
+            eq(connections.fromUserId, currentUserId)
+          )
+        )
+      )
+      .returning();
+    return connection;
+  },
+
   // Delete connection
   async deleteConnection(fromUserId: string, toUserId: string) {
     const [deletedConnection] = await db

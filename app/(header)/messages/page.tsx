@@ -640,10 +640,10 @@ export default function MessagingPage() {
 
   return (
     <AuthWrapper>
-      <div className="min-h-screen bg-background p-4 md:p-6">
-        <div className="max-w-7xl mx-auto h-[85vh]">
+      <div className="bg-background p-4 md:p-6">
+        <div className="max-w-7xl mx-auto">
           {/* Unified messaging interface */}
-          <div className="h-full flex border border-border/50 rounded-xl shadow-lg bg-card overflow-hidden">
+          <div className="flex border border-border/50 rounded-xl shadow-lg bg-card overflow-hidden" style={{ height: '80vh' }}>
             
             {/* Sidebar - Conversations */}
             <div className={`${selectedConversationId ? 'hidden md:flex' : 'flex'} w-full md:w-80 lg:w-96 border-r border-border/50 flex-col bg-gradient-to-b from-[#01ae79]/20 to-[#01ae79]/20 dark:from-[#01ae79]/10 dark:to-[#01ae79]/10`}>
@@ -691,7 +691,7 @@ export default function MessagingPage() {
               {/* Conversations List */}
               <div className="flex-grow overflow-y-auto">
                 {loading && !conversations.length ? (
-                  <div className="p-8 text-center">
+                  <div className="p-6 text-center">
                     <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-[#01ae79] border-r-transparent align-[-0.125em] motion-reduce:animate-[spin_1.5s_linear_infinite]" />
                     <p className="mt-4 text-muted-foreground">Loading conversations...</p>
                   </div>
@@ -745,7 +745,7 @@ export default function MessagingPage() {
                     ))}
                   </div>
                 ) : (
-                  <div className="p-8 text-center">
+                  <div className="p-6 text-center">
                     <Users size={48} className="mx-auto text-muted-foreground/50 mb-4" />
                     <p className="text-muted-foreground">
                       {searchTerm ? 'No matching conversations' : 'No conversations yet'}

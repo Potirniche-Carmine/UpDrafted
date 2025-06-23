@@ -1,23 +1,15 @@
 "use client";
 
 import React, { useState, useMemo, useEffect, Suspense, useRef } from 'react';
-import { Users, Search, MessageSquare, Shield, CheckCircle, X, Clock, MoreHorizontal, MapPin, User, UserCheck, Users2, Send } from 'lucide-react';
+import { Users, Search, MessageSquare, Shield, CheckCircle, X, Clock, MapPin, User, UserCheck, Users2, Send } from 'lucide-react';
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
 import { useRouter } from 'next/navigation';
 import { useSearchParams } from 'next/navigation';
+import Link from 'next/link';
 import { AuthWrapper } from '../../../components/auth-wrapper';
 import { sanitizeText } from '@/utils/sanitization';
 
@@ -71,8 +63,6 @@ interface PendingRequest {
 
 interface UserCardProps {
   connection: Connection;
-  onRemove: (connectionId: number, targetUserId: string) => void;
-  isRemoving?: boolean;
 }
 
 interface PendingRequestCardProps {
@@ -153,28 +143,9 @@ const getRoleBadge = (role: string, division?: string, educationLevel?: string) 
   return <Badge variant="outline" className={`text-xs font-medium px-2 py-0.5 border ${roleColor} whitespace-nowrap`}>{roleText}</Badge>;
 };
 
-const UserCard: React.FC<UserCardProps> = ({ connection, onRemove, isRemoving = false }) => {
-  const [showMenu, setShowMenu] = useState(false);
-  const [showRemoveDialog, setShowRemoveDialog] = useState(false);
+const UserCard: React.FC<UserCardProps> = ({ connection }) => {
   const router = useRouter();
   const { otherUser } = connection;
-
-  const handleRemove = () => {
-    onRemove(connection.id, otherUser.userId);
-    setShowMenu(false);
-    setShowRemoveDialog(false);
-  };
-
-  const handleMenuClick = (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setShowMenu(!showMenu);
-  };
-
-  const navigateToProfile = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    router.push(`/profile/${otherUser.userId}`);
-  };
 
   // Format date as "June 3rd, 2025"
   const formatDate = (dateString: string) => {
@@ -216,95 +187,51 @@ const UserCard: React.FC<UserCardProps> = ({ connection, onRemove, isRemoving = 
       <Card className="group transition-all duration-200 hover:shadow-xl hover:shadow-[#01ae79]/15 border border-border hover:border-[#01ae79]/40 dark:hover:border-[#01ae79]/50 overflow-hidden">
         <CardContent className="p-3 sm:p-4 md:p-5">
           {/* Header Section with Date */}
-          <div className="flex items-start justify-between mb-3 md:mb-4">
-            <div className="flex items-start gap-2 md:gap-3 lg:gap-4 flex-1 min-w-0">
-              <div className="relative flex-shrink-0 cursor-pointer" onClick={navigateToProfile}>
-                <Avatar className="w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 ring-2 ring-[#01ae79]/20 group-hover:ring-[#01ae79]/50 transition-all duration-200">
-                  <AvatarImage 
-                    src={getProfileImageUrl(otherUser.profileImage) || undefined} 
-                    alt={otherUser.fullName}
-                    className="object-cover"
-                  />
-                  <AvatarFallback className="text-xs sm:text-sm font-semibold bg-gradient-to-br from-[#01ae79]/10 to-[#01ae79]/20 text-[#01ae79]">
-                    {otherUser.fullName.split(' ').map(n => n[0]).join('').toUpperCase()}
-                  </AvatarFallback>
-                </Avatar>
-                {otherUser.isVerified && (
-                  <div className="absolute -top-1 -right-1 w-4 h-4 sm:w-5 sm:h-5 bg-green-500 rounded-full flex items-center justify-center shadow-md">
-                    <Shield className="w-2 h-2 sm:w-3 sm:h-3 text-white" />
-                  </div>
-                )}
-              </div>
-
-              <div className="flex-1 min-w-0 space-y-2">
-                <h3 
-                  onClick={navigateToProfile}
-                  className="font-semibold text-sm md:text-base text-foreground leading-tight truncate cursor-pointer hover:text-[#01ae79] transition-colors"
-                >
-                  {otherUser.fullName}
-                </h3>
-                <div className="flex items-center gap-2 flex-wrap pt-1.5">
-                  {getRoleBadge(otherUser.role, otherUser.division, otherUser.educationLevel)}
+          <Link 
+            href={`/profile/${otherUser.userId}`}
+            className="block"
+          >
+            <div className="flex items-start justify-between mb-3 md:mb-4">
+              <div className="flex items-start gap-2 md:gap-3 lg:gap-4 flex-1 min-w-0">
+                <div className="relative flex-shrink-0">
+                  <Avatar className="w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 ring-2 ring-[#01ae79]/20 group-hover:ring-[#01ae79]/50 transition-all duration-200">
+                    <AvatarImage 
+                      src={getProfileImageUrl(otherUser.profileImage) || undefined} 
+                      alt={otherUser.fullName}
+                      className="object-cover"
+                    />
+                    <AvatarFallback className="text-xs sm:text-sm font-semibold bg-gradient-to-br from-[#01ae79]/10 to-[#01ae79]/20 text-[#01ae79]">
+                      {otherUser.fullName.split(' ').map(n => n[0]).join('').toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+                  {otherUser.isVerified && (
+                    <div className="absolute -top-1 -right-1 w-4 h-4 sm:w-5 sm:h-5 bg-green-500 rounded-full flex items-center justify-center shadow-md">
+                      <Shield className="w-2 h-2 sm:w-3 sm:h-3 text-white" />
+                    </div>
+                  )}
                 </div>
 
-                <p className="text-xs md:text-sm font-medium text-[#01ae79] truncate">
-                  {otherUser.role === 'athlete' ? otherUser.sport : otherUser.title}
-                </p>
+                <div className="flex-1 min-w-0 space-y-2">
+                  <div className="flex items-start justify-between gap-2">
+                    <h3 className="font-semibold text-sm md:text-base text-foreground leading-tight hover:text-[#01ae79] transition-colors flex-1 min-w-0">
+                      {otherUser.fullName}
+                    </h3>
+                    <span className="text-xs text-muted-foreground font-medium flex-shrink-0 mt-0.5">
+                      {formatDate(connection.createdAt)}
+                    </span>
+                  </div>
+                  
+                  <div className="flex items-center gap-2 flex-wrap pt-1">
+                    {getRoleBadge(otherUser.role, otherUser.division, otherUser.educationLevel)}
+                  </div>
+
+                  <p className="text-xs md:text-sm font-medium text-blue-600 dark:text-blue-400 truncate">
+                    {otherUser.role === 'athlete' ? otherUser.sport : otherUser.title}
+                  </p>
+                </div>
               </div>
             </div>
-
-            <div className="flex flex-col items-end gap-1 md:gap-2 flex-shrink-0">
-              <span className="py-1.5 text-[10px] sm:text-xs text-muted-foreground font-medium">
-                {formatDate(connection.createdAt)}
-              </span>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleMenuClick}
-                className="h-5 w-5 sm:h-6 sm:w-6 p-0 text-muted-foreground hover:text-foreground"
-              >
-                <MoreHorizontal size={12} className="sm:hidden" />
-                <MoreHorizontal size={14} className="hidden sm:block" />
-              </Button>
-            </div>
-
-            {showMenu && (
-              <div className="absolute right-3 sm:right-5 top-14 sm:top-16 w-36 sm:w-40 bg-background rounded-lg shadow-lg border border-border py-1 z-20">
-                <Dialog open={showRemoveDialog} onOpenChange={setShowRemoveDialog}>
-                  <DialogTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="w-full justify-start text-destructive hover:text-destructive hover:bg-destructive/10 px-3 py-2 h-auto text-xs"
-                    >
-                      <X size={12} className="mr-1" />
-                      Remove
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent onClick={(e) => e.stopPropagation()}>
-                    <DialogHeader>
-                      <DialogTitle>Remove Connection</DialogTitle>
-                      <DialogDescription>
-                        Are you sure you want to remove {otherUser.fullName} from your connections? This action cannot be undone.
-                      </DialogDescription>
-                    </DialogHeader>
-                    <DialogFooter>
-                      <Button variant="outline" onClick={() => setShowRemoveDialog(false)}>
-                        Cancel
-                      </Button>
-                      <Button 
-                        variant="destructive" 
-                        onClick={handleRemove}
-                        disabled={isRemoving}
-                      >
-                        {isRemoving ? 'Removing...' : 'Remove'}
-                      </Button>
-                    </DialogFooter>
-                  </DialogContent>
-                </Dialog>
-              </div>
-            )}
-          </div>
+          </Link>
 
           {/* Status Section */}
           <div className="mb-3 md:mb-4">
@@ -327,8 +254,8 @@ const UserCard: React.FC<UserCardProps> = ({ connection, onRemove, isRemoving = 
           <div className="pt-3 md:pt-4 border-t border-border/50">
             <Button
               onClick={(e) => {
+                e.preventDefault();
                 e.stopPropagation();
-                // Redirect to messages page
                 router.push('/messages');
               }}
               className="w-full h-8 sm:h-8 md:h-9 bg-[#01ae79] hover:bg-[#01ae79]/90 text-white text-xs sm:text-sm font-medium transition-all duration-200 hover:scale-[1.02]"
@@ -344,20 +271,14 @@ const UserCard: React.FC<UserCardProps> = ({ connection, onRemove, isRemoving = 
 };
 
 const PendingRequestCard: React.FC<PendingRequestCardProps> = ({ request, onAccept, onDecline }) => {
-  const router = useRouter();
   const { otherUser } = request;
   const sanitizedNotes = request.notes ? sanitizeText(request.notes) : null;
 
-  const navigateToProfile = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    router.push(`/profile/${otherUser.userId}`);
-  };
-
-  // Format date as "June 3rd, 2025"
+  // Format date as "June 3rd, 2025" with shorter format for mobile
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     const options: Intl.DateTimeFormatOptions = { 
-      month: 'long', 
+      month: 'short', 
       day: 'numeric', 
       year: 'numeric' 
     };
@@ -393,50 +314,53 @@ const PendingRequestCard: React.FC<PendingRequestCardProps> = ({ request, onAcce
       <Card className="group transition-all duration-200 hover:shadow-xl hover:shadow-[#01ae79]/15 border border-border hover:border-[#01ae79]/40 dark:hover:border-[#01ae79]/50 overflow-hidden">
         <CardContent className="p-3 sm:p-4 md:p-5">
           {/* Header Section with Date */}
-          <div className="flex items-start justify-between mb-3 md:mb-4">
-            <div className="flex items-start gap-2 md:gap-3 lg:gap-4 flex-1 min-w-0">
-              <div className="relative flex-shrink-0 cursor-pointer" onClick={navigateToProfile}>
-                <Avatar className="w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 ring-2 ring-[#01ae79]/20 group-hover:ring-[#01ae79]/50 transition-all duration-200">
-                  <AvatarImage 
-                    src={getProfileImageUrl(otherUser.profileImage) || undefined} 
-                    alt={otherUser.fullName}
-                    className="object-cover"
-                  />
-                  <AvatarFallback className="text-xs sm:text-sm font-semibold bg-gradient-to-br from-[#01ae79]/10 to-[#01ae79]/20 text-[#01ae79]">
-                    {otherUser.fullName.split(' ').map(n => n[0]).join('').toUpperCase()}
-                  </AvatarFallback>
-                </Avatar>
-                {otherUser.isVerified && (
-                  <div className="absolute -top-1 -right-1 w-4 h-4 sm:w-5 sm:h-5 bg-green-500 rounded-full flex items-center justify-center shadow-md">
-                    <Shield className="w-2 h-2 sm:w-3 sm:h-3 text-white" />
-                  </div>
-                )}
-              </div>
-
-              <div className="flex-1 min-w-0 space-y-2">
-                <h3 
-                  onClick={navigateToProfile}
-                  className="font-semibold text-sm md:text-base text-foreground leading-tight truncate cursor-pointer hover:text-[#01ae79] transition-colors"
-                >
-                  {otherUser.fullName}
-                </h3>
-                
-                <div className="flex items-center gap-2 flex-wrap pt-1.5">
-                  {getRoleBadge(otherUser.role, otherUser.division, otherUser.educationLevel)}
+          <Link 
+            href={`/profile/${otherUser.userId}`}
+            className="block"
+          >
+            <div className="flex items-start justify-between mb-3 md:mb-4 gap-3">
+              <div className="flex items-start gap-2 md:gap-3 lg:gap-4 flex-1 min-w-0">
+                <div className="relative flex-shrink-0">
+                  <Avatar className="w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 ring-2 ring-[#01ae79]/20 group-hover:ring-[#01ae79]/50 transition-all duration-200">
+                    <AvatarImage 
+                      src={getProfileImageUrl(otherUser.profileImage) || undefined} 
+                      alt={otherUser.fullName}
+                      className="object-cover"
+                    />
+                    <AvatarFallback className="text-xs sm:text-sm font-semibold bg-gradient-to-br from-[#01ae79]/10 to-[#01ae79]/20 text-[#01ae79]">
+                      {otherUser.fullName.split(' ').map(n => n[0]).join('').toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+                  {otherUser.isVerified && (
+                    <div className="absolute -top-1 -right-1 w-4 h-4 sm:w-5 sm:h-5 bg-green-500 rounded-full flex items-center justify-center shadow-md">
+                      <Shield className="w-2 h-2 sm:w-3 sm:h-3 text-white" />
+                    </div>
+                  )}
                 </div>
 
-                <p className="text-xs md:text-sm font-medium text-amber-600 dark:text-amber-400 truncate">
-                  {otherUser.role === 'athlete' ? otherUser.sport : otherUser.title}
-                </p>
+                <div className="flex-1 min-w-0 space-y-1.5">
+                  <div className="flex items-start justify-between gap-2">
+                    <h3 className="font-semibold text-sm md:text-base text-foreground leading-tight hover:text-[#01ae79] transition-colors flex-1 min-w-0">
+                      {otherUser.fullName}
+                    </h3>
+                    <span className="text-xs text-muted-foreground font-medium flex-shrink-0 mt-0.5">
+                      {formatDate(request.createdAt)}
+                    </span>
+                  </div>
+                  
+                  <div className="flex items-center gap-2 overflow-hidden">
+                    <div className="flex-shrink-0">
+                      {getRoleBadge(otherUser.role, otherUser.division, otherUser.educationLevel)}
+                    </div>
+                  </div>
+
+                  <p className="text-xs md:text-sm font-medium text-amber-600 dark:text-amber-400 truncate">
+                    {otherUser.role === 'athlete' ? otherUser.sport : otherUser.title}
+                  </p>
+                </div>
               </div>
             </div>
-
-            <div className="flex-shrink-0">
-              <span className="text-[10px] sm:text-xs text-muted-foreground font-medium">
-                {formatDate(request.createdAt)}
-              </span>
-            </div>
-          </div>
+          </Link>
 
           {/* Status Section */}
           <div className="mb-3 md:mb-4">
@@ -479,8 +403,8 @@ const PendingRequestCard: React.FC<PendingRequestCardProps> = ({ request, onAcce
               Accept
             </Button>
             <Button
-              variant="outline"
               size="sm"
+              variant="outline"
               onClick={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
@@ -499,13 +423,7 @@ const PendingRequestCard: React.FC<PendingRequestCardProps> = ({ request, onAcce
 };
 
 const SentRequestCard: React.FC<SentRequestCardProps> = ({ request, onWithdraw, isWithdrawing = false }) => {
-  const router = useRouter();
   const { otherUser } = request;
-
-  const navigateToProfile = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    router.push(`/profile/${otherUser.userId}`);
-  };
 
   const handleWithdraw = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -513,11 +431,11 @@ const SentRequestCard: React.FC<SentRequestCardProps> = ({ request, onWithdraw, 
     onWithdraw(request.id, otherUser.userId);
   };
 
-  // Format date as "June 3rd, 2025"
+  // Format date as "June 3rd, 2025" with shorter format for mobile
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     const options: Intl.DateTimeFormatOptions = { 
-      month: 'long', 
+      month: 'short', 
       day: 'numeric', 
       year: 'numeric' 
     };
@@ -553,50 +471,53 @@ const SentRequestCard: React.FC<SentRequestCardProps> = ({ request, onWithdraw, 
       <Card className="group transition-all duration-200 hover:shadow-xl hover:shadow-[#01ae79]/15 border border-border hover:border-[#01ae79]/40 dark:hover:border-[#01ae79]/50 overflow-hidden">
         <CardContent className="p-3 sm:p-4 md:p-5">
           {/* Header Section with Date */}
-          <div className="flex items-start justify-between mb-3 md:mb-4">
-            <div className="flex items-start gap-2 md:gap-3 lg:gap-4 flex-1 min-w-0">
-              <div className="relative flex-shrink-0 cursor-pointer" onClick={navigateToProfile}>
-                <Avatar className="w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 ring-2 ring-[#01ae79]/20 group-hover:ring-[#01ae79]/50 transition-all duration-200">
-                  <AvatarImage 
-                    src={getProfileImageUrl(otherUser.profileImage) || undefined} 
-                    alt={otherUser.fullName}
-                    className="object-cover"
-                  />
-                  <AvatarFallback className="text-xs sm:text-sm font-semibold bg-gradient-to-br from-[#01ae79]/10 to-[#01ae79]/20 text-[#01ae79]">
-                    {otherUser.fullName.split(' ').map(n => n[0]).join('').toUpperCase()}
-                  </AvatarFallback>
-                </Avatar>
-                {otherUser.isVerified && (
-                  <div className="absolute -top-1 -right-1 w-4 h-4 sm:w-5 sm:h-5 bg-green-500 rounded-full flex items-center justify-center shadow-md">
-                    <Shield className="w-2 h-2 sm:w-3 sm:h-3 text-white" />
-                  </div>
-                )}
-              </div>
-
-              <div className="flex-1 min-w-0 space-y-2">
-                <h3 
-                  onClick={navigateToProfile}
-                  className="font-semibold text-sm md:text-base text-foreground leading-tight truncate cursor-pointer hover:text-[#01ae79] transition-colors"
-                >
-                  {otherUser.fullName}
-                </h3>
-                
-                <div className="flex items-center gap-2 flex-wrap pt-1.5">
-                  {getRoleBadge(otherUser.role, otherUser.division, otherUser.educationLevel)}
+          <Link 
+            href={`/profile/${otherUser.userId}`}
+            className="block"
+          >
+            <div className="flex items-start justify-between mb-3 md:mb-4 gap-3">
+              <div className="flex items-start gap-2 md:gap-3 lg:gap-4 flex-1 min-w-0">
+                <div className="relative flex-shrink-0">
+                  <Avatar className="w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 ring-2 ring-[#01ae79]/20 group-hover:ring-[#01ae79]/50 transition-all duration-200">
+                    <AvatarImage 
+                      src={getProfileImageUrl(otherUser.profileImage) || undefined} 
+                      alt={otherUser.fullName}
+                      className="object-cover"
+                    />
+                    <AvatarFallback className="text-xs sm:text-sm font-semibold bg-gradient-to-br from-[#01ae79]/10 to-[#01ae79]/20 text-[#01ae79]">
+                      {otherUser.fullName.split(' ').map(n => n[0]).join('').toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+                  {otherUser.isVerified && (
+                    <div className="absolute -top-1 -right-1 w-4 h-4 sm:w-5 sm:h-5 bg-green-500 rounded-full flex items-center justify-center shadow-md">
+                      <Shield className="w-2 h-2 sm:w-3 sm:h-3 text-white" />
+                    </div>
+                  )}
                 </div>
 
-                <p className="text-xs md:text-sm font-medium text-blue-600 dark:text-blue-400 truncate">
-                  {otherUser.role === 'athlete' ? otherUser.sport : otherUser.title}
-                </p>
+                <div className="flex-1 min-w-0 space-y-1.5">
+                  <div className="flex items-start justify-between gap-2">
+                    <h3 className="font-semibold text-sm md:text-base text-foreground leading-tight hover:text-[#01ae79] transition-colors flex-1 min-w-0">
+                      {otherUser.fullName}
+                    </h3>
+                    <span className="text-xs text-muted-foreground font-medium flex-shrink-0 mt-0.5">
+                      {formatDate(request.createdAt)}
+                    </span>
+                  </div>
+                  
+                  <div className="flex items-center gap-2 overflow-hidden">
+                    <div className="flex-shrink-0">
+                      {getRoleBadge(otherUser.role, otherUser.division, otherUser.educationLevel)}
+                    </div>
+                  </div>
+
+                  <p className="text-xs md:text-sm font-medium text-blue-600 dark:text-blue-400 truncate">
+                    {otherUser.role === 'athlete' ? otherUser.sport : otherUser.title}
+                  </p>
+                </div>
               </div>
             </div>
-
-            <div className="flex-shrink-0">
-              <span className="text-[10px] sm:text-xs text-muted-foreground font-medium">
-                {formatDate(request.createdAt)}
-              </span>
-            </div>
-          </div>
+          </Link>
 
           {/* Status Section */}
           <div className="mb-3 md:mb-4">
@@ -681,7 +602,6 @@ function App() {
   const [pendingRequests, setPendingRequests] = useState<PendingRequest[]>([]);
   const [sentRequests, setSentRequests] = useState<PendingRequest[]>([]);
   const [loading, setLoading] = useState(true);
-  const [removingConnection, setRemovingConnection] = useState<number | null>(null);
   const loadingRef = useRef(false); // Track if API call is in progress
 
   const activeTab = searchParams?.get('tab') || 'connections';
@@ -699,7 +619,7 @@ function App() {
 
     try {
       loadingRef.current = true;
-      setLoading(true);
+      
       // Get auth token
       const windowWithClerk = window as unknown as {
         Clerk?: {
@@ -721,59 +641,18 @@ function App() {
       }
 
       const data = await response.json();
-      if (data.success) {
-        // All connections from API are established connections
-        // Pending requests would be handled by a separate endpoint if needed
-        setConnections(data.connections);
-        setPendingRequests(data.pendingRequests);
-        setSentRequests(data.sentRequests);
+      
+      // The API returns the data directly, not wrapped in a success object
+      if (data && (data.connected || data.incoming || data.outgoing)) {
+        setConnections(data.connected || []);
+        setPendingRequests(data.incoming || []);
+        setSentRequests(data.outgoing || []);
       }
-    } catch (error) {
-      console.error('Error loading connections:', error);
+    } catch {
+      // Error handling without console.error for production
     } finally {
       setLoading(false);
       loadingRef.current = false;
-    }
-  };
-
-  const handleRemoveConnection = async (connectionId: number, targetUserId: string) => {
-    setRemovingConnection(connectionId);
-    try {
-      // Get auth token
-      const windowWithClerk = window as unknown as {
-        Clerk?: {
-          session?: {
-            getToken: () => Promise<string>;
-          };
-        };
-      };
-      const token = await windowWithClerk.Clerk?.session?.getToken();
-
-      const response = await fetch('/api/connections', {
-        method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify({ targetUserId }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to remove connection');
-      }
-
-      const result = await response.json();
-      if (result.success) {
-        // Remove from local state
-        setConnections(prev => prev.filter(c => c.id !== connectionId));
-      } else {
-        throw new Error(result.error || 'Failed to remove connection');
-      }
-    } catch (error) {
-      console.error('Error removing connection:', error);
-      alert('Failed to remove connection. Please try again.');
-    } finally {
-      setRemovingConnection(null);
     }
   };
 
@@ -781,7 +660,6 @@ function App() {
     // Find the request to get the fromUserId
     const request = pendingRequests.find(r => r.id === requestId);
     if (!request) {
-      console.error('Request not found');
       return;
     }
 
@@ -802,7 +680,7 @@ function App() {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`,
         },
-        body: JSON.stringify({ fromUserId: request.otherUser.userId }),
+        body: JSON.stringify({ connectionId: requestId }),
       });
 
       if (!response.ok) {
@@ -838,8 +716,7 @@ function App() {
       } else {
         throw new Error(result.error || 'Failed to accept connection request');
       }
-    } catch (error) {
-      console.error('Error accepting connection request:', error);
+    } catch {
       alert('Failed to accept connection request. Please try again.');
     }
   };
@@ -848,7 +725,6 @@ function App() {
     // Find the request to get the fromUserId
     const request = pendingRequests.find(r => r.id === requestId);
     if (!request) {
-      console.error('Request not found');
       return;
     }
 
@@ -892,14 +768,12 @@ function App() {
       } else {
         throw new Error(result.error || 'Failed to decline connection request');
       }
-    } catch (error) {
-      console.error('Error declining connection request:', error);
+    } catch {
       alert('Failed to decline connection request. Please try again.');
     }
   };
 
   const handleWithdrawRequest = async (requestId: number, targetUserId: string) => {
-    setRemovingConnection(requestId);
     try {
       // Get auth token
       const windowWithClerk = window as unknown as {
@@ -939,11 +813,10 @@ function App() {
       } else {
         throw new Error(result.error || 'Failed to withdraw connection request');
       }
-    } catch (error) {
-      console.error('Error withdrawing connection request:', error);
+    } catch {
       alert('Failed to withdraw connection request. Please try again.');
     } finally {
-      setRemovingConnection(null);
+      // Request withdrawn
     }
   };
 
@@ -1016,28 +889,25 @@ function App() {
     return filtered;
   }, [sentRequests, filter, searchTerm]);
 
-  if (loading) {
-    return (
-      <div className="container py-8">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#01ae79] mx-auto"></div>
-          <p className="mt-4 text-muted-foreground">Loading connections...</p>
-        </div>
-      </div>
-    );
-  }
-
-
+  // Show page layout first, then load data (like messages page)
   return (
     <div className="container py-8">
       <div className="max-w-6xl mx-auto">
-        {/* Search */}
+        {/* Page Header */}
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold tracking-tight">Connections</h1>
+          <p className="text-muted-foreground mt-2">
+            Manage your professional network of athletes, coaches, and recruiters
+          </p>
+        </div>
+
+        {/* Local Search - Always show to prevent layout shift */}
         <div className="relative mb-6">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" size={20} />
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground flex-shrink-0" size={20} />
           <input
             type="text"
-            placeholder="Search connections..."
-            className="w-full pl-10 pr-4 py-3 border border-border rounded-lg bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-[#01ae79]/20 focus:border-[#01ae79]"
+            placeholder="Search Connections..."
+            className="w-full pl-10 pr-4 py-3 border border-border rounded-lg bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-[#01ae79]/20 focus:border-[#01ae79] min-w-0"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
@@ -1121,11 +991,16 @@ function App() {
             </TabsList>
           </div>
 
-          <TabsContent value="connections" className="mt-6 min-h-[400px]">
+          <TabsContent value="connections" className="mt-6">
             <FilterButtons currentFilter={filter} onFilterChange={setFilter} />
 
-            {filteredConnections.length === 0 ? (
-              <div className="text-center py-12">
+            {loading ? (
+              <div className="text-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#01ae79] mx-auto"></div>
+                <p className="mt-4 text-muted-foreground text-sm">Loading connections...</p>
+              </div>
+            ) : filteredConnections.length === 0 ? (
+              <div className="text-center py-8">
                 <div className="w-24 h-24 bg-gradient-to-br from-muted to-muted/60 rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm">
                   <Users className="w-12 h-12 text-muted-foreground" />
                 </div>
@@ -1145,19 +1020,22 @@ function App() {
                   <UserCard
                     key={connection.id}
                     connection={connection}
-                    onRemove={handleRemoveConnection}
-                    isRemoving={removingConnection === connection.id}
                   />
                 ))}
               </div>
             )}
           </TabsContent>
 
-          <TabsContent value="requests" className="mt-6 min-h-[400px]">
+          <TabsContent value="requests" className="mt-6">
             <FilterButtons currentFilter={filter} onFilterChange={setFilter} />
 
-            {filteredPendingRequests.length === 0 ? (
-              <div className="text-center py-12">
+            {loading ? (
+              <div className="text-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#01ae79] mx-auto"></div>
+                <p className="mt-4 text-muted-foreground text-sm">Loading requests...</p>
+              </div>
+            ) : filteredPendingRequests.length === 0 ? (
+              <div className="text-center py-8">
                 <div className="w-24 h-24 bg-gradient-to-br from-red-50 to-red-100 dark:from-red-900/20 dark:to-red-800/20 rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm">
                   <Clock className="w-12 h-12 text-red-500" />
                 </div>
@@ -1185,11 +1063,16 @@ function App() {
             )}
           </TabsContent>
 
-          <TabsContent value="sent-requests" className="mt-6 min-h-[424px]">
+          <TabsContent value="sent-requests" className="mt-6">
             <FilterButtons currentFilter={filter} onFilterChange={setFilter} />
 
-            {filteredSentRequests.length === 0 ? (
-              <div className="text-center py-12">
+            {loading ? (
+              <div className="text-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#01ae79] mx-auto"></div>
+                <p className="mt-4 text-muted-foreground text-sm">Loading sent requests...</p>
+              </div>
+            ) : filteredSentRequests.length === 0 ? (
+              <div className="text-center py-8">
                 <div className="w-24 h-24 bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm">
                   <Send className="w-12 h-12 text-blue-500" />
                 </div>
@@ -1210,7 +1093,7 @@ function App() {
                     key={request.id}
                     request={request}
                     onWithdraw={handleWithdrawRequest}
-                    isWithdrawing={removingConnection === request.id}
+                    isWithdrawing={false}
                   />
                 ))}
               </div>

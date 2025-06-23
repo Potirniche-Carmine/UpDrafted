@@ -551,7 +551,7 @@ function SearchPageContent() {
   const activeFiltersCount = selectedSports.length + selectedDivisions.length + selectedStates.length;
 
   return (
-    <div className="min-h-screen bg-background p-4 md:p-6">
+    <div className="bg-background p-4 md:p-6">
       <div className="max-w-7xl mx-auto">
         <div className="flex flex-col lg:flex-row gap-6">
           {/* Desktop Filters Sidebar */}
@@ -662,7 +662,7 @@ function SearchPageContent() {
 
           {/* Mobile Header - Only visible on mobile */}
           <div className="sm:hidden mb-4">
-            <div className="flex items-center justify-between mb-4 min-h-[4rem]">
+            <div className="flex items-center justify-between mb-4">
               <div className="flex-1">
                 <h1 className="text-2xl font-bold text-foreground mb-1">
                   Discover
@@ -795,18 +795,18 @@ function SearchPageContent() {
                 <TabsContent key={tab.value} value={tab.value} className="mt-0">
                   {/* Results */}
                   {initialLoading ? (
-                    <div className="flex items-center justify-center py-12">
+                    <div className="flex items-center justify-center py-8">
                       <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#01ae79]"></div>
                     </div>
                   ) : error ? (
-                    <div className="text-center py-12">
+                    <div className="text-center py-8">
                       <p className="text-muted-foreground mb-4">{error}</p>
                       <Button onClick={() => loadUsers(1, true)} variant="outline">
                         Try Again
                       </Button>
                     </div>
                   ) : !hasSearched ? (
-                    <div className="text-center py-12">
+                    <div className="text-center py-8">
                       <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
                       <h3 className="text-lg font-medium text-foreground mb-2">Ready to discover</h3>
                       <p className="text-muted-foreground mb-4">
@@ -829,7 +829,7 @@ function SearchPageContent() {
                       </div>
                     </div>
                   ) : users.length === 0 ? (
-                    <div className="text-center py-12">
+                    <div className="text-center py-8">
                       <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
                       <h3 className="text-lg font-medium text-foreground mb-2">No users found</h3>
                       <p className="text-muted-foreground mb-4">
@@ -901,7 +901,7 @@ export default function SearchPage() {
   return (
     <AuthWrapper requireRole={['athlete', 'coach', 'recruiter']}>
       <Suspense fallback={
-        <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="bg-background flex items-center justify-center py-12">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#01ae79]"></div>
         </div>
       }>
