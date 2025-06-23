@@ -396,23 +396,28 @@ function DashboardContent({
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="space-y-4">
+                <div className="space-y-3">
                   {ncaaRules.map((rule, index) => (
                     <div key={index} className="space-y-1">
                       <h3 className="text-sm font-medium text-foreground flex items-center">
-                        <Info className="h-4 w-4 text-[#01ae79] mr-2" />
+                        <Info className="h-3 w-3 text-[#01ae79] mr-2 flex-shrink-0" />
                         {rule.title}
                       </h3>
-                      <p className="text-xs text-muted-foreground">{rule.description}</p>
+                      <p className="text-xs text-muted-foreground leading-relaxed line-clamp-3">{rule.description}</p>
                       {index < ncaaRules.length - 1 && (
-                        <div className="pt-2 border-b border-border/50"></div>
+                        <div className="pt-1.5 border-b border-border/50"></div>
                       )}
                     </div>
                   ))}
                   <div className="pt-2">
-                    <Button variant="outline" size="sm" className="w-full border-[#01ae79] text-[#01ae79] hover:bg-[#01ae79] hover:text-white" onClick={() => window.open('https://www.ncsasports.org/ncaa-eligibility-center/recruiting-rules', '_blank')}>
-                      More On NCAA Recruiting Periods
-                      <ArrowRight className="h-3 w-3" />
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="w-full border-[#01ae79] text-[#01ae79] hover:bg-[#01ae79] hover:text-white text-xs py-2" 
+                      onClick={() => window.open('https://www.ncsasports.org/ncaa-eligibility-center/recruiting-rules', '_blank')}
+                    >
+                      <span className="truncate">NCAA Rules & Periods</span>
+                      <ArrowRight className="h-3 w-3 ml-1 flex-shrink-0" />
                     </Button>
                   </div>
                 </div>

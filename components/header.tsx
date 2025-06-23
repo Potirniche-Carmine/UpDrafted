@@ -7,6 +7,7 @@ import { Users, MessageSquare, Bell, LogIn, ChevronDown, Search, Menu, Sun, Moon
 import { useTheme } from "next-themes";
 import Image from "next/image";
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -114,23 +115,21 @@ export function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { navigateToProfile, isNavigating: profileNavigating } = useProfileNavigation();
   const { unreadCount: notificationCount } = useNotifications();
+  const router = useRouter();
 
   // Check if user has completed onboarding (has a role)
   const userRole = user?.publicMetadata?.role as string;
   const hasCompletedOnboarding = userRole && ['athlete', 'coach', 'recruiter', 'admin'].includes(userRole);
 
   // Determine home URL based on authentication status and onboarding completion
-  // Use Next.js router for proper navigation
+  // Use Next.js router for proper client-side navigation
   const handleLogoClick = (e: React.MouseEvent) => {
     e.preventDefault();
-    // Add a small delay to prevent rapid clicking causing issues
-    setTimeout(() => {
-      if (isSignedIn && hasCompletedOnboarding) {
-        window.location.href = '/dashboard';
-      } else {
-        window.location.href = '/';
-      }
-    }, 100);
+    if (isSignedIn && hasCompletedOnboarding) {
+      router.push('/dashboard');
+    } else {
+      router.push('/');
+    }
   };
 
   const navItems: NavItem[] = [
@@ -156,7 +155,7 @@ export function Header() {
   };
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-[#01ae79]/20 dark:border-[#01ae79]/30 bg-white/95 dark:bg-gray-950/95 backdrop-blur supports-[backdrop-filter]:bg-white/80 dark:supports-[backdrop-filter]:bg-gray-950/80">
+    <header className="sticky top-0 z-[51] w-full border-b border-[#01ae79]/20 dark:border-[#01ae79]/30 bg-white/95 dark:bg-gray-950/95 backdrop-blur supports-[backdrop-filter]:bg-white/80 dark:supports-[backdrop-filter]:bg-gray-950/80">
       <div className="container mx-auto flex h-14 lg:h-16 max-w-screen-2xl items-center justify-between px-3 sm:px-4 lg:px-6 xl:px-8">
         {/* Logo */}
         <a href="#" onClick={handleLogoClick} className="flex items-center space-x-2 flex-shrink-0 logo-no-flash">

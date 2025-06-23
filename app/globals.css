@@ -128,12 +128,6 @@
     @apply border-border outline-ring/50;
   }
   
-  /* Prevent layout shifts from scrollbar appearing/disappearing */
-  html {
-    overflow-y: scroll; /* Always show vertical scrollbar */
-    scrollbar-gutter: stable; /* Modern browsers: reserve space for scrollbar */
-  }
-  
   body {
     @apply bg-background text-foreground;
     text-rendering: optimizeLegibility;

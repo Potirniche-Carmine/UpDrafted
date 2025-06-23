@@ -65,7 +65,7 @@ function DialogContent({
         )}
         {...props}
       >
-        {children}
+        <div className="grid gap-4">{children}</div>
         {showCloseButton && (
           <DialogPrimitive.Close
             data-slot="dialog-close"
