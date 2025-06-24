@@ -168,6 +168,38 @@ export default function MessagingPage() {
   const fetchingConversations = useRef(false);
   const fetchingMessages = useRef(false);
 
+  // Handle mobile keyboard visibility and scroll behavior
+  useEffect(() => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+
+    const handleFocus = () => {
+      // Small delay to ensure keyboard is showing
+      setTimeout(() => {
+        // Scroll the textarea into view on mobile
+        textarea.scrollIntoView({ 
+          behavior: 'smooth', 
+          block: 'center',
+          inline: 'nearest'
+        });
+      }, 300);
+    };
+
+    const handleInput = () => {
+      // Auto-resize textarea based on content
+      textarea.style.height = 'auto';
+      textarea.style.height = Math.min(textarea.scrollHeight, 120) + 'px';
+    };
+
+    textarea.addEventListener('focus', handleFocus);
+    textarea.addEventListener('input', handleInput);
+
+    return () => {
+      textarea.removeEventListener('focus', handleFocus);
+      textarea.removeEventListener('input', handleInput);
+    };
+  }, [selectedConversationId]);
+
   // Get messages for the current conversation from cache or set empty if not cached
   const messages = useMemo(() => {
     if (!selectedConversationId || !messagesCache[selectedConversationId]) {
@@ -964,8 +996,8 @@ export default function MessagingPage() {
                   </div>
 
                   {/* Message Input */}
-                  <form onSubmit={handleSendMessage} className="p-4 border-t border-border/50 bg-card/80 backdrop-blur-sm">
-                    <div className="flex items-center space-x-3">
+                  <form onSubmit={handleSendMessage} className="p-4 border-t border-border/50 bg-card/80 backdrop-blur-sm sticky bottom-0 z-10">
+                    <div className="flex items-end space-x-3">
                       <div className="flex-1 relative">
                         <textarea
                           ref={textareaRef}
@@ -973,9 +1005,10 @@ export default function MessagingPage() {
                           onChange={(e) => setNewMessage(e.target.value)}
                           onKeyDown={handleKeyDown}
                           placeholder={!activeConversation?.connectionActive ? "You are no longer connected." : "Type a message..."}
-                          className="w-full flex-1 bg-transparent text-sm resize-none pr-4 focus:outline-none disabled:cursor-not-allowed"
+                          className="w-full flex-1 bg-background border border-border/30 rounded-lg px-3 py-2 text-base sm:text-sm resize-none focus:outline-none focus:ring-2 focus:ring-[#01ae79] focus:border-[#01ae79] disabled:cursor-not-allowed disabled:opacity-50 min-h-[40px] max-h-[120px] overflow-y-auto transition-all"
                           rows={1}
                           disabled={sendingMessage || !activeConversation?.connectionActive}
+                          style={{ fontSize: '16px' }}
                         />
                         {/* Word Count Display */}
                         {newMessage.trim() && (

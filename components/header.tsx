@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Users, MessageSquare, Bell, LogIn, ChevronDown, Search, Menu, Sun, Moon } from "lucide-react";
 import { useTheme } from "next-themes";
 import Image from "next/image";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import {
   DropdownMenu,
@@ -120,6 +120,19 @@ export function Header() {
   // Check if user has completed onboarding (has a role)
   const userRole = user?.publicMetadata?.role as string;
   const hasCompletedOnboarding = userRole && ['athlete', 'coach', 'recruiter', 'admin'].includes(userRole);
+
+  // Blur any focused inputs when mobile sheet opens to prevent auto-focus
+  useEffect(() => {
+    if (mobileMenuOpen) {
+      // Small delay to ensure the sheet is rendered before blurring
+      const timeout = setTimeout(() => {
+        if (document.activeElement instanceof HTMLElement) {
+          document.activeElement.blur();
+        }
+      }, 100);
+      return () => clearTimeout(timeout);
+    }
+  }, [mobileMenuOpen]);
 
   // Determine home URL based on authentication status and onboarding completion
   // Use Next.js router for proper client-side navigation
@@ -262,7 +275,7 @@ export function Header() {
                     <span className="sr-only">Toggle menu</span>
                   </Button>
                 </SheetTrigger>
-                <SheetContent side="right" className="w-[300px] sm:w-[400px]">
+                <SheetContent side="right" className="w-[300px] sm:w-[400px] z-[60]">
                   <SheetHeader>
                     <SheetTitle className="text-left">Menu</SheetTitle>
                     <SheetDescription className="text-left">
