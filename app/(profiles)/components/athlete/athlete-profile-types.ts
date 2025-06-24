@@ -34,7 +34,6 @@ export interface AthleteProfileData {
 
   // Media
   hudlUrl?: string;
-  hudlEmbedUrl?: string;
   youtubeVideos?: {
     id?: string;
     title: string;

@@ -218,8 +218,7 @@ export function AthleteEditDialogs({
         break;
       case 'hudl-highlights':
         setEditData({
-          hudlUrl: profileData.hudlUrl || '',
-          hudlEmbedUrl: profileData.hudlEmbedUrl || ''
+          hudlUrl: profileData.hudlUrl || ''
         });
         break;
       case 'measurable':
@@ -681,8 +680,7 @@ export function AthleteEditDialogs({
         break;
 
       case 'hudl-highlights':
-        updates.hudlUrl = editData.hudlUrl;
-        updates.hudlEmbedUrl = editData.hudlEmbedUrl;
+        updates.hudlUrl = editData.hudlUrl || undefined;
         break;
 
       case 'measurable':
@@ -803,6 +801,9 @@ export function AthleteEditDialogs({
                   onChange={(e) => handleFieldChange('fullName', e.target.value)}
                   className={`h-12 ${validationErrors.fullName ? 'border-red-500' : ''}`}
                   maxLength={FIELD_LIMITS.FULL_NAME}
+                  autoComplete="off"
+                  inputMode="text"
+                  onFocus={(e) => e.target.blur()}
                 />
                 {validationErrors.fullName && (
                   <p className="text-sm text-red-500">{validationErrors.fullName}</p>
@@ -906,11 +907,18 @@ export function AthleteEditDialogs({
                   <Label htmlFor="edit-city">City *</Label>
                   <Input
                     id="edit-city"
-                    value={String(editData.city || '')}
+                    placeholder="Los Angeles"
+                    value={editData.city || ''}
                     onChange={(e) => handleFieldChange('city', e.target.value)}
-                    className="h-12"
+                    className={`h-12 ${validationErrors.city ? 'border-red-500' : ''}`}
                     maxLength={FIELD_LIMITS.CITY}
+                    autoComplete="off"
+                    inputMode="text"
+                    onFocus={(e) => e.target.blur()}
                   />
+                  {validationErrors.city && (
+                    <p className="text-sm text-red-500">{validationErrors.city}</p>
+                  )}
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="edit-state">State *</Label>
@@ -931,14 +939,20 @@ export function AthleteEditDialogs({
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="edit-organizationName">Organization Name *</Label>
+                <Label htmlFor="edit-organizationName">School/Organization *</Label>
                 <Input
                   id="edit-organizationName"
+                  placeholder="University of California"
                   value={editData.organizationName || ''}
                   onChange={(e) => handleFieldChange('organizationName', e.target.value)}
-                  className="h-12"
+                  className={`h-12 ${validationErrors.organizationName ? 'border-red-500' : ''}`}
                   maxLength={FIELD_LIMITS.ORGANIZATION_NAME}
+                  autoComplete="off"
+                  inputMode="text"
                 />
+                {validationErrors.organizationName && (
+                  <p className="text-sm text-red-500">{validationErrors.organizationName}</p>
+                )}
               </div>
 
               <div className="space-y-2">
@@ -998,6 +1012,9 @@ export function AthleteEditDialogs({
                     value={editData.weight || ''}
                     onChange={(e) => handleFieldChange('weight', e.target.value)}
                     className={`h-12 ${validationErrors.weight ? 'border-red-500' : ''}`}
+                    autoComplete="off"
+                    inputMode="numeric"
+                    onFocus={(e) => e.target.blur()}
                   />
                   {validationErrors.weight && (
                     <p className="text-sm text-red-500">{validationErrors.weight}</p>
@@ -1029,6 +1046,9 @@ export function AthleteEditDialogs({
                   value={String(editData.gpa || '')}
                   onChange={(e) => handleFieldChange('gpa', e.target.value ? parseFloat(e.target.value) : '')}
                   className={`h-12 ${validationErrors.gpa ? 'border-red-500' : ''}`}
+                  autoComplete="off"
+                  inputMode="decimal"
+                  onFocus={(e) => e.target.blur()}
                 />
                 {validationErrors.gpa && (
                   <p className="text-sm text-red-500">{validationErrors.gpa}</p>
@@ -1048,6 +1068,9 @@ export function AthleteEditDialogs({
                     value={String(editData.satScore || '')}
                     onChange={(e) => handleFieldChange('satScore', e.target.value ? parseInt(e.target.value) : '')}
                     className="h-12"
+                    autoComplete="off"
+                    inputMode="numeric"
+                    onFocus={(e) => e.target.blur()}
                   />
                   <p className="text-xs text-muted-foreground">400-1600</p>
                 </div>
@@ -1062,6 +1085,9 @@ export function AthleteEditDialogs({
                     value={String(editData.actScore || '')}
                     onChange={(e) => handleFieldChange('actScore', e.target.value ? parseInt(e.target.value) : '')}
                     className="h-12"
+                    autoComplete="off"
+                    inputMode="numeric"
+                    onFocus={(e) => e.target.blur()}
                   />
                   <p className="text-xs text-muted-foreground">1-36</p>
                 </div>
@@ -1078,6 +1104,9 @@ export function AthleteEditDialogs({
                   onChange={(e) => handleFieldChange('intendedMajor', e.target.value)}
                   className="h-12"
                   maxLength={FIELD_LIMITS.INTENDED_MAJOR}
+                  autoComplete="off"
+                  inputMode="text"
+                  onFocus={(e) => e.target.blur()}
                 />
               </div>
             </div>
@@ -1131,6 +1160,9 @@ export function AthleteEditDialogs({
                   onChange={(e) => setEditData(prev => ({ ...prev, instagram: e.target.value }))}
                   className="h-12"
                   maxLength={FIELD_LIMITS.INSTAGRAM_HANDLE}
+                  autoComplete="off"
+                  inputMode="text"
+                  onFocus={(e) => e.target.blur()}
                 />
               </div>
               <div className="space-y-2">
@@ -1142,6 +1174,9 @@ export function AthleteEditDialogs({
                   onChange={(e) => setEditData(prev => ({ ...prev, twitter: e.target.value }))}
                   className="h-12"
                   maxLength={FIELD_LIMITS.TWITTER_HANDLE}
+                  autoComplete="off"
+                  inputMode="text"
+                  onFocus={(e) => e.target.blur()}
                 />
               </div>
             </div>
@@ -1198,8 +1233,8 @@ export function AthleteEditDialogs({
         return (
           <>
             <DialogHeader>
-              <DialogTitle>Add Hudl Profile</DialogTitle>
-              <DialogDescription>Connect your Hudl profile to showcase game film and highlight reels.</DialogDescription>
+              <DialogTitle>Edit Hudl Profile</DialogTitle>
+              <DialogDescription>Add your Hudl profile link to showcase game film and highlight reels.</DialogDescription>
             </DialogHeader>
             <div className="space-y-6">
               <div className="space-y-2">
@@ -1211,26 +1246,15 @@ export function AthleteEditDialogs({
                   onChange={(e) => handleFieldChange('hudlUrl', e.target.value)}
                   className={`h-12 ${validationErrors.hudlUrl ? 'border-red-500' : ''}`}
                   maxLength={FIELD_LIMITS.URL}
+                  autoComplete="off"
+                  inputMode="url"
+                  onFocus={(e) => e.target.blur()}
                 />
                 {validationErrors.hudlUrl && (
                   <p className="text-sm text-red-500">{validationErrors.hudlUrl}</p>
                 )}
                 <p className="text-sm text-muted-foreground">
-                  Add your Hudl profile to showcase game film and highlight reels
-                </p>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="edit-hudlEmbedUrl">Hudl Embed URL (Optional)</Label>
-                <Input
-                  id="edit-hudlEmbedUrl"
-                  placeholder="https://www.hudl.com/embed/..."
-                  value={editData.hudlEmbedUrl || ''}
-                  onChange={(e) => setEditData(prev => ({ ...prev, hudlEmbedUrl: e.target.value }))}
-                  className="h-12"
-                  maxLength={FIELD_LIMITS.URL}
-                />
-                <p className="text-sm text-muted-foreground">
-                  Optional: Direct embed URL for video player (will be auto-generated if not provided)
+                  Add your Hudl profile link to showcase game film and highlight reels
                 </p>
               </div>
             </div>
@@ -1278,7 +1302,6 @@ export function AthleteEditDialogs({
               {/* Add new video form */}
               {!hasReachedLimit ? (
                 <div className="space-y-4 border-t pt-4">
-                  <Label>Add New Video</Label>
                   <div className="space-y-2">
                     <Label htmlFor="edit-youtubeUrl">YouTube Video URL</Label>
                     <Input
@@ -1288,6 +1311,9 @@ export function AthleteEditDialogs({
                       onChange={(e) => handleFieldChange('youtubeUrl', e.target.value)}
                       className={`h-12 ${validationErrors.youtubeUrl ? 'border-red-500' : ''}`}
                       maxLength={FIELD_LIMITS.URL}
+                      autoComplete="off"
+                      inputMode="url"
+                      onFocus={(e) => e.target.blur()}
                     />
                     {validationErrors.youtubeUrl && (
                       <p className="text-sm text-red-500">{validationErrors.youtubeUrl}</p>
@@ -1302,6 +1328,9 @@ export function AthleteEditDialogs({
                       onChange={(e) => handleFieldChange('title', e.target.value)}
                       className="h-12"
                       maxLength={100}
+                      autoComplete="off"
+                      inputMode="text"
+                      onFocus={(e) => e.target.blur()}
                     />
                   </div>
                   <Button 
@@ -1385,7 +1414,7 @@ export function AthleteEditDialogs({
                   <SelectTrigger className={`h-12 ${validationErrors.label ? 'border-red-500' : ''}`} id="edit-measurableType">
                     <SelectValue placeholder="Choose a metric" />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="z-[70]">
                     {availableMeasurables.map((metric: string) => (
                       <SelectItem key={metric} value={metric}>{metric}</SelectItem>
                     ))}
@@ -1417,6 +1446,9 @@ export function AthleteEditDialogs({
                     }}
                     className={`h-12 ${validationErrors.label ? 'border-red-500' : ''}`}
                     maxLength={50}
+                    autoComplete="off"
+                    inputMode="text"
+                    onFocus={(e) => e.target.blur()}
                   />
                   {validationErrors.label && (
                     <p className="text-sm text-red-500">{validationErrors.label}</p>
@@ -1443,6 +1475,8 @@ export function AthleteEditDialogs({
                   }}
                   className={`h-12 ${validationErrors.value ? 'border-red-500' : ''}`}
                   maxLength={20}
+                  autoComplete="off"
+                  inputMode="text"
                 />
                 {validationErrors.value && (
                   <p className="text-sm text-red-500">{validationErrors.value}</p>
@@ -1461,7 +1495,7 @@ export function AthleteEditDialogs({
                       <SelectTrigger className="h-12" id="edit-measurementMonth">
                         <SelectValue placeholder="Select month" />
                       </SelectTrigger>
-                      <SelectContent>
+                      <SelectContent className="z-[70]">
                         {MONTH_OPTIONS.map((option) => (
                           <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
                         ))}
@@ -1477,7 +1511,7 @@ export function AthleteEditDialogs({
                       <SelectTrigger className="h-12" id="edit-measurementYear">
                         <SelectValue placeholder="Select year" />
                       </SelectTrigger>
-                      <SelectContent>
+                      <SelectContent className="z-[70]">
                         {YEAR_OPTIONS.map((option) => (
                           <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
                         ))}
@@ -1619,10 +1653,12 @@ export function AthleteEditDialogs({
                       <h4 className="font-medium text-foreground mb-1">{measurableToDelete.label}</h4>
                       <p className="text-lg font-semibold text-foreground mb-1">{measurableToDelete.value}</p>
                       <p className="text-sm text-muted-foreground">
-                        Recorded in {new Date(measurableToDelete.measurementDate).toLocaleDateString('en-US', {
-                          month: 'long',
-                          year: 'numeric'
-                        })}
+                        Recorded in {(() => {
+                          // Parse the date string to avoid timezone issues
+                          const [year, month] = measurableToDelete.measurementDate.split('-');
+                          const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+                          return `${monthNames[parseInt(month) - 1]} ${year}`;
+                        })()}
                       </p>
                       <p className="text-sm text-muted-foreground">Sport: {measurableToDelete.sport}</p>
                     </div>
@@ -1665,7 +1701,7 @@ export function AthleteEditDialogs({
         }
       }
     }}>
-      <DialogContent className={dialogType === 'basic-info' ? "sm:max-w-2xl max-w-lg" : "sm:max-w-md max-w-lg"}>
+      <DialogContent className={`${dialogType === 'basic-info' ? "sm:max-w-2xl max-w-lg" : "sm:max-w-md max-w-lg"} z-[60]`}>
         {getDialogContent()}
         {dialogType === 'delete-measurable' ? (
           <DialogFooter className="sm:justify-start">

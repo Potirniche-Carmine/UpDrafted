@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, memo, useMemo } from "react";
+import React, { useState, useEffect, memo, useMemo, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -51,8 +51,9 @@ const SocialMediaSection = memo(({ socialMedia, isOwnProfile, onEdit }: {
   // Helper function to truncate very long handles
   const formatHandle = (handle: string) => {
     const cleanHandle = handle.replace('@', '');
-    if (cleanHandle.length > 22) {
-      return `@${cleanHandle.substring(0, 19)}...`;
+    // Only truncate if extremely long (more than 30 characters)
+    if (cleanHandle.length > 30) {
+      return `@${cleanHandle.substring(0, 27)}...`;
     }
     return `@${cleanHandle}`;
   };
@@ -83,7 +84,7 @@ const SocialMediaSection = memo(({ socialMedia, isOwnProfile, onEdit }: {
               title={`@${socialMedia.instagram.replace('@', '')}`}
             >
               <Instagram className="w-4 h-4 flex-shrink-0" />
-              <span className={`${getTextSizeClass(socialMedia.instagram)} font-medium truncate max-w-[120px] sm:max-w-none`}>
+              <span className={`${getTextSizeClass(socialMedia.instagram)} font-medium break-words`}>
                 {formatHandle(socialMedia.instagram)}
               </span>
             </a>
@@ -97,7 +98,7 @@ const SocialMediaSection = memo(({ socialMedia, isOwnProfile, onEdit }: {
               title={`@${socialMedia.twitter.replace('@', '')}`}
             >
               <Twitter className="w-4 h-4 flex-shrink-0" />
-              <span className={`${getTextSizeClass(socialMedia.twitter)} font-medium truncate max-w-[120px] sm:max-w-none`}>
+              <span className={`${getTextSizeClass(socialMedia.twitter)} font-medium break-words`}>
                 {formatHandle(socialMedia.twitter)}
               </span>
             </a>
@@ -360,6 +361,9 @@ export function RecruiterProfile({
     checkForChanges(newData);
   };
 
+  // Create ref to store beforeunload handler so we can remove it during save
+  const beforeUnloadHandlerRef = useRef<((e: BeforeUnloadEvent) => void) | null>(null);
+
   // Warn user about unsaved changes when leaving page
   useEffect(() => {
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
@@ -369,6 +373,7 @@ export function RecruiterProfile({
       }
     };
 
+    beforeUnloadHandlerRef.current = handleBeforeUnload;
     window.addEventListener('beforeunload', handleBeforeUnload);
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
   }, [hasUnsavedChanges]);
@@ -422,9 +427,16 @@ export function RecruiterProfile({
 
       const result = await response.json();
       if (result.success) {
+        // Remove beforeunload listener to prevent popup during reload
+        if (beforeUnloadHandlerRef.current) {
+          window.removeEventListener('beforeunload', beforeUnloadHandlerRef.current);
+        }
+        
+        // Clear unsaved changes flag
+        setHasUnsavedChanges(false);
+        
         // Update the original data to match saved data
-        setProfileData(result.profile);
-        setHasUnsavedChanges(false);        
+        setProfileData(result.profile);        
         // Update the page data reference so changes are permanent
         Object.assign(data, result.profile);
         

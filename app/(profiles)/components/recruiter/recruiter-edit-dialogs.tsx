@@ -454,6 +454,9 @@ export function RecruiterEditDialogs({
                 onChange={(e) => handleFieldChange('fullName', e.target.value)}
                 placeholder="Enter your full name"
                 maxLength={FIELD_LIMITS.FULL_NAME}
+                autoComplete="off"
+                inputMode="text"
+                onFocus={(e) => e.target.blur()}
               />
               {validationErrors.fullName && (
                 <p className="text-sm text-red-500 mt-1">{validationErrors.fullName}</p>
@@ -468,6 +471,9 @@ export function RecruiterEditDialogs({
                 onChange={(e) => handleFieldChange('title', e.target.value)}
                 placeholder="e.g., Head Recruiter, Assistant Recruiter"
                 maxLength={FIELD_LIMITS.TITLE}
+                autoComplete="off"
+                inputMode="text"
+                onFocus={(e) => e.target.blur()}
               />
               {validationErrors.title && (
                 <p className="text-sm text-red-500 mt-1">{validationErrors.title}</p>
@@ -504,6 +510,9 @@ export function RecruiterEditDialogs({
                 onChange={(e) => handleFieldChange('organizationName', e.target.value)}
                 placeholder="e.g., University of State, State High School"
                 maxLength={FIELD_LIMITS.ORGANIZATION_NAME}
+                autoComplete="off"
+                inputMode="text"
+                onFocus={(e) => e.target.blur()}
               />
               {validationErrors.organizationName && (
                 <p className="text-sm text-red-500 mt-1">{validationErrors.organizationName}</p>
@@ -519,6 +528,9 @@ export function RecruiterEditDialogs({
                   onChange={(e) => handleFieldChange('city', e.target.value)}
                   placeholder="Enter city"
                   maxLength={FIELD_LIMITS.CITY}
+                  autoComplete="off"
+                  inputMode="text"
+                  onFocus={(e) => e.target.blur()}
                 />
                 {validationErrors.city && (
                   <p className="text-sm text-red-500 mt-1">{validationErrors.city}</p>
@@ -574,6 +586,9 @@ export function RecruiterEditDialogs({
                 value={editData.conference || ''}
                 onChange={(e) => handleFieldChange('conference', e.target.value)}
                 placeholder="e.g., Big Ten, ACC, etc."
+                autoComplete="off"
+                inputMode="text"
+                onFocus={(e) => e.target.blur()}
               />
             </div>
           </div>
@@ -591,6 +606,9 @@ export function RecruiterEditDialogs({
                 placeholder="Share your recruiting philosophy, experience, and what makes you unique as a recruiter..."
                 className="min-h-[120px]"
                 maxLength={FIELD_LIMITS.PERSONAL_STATEMENT}
+                autoComplete="off"
+                inputMode="text"
+                onFocus={(e) => e.target.blur()}
               />
               <p className="text-xs text-muted-foreground mt-1">
                 {(editData.personalStatement || '').length}/{FIELD_LIMITS.PERSONAL_STATEMENT} characters
@@ -663,6 +681,9 @@ export function RecruiterEditDialogs({
                 placeholder="Number of scholarships"
                 min={NUMERIC_LIMITS.SCHOLARSHIPS_AVAILABLE.min}
                 max={NUMERIC_LIMITS.SCHOLARSHIPS_AVAILABLE.max}
+                autoComplete="off"
+                inputMode="numeric"
+                onFocus={(e) => e.target.blur()}
               />
               {validationErrors.scholarshipsAvailable && (
                 <p className="text-sm text-red-500 mt-1">{validationErrors.scholarshipsAvailable}</p>
@@ -678,6 +699,9 @@ export function RecruiterEditDialogs({
                 placeholder="Describe what you're looking for in student-athletes..."
                 className="min-h-[100px]"
                 maxLength={FIELD_LIMITS.RECRUITING_PHILOSOPHY}
+                autoComplete="off"
+                inputMode="text"
+                onFocus={(e) => e.target.blur()}
               />
               <p className="text-xs text-muted-foreground mt-1">
                 {(editData.recruitingPhilosophy || '').length}/{FIELD_LIMITS.RECRUITING_PHILOSOPHY} characters
@@ -700,6 +724,9 @@ export function RecruiterEditDialogs({
                   placeholder="username"
                   className="rounded-l-none"
                   maxLength={FIELD_LIMITS.INSTAGRAM_HANDLE}
+                  autoComplete="off"
+                  inputMode="text"
+                  onFocus={(e) => e.target.blur()}
                 />
               </div>
               {validationErrors.instagram && (
@@ -718,6 +745,9 @@ export function RecruiterEditDialogs({
                   placeholder="username"
                   className="rounded-l-none"
                   maxLength={FIELD_LIMITS.TWITTER_HANDLE}
+                  autoComplete="off"
+                  inputMode="text"
+                  onFocus={(e) => e.target.blur()}
                 />
               </div>
               {validationErrors.twitter && (
@@ -738,6 +768,9 @@ export function RecruiterEditDialogs({
                 onChange={(e) => handleFieldChange('programWebsite', e.target.value)}
                 placeholder="https://example.com/athletics/program"
                 maxLength={FIELD_LIMITS.URL}
+                autoComplete="off"
+                inputMode="url"
+                onFocus={(e) => e.target.blur()}
               />
               {validationErrors.programWebsite && (
                 <p className="text-sm text-red-500 mt-1">{validationErrors.programWebsite}</p>
@@ -752,6 +785,9 @@ export function RecruiterEditDialogs({
                 onChange={(e) => handleFieldChange('schoolWebsite', e.target.value)}
                 placeholder="https://example.edu"
                 maxLength={FIELD_LIMITS.URL}
+                autoComplete="off"
+                inputMode="url"
+                onFocus={(e) => e.target.blur()}
               />
               {validationErrors.schoolWebsite && (
                 <p className="text-sm text-red-500 mt-1">{validationErrors.schoolWebsite}</p>
@@ -771,6 +807,9 @@ export function RecruiterEditDialogs({
                 onChange={(e) => handleFieldChange('showcaseVideoTitle', e.target.value)}
                 placeholder="e.g., Program Overview, Facility Tour"
                 maxLength={FIELD_LIMITS.SHOWCASE_VIDEO_TITLE}
+                autoComplete="off"
+                inputMode="text"
+                onFocus={(e) => e.target.blur()}
               />
             </div>
 
@@ -782,6 +821,9 @@ export function RecruiterEditDialogs({
                 onChange={(e) => handleFieldChange('showcaseVideoUrl', e.target.value)}
                 placeholder="https://youtube.com/watch?v=..."
                 maxLength={FIELD_LIMITS.URL}
+                autoComplete="off"
+                inputMode="url"
+                onFocus={(e) => e.target.blur()}
               />
               {validationErrors.showcaseVideoUrl && (
                 <p className="text-sm text-red-500 mt-1">{validationErrors.showcaseVideoUrl}</p>

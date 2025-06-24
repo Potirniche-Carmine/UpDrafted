@@ -279,7 +279,7 @@ export function VerificationDialog({ open, onOpenChange, role }: VerificationDia
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[95vw] w-full sm:max-w-2xl max-h-[90vh] overflow-y-auto mx-4 sm:mx-auto">
+      <DialogContent className="w-[calc(100vw-1rem)] max-w-md sm:max-w-2xl mx-auto max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-lg sm:text-xl">
             <Shield className="w-5 h-5 text-blue-600 flex-shrink-0" />

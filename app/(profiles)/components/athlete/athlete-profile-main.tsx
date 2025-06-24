@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo, memo, useEffect } from "react";
+import React, { useState, useMemo, memo, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -153,7 +153,7 @@ const MeasurablesSection = memo(({ measurables, allSports, selectedSport, onSpor
                 return (
                   <div key={`${measurable.id}-${index}`} className="bg-gradient-to-br from-muted/30 to-muted/50 rounded-lg p-4 border border-muted/50 relative group">
                     {isOwnProfile && (
-                      <div key="actions" className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <div key="actions" className="absolute top-2 right-2 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
                         <div className="flex gap-1">
                           <Button
                             size="sm"
@@ -180,10 +180,12 @@ const MeasurablesSection = memo(({ measurables, allSports, selectedSport, onSpor
                         <span className="text-sm font-medium text-muted-foreground">{measurable.label}</span>
                       </div>
                       <Badge variant="outline" className="text-xs">
-                        {new Date(measurable.measurementDate).toLocaleDateString('en-US', { 
-                          month: 'short', 
-                          year: 'numeric' 
-                        })}
+                        {(() => {
+                          // Parse the date string to avoid timezone issues
+                          const [year, month] = measurable.measurementDate.split('-');
+                          const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+                          return `${monthNames[parseInt(month) - 1]} ${year}`;
+                        })()}
                       </Badge>
                     </div>
                     <div className="text-2xl font-bold text-foreground">{measurable.value}</div>
@@ -233,8 +235,9 @@ const SocialMediaSection = memo(({ socialMedia, isOwnProfile, onEdit }: {
   // Helper function to truncate very long handles
   const formatHandle = (handle: string) => {
     const cleanHandle = handle.replace('@', '');
-    if (cleanHandle.length > 22) {
-      return `@${cleanHandle.substring(0, 19)}...`;
+    // Only truncate if extremely long (more than 30 characters)
+    if (cleanHandle.length > 30) {
+      return `@${cleanHandle.substring(0, 27)}...`;
     }
     return `@${cleanHandle}`;
   };
@@ -265,7 +268,7 @@ const SocialMediaSection = memo(({ socialMedia, isOwnProfile, onEdit }: {
               title={`@${socialMedia.instagram.replace('@', '')}`}
             >
               <Instagram className="w-4 h-4 flex-shrink-0" />
-              <span className={`${getTextSizeClass(socialMedia.instagram)} font-medium truncate max-w-[120px] sm:max-w-none`}>
+              <span className={`${getTextSizeClass(socialMedia.instagram)} font-medium break-words`}>
                 {formatHandle(socialMedia.instagram)}
               </span>
             </a>
@@ -279,7 +282,7 @@ const SocialMediaSection = memo(({ socialMedia, isOwnProfile, onEdit }: {
               title={`@${socialMedia.twitter.replace('@', '')}`}
             >
               <Twitter className="w-4 h-4 flex-shrink-0" />
-              <span className={`${getTextSizeClass(socialMedia.twitter)} font-medium truncate max-w-[120px] sm:max-w-none`}>
+              <span className={`${getTextSizeClass(socialMedia.twitter)} font-medium break-words`}>
                 {formatHandle(socialMedia.twitter)}
               </span>
             </a>
@@ -364,6 +367,9 @@ export function AthleteProfile({
     checkForChanges(newData);
   };
 
+  // Create ref to store beforeunload handler so we can remove it during save
+  const beforeUnloadHandlerRef = useRef<((e: BeforeUnloadEvent) => void) | null>(null);
+
   // Warn user about unsaved changes when leaving page
   useEffect(() => {
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
@@ -373,6 +379,7 @@ export function AthleteProfile({
       }
     };
 
+    beforeUnloadHandlerRef.current = handleBeforeUnload;
     window.addEventListener('beforeunload', handleBeforeUnload);
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
   }, [hasUnsavedChanges]);
@@ -431,9 +438,16 @@ export function AthleteProfile({
 
       const result = await response.json();
       if (result.success) {
+        // Remove beforeunload listener to prevent popup during reload
+        if (beforeUnloadHandlerRef.current) {
+          window.removeEventListener('beforeunload', beforeUnloadHandlerRef.current);
+        }
+        
+        // Clear unsaved changes flag
+        setHasUnsavedChanges(false);
+        
         // Update the original data to match saved data
-        setProfileData(result.profile);
-        setHasUnsavedChanges(false);        
+        setProfileData(result.profile);       
         // Update the page data reference so changes are permanent
         Object.assign(data, result.profile);
         
@@ -1044,12 +1058,12 @@ export function AthleteProfile({
               />
             )}
             
-            {/* Hudl Highlights */}
+            {/* Hudl Profile */}
             {(safeProfileData.hudlUrl || isOwnProfile) && (
               <Card>
                 <CardHeader>
                   <div className="flex items-center justify-between">
-                    <CardTitle>Hudl Highlights</CardTitle>
+                    <CardTitle>Hudl Profile</CardTitle>
                     {isOwnProfile && (
                       <Button 
                         size="sm" 
@@ -1064,53 +1078,18 @@ export function AthleteProfile({
                 </CardHeader>
                 <CardContent>
                   {safeProfileData.hudlUrl ? (
-                    (() => {
-                      // Generate embed URL from Hudl URL if embed URL is not provided
-                      let embedUrl = safeProfileData.hudlEmbedUrl;
-                      if (!embedUrl && safeProfileData.hudlUrl) {
-                        // Extract Hudl video ID from various Hudl URL formats
-                        const hudlUrlMatch = safeProfileData.hudlUrl.match(/hudl\.com\/(?:video\/)?([^\/\?]+)/);
-                        if (hudlUrlMatch) {
-                          embedUrl = `https://www.hudl.com/embed/video/${hudlUrlMatch[1]}`;
-                        }
-                      }
-
-                      return embedUrl ? (
-                        <div className="space-y-4">
-                          <div className="relative aspect-video bg-black rounded-lg overflow-hidden">
-                            <iframe
-                              src={embedUrl}
-                              className="absolute inset-0 w-full h-full"
-                              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                              allowFullScreen
-                              title="Hudl Highlights"
-                            />
-                          </div>
-                          <div className="flex justify-between items-center">
-                            <p className="text-sm text-muted-foreground">Game film and highlight reels</p>
-                            <Link href={safeProfileData.hudlUrl} target="_blank">
-                              <Button variant="outline" size="sm">
-                                <ExternalLink className="w-4 h-4 mr-1" />
-                                View Full Hudl
-                              </Button>
-                            </Link>
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="bg-muted rounded-lg p-4 flex items-center justify-between">
-                          <div>
-                            <p className="font-medium">Hudl Profile</p>
-                            <p className="text-sm text-muted-foreground">Game film and highlight reels</p>
-                          </div>
-                          <Link href={safeProfileData.hudlUrl} target="_blank">
-                            <Button variant="outline" size="sm">
-                              <ExternalLink className="w-4 h-4 mr-1" />
-                              View Hudl
-                            </Button>
-                          </Link>
-                        </div>
-                      );
-                    })()
+                    <div className="bg-muted rounded-lg p-4 flex items-center justify-between">
+                      <div>
+                        <p className="font-medium">Hudl Profile</p>
+                        <p className="text-sm text-muted-foreground">Game film and highlight reels</p>
+                      </div>
+                      <Link href={safeProfileData.hudlUrl} target="_blank">
+                        <Button variant="outline" size="sm">
+                          <ExternalLink className="w-4 h-4 mr-1" />
+                          View Hudl
+                        </Button>
+                      </Link>
+                    </div>
                   ) : isOwnProfile && (
                     <div className="bg-muted/50 rounded-lg p-4">
                       <div className="text-center">

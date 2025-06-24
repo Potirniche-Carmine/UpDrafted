@@ -160,7 +160,7 @@ export function AthleticHighlightsSection({ measurables = [], selectedSport, isO
             return (
               <div key={measurable.id} className="bg-gradient-to-br from-muted/30 to-muted/50 rounded-lg p-4 border border-muted/50 relative group">
                 {isOwnProfile && (
-                  <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <div className="absolute top-2 right-2 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
                     <div className="flex gap-1">
                       <Button
                         size="sm"
@@ -187,10 +187,12 @@ export function AthleticHighlightsSection({ measurables = [], selectedSport, isO
                     <span className="text-sm font-medium text-muted-foreground">{measurable.label}</span>
                   </div>
                   <Badge variant="outline" className="text-xs">
-                    {new Date(measurable.measurementDate).toLocaleDateString('en-US', { 
-                      month: 'short', 
-                      year: 'numeric' 
-                    })}
+                    {(() => {
+                      // Parse the date string to avoid timezone issues
+                      const [year, month] = measurable.measurementDate.split('-');
+                      const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+                      return `${monthNames[parseInt(month) - 1]} ${year}`;
+                    })()}
                   </Badge>
                 </div>
                 <div className="text-2xl font-bold text-foreground">{measurable.value}</div>

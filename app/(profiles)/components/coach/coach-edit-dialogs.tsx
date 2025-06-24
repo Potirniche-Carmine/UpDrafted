@@ -448,6 +448,9 @@ export function CoachEditDialogs({
                 onChange={(e) => handleFieldChange('fullName', e.target.value)}
                 placeholder="Enter your full name"
                 className={validationErrors.fullName ? 'border-red-500' : ''}
+                autoComplete="off"
+                inputMode="text"
+                onFocus={(e) => e.target.blur()}
               />
               {validationErrors.fullName && <p className="text-red-500 text-sm">{validationErrors.fullName}</p>}
             </div>
@@ -460,6 +463,9 @@ export function CoachEditDialogs({
                 onChange={(e) => handleFieldChange('title', e.target.value)}
                 placeholder="e.g., Head Coach, Assistant Coach, Program Director"
                 className={validationErrors.title ? 'border-red-500' : ''}
+                autoComplete="off"
+                inputMode="text"
+                onFocus={(e) => e.target.blur()}
               />
               {validationErrors.title && <p className="text-red-500 text-sm">{validationErrors.title}</p>}
             </div>
@@ -501,6 +507,9 @@ export function CoachEditDialogs({
                 onChange={(e) => handleFieldChange('organizationName', e.target.value)}
                 placeholder="Enter school or organization name"
                 className={validationErrors.organizationName ? 'border-red-500' : ''}
+                autoComplete="off"
+                inputMode="text"
+                onFocus={(e) => e.target.blur()}
               />
               {validationErrors.organizationName && <p className="text-red-500 text-sm">{validationErrors.organizationName}</p>}
             </div>
@@ -514,6 +523,9 @@ export function CoachEditDialogs({
                   onChange={(e) => handleFieldChange('city', e.target.value)}
                   placeholder="City"
                   className={validationErrors.city ? 'border-red-500' : ''}
+                  autoComplete="off"
+                  inputMode="text"
+                  onFocus={(e) => e.target.blur()}
                 />
                 {validationErrors.city && <p className="text-red-500 text-sm">{validationErrors.city}</p>}
               </div>
@@ -540,6 +552,9 @@ export function CoachEditDialogs({
                 value={editData.conference || ''}
                 onChange={(e) => handleFieldChange('conference', e.target.value)}
                 placeholder="e.g., Big Ten, SEC, WAC"
+                autoComplete="off"
+                inputMode="text"
+                onFocus={(e) => e.target.blur()}
               />
             </div>
           </div>
@@ -557,6 +572,9 @@ export function CoachEditDialogs({
                 placeholder="Share your personal story, coaching journey, coaching philosophy, and what drives your passion for coaching..."
                 rows={8}
                 className={validationErrors.personalStatement ? 'border-red-500' : ''}
+                autoComplete="off"
+                inputMode="text"
+                onFocus={(e) => e.target.blur()}
               />
               <p className="text-xs text-muted-foreground">
                 {(editData.personalStatement || '').length} / {FIELD_LIMITS.PERSONAL_STATEMENT}
@@ -622,6 +640,9 @@ export function CoachEditDialogs({
                 min="0"
                 max="50"
                 className={validationErrors.scholarshipsAvailable ? 'border-red-500' : ''}
+                autoComplete="off"
+                inputMode="numeric"
+                onFocus={(e) => e.target.blur()}
               />
               {validationErrors.scholarshipsAvailable && <p className="text-red-500 text-sm">{validationErrors.scholarshipsAvailable}</p>}
             </div>
@@ -635,6 +656,9 @@ export function CoachEditDialogs({
                 placeholder="Describe the qualities, skills, and characteristics you seek in student-athletes..."
                 rows={4}
                 className={validationErrors.recruitingPhilosophy ? 'border-red-500' : ''}
+                autoComplete="off"
+                inputMode="text"
+                onFocus={(e) => e.target.blur()}
               />
               <p className="text-xs text-muted-foreground">
                 {(editData.recruitingPhilosophy || '').length} / {FIELD_LIMITS.RECRUITING_PHILOSOPHY}
@@ -657,6 +681,9 @@ export function CoachEditDialogs({
                   onChange={(e) => handleFieldChange('instagram', e.target.value.replace('@', ''))}
                   placeholder="username"
                   className={validationErrors.instagram ? 'border-red-500' : ''}
+                  autoComplete="off"
+                  inputMode="text"
+                  onFocus={(e) => e.target.blur()}
                 />
               </div>
               {validationErrors.instagram && <p className="text-red-500 text-sm">{validationErrors.instagram}</p>}
@@ -672,6 +699,9 @@ export function CoachEditDialogs({
                   onChange={(e) => handleFieldChange('twitter', e.target.value.replace('@', ''))}
                   placeholder="username"
                   className={validationErrors.twitter ? 'border-red-500' : ''}
+                  autoComplete="off"
+                  inputMode="text"
+                  onFocus={(e) => e.target.blur()}
                 />
               </div>
               {validationErrors.twitter && <p className="text-red-500 text-sm">{validationErrors.twitter}</p>}
@@ -690,6 +720,9 @@ export function CoachEditDialogs({
                 onChange={(e) => handleFieldChange('programWebsite', e.target.value)}
                 placeholder="https://school.edu/athletics/basketball"
                 className={validationErrors.programWebsite ? 'border-red-500' : ''}
+                autoComplete="off"
+                inputMode="url"
+                onFocus={(e) => e.target.blur()}
               />
               {validationErrors.programWebsite && <p className="text-red-500 text-sm">{validationErrors.programWebsite}</p>}
             </div>
@@ -702,6 +735,9 @@ export function CoachEditDialogs({
                 onChange={(e) => handleFieldChange('schoolWebsite', e.target.value)}
                 placeholder="https://school.edu"
                 className={validationErrors.schoolWebsite ? 'border-red-500' : ''}
+                autoComplete="off"
+                inputMode="url"
+                onFocus={(e) => e.target.blur()}
               />
               {validationErrors.schoolWebsite && <p className="text-red-500 text-sm">{validationErrors.schoolWebsite}</p>}
             </div>
@@ -719,6 +755,9 @@ export function CoachEditDialogs({
                 onChange={(e) => handleFieldChange('showcaseVideoTitle', e.target.value)}
                 placeholder="e.g., Program Highlights 2024"
                 className={validationErrors.showcaseVideoTitle ? 'border-red-500' : ''}
+                autoComplete="off"
+                inputMode="text"
+                onFocus={(e) => e.target.blur()}
               />
               {validationErrors.showcaseVideoTitle && <p className="text-red-500 text-sm">{validationErrors.showcaseVideoTitle}</p>}
             </div>
@@ -731,6 +770,9 @@ export function CoachEditDialogs({
                 onChange={(e) => handleFieldChange('showcaseVideoUrl', e.target.value)}
                 placeholder="https://youtube.com/watch?v=..."
                 className={validationErrors.showcaseVideoUrl ? 'border-red-500' : ''}
+                autoComplete="off"
+                inputMode="url"
+                onFocus={(e) => e.target.blur()}
               />
               {validationErrors.showcaseVideoUrl && <p className="text-red-500 text-sm">{validationErrors.showcaseVideoUrl}</p>}
             </div>
