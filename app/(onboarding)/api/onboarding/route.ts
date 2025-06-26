@@ -1,10 +1,12 @@
 import { auth, createClerkClient } from '@clerk/nextjs/server'
 import { NextRequest, NextResponse } from 'next/server'
 import { validateClerkHeaders } from '@/utils/clerk-security'
+import { validateRoleAssignment, validateRoleEscalation } from '@/utils/validation'
 import { uploadProfilePicture, uploadOrganizationLogo } from '@/database/r2'
-import { onboardingOperations } from '@/database/db-utils'
+import { onboardingOperations, adminOperations } from '@/database/db-utils'
 import { convertFormDataToProfileData } from '@/app/(onboarding)/lib/onboarding'
 import { FormValidator } from '@/app/(onboarding)/lib/form-validation'
+import { recruitingNeedsOperations } from '@/database/db-utils'
 
 // Force Node.js runtime to avoid expensive edge function costs
 export const runtime = 'nodejs'
@@ -36,6 +38,10 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Check if user is admin
+    const user = await clerkClient.users.getUser(userId)
+    const isAdmin = user.publicMetadata?.role === 'admin'
+
     // Parse the request body
     const formData = await request.formData()
     const profileDataJson = formData.get('profileData') as string
@@ -61,12 +67,15 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Validate role
-    if (!['athlete', 'coach', 'recruiter'].includes(role)) {
+    // Validate role assignment (prevent admin role assignment)
+    try {
+      validateRoleAssignment(role, 'onboarding');
+      validateRoleEscalation(userId, userId, role);
+    } catch (error) {
       return NextResponse.json(
-        { error: 'Invalid role. Must be athlete, coach, or recruiter' },
+        { error: error instanceof Error ? error.message : 'Invalid role assignment' },
         { status: 400 }
-      )
+      );
     }
 
     let rawProfileData
@@ -137,43 +146,148 @@ export async function POST(request: NextRequest) {
       let result
       let profileId: number
 
-      if (role === 'athlete') {
-        result = await onboardingOperations.createAthleteOnboarding(
-          userId, 
-          email, 
-          profileData, 
-          profileImageR3Key
-        )
-        profileId = result.athleteProfile.id
-        
-      } else if (role === 'coach') {
-        result = await onboardingOperations.createCoachOnboarding(
-          userId, 
-          email, 
-          profileData, 
-          profileImageR3Key,
-          organizationLogoR3Key
-        )
-        profileId = result.profile.id
-        
-      } else if (role === 'recruiter') {
-        result = await onboardingOperations.createRecruiterOnboarding(
-          userId, 
-          email, 
-          profileData, 
-          profileImageR3Key,
-          organizationLogoR3Key
-        )
-        profileId = result.profile.id
-      } else {
-        throw new Error('Invalid role provided')
-      }
-
-      await clerkClient.users.updateUserMetadata(userId, {
-        publicMetadata: {
-          role
+      if (isAdmin) {
+        // For admin users, create demo profiles instead of regular profiles
+        if (role === 'athlete') {
+          result = await adminOperations.createDemoAthleteProfile(userId, {
+            fullName: profileData.fullName,
+            sport: profileData.sport!,
+            secondarySports: profileData.secondarySports,
+            graduationYear: profileData.graduationYear!,
+            educationLevel: profileData.educationLevel!,
+            organizationName: profileData.organizationName!,
+            city: profileData.city,
+            state: profileData.state,
+            height: profileData.height!,
+            weight: profileData.weight!,
+            positions: profileData.positions!,
+            gpa: profileData.gpa ? parseFloat(profileData.gpa) : null,
+            satScore: profileData.satScore,
+            actScore: profileData.actScore,
+            intendedMajor: profileData.intendedMajor,
+            gender: profileData.gender,
+            maxprepsUrl: profileData.maxprepsUrl,
+            hudlUrl: profileData.hudlUrl,
+            instagramHandle: profileData.instagramHandle,
+            twitterHandle: profileData.twitterHandle,
+            personalStatement: profileData.personalStatement,
+            profileImageR3Key
+          })
+          profileId = result.id
+          
+        } else if (role === 'coach') {
+          result = await adminOperations.createDemoCoachProfile(userId, {
+            fullName: profileData.fullName,
+            title: profileData.title!,
+            sportCoaching: profileData.sportCoaching!,
+            organizationName: profileData.organizationName!,
+            division: profileData.division!,
+            conference: profileData.conference,
+            city: profileData.city,
+            state: profileData.state,
+            programWebsite: profileData.programWebsite,
+            schoolWebsite: profileData.schoolWebsite,
+            instagramHandle: profileData.orgInstagramHandle,
+            twitterHandle: profileData.orgTwitterHandle,
+            personalStatement: profileData.personalStatement,
+            profileImageR3Key,
+            organizationLogoR3Key
+          })
+          profileId = result.id
+          
+          // Create recruiting needs for demo coach if provided
+          if (profileData.recruitingGraduationYears && profileData.recruitingPositions) {
+            await recruitingNeedsOperations.createRecruitingNeeds({
+              coachId: profileId,
+              graduationYears: profileData.recruitingGraduationYears,
+              positions: profileData.recruitingPositions,
+              scholarshipsAvailable: profileData.scholarshipsAvailable ?? undefined,
+              recruitingPhilosophy: profileData.recruitingPhilosophy || undefined
+            });
+          }
+          
+        } else if (role === 'recruiter') {
+          result = await adminOperations.createDemoRecruitingProfile(userId, {
+            fullName: profileData.fullName,
+            title: profileData.title!,
+            sportRecruiting: profileData.sportCoaching!,
+            secondarySports: profileData.secondarySportsRecruiting,
+            organizationName: profileData.organizationName!,
+            division: profileData.division!,
+            conference: profileData.conference,
+            city: profileData.city,
+            state: profileData.state,
+            programWebsite: profileData.programWebsite,
+            schoolWebsite: profileData.schoolWebsite,
+            instagramHandle: profileData.orgInstagramHandle,
+            twitterHandle: profileData.orgTwitterHandle,
+            personalStatement: profileData.personalStatement,
+            profileImageR3Key,
+            organizationLogoR3Key
+          })
+          profileId = result.id
+          
+          // Create sport-specific recruiting needs for demo recruiter if provided
+          if (profileData.sportSpecificNeeds) {
+            for (const [sport, needs] of Object.entries(profileData.sportSpecificNeeds)) {
+              if (needs.graduationYears && needs.positions) {
+                await recruitingNeedsOperations.createRecruitingProfileNeeds({
+                  recruitingProfileId: profileId,
+                  sport: sport,
+                  graduationYears: needs.graduationYears,
+                  positions: needs.positions,
+                  scholarshipsAvailable: needs.scholarshipsAvailable ?? undefined,
+                  recruitingPhilosophy: needs.recruitingPhilosophy || undefined
+                });
+              }
+            }
+          }
+        } else {
+          throw new Error('Invalid role provided')
         }
-      })
+        
+        // Don't update admin role in Clerk - keep them as admin
+      } else {
+        // For regular users, use normal onboarding flow
+        if (role === 'athlete') {
+          result = await onboardingOperations.createAthleteOnboarding(
+            userId, 
+            email, 
+            profileData, 
+            profileImageR3Key
+          )
+          profileId = result.athleteProfile.id
+          
+        } else if (role === 'coach') {
+          result = await onboardingOperations.createCoachOnboarding(
+            userId, 
+            email, 
+            profileData, 
+            profileImageR3Key,
+            organizationLogoR3Key
+          )
+          profileId = result.profile.id
+          
+        } else if (role === 'recruiter') {
+          result = await onboardingOperations.createRecruiterOnboarding(
+            userId, 
+            email, 
+            profileData, 
+            profileImageR3Key,
+            organizationLogoR3Key
+          )
+          profileId = result.profile.id
+        } else {
+          throw new Error('Invalid role provided')
+        }
+
+        // Update user role in Clerk for regular users only
+        await clerkClient.users.updateUserMetadata(userId, {
+          publicMetadata: {
+            role
+          }
+        })
+      }
 
       return NextResponse.json(
         { 

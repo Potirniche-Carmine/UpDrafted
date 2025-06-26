@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAnyRole, requireOwnershipOrAdmin } from '@/utils/roles';
-import { userOperations, athleteOperations, coachOperations, recruitingOperations, recruitingNeedsOperations, connectionOperations, activityOperations, notificationOperations } from '@/database/db-utils';
+import { userOperations, athleteOperations, coachOperations, recruitingOperations, recruitingNeedsOperations, connectionOperations, activityOperations, notificationOperations, adminOperations } from '@/database/db-utils';
 import { R2_PUBLIC_URL } from '@/database/r2';
 import { NewAthleteProfile, NewAthleteMeasurable, NewAthleteVideo, NewCoachProfile, NewRecruitingProfile, verificationRequests, AthleteProfile, CoachProfile, RecruitingProfile } from '@/database/schema';
 import { db } from '@/database/db';
@@ -308,6 +308,66 @@ export async function GET(
     // Check if the current user is viewing their own profile
     const isOwnProfile = currentUserId === profileUserId;
     const isAdmin = currentUserRole === 'admin';
+
+    // ADMIN DEMO PROFILE HANDLING
+    // If admin is viewing their own profile, check if they're viewing as a different role
+    let adminViewingRole = null;
+    let shouldShowDemoProfile = false;
+
+    if (isAdmin && isOwnProfile) {
+      try {
+        const adminPrefs = await adminOperations.getAdminRolePreferences(currentUserId);
+        if (adminPrefs && adminPrefs.currentViewingRole) {
+          adminViewingRole = adminPrefs.currentViewingRole;
+          shouldShowDemoProfile = true;
+        }
+      } catch (error) {
+        console.error('Failed to get admin preferences:', error);
+        // Continue with normal flow if admin preferences fail
+      }
+    }
+
+    // If admin should show demo profile, fetch and return demo profile
+    if (shouldShowDemoProfile && adminViewingRole) {
+      try {
+        const demoProfiles = await adminOperations.getDemoProfiles(currentUserId);
+                 let demoProfileData = null;
+         const profileType = adminViewingRole;
+
+                 if (adminViewingRole === 'athlete' && demoProfiles.athlete) {
+           // Use the demo athlete profile
+           demoProfileData = demoProfiles.athlete;
+         } else if (adminViewingRole === 'coach' && demoProfiles.coach) {
+           // Use the demo coach profile
+           demoProfileData = demoProfiles.coach;
+         } else if (adminViewingRole === 'recruiter' && demoProfiles.recruiter) {
+           // Use the demo recruiter profile
+           demoProfileData = demoProfiles.recruiter;
+         }
+
+        if (demoProfileData) {
+          // Transform the demo profile data to match the component interface
+          const transformedProfile = transformProfileData(demoProfileData, profileType);
+
+          const responseData = {
+            success: true,
+            profile: transformedProfile,
+            profileType,
+            isOwnProfile: true,
+            isAdmin: true,
+            canEdit: true,
+            currentUserRole,
+            isDemoProfile: true, // Flag to indicate this is a demo profile
+            adminViewingRole
+          };
+
+          return NextResponse.json(responseData);
+        }
+      } catch (error) {
+        console.error('Error fetching demo profile:', error);
+        // Fall through to normal profile fetching if demo profile fails
+      }
+    }
 
     // Track profile view if not viewing own profile
     if (!isOwnProfile) {

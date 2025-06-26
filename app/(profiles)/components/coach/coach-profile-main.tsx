@@ -20,7 +20,7 @@ import {
   Globe,
   Target,
   AlertTriangle,
-  X
+  X,
 } from "lucide-react";
 import { ProfileHeader } from "../shared/profile-header";
 import { CoachEditDialogs } from "./coach-edit-dialogs";
@@ -488,9 +488,8 @@ export function CoachProfile({
         isSaving={isSaving}
         onSaveChanges={saveProfile}
         onDiscardChanges={discardChanges}
-      />
-
-      {/* Connection Dialog */}
+              />
+        {/* Connection Dialog */}
       <ConnectionDialog
         open={connectionDialogOpen}
         onOpenChange={setConnectionDialogOpen}
@@ -505,6 +504,11 @@ export function CoachProfile({
         open={verificationDialogOpen}
         onOpenChange={setVerificationDialogOpen}
         role="coach"
+        onVerificationSubmitted={() => {
+          setTimeout(() => {
+            window.location.reload();
+          }, 2000); // Give user time to read success message
+        }}
       />
 
       {/* Edit Dialogs */}
@@ -743,12 +747,12 @@ export function CoachProfile({
               </CardContent>
             </Card>
 
-            {/* Verification Section */}
-            {isOwnProfile && (
+            {/* Verification Section - Show for own profile or admin viewing */}
+            {(isOwnProfile || (effectiveRole && hasPendingVerification !== undefined)) && (
               <CoachVerificationSection
                 profileData={profileData}
                 isOwnProfile={isOwnProfile}
-                onShowVerificationDialog={() => handleEditSection('manual-verification')}
+                onShowVerificationDialog={() => handleEditSection('verification')}
                 hasPendingVerification={hasPendingVerification}
                 pendingSubmittedAt={pendingSubmittedAt}
               />

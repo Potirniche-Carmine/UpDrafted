@@ -7,8 +7,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
-import { Upload, X } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { Upload, X, Check, ChevronsUpDown } from "lucide-react";
 import Image from "next/image";
+import { cn } from "@/lib/utils";
 import { 
   DIVISIONS,
   US_STATES, 
@@ -22,6 +25,77 @@ import { OnboardingData } from "../lib/types";
 interface CoachFormProps {
   data: OnboardingData;
   onInputChange: (field: keyof OnboardingData, value: string | number | string[] | number[] | File | null | boolean) => void;
+}
+
+// Searchable Combobox Component for Sports
+function SportCombobox({ 
+  value, 
+  onValueChange, 
+  placeholder, 
+  excludeSports = []
+}: {
+  value: string;
+  onValueChange: (value: string) => void;
+  placeholder: string;
+  excludeSports?: string[];
+}) {
+  const [open, setOpen] = useState(false);
+  const [searchValue, setSearchValue] = useState("");
+  const sports = getSportsList().filter(sport => !excludeSports.includes(sport));
+  
+  // Filter sports based on search, limit to 10 for performance
+  const filteredSports = sports.filter(sport => 
+    sport.toLowerCase().includes(searchValue.toLowerCase())
+  ).slice(0, 30);
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          variant="outline"
+          role="combobox"
+          aria-expanded={open}
+          className="h-11 w-full justify-between bg-background"
+        >
+          {value || placeholder}
+          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-full p-0" style={{ width: 'var(--radix-popover-trigger-width)' }}>
+        <Command>
+          <CommandInput 
+            placeholder="Search sports..." 
+            value={searchValue}
+            onValueChange={setSearchValue}
+          />
+          <CommandList className="max-h-[200px]">
+            <CommandEmpty>No sport found.</CommandEmpty>
+            <CommandGroup>
+              {filteredSports.map((sport) => (
+                <CommandItem
+                  key={sport}
+                  value={sport}
+                  onSelect={(currentValue) => {
+                    onValueChange(currentValue);
+                    setOpen(false);
+                    setSearchValue("");
+                  }}
+                >
+                  <Check
+                    className={cn(
+                      "mr-2 h-4 w-4",
+                      value === sport ? "opacity-100" : "opacity-0"
+                    )}
+                  />
+                  {sport}
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
+  );
 }
 
 export default function CoachForm({ data, onInputChange }: CoachFormProps) {
@@ -291,19 +365,11 @@ export default function CoachForm({ data, onInputChange }: CoachFormProps) {
       {/* Sport */}
       <div className="space-y-3">
         <Label htmlFor="sportCoaching" className="text-base font-medium">Sport *</Label>
-        <Select
+        <SportCombobox
           value={data.sportCoaching}
           onValueChange={(value) => onInputChange('sportCoaching', value)}
-        >
-          <SelectTrigger className="h-11 bg-background" style={{ height: '2.75rem' }}>
-            <SelectValue placeholder="Select sport" />
-          </SelectTrigger>
-          <SelectContent>
-            {getSportsList().map(sport => (
-              <SelectItem key={sport} value={sport}>{sport}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+          placeholder="Select sport"
+        />
       </div>
 
       {/* Division and Conference */}

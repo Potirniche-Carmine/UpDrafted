@@ -14,6 +14,7 @@ import {
   messages,
   conversations,
   notifications,
+  adminRolePreferences,
   type NewUser,
   type NewAthleteProfile,
   type NewAthleteMeasurable,
@@ -23,6 +24,7 @@ import {
   type NewRecruitingNeeds,
   type NewRecruitingProfileNeeds,
   type NewReport,
+  type NewAdminRolePreferences,
   athleteVideos,
 } from './schema';
 import { OnboardingProfileData } from '@/app/(onboarding)/lib/onboarding';
@@ -1441,4 +1443,142 @@ export const notificationOperations = {
       }
     );
   },
+};
+
+// Admin operations
+export const adminOperations = {
+  // Get admin role preferences
+  async getAdminRolePreferences(userId: string) {
+    return await db.query.adminRolePreferences.findFirst({
+      where: eq(adminRolePreferences.userId, userId),
+    });
+  },
+
+  // Create or update admin role preferences
+  async setAdminRolePreferences(userId: string, preferencesData: Partial<NewAdminRolePreferences>) {
+    const existing = await this.getAdminRolePreferences(userId);
+    
+    if (existing) {
+      const [updated] = await db
+        .update(adminRolePreferences)
+        .set({ ...preferencesData, updatedAt: new Date() })
+        .where(eq(adminRolePreferences.userId, userId))
+        .returning();
+      return updated;
+    } else {
+      const [created] = await db
+        .insert(adminRolePreferences)
+        .values({ userId, ...preferencesData })
+        .returning();
+      return created;
+    }
+  },
+
+  // Get demo profiles for admin
+  async getDemoProfiles(userId: string) {
+    const athlete = await db.query.athleteProfiles.findFirst({
+      where: and(
+        eq(athleteProfiles.userId, userId),
+        eq(athleteProfiles.isDemoProfile, true)
+      ),
+      with: {
+        user: true,
+        measurables: true,
+        videos: {
+          orderBy: [asc(athleteVideos.sortOrder)],
+        }
+      }
+    });
+
+    const coach = await db.query.coachProfiles.findFirst({
+      where: and(
+        eq(coachProfiles.userId, userId),
+        eq(coachProfiles.isDemoProfile, true)
+      ),
+      with: {
+        user: true,
+        recruitingNeeds: true,
+      }
+    });
+
+    const recruiter = await db.query.recruitingProfiles.findFirst({
+      where: and(
+        eq(recruitingProfiles.userId, userId),
+        eq(recruitingProfiles.isDemoProfile, true)
+      ),
+      with: {
+        user: true,
+        recruitingNeeds: true,
+      }
+    });
+
+    return { athlete, coach, recruiter };
+  },
+
+  // Create demo athlete profile
+  async createDemoAthleteProfile(userId: string, profileData: Omit<NewAthleteProfile, 'userId' | 'isDemoProfile'>) {
+    const [profile] = await db.insert(athleteProfiles).values({
+      ...profileData,
+      userId,
+      isDemoProfile: true,
+    }).returning();
+    return profile;
+  },
+
+  // Create demo coach profile
+  async createDemoCoachProfile(userId: string, profileData: Omit<NewCoachProfile, 'userId' | 'isDemoProfile'>) {
+    const [profile] = await db.insert(coachProfiles).values({
+      ...profileData,
+      userId,
+      isDemoProfile: true,
+    }).returning();
+    return profile;
+  },
+
+  // Create demo recruiting profile
+  async createDemoRecruitingProfile(userId: string, profileData: Omit<NewRecruitingProfile, 'userId' | 'isDemoProfile'>) {
+    const [profile] = await db.insert(recruitingProfiles).values({
+      ...profileData,
+      userId,
+      isDemoProfile: true,
+    }).returning();
+    return profile;
+  },
+
+  // Update demo profiles
+  async updateDemoAthleteProfile(userId: string, profileData: Partial<NewAthleteProfile>) {
+    const [profile] = await db
+      .update(athleteProfiles)
+      .set({ ...profileData, updatedAt: new Date() })
+      .where(and(
+        eq(athleteProfiles.userId, userId),
+        eq(athleteProfiles.isDemoProfile, true)
+      ))
+      .returning();
+    return profile;
+  },
+
+  async updateDemoCoachProfile(userId: string, profileData: Partial<NewCoachProfile>) {
+    const [profile] = await db
+      .update(coachProfiles)
+      .set({ ...profileData, updatedAt: new Date() })
+      .where(and(
+        eq(coachProfiles.userId, userId),
+        eq(coachProfiles.isDemoProfile, true)
+      ))
+      .returning();
+    return profile;
+  },
+
+  async updateDemoRecruitingProfile(userId: string, profileData: Partial<NewRecruitingProfile>) {
+    const [profile] = await db
+      .update(recruitingProfiles)
+      .set({ ...profileData, updatedAt: new Date() })
+      .where(and(
+        eq(recruitingProfiles.userId, userId),
+        eq(recruitingProfiles.isDemoProfile, true)
+      ))
+      .returning();
+    return profile;
+  }
 }; 

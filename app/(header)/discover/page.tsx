@@ -899,7 +899,7 @@ function SearchPageContent() {
 
 export default function SearchPage() {
   return (
-    <AuthWrapper requireRole={['athlete', 'coach', 'recruiter']}>
+    <AuthWrapper requireRole={['athlete', 'coach', 'recruiter', 'admin']}>
       <Suspense fallback={
         <div className="bg-background flex items-center justify-center py-12">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#01ae79]"></div>

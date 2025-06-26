@@ -16,7 +16,6 @@ import {
   BarChart3,
 } from "lucide-react"
 import Link from "next/link"
-import { useRoleView } from '@/hooks/use-role-view'
 import { useProfileNavigation } from '@/hooks/use-profile-navigation'
 import { DashboardHeader } from '../components/dashboard-header'
 import { AuthWrapper } from '../../../components/auth-wrapper'
@@ -220,53 +219,69 @@ const getUserContent = (role: string, handleViewProfile: () => void, profileNavi
           }
         ]
       };
-    default:
+    case 'admin':
       return {
-        welcomeText: "Welcome to your dashboard",
-        searchText: "Discover",
+        welcomeText: "Manage and oversee platform operations",
+        searchText: "Discover All Users",
         searchHref: "/discover",
         primaryNav: [
           { 
-            label: profileNavigating ? "Loading..." : "View Profile", 
-            onClick: handleViewProfile, 
+            label: "Admin Controls", 
+            href: "/admin-init", 
             icon: Eye, 
-            description: "Check and update your profile", 
-            color: "#01ae79" 
+            description: "Access admin management tools", 
+            color: "#dc2626" 
           },
           { 
             label: "Discover", 
             href: "/discover", 
             icon: Users, 
-            description: "Explore UpDrafted", 
+            description: "View all platform users", 
             color: "#4f46e5" 
           },
           { 
             label: "Connections", 
             href: "/connections", 
             icon: Users, 
-            description: "Manage your network", 
+            description: "Monitor connections", 
             color: "#0ea5e9" 
           },
           { 
             label: "Messages", 
             href: "/messages", 
             icon: MessageSquare, 
-            description: "Check your conversations", 
+            description: "Monitor conversations", 
             color: "#f59e0b" 
           },
           { 
             label: "Notifications", 
             href: "/notifications", 
             icon: Bell, 
-            description: "View your notifications", 
+            description: "View system notifications", 
             color: "#ef4444" 
           },
           { 
             label: "Activity", 
             href: "/activity", 
             icon: BarChart3, 
-            description: "Track profile views and insights", 
+            description: "Monitor platform activity", 
             color: "#8b5cf6" 
+          }
+        ]
+      };
+    default:
+      // Fallback for unknown roles
+      return {
+        welcomeText: "Welcome to UpDrafted",
+        searchText: "Discover",
+        searchHref: "/discover",
+        primaryNav: [
+          { 
+            label: "Discover", 
+            href: "/discover", 
+            icon: Users, 
+            description: "Explore the platform", 
+            color: "#4f46e5" 
           }
         ]
       };
@@ -305,7 +320,9 @@ function DashboardContent({
   profileNavigating: boolean; 
 }) {
   const { user } = useUser();
-  const { effectiveRole, isAdmin, isViewingAsOtherRole } = useRoleView();
+  
+  // Get user role directly from user metadata instead of useRoleView
+  const userRole = user?.publicMetadata?.role as string || 'athlete';
 
   // Get current date for calendar display
   const currentDate = new Date();
@@ -333,7 +350,7 @@ function DashboardContent({
   }
 
   // Get content based on user role
-  const userContent = getUserContent(effectiveRole || 'athlete', handleViewProfile, profileNavigating);
+  const userContent = getUserContent(userRole, handleViewProfile, profileNavigating);
   
   // Get user display name
   const displayName = user.fullName || user.firstName || user.username || 'User';
@@ -347,9 +364,6 @@ function DashboardContent({
           welcomeText={userContent.welcomeText}
           searchText={userContent.searchText}
           searchHref={userContent.searchHref}
-          isAdmin={isAdmin}
-          isViewingAsOtherRole={isViewingAsOtherRole}
-          effectiveRole={effectiveRole || 'athlete'}
         />
 
         {/* Main Grid Layout */}

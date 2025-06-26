@@ -240,4 +240,49 @@ export const RateLimitValidation = {
       windowMs: 60 * 1000, // 1 minute window
     };
   },
+};
+
+/**
+ * Validates that admin role is never assigned through API calls
+ * @param role - The role being assigned
+ * @param context - Where the role assignment is happening
+ * @throws Error if admin role is being assigned through non-webhook context
+ */
+export const validateRoleAssignment = (
+  role: string, 
+  context: 'api' | 'webhook' | 'onboarding'
+): void => {
+  if (role === 'admin') {
+    if (context === 'api' || context === 'onboarding') {
+      throw new Error('Admin role can only be assigned through Clerk dashboard, not via API');
+    }
+  }
+  
+  // Validate role is one of the allowed values
+  const allowedRoles = ['athlete', 'coach', 'recruiter'];
+  if (context !== 'webhook' && !allowedRoles.includes(role)) {
+    throw new Error(`Invalid role: ${role}. Must be one of: ${allowedRoles.join(', ')}`);
+  }
+};
+
+/**
+ * Validates that a user cannot escalate their own role to admin
+ * @param requestingUserId - The user making the request
+ * @param targetUserId - The user whose role is being changed
+ * @param newRole - The new role being assigned
+ */
+export const validateRoleEscalation = (
+  requestingUserId: string,
+  targetUserId: string, 
+  newRole: string
+): void => {
+  // Users cannot assign admin role to themselves or others
+  if (newRole === 'admin') {
+    throw new Error('Admin role assignment is not permitted through this endpoint');
+  }
+  
+  // Users can only change their own role during onboarding
+  if (requestingUserId !== targetUserId) {
+    throw new Error('Users can only modify their own role during onboarding');
+  }
 }; 

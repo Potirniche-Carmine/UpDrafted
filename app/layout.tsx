@@ -6,7 +6,6 @@ import { ClerkProviderWrapper } from "@/components/clerk-theme-wrapper";
 import { Header } from "@/components/header";
 import { Footer } from "@/components/footer";
 import { QueryProvider } from '@/components/providers/query-provider'
-import { RoleSwitcher } from '@/components/role-switcher'
 
 const inter = Inter({ 
   subsets: ["latin"],
@@ -44,7 +43,6 @@ export default function RootLayout({
                 {children}
               </main>
               <Footer />
-              <RoleSwitcher />
             </ClerkProviderWrapper>
           </ThemeProvider>
         </QueryProvider>

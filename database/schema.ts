@@ -14,7 +14,7 @@ import {
 } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
 
-export const userRoleEnum = pgEnum('user_role', ['athlete', 'coach', 'recruiter']);
+export const userRoleEnum = pgEnum('user_role', ['athlete', 'coach', 'recruiter', 'admin']);
 export const coachRoleEnum = pgEnum('coach_role', ['coach', 'recruiter']);
 export const connectionStatusEnum = pgEnum('connection_status', ['connected', 'pending']);
 export const initiatedByEnum = pgEnum('initiated_by', ['athlete', 'coach', 'recruiter']);
@@ -64,6 +64,7 @@ export const athleteProfiles = pgTable('athlete_profiles', {
   instagramHandle: text('instagram_handle'),
   twitterHandle: text('twitter_handle'),
   personalStatement: text('personal_statement'),
+  isDemoProfile: boolean('is_demo_profile').default(false),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
 }, (table) => [
@@ -71,6 +72,7 @@ export const athleteProfiles = pgTable('athlete_profiles', {
   index('idx_athlete_profiles_sport').on(table.sport),
   index('idx_athlete_profiles_graduation_year').on(table.graduationYear),
   index('idx_athlete_profiles_education_level').on(table.educationLevel),
+  index('idx_athlete_profiles_is_demo').on(table.isDemoProfile),
   unique('athlete_profiles_user_id_unique').on(table.userId),
 ]);
 
@@ -119,10 +121,12 @@ export const coachProfiles = pgTable('coach_profiles', {
   showcaseVideoUrl: text('showcase_video_url'),
   personalStatement: text('personal_statement'),
   showcaseVideoEmbedUrl: text('showcase_video_embed_url'),
+  isDemoProfile: boolean('is_demo_profile').default(false),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
 }, (table) => [
   index('idx_coach_profiles_user_id').on(table.userId),
+  index('idx_coach_profiles_is_demo').on(table.isDemoProfile),
   unique('coach_profiles_user_id_unique').on(table.userId),
 ]);
 
@@ -149,10 +153,12 @@ export const recruitingProfiles = pgTable('recruiting_profiles', {
   showcaseVideoUrl: text('showcase_video_url'),
   showcaseVideoEmbedUrl: text('showcase_video_embed_url'),
   personalStatement: text('personal_statement'),
+  isDemoProfile: boolean('is_demo_profile').default(false),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
 }, (table) => [
   index('idx_recruiting_profiles_user_id').on(table.userId),
+  index('idx_recruiting_profiles_is_demo').on(table.isDemoProfile),
   unique('recruiting_profiles_user_id_unique').on(table.userId),
 ]);
 
@@ -330,6 +336,18 @@ export const notifications = pgTable('notifications', {
   index('idx_notifications_created_at').on(table.createdAt),
 ]);
 
+export const adminRolePreferences = pgTable('admin_role_preferences', {
+  id: serial('id').primaryKey(),
+  userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  currentViewingRole: userRoleEnum('current_viewing_role'),
+  verificationStatusOverride: boolean('verification_status_override').default(false),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+}, (table) => [
+  index('idx_admin_role_preferences_user_id').on(table.userId),
+  unique('admin_role_preferences_user_id_unique').on(table.userId),
+]);
+
 export const usersRelations = relations(users, ({ one, many }) => ({
   athleteProfile: one(athleteProfiles, {
     fields: [users.id],
@@ -343,7 +361,18 @@ export const usersRelations = relations(users, ({ one, many }) => ({
     fields: [users.id],
     references: [recruitingProfiles.userId],
   }),
+  adminRolePreferences: one(adminRolePreferences, {
+    fields: [users.id],
+    references: [adminRolePreferences.userId],
+  }),
   sentMessages: many(messages),
+}));
+
+export const adminRolePreferencesRelations = relations(adminRolePreferences, ({ one }) => ({
+  user: one(users, {
+    fields: [adminRolePreferences.userId],
+    references: [users.id],
+  }),
 }));
 
 export const athleteProfilesRelations = relations(athleteProfiles, ({ one, many }) => ({
@@ -498,4 +527,6 @@ export type NewVerificationFile = typeof verificationFiles.$inferInsert;
 export type Report = typeof reports.$inferSelect;
 export type NewReport = typeof reports.$inferInsert;
 export type Notification = typeof notifications.$inferSelect;
-export type NewNotification = typeof notifications.$inferInsert; 
+export type NewNotification = typeof notifications.$inferInsert;
+export type AdminRolePreferences = typeof adminRolePreferences.$inferSelect;
+export type NewAdminRolePreferences = typeof adminRolePreferences.$inferInsert; 

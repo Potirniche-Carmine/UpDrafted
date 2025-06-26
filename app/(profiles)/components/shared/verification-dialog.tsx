@@ -29,6 +29,7 @@ interface VerificationDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   role: "coach" | "recruiter" | "athlete";
+  onVerificationSubmitted?: () => void;
 }
 
 interface VerificationFile {
@@ -42,7 +43,7 @@ interface VerificationFile {
   uploading?: boolean;
 }
 
-export function VerificationDialog({ open, onOpenChange, role }: VerificationDialogProps) {
+export function VerificationDialog({ open, onOpenChange, role, onVerificationSubmitted }: VerificationDialogProps) {
   const { userId } = useAuth();
   const [files, setFiles] = useState<VerificationFile[]>([]);
   const [linkUrl, setLinkUrl] = useState("");
@@ -203,6 +204,10 @@ export function VerificationDialog({ open, onOpenChange, role }: VerificationDia
 
       // Success - show success message instead of closing immediately
       setSubmitSuccess(true);
+
+      if (onVerificationSubmitted) {
+        onVerificationSubmitted();
+      }
 
     } catch (error) {
       console.error('Error submitting verification:', error);

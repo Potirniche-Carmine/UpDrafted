@@ -921,12 +921,12 @@ export function RecruiterProfile({
               </CardContent>
             </Card>
 
-            {/* Verification Section */}
-            {isOwnProfile && (
+            {/* Verification Section - Show for own profile or admin viewing */}
+            {(isOwnProfile || (effectiveRole && (hasPendingVerification !== undefined || hasRejectedVerification !== undefined))) && (
               <RecruiterVerificationSection
                 profileData={profileData}
                 isOwnProfile={isOwnProfile}
-                onShowVerificationDialog={() => handleEditSection('manual-verification')}
+                onShowVerificationDialog={() => handleEditSection('verification')}
                 hasPendingVerification={hasPendingVerification}
                 pendingSubmittedAt={pendingSubmittedAt}
                 hasRejectedVerification={hasRejectedVerification}
@@ -1107,11 +1107,16 @@ export function RecruiterProfile({
       />
 
       {/* Verification Dialog */}
-      <VerificationDialog
-        open={verificationDialogOpen}
-        onOpenChange={(open) => setVerificationDialogOpen(open)}
-        role="recruiter"
-      />
+              <VerificationDialog
+          open={verificationDialogOpen}
+          onOpenChange={(open) => setVerificationDialogOpen(open)}
+          role="recruiter"
+          onVerificationSubmitted={() => {
+            setTimeout(() => {
+              window.location.reload();
+            }, 2000); // Give user time to read success message
+          }}
+        />
     </div>
   );
 } 
