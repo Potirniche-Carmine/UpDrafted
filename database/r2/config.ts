@@ -13,7 +13,7 @@ const r2Client = new S3Client({
 
 // Public bucket for profile pictures and organization logos
 export const R2_PUBLIC_BUCKET_NAME = process.env.R2_PUBLIC_BUCKET_NAME!;
-export const R2_PUBLIC_URL = 'https://bucket.updrafted.us';
+export const R2_PUBLIC_URL = process.env.R2_PUBLIC_URL || 'https://bucket.updrafted.us';
 
 // Private bucket for verification files (optional - falls back to public bucket if not configured)
 export const R2_PRIVATE_BUCKET_NAME = process.env.R2_PRIVATE_BUCKET_NAME || R2_PUBLIC_BUCKET_NAME;

@@ -7,8 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
-import { Upload, X, Check, ChevronsUpDown } from "lucide-react";
-import Image from "next/image";
+import { Check, ChevronsUpDown } from "lucide-react";
 import { 
   DIVISIONS,
   US_STATES, 
@@ -21,6 +20,7 @@ import { OnboardingData } from "../lib/types";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { cn } from "@/lib/utils";
+import { FileUpload } from '@/components/ui/file-upload';
 
 interface CoachRecruiterFormProps {
   data: OnboardingData;
@@ -310,66 +310,19 @@ export default function CoachRecruiterForm({ data, onInputChange }: CoachRecruit
       {/* Organization Logo Upload */}
       <div className="space-y-4">
         <Label className="text-base font-medium">Organization Logo</Label>
-        <div className="space-y-4">
-          {data.organizationLogoPreview ? (
-            <div className="relative w-24 h-20 mx-auto">
-              <Image
-                src={data.organizationLogoPreview}
-                alt="Organization logo preview"
-                width={96}
-                height={80}
-                className="rounded-lg object-contain border border-border/50"
-              />
-              <Button
-                type="button"
-                variant="destructive"
-                size="sm"
-                onClick={removeOrganizationLogo}
-                className="absolute -top-2 -right-2 w-6 h-6 rounded-full p-0"
-              >
-                <X className="w-4 h-4" />
-              </Button>
-            </div>
-          ) : (
-            <div className="border-2 border-dashed border-gray-300 rounded-lg p-4">
-              <div className="text-center">
-                <Upload className="mx-auto h-8 w-8 text-gray-400" />
-                <div className="mt-2">
-                  <label htmlFor="organizationLogo" className="cursor-pointer">
-                    <span className="mt-2 block text-sm font-medium text-gray-900">
-                      Upload organization logo
-                    </span>
-                    <span className="mt-1 block text-xs text-gray-500">
-                      Optional - Add your school or organization logo
-                    </span>
-                  </label>
-                  <input
-                    id="organizationLogo"
-                    type="file"
-                    accept="image/jpeg,image/jpg,image/png,image/webp"
-                    onChange={handleOrganizationLogoChange}
-                    className="sr-only"
-                  />
-                </div>
-              </div>
-            </div>
-          )}
-          {!data.organizationLogoPreview && (
-            <div>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => document.getElementById('organizationLogo')?.click()}
-                className="w-full"
-              >
-                Choose Logo
-              </Button>
-            </div>
-          )}
-        </div>
-        <p className="text-xs text-muted-foreground">
-          Accepted formats: JPEG, PNG, WebP. Max size: 5MB.
-        </p>
+        <FileUpload
+          id="organizationLogo"
+          accept="image/jpeg,image/jpg,image/png,image/webp"
+          onChange={handleOrganizationLogoChange}
+          onRemove={removeOrganizationLogo}
+          preview={data.organizationLogoPreview}
+          uploadText="Upload organization logo"
+          chooseText="Choose organization logo"
+          supportedFormats="Accepted formats: JPEG, PNG, WebP"
+          maxSize="5MB"
+          imageType="organization"
+        />
+        <p className="text-xs text-muted-foreground">Optional - Add your school or organization logo</p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

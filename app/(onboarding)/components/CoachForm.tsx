@@ -9,8 +9,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
-import { Upload, X, Check, ChevronsUpDown } from "lucide-react";
-import Image from "next/image";
+import { Check, ChevronsUpDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { 
   DIVISIONS,
@@ -21,6 +20,7 @@ import {
 } from "@/lib/sports-data";
 import { FormValidator, FIELD_LIMITS } from "@/app/(onboarding)/lib/form-validation";
 import { OnboardingData } from "../lib/types";
+import { FileUpload } from '@/components/ui/file-upload';
 
 interface CoachFormProps {
   data: OnboardingData;
@@ -320,46 +320,19 @@ export default function CoachForm({ data, onInputChange }: CoachFormProps) {
       {/* Organization Logo Upload */}
       <div className="space-y-4">
         <Label className="text-base font-medium">Organization Logo</Label>
-        <div className="space-y-4">
-          {data.organizationLogoPreview ? (
-            <div className="relative w-32 h-24 mx-auto">
-              <Image
-                src={data.organizationLogoPreview}
-                alt="Organization logo preview"
-                width={128}
-                height={96}
-                className="rounded-lg object-contain border border-border/50"
-              />
-              <Button
-                type="button"
-                variant="destructive"
-                size="sm"
-                className="absolute -top-2 -right-2 w-6 h-6 p-0 rounded-full"
-                onClick={removeOrganizationLogo}
-              >
-                <X className="w-3 h-3" />
-              </Button>
-            </div>
-          ) : (
-            <label
-              htmlFor="organizationLogo"
-              className="border-2 border-dashed border-border rounded-lg p-8 text-center cursor-pointer hover:border-border/80 transition-colors block"
-            >
-              <Upload className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-              <div className="space-y-2">
-                <p className="text-sm font-medium">Click to upload organization logo</p>
-                <p className="text-xs text-muted-foreground">PNG, JPG, or WebP (max 5MB)</p>
-              </div>
-              <Input
-                id="organizationLogo"
-                type="file"
-                className="sr-only"
-                accept="image/*"
-                onChange={handleOrganizationLogoChange}
-              />
-            </label>
-          )}
-        </div>
+        <FileUpload
+          id="organizationLogo"
+          accept="image/*"
+          onChange={handleOrganizationLogoChange}
+          onRemove={removeOrganizationLogo}
+          preview={data.organizationLogoPreview}
+          uploadText="Click to upload organization logo"
+          chooseText="Choose organization logo"
+          supportedFormats="PNG, JPG, or WebP"
+          maxSize="5MB"
+          imageType="organization"
+        />
+        <p className="text-xs text-muted-foreground">Optional - Add your school or organization logo</p>
       </div>
 
       {/* Sport */}

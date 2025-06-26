@@ -3,11 +3,9 @@
 import { useState } from "react";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { Upload, X } from "lucide-react";
-import Image from "next/image";
 import { FormValidator, FIELD_LIMITS } from "@/app/(onboarding)/lib/form-validation";
 import { OnboardingData } from "../lib/types";
+import { FileUpload } from '@/components/ui/file-upload';
 
 interface CommonFieldsProps {
   fullName: string;
@@ -90,49 +88,19 @@ export default function CommonFields({
 
       <div className="space-y-4">
         <Label className="text-base font-medium">Profile Picture</Label>
-        <div className="space-y-4">
-          {profileImagePreview ? (
-            <div className="relative w-32 h-32 mx-auto p-2">
-              <div className="relative w-full h-full overflow-hidden rounded-lg border border-border/50">
-                <Image
-                  src={profileImagePreview}
-                  alt="Profile preview"
-                  fill
-                  className="object-cover"
-                  sizes="128px"
-                />
-              </div>
-              <Button
-                type="button"
-                variant="destructive"
-                size="sm"
-                className="absolute -top-1 -right-1 w-6 h-6 p-0 rounded-full z-10"
-                onClick={removeImage}
-              >
-                <X className="w-3 h-3" />
-              </Button>
-            </div>
-          ) : (
-            <label
-              htmlFor="profileImage"
-              className="border-2 border-dashed border-border rounded-lg p-8 text-center cursor-pointer hover:border-border/80 transition-colors block"
-            >
-              <Upload className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-              <div className="space-y-2">
-                <p className="text-sm font-medium">Click to upload profile picture</p>
-                <p className="text-xs text-muted-foreground">PNG, JPG, or WebP (max 5MB)</p>
-                <p className="text-xs text-muted-foreground">Optional - A default image will be selected if none provided</p>
-              </div>
-              <Input
-                id="profileImage"
-                type="file"
-                accept="image/jpeg,image/jpg,image/png,image/webp"
-                onChange={handleFileChange}
-                className="sr-only"
-              />
-            </label>
-          )}
-        </div>
+        <FileUpload
+          id="profileImage"
+          accept="image/jpeg,image/jpg,image/png,image/webp"
+          onChange={handleFileChange}
+          onRemove={removeImage}
+          preview={profileImagePreview}
+          uploadText="Click to upload profile picture"
+          chooseText="Choose profile picture"
+          supportedFormats="PNG, JPG, or WebP"
+          maxSize="5MB"
+          imageType="profile"
+        />
+        <p className="text-xs text-muted-foreground">Optional - A default image will be selected if none provided</p>
       </div>
     </>
   );

@@ -9,11 +9,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
-import { Save, X, Plus, Upload, Shield } from "lucide-react";
+import { Save, X, Plus, Shield } from "lucide-react";
 import { getSportsList, US_STATES, GRADUATION_YEARS, getPositionsForSport, getMeasurablesForSport } from '@/lib/sports-data';
 import { EducationLevel } from '@/app/(onboarding)/lib/onboarding';
-import Image from "next/image";
 import { sanitizeProfileData } from '@/utils/sanitization';
+import { FileUpload } from '@/components/ui/file-upload';
 
 // Import field validation
 const FIELD_LIMITS = {
@@ -1534,75 +1534,23 @@ export function AthleteEditDialogs({
             </DialogHeader>
             <div className="space-y-4">
               <div className="space-y-4">
-                {profileImagePreview ? (
-                  <div className="relative w-32 h-32 mx-auto">
-                    <Image
-                      src={profileImagePreview}
-                      alt="Profile preview"
-                      fill
-                      className="rounded-lg object-cover"
-                    />
-                    <Button
-                      type="button"
-                      variant="destructive"
-                      size="sm"
-                      onClick={removeImagePreview}
-                      className="absolute -top-2 -right-2 w-6 h-6 rounded-full p-0"
-                      disabled={isUploading}
-                    >
-                      <X className="w-4 h-4" />
-                    </Button>
-                  </div>
-                ) : (
-                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-6">
-                    <div className="text-center">
-                      <Upload className="mx-auto h-12 w-12 text-gray-400" />
-                      <div className="mt-4">
-                        <label htmlFor="profileImageUpload" className="cursor-pointer">
-                          <span className="mt-2 block text-sm font-medium text-gray-100">
-                            Upload a profile picture
-                          </span>
-                          <span className="mt-1 block text-xs text-gray-500">
-                            Choose a new profile picture
-                          </span>
-                        </label>
-                        <input
-                          id="profileImageUpload"
-                          type="file"
-                          accept="image/jpeg,image/jpg,image/png,image/webp"
-                          onChange={handleFileChange}
-                          disabled={isUploading}
-                          className="sr-only"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                )}
-                {!profileImagePreview && (
-                  <div>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => document.getElementById('profileImageUpload')?.click()}
-                      className="w-full"
-                      disabled={isUploading}
-                    >
-                      Choose Photo
-                    </Button>
-                  </div>
-                )}
-                {selectedProfileFile && profileImagePreview && (
-                  <div>
-                    <Button
-                      type="button"
-                      onClick={handleManualUpload}
-                      className="w-full"
-                      disabled={isUploading}
-                    >
-                      {isUploading ? 'Uploading...' : 'Upload Photo'}
-                    </Button>
-                  </div>
-                )}
+                <FileUpload
+                  id="profileImageUpload"
+                  accept="image/jpeg,image/jpg,image/png,image/webp"
+                  onChange={handleFileChange}
+                  onUpload={handleManualUpload}
+                  onRemove={removeImagePreview}
+                  disabled={isUploading}
+                  preview={profileImagePreview}
+                  uploadText="Upload a profile picture"
+                  chooseText="Choose a new profile picture"
+                  supportedFormats="Supported formats: JPG, PNG, WebP"
+                  maxSize="5MB"
+                  showUploadButton={!!selectedProfileFile}
+                  isUploading={isUploading}
+                  error={validationErrors.upload}
+                  imageType="profile"
+                />
               </div>
               <p className="text-xs text-muted-foreground">
                 Supported formats: JPG, PNG, WebP. Max size: 5MB

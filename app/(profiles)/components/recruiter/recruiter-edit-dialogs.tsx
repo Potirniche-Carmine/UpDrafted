@@ -9,11 +9,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
-import { Save, X, Upload } from "lucide-react";
-import Image from "next/image";
+import { Save, X } from "lucide-react";
 import { getSportsList, US_STATES, GRADUATION_YEARS, DIVISIONS, getPositionsForSport } from '@/lib/sports-data';
 import { RecruiterProfileData } from './recruiter-profile-types';
 import { sanitizeProfileData } from '@/utils/sanitization';
+import { FileUpload } from '@/components/ui/file-upload';
 
 // Field validation limits
 const FIELD_LIMITS = {
@@ -837,165 +837,46 @@ export function RecruiterEditDialogs({
 
       case 'profile-image':
         return (
-          <div className="space-y-4">
-            <div className="space-y-4">
-              {profileImagePreview ? (
-                <div className="relative w-32 h-32 mx-auto">
-                  <Image
-                    src={profileImagePreview}
-                    alt="Profile preview"
-                    fill
-                    className="rounded-lg object-cover"
-                  />
-                  <Button
-                    type="button"
-                    variant="destructive"
-                    size="sm"
-                    onClick={() => removeImagePreview('profile')}
-                    className="absolute -top-2 -right-2 w-6 h-6 rounded-full p-0"
-                    disabled={isUploading}
-                  >
-                    <X className="w-4 h-4" />
-                  </Button>
-                </div>
-              ) : (
-                <div className="border-2 border-dashed border-gray-300 rounded-lg p-6">
-                  <div className="text-center">
-                    <Upload className="mx-auto h-12 w-12 text-gray-400" />
-                    <div className="mt-4">
-                      <label htmlFor="profileImageUpload" className="cursor-pointer">
-                        <span className="mt-2 block text-sm font-medium text-gray-900">
-                          Upload a profile picture
-                        </span>
-                        <span className="mt-1 block text-xs text-gray-500">
-                          Choose a new profile picture
-                        </span>
-                      </label>
-                      <input
-                        id="profileImageUpload"
-                        type="file"
-                        accept="image/jpeg,image/jpg,image/png,image/webp"
-                        onChange={(e) => handleFileChange(e, 'profile')}
-                        disabled={isUploading}
-                        className="sr-only"
-                      />
-                    </div>
-                  </div>
-                </div>
-              )}
-              {!profileImagePreview && (
-                <div>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => document.getElementById('profileImageUpload')?.click()}
-                    className="w-full"
-                    disabled={isUploading}
-                  >
-                    Choose Photo
-                  </Button>
-                </div>
-              )}
-              {selectedProfileFile && profileImagePreview && (
-                <div>
-                  <Button
-                    type="button"
-                    onClick={() => handleManualUpload('profile')}
-                    className="w-full"
-                    disabled={isUploading}
-                  >
-                    {isUploading ? 'Uploading...' : 'Upload Photo'}
-                  </Button>
-                </div>
-              )}
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Supported formats: JPG, PNG, WebP. Max size: 5MB
-            </p>
-            {validationErrors.upload && <p className="text-red-500 text-sm">{validationErrors.upload}</p>}
-          </div>
+          <FileUpload
+            id="profileImageUpload"
+            accept="image/jpeg,image/jpg,image/png,image/webp"
+            onChange={(e) => handleFileChange(e, 'profile')}
+            onUpload={() => handleManualUpload('profile')}
+            onRemove={() => removeImagePreview('profile')}
+            disabled={isUploading}
+            preview={profileImagePreview}
+            uploadText="Upload a profile picture"
+            chooseText="Choose a new profile picture"
+            supportedFormats="Supported formats: JPG, PNG, WebP"
+            maxSize="5MB"
+            showUploadButton={!!(selectedProfileFile && profileImagePreview)}
+            uploadButtonText="Upload Photo"
+            isUploading={isUploading}
+            error={validationErrors.upload}
+            imageType="profile"
+          />
         );
 
       case 'organization-logo':
         return (
-          <div className="space-y-4">
-            <div className="space-y-4">
-              {organizationLogoPreview ? (
-                <div className="relative w-24 h-20 mx-auto">
-                  <Image
-                    src={organizationLogoPreview}
-                    alt="Organization logo preview"
-                    width={96}
-                    height={80}
-                    className="rounded-lg object-contain border border-border/50"
-                  />
-                  <Button
-                    type="button"
-                    variant="destructive"
-                    size="sm"
-                    onClick={() => removeImagePreview('organization')}
-                    className="absolute -top-2 -right-2 w-6 h-6 rounded-full p-0"
-                    disabled={isUploading}
-                  >
-                    <X className="w-4 h-4" />
-                  </Button>
-                </div>
-              ) : (
-                <div className="border-2 border-dashed border-gray-300 rounded-lg p-4">
-                  <div className="text-center">
-                    <Upload className="mx-auto h-8 w-8 text-gray-400" />
-                    <div className="mt-2">
-                      <label htmlFor="organizationLogoUpload" className="cursor-pointer">
-                        <span className="mt-2 block text-sm font-medium text-gray-900">
-                          Upload organization logo
-                        </span>
-                        <span className="mt-1 block text-xs text-gray-500">
-                          Choose a new logo
-                        </span>
-                      </label>
-                      <input
-                        id="organizationLogoUpload"
-                        type="file"
-                        accept="image/jpeg,image/jpg,image/png,image/webp"
-                        onChange={(e) => handleFileChange(e, 'organization')}
-                        disabled={isUploading}
-                        className="sr-only"
-                      />
-                    </div>
-                  </div>
-                </div>
-              )}
-              {!organizationLogoPreview && (
-                <div>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => document.getElementById('organizationLogoUpload')?.click()}
-                    className="w-full"
-                    disabled={isUploading}
-                  >
-                    Choose Logo
-                  </Button>
-                </div>
-              )}
-              {selectedOrganizationFile && organizationLogoPreview && (
-                <div>
-                  <Button
-                    type="button"
-                    onClick={() => handleManualUpload('organization')}
-                    className="w-full"
-                    disabled={isUploading}
-                  >
-                    {isUploading ? 'Uploading...' : 'Upload Logo'}
-                  </Button>
-                </div>
-              )}
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Supported formats: JPG, PNG, WebP. Max size: 5MB
-            </p>
-            {validationErrors.upload && <p className="text-red-500 text-sm">{validationErrors.upload}</p>}
-          </div>
+          <FileUpload
+            id="organizationLogoUpload"
+            accept="image/jpeg,image/jpg,image/png,image/webp"
+            onChange={(e) => handleFileChange(e, 'organization')}
+            onUpload={() => handleManualUpload('organization')}
+            onRemove={() => removeImagePreview('organization')}
+            disabled={isUploading}
+            preview={organizationLogoPreview}
+            uploadText="Upload organization logo"
+            chooseText="Choose a new logo"
+            supportedFormats="Supported formats: JPG, PNG, WebP"
+            maxSize="5MB"
+            showUploadButton={!!(selectedOrganizationFile && organizationLogoPreview)}
+            uploadButtonText="Upload Logo"
+            isUploading={isUploading}
+            error={validationErrors.upload}
+            imageType="organization"
+          />
         );
 
       default:
