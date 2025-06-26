@@ -78,6 +78,7 @@ export async function GET(request: NextRequest) {
     // 2. Users they're already connected to
     // 3. Users they've sent requests to
     // 4. Athletes can't discover other athletes
+    // 5. Demo profiles should never appear in discover
     const baseExcludeConditions = [
       ne(users.id, userId), // Exclude self
       not(exists(
@@ -117,6 +118,9 @@ export async function GET(request: NextRequest) {
         isNull(athleteProfiles.userId)
       );
     }
+
+    // Always exclude demo profiles from discover results
+    // This will be handled in the query where clause based on which tables are joined
 
     // Search conditions with sanitized input
     const searchConditions = query ? [
@@ -204,9 +208,27 @@ export async function GET(request: NextRequest) {
         )
       })
       .from(users)
-      .leftJoin(athleteProfiles, eq(athleteProfiles.userId, users.id))
-      .leftJoin(coachProfiles, eq(coachProfiles.userId, users.id))
-      .leftJoin(recruitingProfiles, eq(recruitingProfiles.userId, users.id))
+      .leftJoin(athleteProfiles, and(
+        eq(athleteProfiles.userId, users.id),
+        or(
+          isNull(athleteProfiles.isDemoProfile),
+          eq(athleteProfiles.isDemoProfile, false)
+        )
+      ))
+      .leftJoin(coachProfiles, and(
+        eq(coachProfiles.userId, users.id),
+        or(
+          isNull(coachProfiles.isDemoProfile),
+          eq(coachProfiles.isDemoProfile, false)
+        )
+      ))
+      .leftJoin(recruitingProfiles, and(
+        eq(recruitingProfiles.userId, users.id),
+        or(
+          isNull(recruitingProfiles.isDemoProfile),
+          eq(recruitingProfiles.isDemoProfile, false)
+        )
+      ))
       .where(and(...baseExcludeConditions, ...searchConditions, ...filterConditions))
       .limit(pageSize)
       .offset(offset);

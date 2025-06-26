@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireAnyRole } from '@/utils/roles';
 import { db } from '@/database/db';
 import { users, athleteProfiles, coachProfiles, recruitingProfiles } from '@/database/schema';
-import { or, eq, ilike, sql, and, ne } from 'drizzle-orm';
+import { or, eq, ilike, sql, and, ne, isNull } from 'drizzle-orm';
 import { R2_PUBLIC_URL } from '@/database/r2';
 import { withRateLimit } from '@/utils/rate-limiting';
 import { getCachedWithType, setCachedWithType, createErrorResponse, createSuccessResponse } from '@/utils/security-cache';
@@ -34,7 +34,6 @@ export async function GET(request: NextRequest) {
     if (request.url.length > MAX_URL_LENGTH) {
       return createErrorResponse('URL too long', 414);
     }
-
     // Require authentication
     const auth = await requireAnyRole();
     if (auth instanceof NextResponse) return auth;
@@ -92,38 +91,46 @@ export async function GET(request: NextRequest) {
 
     // Search athletes if no role filter or role is athlete
     if (!roleFilter || roleFilter === 'athlete') {
-      searchPromises.push(
-        db
-          .select({
-            id: users.id,
-            fullName: athleteProfiles.fullName,
-            role: users.role,
-            sport: athleteProfiles.sport,
-            profileImageR3Key: athleteProfiles.profileImageR3Key,
-            organizationName: athleteProfiles.organizationName,
-            city: athleteProfiles.city,
-            state: athleteProfiles.state,
-            isVerified: athleteProfiles.isVerified,
-            graduationYear: athleteProfiles.graduationYear,
-            educationLevel: athleteProfiles.educationLevel,
-          })
-          .from(athleteProfiles)
-          .innerJoin(users, eq(users.id, athleteProfiles.userId))
-          .where(
-            and(
-              or(
-                ilike(athleteProfiles.fullName, searchTerm),
-                ilike(athleteProfiles.sport, searchTerm),
-                ilike(athleteProfiles.organizationName, searchTerm),
-                ilike(athleteProfiles.city, searchTerm),
-                ilike(athleteProfiles.state, searchTerm)
-              ),
-              ne(users.id, auth.userId)
+      // Only allow athlete search if current user is not an athlete
+      if (role !== 'athlete') {
+        searchPromises.push(
+          db
+            .select({
+              id: users.id,
+              fullName: athleteProfiles.fullName,
+              role: users.role,
+              sport: athleteProfiles.sport,
+              profileImageR3Key: athleteProfiles.profileImageR3Key,
+              organizationName: athleteProfiles.organizationName,
+              city: athleteProfiles.city,
+              state: athleteProfiles.state,
+              isVerified: athleteProfiles.isVerified,
+              graduationYear: athleteProfiles.graduationYear,
+              educationLevel: athleteProfiles.educationLevel,
+            })
+            .from(athleteProfiles)
+            .innerJoin(users, eq(users.id, athleteProfiles.userId))
+            .where(
+              and(
+                or(
+                  ilike(athleteProfiles.fullName, searchTerm),
+                  ilike(athleteProfiles.sport, searchTerm),
+                  ilike(athleteProfiles.organizationName, searchTerm),
+                  ilike(athleteProfiles.city, searchTerm),
+                  ilike(athleteProfiles.state, searchTerm)
+                ),
+                ne(users.id, auth.userId),
+                // Exclude demo profiles
+                or(
+                  isNull(athleteProfiles.isDemoProfile),
+                  eq(athleteProfiles.isDemoProfile, false)
+                )
+              )
             )
-          )
-          .offset(offset)
-          .limit(pageSize)
-      );
+            .offset(offset)
+            .limit(pageSize)
+        );
+      }
     }
 
     // Search coaches if no role filter or role is coach
@@ -155,7 +162,12 @@ export async function GET(request: NextRequest) {
                 ilike(coachProfiles.state, searchTerm),
                 ilike(coachProfiles.title, searchTerm)
               ),
-              ne(users.id, auth.userId)
+              ne(users.id, auth.userId),
+              // Exclude demo profiles
+              or(
+                isNull(coachProfiles.isDemoProfile),
+                eq(coachProfiles.isDemoProfile, false)
+              )
             )
           )
           .offset(offset)
@@ -192,7 +204,12 @@ export async function GET(request: NextRequest) {
                 ilike(recruitingProfiles.state, searchTerm),
                 ilike(recruitingProfiles.title, searchTerm)
               ),
-              ne(users.id, auth.userId)
+              ne(users.id, auth.userId),
+              // Exclude demo profiles
+              or(
+                isNull(recruitingProfiles.isDemoProfile),
+                eq(recruitingProfiles.isDemoProfile, false)
+              )
             )
           )
           .offset(offset)
@@ -207,21 +224,24 @@ export async function GET(request: NextRequest) {
     let searchIndex = 0;
     
     if (!roleFilter || roleFilter === 'athlete') {
-      const athleteResults = searchResults[searchIndex++];
-      for (const athlete of athleteResults) {
-        results.push({
-          id: athlete.id,
-          fullName: athlete.fullName,
-          role: 'athlete',
-          sport: athlete.sport,
-          profileImage: athlete.profileImageR3Key ? `${R2_PUBLIC_URL}/${athlete.profileImageR3Key}` : null,
-          organizationName: athlete.organizationName,
-          city: athlete.city,
-          state: athlete.state,
-          isVerified: athlete.isVerified ?? false,
-          graduationYear: athlete.graduationYear,
-          educationLevel: athlete.educationLevel,
-        });
+      // Only process athlete results if current user is not an athlete
+      if (role !== 'athlete') {
+        const athleteResults = searchResults[searchIndex++];
+        for (const athlete of athleteResults) {
+          results.push({
+            id: athlete.id,
+            fullName: athlete.fullName,
+            role: 'athlete',
+            sport: athlete.sport,
+            profileImage: athlete.profileImageR3Key ? `${R2_PUBLIC_URL}/${athlete.profileImageR3Key}` : null,
+            organizationName: athlete.organizationName,
+            city: athlete.city,
+            state: athlete.state,
+            isVerified: athlete.isVerified ?? false,
+            graduationYear: athlete.graduationYear,
+            educationLevel: athlete.educationLevel,
+          });
+        }
       }
     }
 
@@ -268,24 +288,32 @@ export async function GET(request: NextRequest) {
     const countPromises: Promise<any>[] = [];
 
     if (!roleFilter || roleFilter === 'athlete') {
-      countPromises.push(
-        db
-          .select({ count: sql<number>`count(*)` })
-          .from(athleteProfiles)
-          .innerJoin(users, eq(users.id, athleteProfiles.userId))
-          .where(
-            and(
-              or(
-                ilike(athleteProfiles.fullName, searchTerm),
-                ilike(athleteProfiles.sport, searchTerm),
-                ilike(athleteProfiles.organizationName, searchTerm),
-                ilike(athleteProfiles.city, searchTerm),
-                ilike(athleteProfiles.state, searchTerm)
-              ),
-              ne(users.id, auth.userId)
+      // Only count athletes if current user is not an athlete
+      if (role !== 'athlete') {
+        countPromises.push(
+          db
+            .select({ count: sql<number>`count(*)` })
+            .from(athleteProfiles)
+            .innerJoin(users, eq(users.id, athleteProfiles.userId))
+            .where(
+              and(
+                or(
+                  ilike(athleteProfiles.fullName, searchTerm),
+                  ilike(athleteProfiles.sport, searchTerm),
+                  ilike(athleteProfiles.organizationName, searchTerm),
+                  ilike(athleteProfiles.city, searchTerm),
+                  ilike(athleteProfiles.state, searchTerm)
+                ),
+                ne(users.id, auth.userId),
+                // Exclude demo profiles
+                or(
+                  isNull(athleteProfiles.isDemoProfile),
+                  eq(athleteProfiles.isDemoProfile, false)
+                )
+              )
             )
-          )
-      );
+        );
+      }
     }
 
     if (!roleFilter || roleFilter === 'coach') {
@@ -304,7 +332,12 @@ export async function GET(request: NextRequest) {
                 ilike(coachProfiles.state, searchTerm),
                 ilike(coachProfiles.title, searchTerm)
               ),
-              ne(users.id, auth.userId)
+              ne(users.id, auth.userId),
+              // Exclude demo profiles
+              or(
+                isNull(coachProfiles.isDemoProfile),
+                eq(coachProfiles.isDemoProfile, false)
+              )
             )
           )
       );
@@ -326,7 +359,12 @@ export async function GET(request: NextRequest) {
                 ilike(recruitingProfiles.state, searchTerm),
                 ilike(recruitingProfiles.title, searchTerm)
               ),
-              ne(users.id, auth.userId)
+              ne(users.id, auth.userId),
+              // Exclude demo profiles
+              or(
+                isNull(recruitingProfiles.isDemoProfile),
+                eq(recruitingProfiles.isDemoProfile, false)
+              )
             )
           )
       );

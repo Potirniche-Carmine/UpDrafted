@@ -771,7 +771,7 @@ export function AthleteProfile({
       {/* Header with Profile Actions */}
       <ProfileHeader
         isOwnProfile={isOwnProfile}
-        onConnect={handleConnectClick}
+        onConnect={canDraft ? handleConnectClick : undefined}
         onWithdrawConnection={handleWithdrawConnection}
         onAcceptConnection={handleAcceptConnection}
         onDeclineConnection={handleDeclineConnection}
@@ -791,14 +791,15 @@ export function AthleteProfile({
       />
 
       {/* Connection Dialog */}
-      <ConnectionDialog
-        open={connectionDialogOpen}
-        onOpenChange={setConnectionDialogOpen}
-        profileName={safeProfileData.fullName}
-        profileType="athlete"
-        onConfirm={handleConnectionConfirm}
-        isConnecting={isConnecting}
-      />
+      {!isOwnProfile && canDraft && (
+        <ConnectionDialog
+          open={connectionDialogOpen}
+          onOpenChange={setConnectionDialogOpen}
+          profileName={safeProfileData.fullName || ""}
+          profileType="athlete"
+          onConfirm={handleConnectionConfirm}
+        />
+      )}
 
       {/* Verification Dialog */}
       <VerificationDialog

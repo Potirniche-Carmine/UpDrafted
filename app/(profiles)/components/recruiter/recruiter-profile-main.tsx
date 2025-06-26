@@ -660,7 +660,7 @@ export function RecruiterProfile({
       {/* Header Actions */}
       <ProfileHeader
         isOwnProfile={isOwnProfile}
-        onConnect={handleConnectClick}
+        onConnect={canConnect ? handleConnectClick : undefined}
         onWithdrawConnection={handleWithdrawConnection}
         onAcceptConnection={handleConnectionConfirm}
         onDeclineConnection={handleWithdrawConnection}
@@ -680,14 +680,16 @@ export function RecruiterProfile({
       />
 
       {/* Connection Dialog */}
-      <ConnectionDialog
-        open={connectionDialogOpen}
-        onOpenChange={setConnectionDialogOpen}
-        profileName={profileData.fullName}
-        profileType="recruiter"
-        onConfirm={handleConnectionConfirm}
-        isConnecting={isConnecting}
-      />
+      {!isOwnProfile && canConnect && (
+        <ConnectionDialog
+          open={connectionDialogOpen}
+          onOpenChange={setConnectionDialogOpen}
+          profileName={profileData.fullName}
+          profileType="recruiter"
+          onConfirm={handleConnectionConfirm}
+          isConnecting={isConnecting}
+        />
+      )}
 
       <div className="container py-4 md:py-6 lg:py-8 px-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 md:gap-6 lg:gap-8 max-w-screen-2xl mx-auto">

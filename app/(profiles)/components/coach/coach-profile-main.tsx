@@ -472,7 +472,7 @@ export function CoachProfile({
       {/* Header Actions */}
       <ProfileHeader
         isOwnProfile={isOwnProfile}
-        onConnect={handleConnectClick}
+        onConnect={canConnect ? handleConnectClick : undefined}
         onWithdrawConnection={handleWithdrawConnection}
         onAcceptConnection={handleConnectionConfirm}
         onDeclineConnection={handleWithdrawConnection}
@@ -491,14 +491,16 @@ export function CoachProfile({
         onDiscardChanges={discardChanges}
               />
         {/* Connection Dialog */}
-      <ConnectionDialog
-        open={connectionDialogOpen}
-        onOpenChange={setConnectionDialogOpen}
-        profileName={profileData.fullName}
-        profileType="coach"
-        onConfirm={handleConnectionConfirm}
-        isConnecting={isConnecting}
-      />
+      {!isOwnProfile && canConnect && (
+        <ConnectionDialog
+          open={connectionDialogOpen}
+          onOpenChange={setConnectionDialogOpen}
+          profileName={profileData.fullName}
+          profileType="coach"
+          onConfirm={handleConnectionConfirm}
+          isConnecting={isConnecting}
+        />
+      )}
 
       {/* Verification Dialog */}
       <VerificationDialog
