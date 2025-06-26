@@ -120,6 +120,7 @@ export function Header() {
   // Check if user has completed onboarding (has a role)
   const userRole = user?.publicMetadata?.role as string;
   const hasCompletedOnboarding = userRole && ['athlete', 'coach', 'recruiter', 'admin'].includes(userRole);
+  const isAdmin = userRole === 'admin';
 
   // Blur any focused inputs when mobile sheet opens to prevent auto-focus
   useEffect(() => {
@@ -247,6 +248,18 @@ export function Header() {
             </div>
           </SignedIn>
 
+          {/* Admin Button (Desktop) */}
+          {isAdmin && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => router.push('/admin')}
+              className="hidden lg:flex h-8 px-3 text-sm font-medium border-[#01ae79]/20 text-[#01ae79] hover:bg-[#01ae79]/5"
+            >
+              Admin
+            </Button>
+          )}
+
           <SignedOut>
             <SignInButton mode="modal">
               <Button variant="default" size="sm" className="flex items-center space-x-2 ml-2 bg-[#01ae79] hover:bg-[#01ae79]/90 text-white">
@@ -313,7 +326,21 @@ export function Header() {
                       ))}
                     </div>
 
-                    {/* User Profile Link */}
+                    {/* Admin Button (Mobile) */}
+                    {isAdmin && (
+                      <div className="pt-4 border-t border-border">
+                        <button
+                          onClick={() => {
+                            router.push('/admin');
+                            setMobileMenuOpen(false);
+                          }}
+                          className="flex items-center space-x-3 rounded-lg px-3 py-3 text-sm font-medium transition-colors hover:bg-[#01ae79]/5 dark:hover:bg-[#01ae79]/10 hover:text-[#01ae79] w-full text-left border border-[#01ae79]/20"
+                        >
+                          <span>🔧 Admin Panel</span>
+                        </button>
+                      </div>
+                    )}
+
                     <div className="pt-4 border-t border-border">
                       <button
                         onClick={() => {

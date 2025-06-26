@@ -144,7 +144,7 @@ const validateBasicFields = (data: Record<string, unknown>) => {
   }
   
   if (data.graduationYear && (typeof data.graduationYear !== 'number' || data.graduationYear < 2020 || data.graduationYear > 2040)) {
-    errors.push('Graduation year must be between 2020 and 2035');
+    errors.push('Graduation year must be between 2020 and 2040');
   }
   
   // URL validation
@@ -635,15 +635,22 @@ export async function PUT(
 
     // Parse the request body
     const updateData = await request.json();
+    console.log('Raw update data received:', JSON.stringify(updateData, null, 2));
 
     // CRITICAL: XSS Protection - Sanitize all user input
     const sanitizedData = sanitizeProfileData(updateData);
+    console.log('Sanitized data:', JSON.stringify(sanitizedData, null, 2));
 
     // CRITICAL: Input validation
     const validationErrors = validateBasicFields(sanitizedData);
     if (validationErrors.length > 0) {
+      console.error('Profile validation failed:', {
+        userId: profileUserId,
+        errors: validationErrors,
+        sanitizedData: sanitizedData
+      });
       return NextResponse.json(
-        { error: `Validation failed: ${validationErrors.join(', ')}` },
+        { error: `Validation failed: ${validationErrors.join(', ')}`, details: validationErrors },
         { status: 400 }
       );
     }
@@ -700,14 +707,38 @@ export async function PUT(
     const userWithProfile = await userOperations.getUserWithProfile(currentUserId);
 
     if (!userWithProfile) {
+      console.error('User not found:', currentUserId);
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
-    const profileType = userWithProfile.role;
+    let profileType = userWithProfile.role;
+    
+    // Special handling for admin users with demo profiles
+    if (profileType === 'admin') {
+      // For admin users, determine profile type from the data structure being sent
+      if (sanitizedData.sport && sanitizedData.graduationYear) {
+        profileType = 'athlete';
+      } else if (sanitizedData.sportCoaching || sanitizedData.title) {
+        // Check if it's a coach or recruiter based on additional fields
+        if (sanitizedData.secondarySports !== undefined) {
+          profileType = 'recruiter'; // Recruiters have secondarySports
+        } else {
+          profileType = 'coach';
+        }
+      } else {
+        return NextResponse.json(
+          { error: 'Unable to determine profile type for admin user' },
+          { status: 400 }
+        );
+      }
+    }
+    
+    console.log('Profile type determined:', profileType, 'for user:', currentUserId);
     let updatedProfile: AthleteProfile | CoachProfile | RecruitingProfile | null = null;
 
     // Update profile based on type
     if (profileType === 'athlete') {
+      console.log('Processing athlete profile update...');
       // First, update the athlete profile data
       const profileUpdateData: Partial<NewAthleteProfile> = {};
       
@@ -720,6 +751,7 @@ export async function PUT(
       if (sanitizedData.organizationName !== undefined) profileUpdateData.organizationName = sanitizedData.organizationName as string;
       if (sanitizedData.city !== undefined) profileUpdateData.city = sanitizedData.city as string;
       if (sanitizedData.state !== undefined) profileUpdateData.state = sanitizedData.state as string;
+      if (sanitizedData.division !== undefined) profileUpdateData.division = (sanitizedData.division as string) || null;
       if (sanitizedData.height !== undefined) profileUpdateData.height = sanitizedData.height as string;
       if (sanitizedData.weight !== undefined) profileUpdateData.weight = sanitizedData.weight as string;
       if (sanitizedData.positions !== undefined) profileUpdateData.positions = sanitizedData.positions as string[];
@@ -745,7 +777,16 @@ export async function PUT(
       }
 
       // Update the athlete profile in the database
-      updatedProfile = await athleteOperations.updateAthleteProfile(profileUserId, profileUpdateData);
+      console.log('About to update athlete profile with data:', JSON.stringify(profileUpdateData, null, 2));
+      console.log('Profile user ID:', profileUserId);
+      
+      try {
+        updatedProfile = await athleteOperations.updateAthleteProfile(profileUserId, profileUpdateData);
+        console.log('Athlete profile updated successfully');
+      } catch (dbError) {
+        console.error('Database error during athlete profile update:', dbError);
+        throw dbError;
+      }
       
       // Handle measurables updates if provided
       if (sanitizedData.measurables !== undefined && Array.isArray(sanitizedData.measurables)) {
@@ -841,7 +882,17 @@ export async function PUT(
           recruitingPhilosophy: recruitingNeeds.recruitingPhilosophy || null
         };
         
-        await recruitingNeedsOperations.updateRecruitingNeeds(updatedProfile.id, recruitingNeedsData);
+        // Check if recruiting needs exist, if not create them, otherwise update them
+        const existingNeeds = await recruitingNeedsOperations.getRecruitingNeedsByCoachId(updatedProfile.id);
+        
+        if (existingNeeds) {
+          await recruitingNeedsOperations.updateRecruitingNeeds(updatedProfile.id, recruitingNeedsData);
+        } else {
+          await recruitingNeedsOperations.createRecruitingNeeds({
+            coachId: updatedProfile.id,
+            ...recruitingNeedsData
+          });
+        }
       }
       
       // Re-fetch the complete profile with all related data to ensure consistency
@@ -947,8 +998,9 @@ export async function PUT(
 
   } catch (error) {
     console.error('Error updating profile:', error);
+    console.error('Error stack:', error instanceof Error ? error.stack : 'No stack trace');
     return NextResponse.json(
-      { error: sanitizeError(error) },
+      { error: sanitizeError(error), debug: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
     );
   }

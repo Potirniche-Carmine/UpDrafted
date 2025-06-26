@@ -450,7 +450,7 @@ export function CoachEditDialogs({
                 className={validationErrors.fullName ? 'border-red-500' : ''}
                 autoComplete="off"
                 inputMode="text"
-                onFocus={(e) => e.target.blur()}
+                
               />
               {validationErrors.fullName && <p className="text-red-500 text-sm">{validationErrors.fullName}</p>}
             </div>
@@ -465,7 +465,7 @@ export function CoachEditDialogs({
                 className={validationErrors.title ? 'border-red-500' : ''}
                 autoComplete="off"
                 inputMode="text"
-                onFocus={(e) => e.target.blur()}
+                
               />
               {validationErrors.title && <p className="text-red-500 text-sm">{validationErrors.title}</p>}
             </div>
@@ -476,7 +476,7 @@ export function CoachEditDialogs({
                 <SelectTrigger className={validationErrors.sportCoaching ? 'border-red-500' : ''}>
                   <SelectValue placeholder="Select sport" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="z-[70]">
                   {getSportsList().map(sport => (
                     <SelectItem key={sport} value={sport}>{sport}</SelectItem>
                   ))}
@@ -491,7 +491,7 @@ export function CoachEditDialogs({
                 <SelectTrigger>
                   <SelectValue placeholder="Select division" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="z-[70]">
                   {DIVISIONS.map(division => (
                     <SelectItem key={division} value={division}>{division}</SelectItem>
                   ))}
@@ -509,7 +509,7 @@ export function CoachEditDialogs({
                 className={validationErrors.organizationName ? 'border-red-500' : ''}
                 autoComplete="off"
                 inputMode="text"
-                onFocus={(e) => e.target.blur()}
+                
               />
               {validationErrors.organizationName && <p className="text-red-500 text-sm">{validationErrors.organizationName}</p>}
             </div>
@@ -525,7 +525,7 @@ export function CoachEditDialogs({
                   className={validationErrors.city ? 'border-red-500' : ''}
                   autoComplete="off"
                   inputMode="text"
-                  onFocus={(e) => e.target.blur()}
+                  
                 />
                 {validationErrors.city && <p className="text-red-500 text-sm">{validationErrors.city}</p>}
               </div>
@@ -535,7 +535,7 @@ export function CoachEditDialogs({
                   <SelectTrigger className={validationErrors.state ? 'border-red-500' : ''}>
                     <SelectValue placeholder="State" />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="z-[70]">
                     {US_STATES.map(state => (
                       <SelectItem key={state} value={state}>{state}</SelectItem>
                     ))}
@@ -554,7 +554,7 @@ export function CoachEditDialogs({
                 placeholder="e.g., Big Ten, SEC, WAC"
                 autoComplete="off"
                 inputMode="text"
-                onFocus={(e) => e.target.blur()}
+                
               />
             </div>
           </div>
@@ -574,7 +574,7 @@ export function CoachEditDialogs({
                 className={validationErrors.personalStatement ? 'border-red-500' : ''}
                 autoComplete="off"
                 inputMode="text"
-                onFocus={(e) => e.target.blur()}
+                
               />
               <p className="text-xs text-muted-foreground">
                 {(editData.personalStatement || '').length} / {FIELD_LIMITS.PERSONAL_STATEMENT}
@@ -617,7 +617,7 @@ export function CoachEditDialogs({
                   <SelectTrigger>
                     <SelectValue placeholder="Select a position to add" />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="z-[70]">
                     {getPositionsForSport(profileData.sportCoaching)
                       .filter(position => !(editData.positions || []).includes(position))
                       .map(position => (
@@ -642,7 +642,7 @@ export function CoachEditDialogs({
                 className={validationErrors.scholarshipsAvailable ? 'border-red-500' : ''}
                 autoComplete="off"
                 inputMode="numeric"
-                onFocus={(e) => e.target.blur()}
+                
               />
               {validationErrors.scholarshipsAvailable && <p className="text-red-500 text-sm">{validationErrors.scholarshipsAvailable}</p>}
             </div>
@@ -658,7 +658,7 @@ export function CoachEditDialogs({
                 className={validationErrors.recruitingPhilosophy ? 'border-red-500' : ''}
                 autoComplete="off"
                 inputMode="text"
-                onFocus={(e) => e.target.blur()}
+                
               />
               <p className="text-xs text-muted-foreground">
                 {(editData.recruitingPhilosophy || '').length} / {FIELD_LIMITS.RECRUITING_PHILOSOPHY}
@@ -683,7 +683,7 @@ export function CoachEditDialogs({
                   className={validationErrors.instagram ? 'border-red-500' : ''}
                   autoComplete="off"
                   inputMode="text"
-                  onFocus={(e) => e.target.blur()}
+                  
                 />
               </div>
               {validationErrors.instagram && <p className="text-red-500 text-sm">{validationErrors.instagram}</p>}
@@ -701,7 +701,7 @@ export function CoachEditDialogs({
                   className={validationErrors.twitter ? 'border-red-500' : ''}
                   autoComplete="off"
                   inputMode="text"
-                  onFocus={(e) => e.target.blur()}
+                  
                 />
               </div>
               {validationErrors.twitter && <p className="text-red-500 text-sm">{validationErrors.twitter}</p>}
@@ -722,7 +722,7 @@ export function CoachEditDialogs({
                 className={validationErrors.programWebsite ? 'border-red-500' : ''}
                 autoComplete="off"
                 inputMode="url"
-                onFocus={(e) => e.target.blur()}
+                
               />
               {validationErrors.programWebsite && <p className="text-red-500 text-sm">{validationErrors.programWebsite}</p>}
             </div>
@@ -737,7 +737,7 @@ export function CoachEditDialogs({
                 className={validationErrors.schoolWebsite ? 'border-red-500' : ''}
                 autoComplete="off"
                 inputMode="url"
-                onFocus={(e) => e.target.blur()}
+                
               />
               {validationErrors.schoolWebsite && <p className="text-red-500 text-sm">{validationErrors.schoolWebsite}</p>}
             </div>
@@ -757,7 +757,7 @@ export function CoachEditDialogs({
                 className={validationErrors.showcaseVideoTitle ? 'border-red-500' : ''}
                 autoComplete="off"
                 inputMode="text"
-                onFocus={(e) => e.target.blur()}
+                
               />
               {validationErrors.showcaseVideoTitle && <p className="text-red-500 text-sm">{validationErrors.showcaseVideoTitle}</p>}
             </div>
@@ -772,7 +772,7 @@ export function CoachEditDialogs({
                 className={validationErrors.showcaseVideoUrl ? 'border-red-500' : ''}
                 autoComplete="off"
                 inputMode="url"
-                onFocus={(e) => e.target.blur()}
+                
               />
               {validationErrors.showcaseVideoUrl && <p className="text-red-500 text-sm">{validationErrors.showcaseVideoUrl}</p>}
             </div>

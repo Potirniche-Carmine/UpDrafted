@@ -26,9 +26,10 @@ import { AcademicSummaryCard } from "../shared/academic-summary-card";
 import { AthleteEditDialogs } from "./athlete-edit-dialogs";
 import { VerificationSection } from "./athlete-verification-section";
 import { VerificationDialog } from "../shared/verification-dialog";
-import { useRoleView } from '@/hooks/use-role-view';
+// import { useRoleView } from '@/hooks/use-role-view'; // Removed - using actual profile data instead
 import { AthleteProfileData, AthleteProfileProps, Measurable } from './athlete-profile-types';
 import { ConnectionDialog } from "../shared/connection-dialog";
+import { useUser } from "@clerk/nextjs";
 
 // Memoize heavy components
 const MeasurablesSection = memo(({ measurables, allSports, selectedSport, onSportChange, isOwnProfile, onEditSection }: { 
@@ -320,7 +321,9 @@ export function AthleteProfile({
   const [profileData, setProfileData] = useState(data);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const { effectiveRole } = useRoleView();
+  // Remove useRoleView dependency - using actual role from user context instead
+  const { user } = useUser();
+  const effectiveRole = user?.publicMetadata?.role as string;
   const [connectionDialogOpen, setConnectionDialogOpen] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
   const [currentConnectionStatus, setCurrentConnectionStatus] = useState(connectionStatus);

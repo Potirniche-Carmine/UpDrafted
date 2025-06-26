@@ -5,16 +5,25 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { AdminRoleSwitcher } from "@/components/admin-role-switcher";
 
-export default function AdminInitPage() {
-  const { user } = useUser();
+export default function AdminPage() {
+  const { user, isLoaded } = useUser();
+  const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [initialized, setInitialized] = useState(false);
   const [checkingStatus, setCheckingStatus] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const isAdmin = user?.publicMetadata?.role === 'admin';
+
+  // Redirect non-admin users
+  useEffect(() => {
+    if (isLoaded && !isAdmin) {
+      router.push('/dashboard');
+    }
+  }, [isLoaded, isAdmin, router]);
 
   // Check if admin is already initialized
   useEffect(() => {
@@ -89,14 +98,15 @@ export default function AdminInitPage() {
     }
   };
 
-    if (checkingStatus) {
+  // Show loading while checking authentication
+  if (!isLoaded || (isLoaded && !isAdmin) || checkingStatus) {
     return (
       <div className="container mx-auto p-8">
         <Card className="max-w-md mx-auto">
           <CardHeader>
             <CardTitle>Loading...</CardTitle>
             <CardDescription>
-              Checking admin status...
+              Checking authentication...
             </CardDescription>
           </CardHeader>
         </Card>
@@ -131,7 +141,7 @@ export default function AdminInitPage() {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                Admin Initialized Successfully!
+                Admin Panel
                 <Badge variant="default">✅</Badge>
               </CardTitle>
               <CardDescription>

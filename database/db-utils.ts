@@ -767,7 +767,8 @@ export const onboardingOperations = {
 
     // Create recruiting needs if provided
     let recruitingNeeds = null;
-    if (profileData.recruitingGraduationYears && profileData.recruitingPositions) {
+    if (profileData.recruitingGraduationYears && profileData.recruitingGraduationYears.length > 0 && 
+        profileData.recruitingPositions && profileData.recruitingPositions.length > 0) {
       recruitingNeeds = await recruitingNeedsOperations.createRecruitingNeeds({
         coachId: coachProfile.id,
         graduationYears: profileData.recruitingGraduationYears,
@@ -814,7 +815,8 @@ export const onboardingOperations = {
     const recruitingProfileNeeds = [];
     if (profileData.sportSpecificNeeds) {
       for (const [sport, needs] of Object.entries(profileData.sportSpecificNeeds)) {
-        if (needs.graduationYears && needs.positions) {
+        if (needs.graduationYears && needs.graduationYears.length > 0 && 
+            needs.positions && needs.positions.length > 0) {
           const profileNeeds = await recruitingNeedsOperations.createRecruitingProfileNeeds({
             recruitingProfileId: recruiterProfile.id,
             sport: sport,

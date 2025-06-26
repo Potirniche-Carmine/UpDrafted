@@ -803,7 +803,7 @@ export function AthleteEditDialogs({
                   maxLength={FIELD_LIMITS.FULL_NAME}
                   autoComplete="off"
                   inputMode="text"
-                  onFocus={(e) => e.target.blur()}
+                  
                 />
                 {validationErrors.fullName && (
                   <p className="text-sm text-red-500">{validationErrors.fullName}</p>
@@ -821,7 +821,7 @@ export function AthleteEditDialogs({
                   <SelectTrigger className="h-12" id="edit-sport">
                     <SelectValue placeholder="Select sport" />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="z-[70]">
                     {getSportsList().map((sport) => (
                       <SelectItem key={sport} value={sport}>{sport}</SelectItem>
                     ))}
@@ -840,7 +840,7 @@ export function AthleteEditDialogs({
                   <SelectTrigger className="h-12" id="edit-educationLevel">
                     <SelectValue placeholder="Select education level" />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="z-[70]">
                     {EDUCATION_LEVEL_OPTIONS.map((option) => (
                       <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
                     ))}
@@ -856,7 +856,7 @@ export function AthleteEditDialogs({
                     <SelectTrigger className="h-12" id="edit-secondarySports">
                       <SelectValue placeholder="Add secondary sport (optional)" />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent className="z-[70]">
                       {availableSports.map(sport => (
                         <SelectItem key={sport} value={sport}>{sport}</SelectItem>
                       ))}
@@ -914,7 +914,7 @@ export function AthleteEditDialogs({
                     maxLength={FIELD_LIMITS.CITY}
                     autoComplete="off"
                     inputMode="text"
-                    onFocus={(e) => e.target.blur()}
+                    
                   />
                   {validationErrors.city && (
                     <p className="text-sm text-red-500">{validationErrors.city}</p>
@@ -929,7 +929,7 @@ export function AthleteEditDialogs({
                     <SelectTrigger className="h-12" id="edit-state">
                       <SelectValue placeholder="Select state" />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent className="z-[70]">
                       {US_STATES.map((state) => (
                         <SelectItem key={state} value={state}>{state}</SelectItem>
                       ))}
@@ -964,7 +964,7 @@ export function AthleteEditDialogs({
                   <SelectTrigger className="h-12" id="edit-graduationYear">
                     <SelectValue placeholder="Select year" />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="z-[70]">
                     {GRADUATION_YEARS.map((year) => (
                       <SelectItem key={year} value={year.toString()}>{year}</SelectItem>
                     ))}
@@ -983,7 +983,7 @@ export function AthleteEditDialogs({
                       <SelectTrigger className="h-12">
                         <SelectValue placeholder="Feet" />
                       </SelectTrigger>
-                      <SelectContent>
+                      <SelectContent className="z-[70]">
                         {Array.from({ length: 5 }, (_, i) => i + 4).map(feet => (
                           <SelectItem key={feet} value={feet.toString()}>{feet}&apos;</SelectItem>
                         ))}
@@ -996,7 +996,7 @@ export function AthleteEditDialogs({
                       <SelectTrigger className="h-12">
                         <SelectValue placeholder="In" />
                       </SelectTrigger>
-                      <SelectContent>
+                      <SelectContent className="z-[70]">
                         {Array.from({ length: 12 }, (_, i) => i).map(inches => (
                           <SelectItem key={inches} value={inches.toString()}>{inches}&quot;</SelectItem>
                         ))}
@@ -1014,7 +1014,7 @@ export function AthleteEditDialogs({
                     className={`h-12 ${validationErrors.weight ? 'border-red-500' : ''}`}
                     autoComplete="off"
                     inputMode="numeric"
-                    onFocus={(e) => e.target.blur()}
+                    
                   />
                   {validationErrors.weight && (
                     <p className="text-sm text-red-500">{validationErrors.weight}</p>
@@ -1048,7 +1048,7 @@ export function AthleteEditDialogs({
                   className={`h-12 ${validationErrors.gpa ? 'border-red-500' : ''}`}
                   autoComplete="off"
                   inputMode="decimal"
-                  onFocus={(e) => e.target.blur()}
+                  
                 />
                 {validationErrors.gpa && (
                   <p className="text-sm text-red-500">{validationErrors.gpa}</p>
@@ -1070,7 +1070,7 @@ export function AthleteEditDialogs({
                     className="h-12"
                     autoComplete="off"
                     inputMode="numeric"
-                    onFocus={(e) => e.target.blur()}
+                    
                   />
                   <p className="text-xs text-muted-foreground">400-1600</p>
                 </div>
@@ -1087,7 +1087,7 @@ export function AthleteEditDialogs({
                     className="h-12"
                     autoComplete="off"
                     inputMode="numeric"
-                    onFocus={(e) => e.target.blur()}
+                    
                   />
                   <p className="text-xs text-muted-foreground">1-36</p>
                 </div>
@@ -1106,7 +1106,7 @@ export function AthleteEditDialogs({
                   maxLength={FIELD_LIMITS.INTENDED_MAJOR}
                   autoComplete="off"
                   inputMode="text"
-                  onFocus={(e) => e.target.blur()}
+                  
                 />
               </div>
             </div>
@@ -1162,7 +1162,7 @@ export function AthleteEditDialogs({
                   maxLength={FIELD_LIMITS.INSTAGRAM_HANDLE}
                   autoComplete="off"
                   inputMode="text"
-                  onFocus={(e) => e.target.blur()}
+                  
                 />
               </div>
               <div className="space-y-2">
@@ -1176,7 +1176,7 @@ export function AthleteEditDialogs({
                   maxLength={FIELD_LIMITS.TWITTER_HANDLE}
                   autoComplete="off"
                   inputMode="text"
-                  onFocus={(e) => e.target.blur()}
+                  
                 />
               </div>
             </div>
@@ -1248,7 +1248,7 @@ export function AthleteEditDialogs({
                   maxLength={FIELD_LIMITS.URL}
                   autoComplete="off"
                   inputMode="url"
-                  onFocus={(e) => e.target.blur()}
+                  
                 />
                 {validationErrors.hudlUrl && (
                   <p className="text-sm text-red-500">{validationErrors.hudlUrl}</p>
@@ -1313,7 +1313,7 @@ export function AthleteEditDialogs({
                       maxLength={FIELD_LIMITS.URL}
                       autoComplete="off"
                       inputMode="url"
-                      onFocus={(e) => e.target.blur()}
+                      
                     />
                     {validationErrors.youtubeUrl && (
                       <p className="text-sm text-red-500">{validationErrors.youtubeUrl}</p>
@@ -1330,7 +1330,7 @@ export function AthleteEditDialogs({
                       maxLength={100}
                       autoComplete="off"
                       inputMode="text"
-                      onFocus={(e) => e.target.blur()}
+                      
                     />
                   </div>
                   <Button 
@@ -1448,7 +1448,7 @@ export function AthleteEditDialogs({
                     maxLength={50}
                     autoComplete="off"
                     inputMode="text"
-                    onFocus={(e) => e.target.blur()}
+                    
                   />
                   {validationErrors.label && (
                     <p className="text-sm text-red-500">{validationErrors.label}</p>

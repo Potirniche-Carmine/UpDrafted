@@ -30,7 +30,7 @@ import { VerificationDialog } from "../shared/verification-dialog";
 import { OptimizedOrgLogo } from "../shared/optimized-org-logo";
 import { RecruiterProfileData, RecruiterProfileProps } from './recruiter-profile-types';
 import { ConnectionDialog } from "../shared/connection-dialog";
-import { useRoleView } from '@/hooks/use-role-view';
+import { useUser } from "@clerk/nextjs";
 
 // Social Media Section Component (same as athlete profile)
 const SocialMediaSection = memo(({ socialMedia, isOwnProfile, onEdit }: { 
@@ -337,7 +337,8 @@ export function RecruiterProfile({
   const [connectionDialogOpen, setConnectionDialogOpen] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
   const [currentConnectionStatus, setCurrentConnectionStatus] = useState(connectionStatus);
-  const { effectiveRole } = useRoleView();
+  const { user } = useUser();
+  const effectiveRole = user?.publicMetadata?.role as string;
 
   // Memoize computed values
   const allSports = useMemo(() => [profileData.sportRecruiting, ...(profileData.secondarySports || [])], [profileData.sportRecruiting, profileData.secondarySports]);
@@ -379,7 +380,7 @@ export function RecruiterProfile({
   }, [hasUnsavedChanges]);
 
   const handleEditSection = (section: string, sport?: string) => {
-    if (section === 'manual-verification') {
+    if (section === 'manual-verification' || section === 'verification') {
       setVerificationDialogOpen(true);
       return;
     }

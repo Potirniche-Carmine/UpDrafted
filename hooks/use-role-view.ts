@@ -20,6 +20,21 @@ export function useRoleView() {
   const isAdmin = user?.publicMetadata?.role === 'admin';
   const actualRole = user?.publicMetadata?.role as string;
 
+  // Fetch verification status for current role
+  const fetchVerificationStatus = useCallback(async (role: ViewRole) => {
+    if (!isAdmin) return;
+
+    try {
+      const response = await fetch(`/api/admin/verification?role=${role}`);
+      if (response.ok) {
+        const { isVerified } = await response.json();
+        setVerificationStatus(isVerified);
+      }
+    } catch (error) {
+      console.error('Failed to fetch verification status:', error);
+    }
+  }, [isAdmin]);
+
   // Fetch admin preferences from database
   const fetchAdminPreferences = useCallback(async () => {
     if (!isAdmin || hasFetched.current) {
@@ -34,19 +49,48 @@ export function useRoleView() {
       if (response.ok) {
         const { preferences }: { preferences: AdminRolePreferences } = await response.json();
         setViewingAs(preferences.currentViewingRole);
-        setVerificationStatus(preferences.verificationStatusOverride);
+        
+        // Fetch verification status for the current role
+        if (preferences.currentViewingRole) {
+          await fetchVerificationStatus(preferences.currentViewingRole);
+        } else {
+          setVerificationStatus(false);
+        }
       }
     } catch (error) {
       console.error('Failed to fetch admin preferences:', error);
     } finally {
       setLoading(false);
     }
+  }, [isAdmin, fetchVerificationStatus]);
+
+  // Update verification status in database
+  const updateVerificationStatus = useCallback(async (role: ViewRole, isVerified: boolean) => {
+    if (!isAdmin) return;
+
+    try {
+      const response = await fetch('/api/admin/verification', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          role,
+          isVerified
+        })
+      });
+
+      if (response.ok) {
+        setVerificationStatus(isVerified);
+      }
+    } catch (error) {
+      console.error('Failed to update verification status:', error);
+    }
   }, [isAdmin]);
 
   // Update admin preferences in database
   const updateAdminPreferences = useCallback(async (
-    currentViewingRole: ViewRole | null,
-    verificationStatusOverride: boolean
+    currentViewingRole: ViewRole | null
   ) => {
     if (!isAdmin) return;
 
@@ -58,18 +102,24 @@ export function useRoleView() {
         },
         body: JSON.stringify({
           currentViewingRole,
-          verificationStatusOverride
+          verificationStatusOverride: false // Remove this since it's role-specific now
         })
       });
 
       if (response.ok) {
         setViewingAs(currentViewingRole);
-        setVerificationStatus(verificationStatusOverride);
+        
+        // Fetch verification status for the new role
+        if (currentViewingRole) {
+          await fetchVerificationStatus(currentViewingRole);
+        } else {
+          setVerificationStatus(false);
+        }
       }
     } catch (error) {
       console.error('Failed to update admin preferences:', error);
     }
-  }, [isAdmin]);
+  }, [isAdmin, fetchVerificationStatus]);
 
   useEffect(() => {
     if (isAdmin && !hasFetched.current) {
@@ -98,12 +148,12 @@ export function useRoleView() {
     updateAdminPreferences,
     setViewingAs: (role: ViewRole | null) => {
       if (isAdmin) {
-        updateAdminPreferences(role, verificationStatus);
+        updateAdminPreferences(role);
       }
     },
     setVerificationStatus: (status: boolean) => {
-      if (isAdmin) {
-        updateAdminPreferences(viewingAs, status);
+      if (isAdmin && viewingAs) {
+        updateVerificationStatus(viewingAs, status);
       }
     }
   };

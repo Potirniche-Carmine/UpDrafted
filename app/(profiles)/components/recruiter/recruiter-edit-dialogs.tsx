@@ -456,7 +456,7 @@ export function RecruiterEditDialogs({
                 maxLength={FIELD_LIMITS.FULL_NAME}
                 autoComplete="off"
                 inputMode="text"
-                onFocus={(e) => e.target.blur()}
+                
               />
               {validationErrors.fullName && (
                 <p className="text-sm text-red-500 mt-1">{validationErrors.fullName}</p>
@@ -473,7 +473,7 @@ export function RecruiterEditDialogs({
                 maxLength={FIELD_LIMITS.TITLE}
                 autoComplete="off"
                 inputMode="text"
-                onFocus={(e) => e.target.blur()}
+                
               />
               {validationErrors.title && (
                 <p className="text-sm text-red-500 mt-1">{validationErrors.title}</p>
@@ -489,7 +489,7 @@ export function RecruiterEditDialogs({
                 <SelectTrigger>
                   <SelectValue placeholder="Select sport" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="z-[70]">
                   {getSportsList().map((sport) => (
                     <SelectItem key={sport} value={sport}>
                       {sport}
@@ -512,7 +512,7 @@ export function RecruiterEditDialogs({
                 maxLength={FIELD_LIMITS.ORGANIZATION_NAME}
                 autoComplete="off"
                 inputMode="text"
-                onFocus={(e) => e.target.blur()}
+                
               />
               {validationErrors.organizationName && (
                 <p className="text-sm text-red-500 mt-1">{validationErrors.organizationName}</p>
@@ -530,7 +530,7 @@ export function RecruiterEditDialogs({
                   maxLength={FIELD_LIMITS.CITY}
                   autoComplete="off"
                   inputMode="text"
-                  onFocus={(e) => e.target.blur()}
+                  
                 />
                 {validationErrors.city && (
                   <p className="text-sm text-red-500 mt-1">{validationErrors.city}</p>
@@ -546,7 +546,7 @@ export function RecruiterEditDialogs({
                   <SelectTrigger>
                     <SelectValue placeholder="Select state" />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="z-[70]">
                     {US_STATES.map((state) => (
                       <SelectItem key={state} value={state}>
                         {state}
@@ -569,7 +569,7 @@ export function RecruiterEditDialogs({
                 <SelectTrigger>
                   <SelectValue placeholder="Select division" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="z-[70]">
                   {DIVISIONS.map((division) => (
                     <SelectItem key={division} value={division}>
                       {division}
@@ -588,7 +588,7 @@ export function RecruiterEditDialogs({
                 placeholder="e.g., Big Ten, ACC, etc."
                 autoComplete="off"
                 inputMode="text"
-                onFocus={(e) => e.target.blur()}
+                
               />
             </div>
           </div>
@@ -608,7 +608,7 @@ export function RecruiterEditDialogs({
                 maxLength={FIELD_LIMITS.PERSONAL_STATEMENT}
                 autoComplete="off"
                 inputMode="text"
-                onFocus={(e) => e.target.blur()}
+                
               />
               <p className="text-xs text-muted-foreground mt-1">
                 {(editData.personalStatement || '').length}/{FIELD_LIMITS.PERSONAL_STATEMENT} characters
@@ -648,7 +648,7 @@ export function RecruiterEditDialogs({
                   <SelectTrigger>
                     <SelectValue placeholder="Add position" />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="z-[70]">
                     {availablePositions.map((position) => (
                       <SelectItem key={position} value={position}>
                         {position}
@@ -683,7 +683,7 @@ export function RecruiterEditDialogs({
                 max={NUMERIC_LIMITS.SCHOLARSHIPS_AVAILABLE.max}
                 autoComplete="off"
                 inputMode="numeric"
-                onFocus={(e) => e.target.blur()}
+                
               />
               {validationErrors.scholarshipsAvailable && (
                 <p className="text-sm text-red-500 mt-1">{validationErrors.scholarshipsAvailable}</p>
@@ -701,7 +701,7 @@ export function RecruiterEditDialogs({
                 maxLength={FIELD_LIMITS.RECRUITING_PHILOSOPHY}
                 autoComplete="off"
                 inputMode="text"
-                onFocus={(e) => e.target.blur()}
+                
               />
               <p className="text-xs text-muted-foreground mt-1">
                 {(editData.recruitingPhilosophy || '').length}/{FIELD_LIMITS.RECRUITING_PHILOSOPHY} characters
@@ -726,7 +726,7 @@ export function RecruiterEditDialogs({
                   maxLength={FIELD_LIMITS.INSTAGRAM_HANDLE}
                   autoComplete="off"
                   inputMode="text"
-                  onFocus={(e) => e.target.blur()}
+                  
                 />
               </div>
               {validationErrors.instagram && (
@@ -747,7 +747,7 @@ export function RecruiterEditDialogs({
                   maxLength={FIELD_LIMITS.TWITTER_HANDLE}
                   autoComplete="off"
                   inputMode="text"
-                  onFocus={(e) => e.target.blur()}
+                  
                 />
               </div>
               {validationErrors.twitter && (
@@ -770,7 +770,7 @@ export function RecruiterEditDialogs({
                 maxLength={FIELD_LIMITS.URL}
                 autoComplete="off"
                 inputMode="url"
-                onFocus={(e) => e.target.blur()}
+                
               />
               {validationErrors.programWebsite && (
                 <p className="text-sm text-red-500 mt-1">{validationErrors.programWebsite}</p>
@@ -787,7 +787,7 @@ export function RecruiterEditDialogs({
                 maxLength={FIELD_LIMITS.URL}
                 autoComplete="off"
                 inputMode="url"
-                onFocus={(e) => e.target.blur()}
+                
               />
               {validationErrors.schoolWebsite && (
                 <p className="text-sm text-red-500 mt-1">{validationErrors.schoolWebsite}</p>
@@ -809,7 +809,7 @@ export function RecruiterEditDialogs({
                 maxLength={FIELD_LIMITS.SHOWCASE_VIDEO_TITLE}
                 autoComplete="off"
                 inputMode="text"
-                onFocus={(e) => e.target.blur()}
+                
               />
             </div>
 
@@ -823,7 +823,7 @@ export function RecruiterEditDialogs({
                 maxLength={FIELD_LIMITS.URL}
                 autoComplete="off"
                 inputMode="url"
-                onFocus={(e) => e.target.blur()}
+                
               />
               {validationErrors.showcaseVideoUrl && (
                 <p className="text-sm text-red-500 mt-1">{validationErrors.showcaseVideoUrl}</p>

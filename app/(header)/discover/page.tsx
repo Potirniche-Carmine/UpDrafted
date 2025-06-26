@@ -8,7 +8,7 @@ import { User, Users, Target, MapPin, Shield, GraduationCap, Send, ChevronDown, 
 import { useSearchParams } from 'next/navigation';
 import Link from "next/link";
 import { AuthWrapper } from '@/components/auth-wrapper';
-import { useRoleView } from '@/hooks/use-role-view';
+import { useUser } from "@clerk/nextjs";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
@@ -228,7 +228,8 @@ const getTabRole = (tab: TabValue): string | null => {
 
 function SearchPageContent() {
   const searchParams = useSearchParams();
-  const { effectiveRole } = useRoleView();
+  const { user } = useUser();
+  const effectiveRole = user?.publicMetadata?.role as string;
   const [activeTab, setActiveTab] = useState<TabValue>(searchParams?.get('tab') as TabValue || 'all');
   
   // Filter states
