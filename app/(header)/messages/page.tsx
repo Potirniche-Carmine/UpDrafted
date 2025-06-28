@@ -174,15 +174,20 @@ export default function MessagingPage() {
     if (!textarea) return;
 
     const handleFocus = () => {
-      // Small delay to ensure keyboard is showing
-      setTimeout(() => {
-        // Scroll the textarea into view on mobile
-        textarea.scrollIntoView({ 
-          behavior: 'smooth', 
-          block: 'center',
-          inline: 'nearest'
-        });
-      }, 300);
+      // Only scroll into view on mobile devices to handle keyboard visibility
+      const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth <= 768;
+      
+      if (isMobile) {
+        // Small delay to ensure keyboard is showing
+        setTimeout(() => {
+          // Scroll the textarea into view on mobile
+          textarea.scrollIntoView({ 
+            behavior: 'smooth', 
+            block: 'center',
+            inline: 'nearest'
+          });
+        }, 300);
+      }
     };
 
     const handleInput = () => {
