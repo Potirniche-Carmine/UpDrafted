@@ -1562,9 +1562,6 @@ export function AthleteEditDialogs({
                   imageType="profile"
                 />
               </div>
-              <p className="text-xs text-muted-foreground">
-                Supported formats: JPG, PNG, WebP. Max size: 5MB
-              </p>
               {validationErrors.upload && <p className="text-red-500 text-sm">{validationErrors.upload}</p>}
             </div>
           </>
