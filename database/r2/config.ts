@@ -15,6 +15,21 @@ const r2Client = new S3Client({
 export const R2_PUBLIC_BUCKET_NAME = process.env.R2_PUBLIC_BUCKET_NAME!;
 export const R2_PUBLIC_URL = process.env.R2_PUBLIC_URL || 'https://bucket.updrafted.us';
 
+/**
+ * Helper function to properly construct R2 URLs without double slashes
+ * @param baseUrl - The base R2 URL
+ * @param path - The file path/key
+ * @returns Properly formatted URL
+ */
+export function constructR2Url(baseUrl: string, path: string): string {
+  // Remove trailing slash from base URL if present
+  const cleanBaseUrl = baseUrl.replace(/\/$/, '');
+  // Remove leading slash from path if present
+  const cleanPath = path.replace(/^\//, '');
+  
+  return `${cleanBaseUrl}/${cleanPath}`;
+}
+
 // Private bucket for verification files (optional - falls back to public bucket if not configured)
 export const R2_PRIVATE_BUCKET_NAME = process.env.R2_PRIVATE_BUCKET_NAME || R2_PUBLIC_BUCKET_NAME;
 
@@ -60,7 +75,7 @@ export async function uploadToR2(
       return fullKey;
     } else {
       // Return the public URL for public files
-      return `${R2_PUBLIC_URL}/${fullKey}`;
+      return constructR2Url(R2_PUBLIC_URL, fullKey);
     }
   } catch (error) {
     throw error;

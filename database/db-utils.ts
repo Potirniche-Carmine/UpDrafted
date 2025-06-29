@@ -29,7 +29,7 @@ import {
 } from './schema';
 import { OnboardingProfileData } from '@/app/(onboarding)/lib/onboarding';
 import { sanitizeAndEncryptMessage } from '@/utils/encryption';
-import { R2_PUBLIC_URL } from './r2/config';
+import { R2_PUBLIC_URL, constructR2Url } from './r2/config';
 
 // User operations
 export const userOperations = {
@@ -1254,7 +1254,7 @@ export const profileOperations = {
     return {
       fullName,
       profileImageUrl: profileImageUrl 
-        ? `${R2_PUBLIC_URL}/${profileImageUrl}`
+        ? constructR2Url(R2_PUBLIC_URL, profileImageUrl)
         : null,
       role: user.role,
       division,

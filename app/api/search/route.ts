@@ -3,7 +3,7 @@ import { requireAnyRole } from '@/utils/roles';
 import { db } from '@/database/db';
 import { users, athleteProfiles, coachProfiles, recruitingProfiles } from '@/database/schema';
 import { or, eq, ilike, sql, and, ne, isNull } from 'drizzle-orm';
-import { R2_PUBLIC_URL } from '@/database/r2';
+import { R2_PUBLIC_URL, constructR2Url } from '@/database/r2';
 import { withRateLimit } from '@/utils/rate-limiting';
 import { getCachedWithType, setCachedWithType, createErrorResponse, createSuccessResponse } from '@/utils/security-cache';
 
@@ -233,7 +233,7 @@ export async function GET(request: NextRequest) {
             fullName: athlete.fullName,
             role: 'athlete',
             sport: athlete.sport,
-            profileImage: athlete.profileImageR3Key ? `${R2_PUBLIC_URL}/${athlete.profileImageR3Key}` : null,
+            profileImage: athlete.profileImageR3Key ? constructR2Url(R2_PUBLIC_URL, athlete.profileImageR3Key) : null,
             organizationName: athlete.organizationName,
             city: athlete.city,
             state: athlete.state,
@@ -253,7 +253,7 @@ export async function GET(request: NextRequest) {
           fullName: coach.fullName,
           role: 'coach',
           sport: coach.sport,
-          profileImage: coach.profileImageR3Key ? `${R2_PUBLIC_URL}/${coach.profileImageR3Key}` : null,
+          profileImage: coach.profileImageR3Key ? constructR2Url(R2_PUBLIC_URL, coach.profileImageR3Key) : null,
           organizationName: coach.organizationName,
           city: coach.city,
           state: coach.state,
@@ -272,7 +272,7 @@ export async function GET(request: NextRequest) {
           fullName: recruiter.fullName,
           role: 'recruiter',
           sport: recruiter.sport,
-          profileImage: recruiter.profileImageR3Key ? `${R2_PUBLIC_URL}/${recruiter.profileImageR3Key}` : null,
+          profileImage: recruiter.profileImageR3Key ? constructR2Url(R2_PUBLIC_URL, recruiter.profileImageR3Key) : null,
           organizationName: recruiter.organizationName,
           city: recruiter.city,
           state: recruiter.state,
