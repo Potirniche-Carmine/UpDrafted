@@ -694,7 +694,7 @@ export function RecruiterProfile({
       <div className="container py-4 md:py-6 lg:py-8 px-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 md:gap-6 lg:gap-8 max-w-screen-2xl mx-auto">
           {/* Sidebar - Basic Info */}
-          <div className="space-y-4 md:space-y-6 xl:sticky xl:top-24 xl:self-start">
+          <div className="space-y-4 md:space-y-6">
             {/* Profile Card */}
             <Card className="overflow-hidden">
               <CardContent className="p-4 md:p-6">

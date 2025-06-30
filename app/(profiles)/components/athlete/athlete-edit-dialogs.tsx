@@ -256,12 +256,22 @@ export function AthleteEditDialogs({
         break;
       case 'profile-image':
         setEditData({});
-        // Always start fresh for image editing
-        setProfileImagePreview(null);
-        setSelectedProfileFile(null);
+        // Only reset image state when dialog first opens, not when profileData changes
+        // This prevents resetting the form after successful image upload
         break;
     }
   }, [dialogType, profileData, measurableToEdit, selectedSport]);
+
+  // Separate useEffect to handle profile-image dialog initialization
+  // This only runs when the dialog type changes to 'profile-image'
+  useEffect(() => {
+    if (dialogType === 'profile-image') {
+      // Always start fresh for image editing when dialog opens
+      setProfileImagePreview(null);
+      setSelectedProfileFile(null);
+      setValidationErrors({});
+    }
+  }, [dialogType]); // Only depend on dialogType, not profileData
 
   // Reset dirty state when dialog closes or changes type
   useEffect(() => {
@@ -1552,9 +1562,6 @@ export function AthleteEditDialogs({
                   imageType="profile"
                 />
               </div>
-              <p className="text-xs text-muted-foreground">
-                Supported formats: JPG, PNG, WebP. Max size: 5MB
-              </p>
               {validationErrors.upload && <p className="text-red-500 text-sm">{validationErrors.upload}</p>}
             </div>
           </>

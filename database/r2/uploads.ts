@@ -191,7 +191,14 @@ export async function uploadPublicFile(
     }
 
     // Return the public URL for immediate use
-    const publicUrl = `${process.env.R2_PUBLIC_URL}/${fileKey}`;
+    const R2_PUBLIC_URL = process.env.R2_PUBLIC_URL!;
+    // Helper function to construct URL properly
+    const constructUrl = (baseUrl: string, path: string) => {
+      const cleanBaseUrl = baseUrl.replace(/\/$/, '');
+      const cleanPath = path.replace(/^\//, '');
+      return `${cleanBaseUrl}/${cleanPath}`;
+    };
+    const publicUrl = constructUrl(R2_PUBLIC_URL, fileKey);
 
     return {
       success: true,
