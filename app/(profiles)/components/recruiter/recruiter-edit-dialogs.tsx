@@ -718,46 +718,42 @@ export function RecruiterEditDialogs({
       case 'social-media':
         return (
           <div className="space-y-4">
-            <div>
+            <div className="space-y-2">
               <Label htmlFor="instagram">Instagram Handle</Label>
               <div className="flex items-center">
-                <span className="px-3 py-2 bg-muted border border-r-0 rounded-l-md text-muted-foreground">@</span>
+                <span className="text-muted-foreground mr-2">@</span>
                 <Input
                   id="instagram"
                   value={editData.instagram || ''}
-                  onChange={(e) => handleFieldChange('instagram', e.target.value)}
+                  onChange={(e) => handleFieldChange('instagram', e.target.value.replace('@', ''))}
                   placeholder="username"
-                  className="rounded-l-none"
+                  className={validationErrors.instagram ? 'border-red-500' : ''}
                   maxLength={FIELD_LIMITS.INSTAGRAM_HANDLE}
                   autoComplete="off"
                   inputMode="text"
                   
                 />
               </div>
-              {validationErrors.instagram && (
-                <p className="text-sm text-red-500 mt-1">{validationErrors.instagram}</p>
-              )}
+              {validationErrors.instagram && <p className="text-red-500 text-sm">{validationErrors.instagram}</p>}
             </div>
 
-            <div>
+            <div className="space-y-2">
               <Label htmlFor="twitter">Twitter Handle</Label>
               <div className="flex items-center">
-                <span className="px-3 py-2 bg-muted border border-r-0 rounded-l-md text-muted-foreground">@</span>
+                <span className="text-muted-foreground mr-2">@</span>
                 <Input
                   id="twitter"
                   value={editData.twitter || ''}
-                  onChange={(e) => handleFieldChange('twitter', e.target.value)}
+                  onChange={(e) => handleFieldChange('twitter', e.target.value.replace('@', ''))}
                   placeholder="username"
-                  className="rounded-l-none"
+                  className={validationErrors.twitter ? 'border-red-500' : ''}
                   maxLength={FIELD_LIMITS.TWITTER_HANDLE}
                   autoComplete="off"
                   inputMode="text"
                   
                 />
               </div>
-              {validationErrors.twitter && (
-                <p className="text-sm text-red-500 mt-1">{validationErrors.twitter}</p>
-              )}
+              {validationErrors.twitter && <p className="text-red-500 text-sm">{validationErrors.twitter}</p>}
             </div>
           </div>
         );
