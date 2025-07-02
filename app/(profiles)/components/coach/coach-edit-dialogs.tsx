@@ -437,6 +437,11 @@ export function CoachEditDialogs({
   };
 
   const getDialogContent = () => {
+    // Handle null dialogType to prevent showing default case during dialog close animation
+    if (!dialogType) {
+      return null;
+    }
+    
     switch (dialogType) {
       case 'basic-info':
         return (
