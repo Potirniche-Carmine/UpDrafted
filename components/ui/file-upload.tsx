@@ -47,21 +47,23 @@ export function FileUpload({
   if (preview) {
     return (
       <div className="space-y-4">
-        <div className={`relative ${imageSize.containerClass} mx-auto`}>
-          <Image
-            src={preview}
-            alt={`${imageType} preview`}
-            width={imageSize.width}
-            height={imageSize.height}
-            className="rounded-lg object-contain border border-border/50"
-          />
+        <div className="relative mx-auto" style={{ width: 'fit-content' }}>
+          <div className={`relative ${imageSize.containerClass} flex items-center justify-center overflow-hidden`}>
+            <Image
+              src={preview}
+              alt={`${imageType} preview`}
+              width={imageSize.width}
+              height={imageSize.height}
+              className="rounded-lg object-cover border border-border/50 w-full h-full"
+            />
+          </div>
           {onRemove && (
             <Button
               type="button"
               variant="destructive"
               size="sm"
               onClick={onRemove}
-              className="absolute -top-2 -right-2 w-6 h-6 rounded-full p-0"
+              className="absolute -top-2 -right-2 w-6 h-6 rounded-full p-0 cursor-pointer hover:bg-red-600 hover:scale-110 transition-all duration-200"
               disabled={disabled}
             >
               <X className="w-4 h-4" />
