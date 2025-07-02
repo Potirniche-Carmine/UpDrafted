@@ -236,7 +236,10 @@ export default function AthleteForm({ data, onInputChange }: AthleteFormProps) {
         }
         break;
       case 'hudlUrl':
-        if (value) {
+        const isHighSchool = data.educationLevel === 'high_school';
+        if (isHighSchool && !(value as string)?.trim()) {
+          newErrors.hudlUrl = 'Hudl URL is required for high school athletes';
+        } else if (value) {
           const hudlResult = FormValidator.validateURL(value as string, 'hudl');
           if (hudlResult.isValid) {
             delete newErrors.hudlUrl;
@@ -287,6 +290,28 @@ export default function AthleteForm({ data, onInputChange }: AthleteFormProps) {
 
   return (
     <div className="space-y-8">
+      {/* Education Level Selection - Moved to be always visible */}
+      <div className="space-y-3">
+        <Label htmlFor="educationLevel" className="text-base font-medium">Education Level *</Label>
+        <Select value={data.educationLevel} onValueChange={(value) => {
+          onInputChange('educationLevel', value as EducationLevel);
+          // Re-validate HUDL URL when education level changes (may become required/optional)
+          validateAndUpdateField('hudlUrl', data.hudlUrl);
+        }}>
+          <SelectTrigger className="h-11 bg-background">
+            <SelectValue placeholder="Are you a high school or college athlete?" />
+          </SelectTrigger>
+          <SelectContent>
+            {EDUCATION_LEVEL_OPTIONS.map(option => (
+              <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <p className="text-xs text-muted-foreground">
+          This helps us customize your profile and determine requirements like HUDL.
+        </p>
+      </div>
+
       {/* Primary Sport Selection */}
       <div className="space-y-3">
         <Label htmlFor="sport" className="text-base font-medium">Primary Sport *</Label>
@@ -296,26 +321,6 @@ export default function AthleteForm({ data, onInputChange }: AthleteFormProps) {
           placeholder="Select your primary sport"
         />
       </div>
-
-      {/* Education Level Selection - New */}
-      {data.sport && (
-        <div className="space-y-3">
-          <Label htmlFor="educationLevel" className="text-base font-medium">Education Level *</Label>
-          <Select value={data.educationLevel} onValueChange={(value) => onInputChange('educationLevel', value as EducationLevel)}>
-            <SelectTrigger className="h-11 bg-background">
-              <SelectValue placeholder="Select your education level" />
-            </SelectTrigger>
-            <SelectContent>
-              {EDUCATION_LEVEL_OPTIONS.map(option => (
-                <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <p className="text-xs text-muted-foreground">
-            This helps us customize your profile and match you with appropriate opportunities.
-          </p>
-        </div>
-      )}
 
       {/* Secondary Sports */}
       <div className="space-y-3">
@@ -594,7 +599,9 @@ export default function AthleteForm({ data, onInputChange }: AthleteFormProps) {
       </div>
 
       <div className="space-y-3">
-        <Label htmlFor="hudlUrl" className="text-base font-medium">Hudl Profile URL</Label>
+        <Label htmlFor="hudlUrl" className="text-base font-medium">
+          Hudl Profile URL{data.educationLevel === 'high_school' ? ' *' : ''}
+        </Label>
         <Input
           id="hudlUrl"
           placeholder="https://www.hudl.com/profile/..."
@@ -605,6 +612,15 @@ export default function AthleteForm({ data, onInputChange }: AthleteFormProps) {
         />
         {validationErrors.hudlUrl && (
           <p className="text-sm text-red-500">{validationErrors.hudlUrl}</p>
+        )}
+        {data.educationLevel === 'high_school' ? (
+          <p className="text-sm text-muted-foreground">
+            Required for high school athletes. Hudl helps showcase your game footage to college recruiters.
+          </p>
+        ) : (
+          <p className="text-sm text-muted-foreground">
+            Optional for college athletes. Showcase your game footage to professional scouts and recruiters.
+          </p>
         )}
       </div>
 
