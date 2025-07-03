@@ -329,6 +329,15 @@ export function AthleteEditDialogs({
           return `GPA must be between ${NUMERIC_LIMITS.GPA.min} and ${NUMERIC_LIMITS.GPA.max}`;
         }
         break;
+      case 'instagram':
+      case 'twitter':
+        if (typeof value === 'string' && value) {
+          const handle = value.toString().replace('@', '');
+          if (!/^[a-zA-Z0-9._]+$/.test(handle)) {
+            return 'Handle can only contain letters, numbers, periods, and underscores';
+          }
+        }
+        break;
       case 'maxPrepsUrl':
         if (typeof value === 'string' && value.trim()) {
           const url = value.trim();
@@ -1168,31 +1177,39 @@ export function AthleteEditDialogs({
             <div className="space-y-6">
               <div className="space-y-2">
                 <Label htmlFor="edit-instagram">Instagram Handle</Label>
-                <Input
-                  id="edit-instagram"
-                  placeholder="@username"
-                  value={editData.instagram || ''}
-                  onChange={(e) => setEditData(prev => ({ ...prev, instagram: e.target.value }))}
-                  className="h-12"
-                  maxLength={FIELD_LIMITS.INSTAGRAM_HANDLE}
-                  autoComplete="off"
-                  inputMode="text"
-                  
-                />
+                <div className="flex items-center">
+                  <span className="text-muted-foreground mr-2">@</span>
+                  <Input
+                    id="edit-instagram"
+                    value={editData.instagram || ''}
+                    onChange={(e) => handleFieldChange('instagram', e.target.value.replace('@', ''))}
+                    placeholder="username"
+                    className={`h-12 ${validationErrors.instagram ? 'border-red-500' : ''}`}
+                    maxLength={FIELD_LIMITS.INSTAGRAM_HANDLE}
+                    autoComplete="off"
+                    inputMode="text"
+                    
+                  />
+                </div>
+                {validationErrors.instagram && <p className="text-red-500 text-sm">{validationErrors.instagram}</p>}
               </div>
               <div className="space-y-2">
                 <Label htmlFor="edit-twitter">Twitter/X Handle</Label>
-                <Input
-                  id="edit-twitter"
-                  placeholder="@username"
-                  value={editData.twitter || ''}
-                  onChange={(e) => setEditData(prev => ({ ...prev, twitter: e.target.value }))}
-                  className="h-12"
-                  maxLength={FIELD_LIMITS.TWITTER_HANDLE}
-                  autoComplete="off"
-                  inputMode="text"
-                  
-                />
+                <div className="flex items-center">
+                  <span className="text-muted-foreground mr-2">@</span>
+                  <Input
+                    id="edit-twitter"
+                    value={editData.twitter || ''}
+                    onChange={(e) => handleFieldChange('twitter', e.target.value.replace('@', ''))}
+                    placeholder="username"
+                    className={`h-12 ${validationErrors.twitter ? 'border-red-500' : ''}`}
+                    maxLength={FIELD_LIMITS.TWITTER_HANDLE}
+                    autoComplete="off"
+                    inputMode="text"
+                    
+                  />
+                </div>
+                {validationErrors.twitter && <p className="text-red-500 text-sm">{validationErrors.twitter}</p>}
               </div>
             </div>
           </>
