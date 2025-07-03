@@ -14,6 +14,7 @@ import { getSportsList, US_STATES, GRADUATION_YEARS, DIVISIONS, getPositionsForS
 import { CoachProfileData } from './coach-profile-types';
 import { sanitizeProfileData } from '@/utils/sanitization';
 import { FileUpload } from '@/components/ui/file-upload';
+import { useRoleView } from '@/hooks/use-role-view';
 
 
 // Field validation limits
@@ -58,6 +59,9 @@ export function CoachEditDialogs({
   const [organizationLogoPreview, setOrganizationLogoPreview] = useState<string | null>(null);
   const [selectedProfileFile, setSelectedProfileFile] = useState<File | null>(null);
   const [selectedOrganizationFile, setSelectedOrganizationFile] = useState<File | null>(null);
+
+  // Get admin role information for demo profile uploads
+  const { isAdmin, viewingAs } = useRoleView();
 
   // Initialize edit data when dialog opens
   useEffect(() => {
@@ -214,6 +218,11 @@ export function CoachEditDialogs({
       formData.append('file', file);
       formData.append('userId', profileData.userId || profileData.id);
       formData.append('imageType', imageType);
+      
+      // Add demo profile type for admin users
+      if (isAdmin && viewingAs) {
+        formData.append('demoProfileType', viewingAs);
+      }
       
       // Add current image URL for deletion
       const currentImageUrl = imageType === 'profile' 

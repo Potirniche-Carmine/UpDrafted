@@ -31,6 +31,7 @@ import { OptimizedOrgLogo } from "../shared/optimized-org-logo";
 import { RecruiterProfileData, RecruiterProfileProps } from './recruiter-profile-types';
 import { ConnectionDialog } from "../shared/connection-dialog";
 import { useUser } from "@clerk/nextjs";
+import { useRoleView } from '@/hooks/use-role-view';
 
 // Social Media Section Component (same as athlete profile)
 const SocialMediaSection = memo(({ socialMedia, isOwnProfile, onEdit }: { 
@@ -339,6 +340,9 @@ export function RecruiterProfile({
   const [currentConnectionStatus, setCurrentConnectionStatus] = useState(connectionStatus);
   const { user } = useUser();
   const effectiveRole = user?.publicMetadata?.role as string;
+  
+  // Get admin role information for demo profile uploads
+  const { isAdmin, viewingAs } = useRoleView();
 
   // Memoize computed values
   const allSports = useMemo(() => [profileData.sportRecruiting, ...(profileData.secondarySports || [])], [profileData.sportRecruiting, profileData.secondarySports]);
@@ -496,6 +500,12 @@ export function RecruiterProfile({
       const formData = new FormData();
       formData.append('userId', profileData.userId || profileData.id);
       formData.append('imageType', imageType);
+      
+      // Add demo profile type for admin users
+      if (isAdmin && viewingAs) {
+        formData.append('demoProfileType', viewingAs);
+      }
+      
       // Remove any existing cache-busting parameters before sending for deletion
       const cleanUrl = currentImageUrl.split('?')[0];
       formData.append('currentImageUrl', cleanUrl);

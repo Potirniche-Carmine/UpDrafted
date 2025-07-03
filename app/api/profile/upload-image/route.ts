@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireOwnershipOrAdmin } from '@/utils/roles';
 import { uploadProfilePicture, uploadOrganizationLogo } from '@/database/r2/uploads';
 import { deleteFromR2, getR2KeyFromUrl } from '@/database/r2/config';
-import { coachOperations, athleteOperations, recruitingOperations, userOperations } from '@/database/db-utils';
+import { coachOperations, athleteOperations, recruitingOperations, userOperations, adminOperations } from '@/database/db-utils';
 import { withRateLimit } from '@/utils/rate-limiting';
 import { validateFile, scanContent, createErrorResponse, createSuccessResponse, invalidateCache } from '@/utils/security-cache';
 
@@ -23,6 +23,7 @@ export async function POST(request: NextRequest) {
     const imageType = formData.get('imageType') as 'profile' | 'organization';
     const currentImageUrl = formData.get('currentImageUrl') as string | null;
     const removeOnly = formData.get('removeOnly') as string | null;
+    const demoProfileType = formData.get('demoProfileType') as 'athlete' | 'coach' | 'recruiter' | null;
 
     if (!userId) {
       return createErrorResponse('Missing user ID', 400);
@@ -36,6 +37,12 @@ export async function POST(request: NextRequest) {
     const auth = await requireOwnershipOrAdmin(userId);
     if (auth instanceof NextResponse) return auth;
 
+    // For admin users, require demoProfileType
+    const userWithProfile = await userOperations.getUserWithProfile(userId);
+    if (userWithProfile?.role === 'admin' && !demoProfileType) {
+      return createErrorResponse('Demo profile type is required for admin users', 400);
+    }
+
     // Handle remove-only operation
     if (removeOnly === 'true') {
       if (!currentImageUrl) {
@@ -47,8 +54,7 @@ export async function POST(request: NextRequest) {
         const oldKey = getR2KeyFromUrl(currentImageUrl);
         await deleteFromR2(oldKey, false);
 
-        // Update database
-        const userWithProfile = await userOperations.getUserWithProfile(userId);
+        // userWithProfile already fetched above
         if (!userWithProfile) {
           return createErrorResponse('User not found', 404);
         }
@@ -57,7 +63,16 @@ export async function POST(request: NextRequest) {
           ? { profileImageR3Key: null }
           : { organizationLogoR3Key: null };
 
-        if (userWithProfile.role === 'athlete' && imageType === 'profile') {
+        // Handle admin demo profiles
+        if (userWithProfile.role === 'admin' && demoProfileType) {
+          if (demoProfileType === 'athlete' && imageType === 'profile') {
+            await adminOperations.updateDemoAthleteProfile(userId, updateData);
+          } else if (demoProfileType === 'coach') {
+            await adminOperations.updateDemoCoachProfile(userId, updateData);
+          } else if (demoProfileType === 'recruiter') {
+            await adminOperations.updateDemoRecruitingProfile(userId, updateData);
+          }
+        } else if (userWithProfile.role === 'athlete' && imageType === 'profile') {
           await athleteOperations.updateAthleteProfile(userId, updateData);
         } else if (userWithProfile.role === 'coach') {
           await coachOperations.updateCoachProfile(userId, updateData);
@@ -113,8 +128,7 @@ export async function POST(request: NextRequest) {
         ? await uploadProfilePicture(file, userId)
         : await uploadOrganizationLogo(file, userId);
 
-      // Update database
-      const userWithProfile = await userOperations.getUserWithProfile(userId);
+      // userWithProfile already fetched above  
       if (!userWithProfile) {
         return createErrorResponse('User not found', 404);
       }
@@ -123,7 +137,18 @@ export async function POST(request: NextRequest) {
         ? { profileImageR3Key: uploadResult.key }
         : { organizationLogoR3Key: uploadResult.key };
 
-      if (userWithProfile.role === 'athlete' && imageType === 'profile') {
+      // Handle admin demo profiles
+      if (userWithProfile.role === 'admin' && demoProfileType) {
+        if (demoProfileType === 'athlete' && imageType === 'profile') {
+          await adminOperations.updateDemoAthleteProfile(userId, updateData);
+        } else if (demoProfileType === 'coach') {
+          await adminOperations.updateDemoCoachProfile(userId, updateData);
+        } else if (demoProfileType === 'recruiter') {
+          await adminOperations.updateDemoRecruitingProfile(userId, updateData);
+        } else {
+          return createErrorResponse(`Unsupported demo profile operation for admin with type: ${demoProfileType}`, 400);
+        }
+      } else if (userWithProfile.role === 'athlete' && imageType === 'profile') {
         await athleteOperations.updateAthleteProfile(userId, updateData);
       } else if (userWithProfile.role === 'coach') {
         await coachOperations.updateCoachProfile(userId, updateData);

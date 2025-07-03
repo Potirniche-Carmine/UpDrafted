@@ -14,6 +14,7 @@ import { getSportsList, US_STATES, GRADUATION_YEARS, getPositionsForSport, getMe
 import { EducationLevel } from '@/app/(onboarding)/lib/onboarding';
 import { sanitizeProfileData } from '@/utils/sanitization';
 import { FileUpload } from '@/components/ui/file-upload';
+import { useRoleView } from '@/hooks/use-role-view';
 
 // Import field validation
 const FIELD_LIMITS = {
@@ -141,6 +142,9 @@ export function AthleteEditDialogs({
   const [profileImagePreview, setProfileImagePreview] = useState<string | null>(null);
   const [selectedProfileFile, setSelectedProfileFile] = useState<File | null>(null);
   const [isDirty, setIsDirty] = useState(false);
+
+  // Get admin role information for demo profile uploads
+  const { isAdmin, viewingAs } = useRoleView();
 
   // Initialize tempVideos when dialog opens
   useEffect(() => {
@@ -482,6 +486,11 @@ export function AthleteEditDialogs({
       formData.append('file', file);
       formData.append('userId', profileData.userId || profileData.id);
       formData.append('imageType', 'profile');
+      
+      // Add demo profile type for admin users
+      if (isAdmin && viewingAs) {
+        formData.append('demoProfileType', viewingAs);
+      }
       
       // Add current image URL for deletion
       const currentImageUrl = profileData.profileImage;
