@@ -26,7 +26,7 @@ import { AcademicSummaryCard } from "../shared/academic-summary-card";
 import { AthleteEditDialogs } from "./athlete-edit-dialogs";
 import { VerificationSection } from "./athlete-verification-section";
 import { VerificationDialog } from "../shared/verification-dialog";
-// import { useRoleView } from '@/hooks/use-role-view'; // Removed - using actual profile data instead
+import { useRoleView } from '@/hooks/use-role-view';
 import { AthleteProfileData, AthleteProfileProps, Measurable } from './athlete-profile-types';
 import { ConnectionDialog } from "../shared/connection-dialog";
 import { useUser } from "@clerk/nextjs";
@@ -321,7 +321,8 @@ export function AthleteProfile({
   const [profileData, setProfileData] = useState(data);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  // Remove useRoleView dependency - using actual role from user context instead
+  // Get admin role information for demo profile uploads
+  const { isAdmin, viewingAs } = useRoleView();
   const { user } = useUser();
   const effectiveRole = user?.publicMetadata?.role as string;
   const [connectionDialogOpen, setConnectionDialogOpen] = useState(false);
@@ -511,6 +512,12 @@ export function AthleteProfile({
       const formData = new FormData();
       formData.append('userId', safeProfileData.userId || safeProfileData.id);
       formData.append('imageType', 'profile');
+      
+      // Add demo profile type for admin users
+      if (isAdmin && viewingAs) {
+        formData.append('demoProfileType', viewingAs);
+      }
+      
       // Remove any existing cache-busting parameters before sending for deletion
       const cleanUrl = currentImageUrl.split('?')[0];
       formData.append('currentImageUrl', cleanUrl);

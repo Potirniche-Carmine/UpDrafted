@@ -31,6 +31,7 @@ import { OptimizedOrgLogo } from "../shared/optimized-org-logo";
 import { CoachProfileData, CoachProfileProps } from './coach-profile-types';
 import { ConnectionDialog } from "../shared/connection-dialog";
 import { useUser } from "@clerk/nextjs";
+import { useRoleView } from '@/hooks/use-role-view';
 
 // Social Media Section Component (same as athlete profile)
 const SocialMediaSection = memo(({ socialMedia, isOwnProfile, onEdit }: { 
@@ -139,6 +140,9 @@ export function CoachProfile({
   const [currentConnectionStatus, setCurrentConnectionStatus] = useState(connectionStatus);
   const { user } = useUser();
   const effectiveRole = user?.publicMetadata?.role as string;
+  
+  // Get admin role information for demo profile uploads
+  const { isAdmin, viewingAs } = useRoleView();
 
   // Determine if current user can connect to this coach
   const canConnect = useMemo(() => 
@@ -313,6 +317,12 @@ export function CoachProfile({
       const formData = new FormData();
       formData.append('userId', profileData.userId || profileData.id);
       formData.append('imageType', imageType);
+      
+      // Add demo profile type for admin users
+      if (isAdmin && viewingAs) {
+        formData.append('demoProfileType', viewingAs);
+      }
+      
       // Remove any existing cache-busting parameters before sending for deletion
       const cleanUrl = currentImageUrl.split('?')[0];
       formData.append('currentImageUrl', cleanUrl);
