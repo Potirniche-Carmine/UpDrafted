@@ -121,7 +121,7 @@ export function FileUpload({
           className="w-full"
           disabled={disabled}
         >
-          {chooseText.split(' ').slice(0, 2).join(' ')}
+          {chooseText}
         </Button>
       )}
       
