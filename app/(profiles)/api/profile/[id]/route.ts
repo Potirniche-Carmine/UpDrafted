@@ -771,6 +771,10 @@ export async function PUT(
         profileUpdateData.instagramHandle = socialMedia?.instagram || null;
         profileUpdateData.twitterHandle = socialMedia?.twitter || null;
       }
+
+      // Update the athlete profile in the database
+      console.log('About to update athlete profile with data:', JSON.stringify(profileUpdateData, null, 2));
+      console.log('Profile user ID:', profileUserId);
       
       try {
         updatedProfile = await athleteOperations.updateAthleteProfile(profileUserId, profileUpdateData);
