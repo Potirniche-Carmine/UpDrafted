@@ -383,6 +383,15 @@ export function RecruiterProfile({
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
   }, [hasUnsavedChanges]);
 
+  // Add safety check for profileData
+  if (!profileData || !profileData.fullName) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-background to-muted/20 relative flex items-center justify-center">
+        <div className="animate-spin rounded-full h-16 w-16 border-4 border-muted border-t-[#01ae79]"></div>
+      </div>
+    );
+  }
+
   const handleEditSection = (section: string, sport?: string) => {
     if (section === 'manual-verification' || section === 'verification') {
       setVerificationDialogOpen(true);

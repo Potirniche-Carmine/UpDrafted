@@ -138,7 +138,7 @@ export function CoachProfile({
   const [connectionDialogOpen, setConnectionDialogOpen] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
   const [currentConnectionStatus, setCurrentConnectionStatus] = useState(connectionStatus);
-  const { user } = useUser();
+    const { user } = useUser();
   const effectiveRole = user?.publicMetadata?.role as string;
   
   // Get admin role information for demo profile uploads
@@ -460,6 +460,15 @@ export function CoachProfile({
       setIsConnecting(false);
     }
   };
+
+  // Add safety check for profileData
+  if (!profileData || !profileData.fullName) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-background to-muted/20 relative flex items-center justify-center">
+        <div className="animate-spin rounded-full h-16 w-16 border-4 border-muted border-t-[#01ae79]"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background to-muted/20 relative">
