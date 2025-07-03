@@ -635,11 +635,9 @@ export async function PUT(
 
     // Parse the request body
     const updateData = await request.json();
-    console.log('Raw update data received:', JSON.stringify(updateData, null, 2));
 
     // CRITICAL: XSS Protection - Sanitize all user input
     const sanitizedData = sanitizeProfileData(updateData);
-    console.log('Sanitized data:', JSON.stringify(sanitizedData, null, 2));
 
     // CRITICAL: Input validation
     const validationErrors = validateBasicFields(sanitizedData);
@@ -733,12 +731,10 @@ export async function PUT(
       }
     }
     
-    console.log('Profile type determined:', profileType, 'for user:', currentUserId);
     let updatedProfile: AthleteProfile | CoachProfile | RecruitingProfile | null = null;
 
     // Update profile based on type
     if (profileType === 'athlete') {
-      console.log('Processing athlete profile update...');
       // First, update the athlete profile data
       const profileUpdateData: Partial<NewAthleteProfile> = {};
       
@@ -775,14 +771,9 @@ export async function PUT(
         profileUpdateData.instagramHandle = socialMedia?.instagram || null;
         profileUpdateData.twitterHandle = socialMedia?.twitter || null;
       }
-
-      // Update the athlete profile in the database
-      console.log('About to update athlete profile with data:', JSON.stringify(profileUpdateData, null, 2));
-      console.log('Profile user ID:', profileUserId);
       
       try {
         updatedProfile = await athleteOperations.updateAthleteProfile(profileUserId, profileUpdateData);
-        console.log('Athlete profile updated successfully');
       } catch (dbError) {
         console.error('Database error during athlete profile update:', dbError);
         throw dbError;

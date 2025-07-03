@@ -451,7 +451,7 @@ export function RecruiterEditDialogs({
       case 'basic-info':
         return (
           <div className="space-y-4">
-            <div>
+            <div className="space-y-2">
               <Label htmlFor="fullName">Full Name *</Label>
               <Input
                 id="fullName"
@@ -468,7 +468,7 @@ export function RecruiterEditDialogs({
               )}
             </div>
 
-            <div>
+            <div className="space-y-2">
               <Label htmlFor="title">Title *</Label>
               <Input
                 id="title"
@@ -485,7 +485,7 @@ export function RecruiterEditDialogs({
               )}
             </div>
 
-            <div>
+            <div className="space-y-2">
               <Label htmlFor="sportRecruiting">Sport Recruiting *</Label>
               <Select 
                 value={editData.sportRecruiting || ''} 
@@ -507,7 +507,7 @@ export function RecruiterEditDialogs({
               )}
             </div>
 
-            <div>
+            <div className="space-y-2">
               <Label htmlFor="organizationName">Organization Name *</Label>
               <Input
                 id="organizationName"
@@ -525,7 +525,7 @@ export function RecruiterEditDialogs({
             </div>
 
             <div className="grid grid-cols-2 gap-4">
-              <div>
+              <div className="space-y-2">
                 <Label htmlFor="city">City *</Label>
                 <Input
                   id="city"
@@ -542,7 +542,7 @@ export function RecruiterEditDialogs({
                 )}
               </div>
 
-              <div>
+              <div className="space-y-2">
                 <Label htmlFor="state">State *</Label>
                 <Select 
                   value={editData.state || ''} 
@@ -565,7 +565,7 @@ export function RecruiterEditDialogs({
               </div>
             </div>
 
-            <div>
+            <div className="space-y-2">
               <Label htmlFor="division">Division</Label>
               <Select 
                 value={editData.division || ''} 
@@ -584,7 +584,7 @@ export function RecruiterEditDialogs({
               </Select>
             </div>
 
-            <div>
+            <div className="space-y-2">
               <Label htmlFor="conference">Conference (Optional)</Label>
               <Input
                 id="conference"
@@ -602,7 +602,7 @@ export function RecruiterEditDialogs({
       case 'personal-statement':
         return (
           <div className="space-y-4">
-            <div>
+            <div className="space-y-2">
               <Label htmlFor="personalStatement">About You</Label>
               <Textarea
                 id="personalStatement"
@@ -676,7 +676,7 @@ export function RecruiterEditDialogs({
               </div>
             </div>
 
-            <div>
+            <div className="space-y-2">
               <Label htmlFor="scholarshipsAvailable">Scholarships Available</Label>
               <Input
                 id="scholarshipsAvailable"
@@ -695,7 +695,7 @@ export function RecruiterEditDialogs({
               )}
             </div>
 
-            <div>
+            <div className="space-y-2">
               <Label htmlFor="recruitingPhilosophy">What You&apos;re Looking For</Label>
               <Textarea
                 id="recruitingPhilosophy"
@@ -761,7 +761,7 @@ export function RecruiterEditDialogs({
       case 'program-links':
         return (
           <div className="space-y-4">
-            <div>
+            <div className="space-y-2">
               <Label htmlFor="programWebsite">Program Website</Label>
               <Input
                 id="programWebsite"
@@ -778,7 +778,7 @@ export function RecruiterEditDialogs({
               )}
             </div>
 
-            <div>
+            <div className="space-y-2">
               <Label htmlFor="schoolWebsite">School Website</Label>
               <Input
                 id="schoolWebsite"
@@ -800,7 +800,7 @@ export function RecruiterEditDialogs({
       case 'showcase-video':
         return (
           <div className="space-y-4">
-            <div>
+            <div className="space-y-2">
               <Label htmlFor="showcaseVideoTitle">Video Title</Label>
               <Input
                 id="showcaseVideoTitle"
@@ -814,7 +814,7 @@ export function RecruiterEditDialogs({
               />
             </div>
 
-            <div>
+            <div className="space-y-2">
               <Label htmlFor="showcaseVideoUrl">YouTube URL</Label>
               <Input
                 id="showcaseVideoUrl"
