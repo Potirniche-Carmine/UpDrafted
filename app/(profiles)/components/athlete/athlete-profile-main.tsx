@@ -852,7 +852,7 @@ export function AthleteProfile({
             <Card>
               <CardContent className="p-4 md:p-6">
                 <div className="text-center">
-                  <div className="relative w-24 h-24 md:w-32 md:h-32 mx-auto mb-4">
+                  <div className="relative w-24 h-24 md:w-32 md:h-32 mx-auto mb-4 flex-shrink-0">
                     {safeProfileData.profileImage ? (
                       <Image
                         src={safeProfileData.profileImage}

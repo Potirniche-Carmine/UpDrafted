@@ -851,16 +851,14 @@ export function RecruiterEditDialogs({
             id="profileImageUpload"
             accept="image/jpeg,image/jpg,image/png,image/webp"
             onChange={(e) => handleFileChange(e, 'profile')}
-            onUpload={() => handleManualUpload('profile')}
             onRemove={() => removeImagePreview('profile')}
             disabled={isUploading}
             preview={profileImagePreview}
+            originalImage={profileData.profileImage}
             uploadText="Upload a profile picture"
             chooseText="Choose a new profile picture"
             supportedFormats="Supported formats: JPG, PNG, WebP"
             maxSize="5MB"
-            showUploadButton={!!(selectedProfileFile && profileImagePreview)}
-            uploadButtonText="Upload Photo"
             isUploading={isUploading}
             error={validationErrors.upload}
             imageType="profile"
@@ -873,16 +871,14 @@ export function RecruiterEditDialogs({
             id="organizationLogoUpload"
             accept="image/jpeg,image/jpg,image/png,image/webp"
             onChange={(e) => handleFileChange(e, 'organization')}
-            onUpload={() => handleManualUpload('organization')}
             onRemove={() => removeImagePreview('organization')}
             disabled={isUploading}
             preview={organizationLogoPreview}
+            originalImage={profileData.organizationLogo}
             uploadText="Upload organization logo"
             chooseText="Choose a new logo"
             supportedFormats="Supported formats: JPG, PNG, WebP"
             maxSize="5MB"
-            showUploadButton={!!(selectedOrganizationFile && organizationLogoPreview)}
-            uploadButtonText="Upload Logo"
             isUploading={isUploading}
             error={validationErrors.upload}
             imageType="organization"
@@ -940,6 +936,18 @@ export function RecruiterEditDialogs({
             <Button onClick={handleSave} disabled={isUploading}>
               <Save className="w-4 h-4 mr-2" />
               Save Changes
+            </Button>
+          )}
+          {dialogType === 'profile-image' && profileImagePreview && (
+            <Button onClick={() => handleManualUpload('profile')} disabled={isUploading}>
+              <Save className="w-4 h-4 mr-2" />
+              {isUploading ? 'Saving...' : 'Save Changes'}
+            </Button>
+          )}
+          {dialogType === 'organization-logo' && organizationLogoPreview && (
+            <Button onClick={() => handleManualUpload('organization')} disabled={isUploading}>
+              <Save className="w-4 h-4 mr-2" />
+              {isUploading ? 'Saving...' : 'Save Changes'}
             </Button>
           )}
         </DialogFooter>

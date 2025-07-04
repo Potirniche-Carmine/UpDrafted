@@ -2,4 +2,4 @@
 export * from './config';
 
 // Export all upload functions
-export * from './uploads'; 
+export * from './uploads';

@@ -588,7 +588,7 @@ export function AthleteEditDialogs({
     }
   };
 
-  const handleManualUpload = async () => {
+  const handleSaveImageChanges = async () => {
     if (!selectedProfileFile) return;
     await handleImageUpload(selectedProfileFile);
   };
@@ -1579,15 +1579,14 @@ export function AthleteEditDialogs({
                   id="profileImageUpload"
                   accept="image/jpeg,image/jpg,image/png,image/webp"
                   onChange={handleFileChange}
-                  onUpload={handleManualUpload}
                   onRemove={removeImagePreview}
                   disabled={isUploading}
                   preview={profileImagePreview}
+                  originalImage={profileData.profileImage}
                   uploadText="Upload a profile picture"
                   chooseText="Choose a new profile picture"
                   supportedFormats="Supported formats: JPG, PNG, WebP"
                   maxSize="5MB"
-                  showUploadButton={!!selectedProfileFile}
                   isUploading={isUploading}
                   error={validationErrors.upload}
                   imageType="profile"
@@ -1595,6 +1594,17 @@ export function AthleteEditDialogs({
               </div>
               {validationErrors.upload && <p className="text-red-500 text-sm">{validationErrors.upload}</p>}
             </div>
+            <DialogFooter className="gap-2">
+              <Button variant="outline" onClick={onClose} disabled={isUploading}>
+                Cancel
+              </Button>
+              {profileImagePreview && (
+                <Button onClick={handleSaveImageChanges} disabled={isUploading}>
+                  <Save className="w-4 h-4 mr-2" />
+                  {isUploading ? 'Saving...' : 'Save Changes'}
+                </Button>
+              )}
+            </DialogFooter>
           </>
         );
 

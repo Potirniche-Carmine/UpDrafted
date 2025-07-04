@@ -11,6 +11,7 @@ interface FileUploadProps {
   onRemove?: () => void;
   disabled?: boolean;
   preview?: string | null;
+  originalImage?: string | null;
   uploadText: string;
   chooseText: string;
   supportedFormats: string;
@@ -30,6 +31,7 @@ export function FileUpload({
   onRemove,
   disabled = false,
   preview,
+  originalImage,
   uploadText,
   chooseText,
   supportedFormats,
@@ -42,44 +44,82 @@ export function FileUpload({
 }: FileUploadProps) {
   const imageSize = imageType === 'profile' 
     ? { width: 128, height: 128, containerClass: 'w-32 h-32' }
-    : { width: 96, height: 80, containerClass: 'w-24 h-20' };
+    : { width: 96, height: 96, containerClass: 'w-24 h-24' };
 
-  if (preview) {
+  const imageToShow = preview || originalImage;
+  const isShowingPreview = !!preview;
+
+  if (imageToShow) {
     return (
       <div className="space-y-4">
         <div className="relative mx-auto" style={{ width: 'fit-content' }}>
-          <div className={`relative ${imageSize.containerClass} flex items-center justify-center overflow-hidden`}>
+          <div className={`relative ${imageSize.containerClass} flex items-center justify-center overflow-hidden flex-shrink-0`}>
             <Image
-              src={preview}
-              alt={`${imageType} preview`}
+              src={imageToShow}
+              alt={`${imageType} ${isShowingPreview ? 'preview' : 'current'}`}
               width={imageSize.width}
               height={imageSize.height}
-              className="rounded-lg object-cover border border-border/50 w-full h-full"
+              className={`${imageType === 'profile' ? 'rounded-full' : 'rounded-lg'} object-cover border border-border/50 w-full h-full`}
             />
           </div>
-          {onRemove && (
+          {isShowingPreview && onRemove && (
             <Button
               type="button"
               variant="destructive"
               size="sm"
               onClick={onRemove}
-              className="absolute -top-2 -right-2 w-6 h-6 rounded-full p-0 cursor-pointer hover:bg-red-600 hover:scale-110 transition-all duration-200"
+              className="absolute -top-2 -right-2 w-7 h-7 rounded-full p-0 cursor-pointer hover:bg-red-600 hover:scale-110 transition-all duration-200 shadow-lg border border-white"
               disabled={disabled}
+              title="Remove preview and revert to original image"
             >
               <X className="w-4 h-4" />
             </Button>
           )}
         </div>
-        {showUploadButton && onUpload && (
+        
+        {isShowingPreview ? (
+          <>
+            {showUploadButton && onUpload && (
+              <Button
+                type="button"
+                onClick={onUpload}
+                className="w-full"
+                disabled={disabled || isUploading}
+              >
+                {isUploading ? 'Uploading...' : uploadButtonText}
+              </Button>
+            )}
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => document.getElementById(id)?.click()}
+              className="w-full"
+              disabled={disabled}
+            >
+              Choose Different Image
+            </Button>
+          </>
+        ) : (
           <Button
             type="button"
-            onClick={onUpload}
+            variant="outline"
+            onClick={() => document.getElementById(id)?.click()}
             className="w-full"
-            disabled={disabled || isUploading}
+            disabled={disabled}
           >
-            {isUploading ? 'Uploading...' : uploadButtonText}
+            Change Image
           </Button>
         )}
+        
+        <input
+          id={id}
+          type="file"
+          accept={accept}
+          onChange={onChange}
+          disabled={disabled}
+          className="sr-only"
+        />
+        
         {error && (
           <p className="text-red-500 text-sm">{error}</p>
         )}
@@ -113,17 +153,15 @@ export function FileUpload({
         </div>
       </div>
       
-      {!preview && (
-        <Button
-          type="button"
-          variant="outline"
-          onClick={() => document.getElementById(id)?.click()}
-          className="w-full"
-          disabled={disabled}
-        >
-          {chooseText}
-        </Button>
-      )}
+      <Button
+        type="button"
+        variant="outline"
+        onClick={() => document.getElementById(id)?.click()}
+        className="w-full"
+        disabled={disabled}
+      >
+        {chooseText}
+      </Button>
       
       <p className="text-xs text-muted-foreground">
         {supportedFormats}. Max size: {maxSize}

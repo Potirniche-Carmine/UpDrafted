@@ -19,6 +19,7 @@ interface OptimizedOrgLogoProps {
  * - 1-year cache TTL for rarely changing logos
  * - Lazy loading for performance
  * - Consistent cache keys to minimize transformations
+ * - Fixed container sizes to prevent layout shifts
  */
 export function OptimizedOrgLogo({ 
   src, 
@@ -30,9 +31,9 @@ export function OptimizedOrgLogo({
   
   // Fixed sizes to ensure consistent cache keys and minimize transformations
   const sizeConfig = {
-    small: { width: 48, height: 38, containerClass: "w-12 h-9" },
-    medium: { width: 80, height: 64, containerClass: "w-20 h-16" },
-    large: { width: 128, height: 102, containerClass: "w-32 h-24" }
+    small: { width: 48, height: 48, containerClass: "w-12 h-12" },
+    medium: { width: 80, height: 80, containerClass: "w-20 h-20" },
+    large: { width: 128, height: 128, containerClass: "w-32 h-32" }
   };
   
   const config = sizeConfig[size];
@@ -42,7 +43,7 @@ export function OptimizedOrgLogo({
   
   if (hasError) {
     return (
-      <div className={`${config.containerClass} flex items-center justify-center bg-muted rounded-lg border border-border/50 ${className}`}>
+      <div className={`${config.containerClass} flex items-center justify-center bg-muted rounded-lg border border-border/50 flex-shrink-0 ${className}`}>
         <span className="text-xs text-muted-foreground text-center px-1">
           {organizationName.slice(0, 3).toUpperCase()}
         </span>
@@ -51,13 +52,13 @@ export function OptimizedOrgLogo({
   }
 
   return (
-    <div className={`${config.containerClass} relative ${className}`}>
+    <div className={`${config.containerClass} relative flex-shrink-0 ${className}`}>
       <Image
         src={imageUrl}
         alt={`${organizationName} logo`}
         width={config.width}
         height={config.height}
-        className="object-contain rounded-lg border border-border/50"
+        className="object-cover rounded-lg border border-border/50 w-full h-full"
         priority={false}
         quality={80} // Optimal quality vs cost balance
         placeholder="blur"
@@ -66,10 +67,6 @@ export function OptimizedOrgLogo({
         unoptimized={false}
         loading="lazy"
         onError={() => setHasError(true)}
-        style={{
-          maxWidth: '100%',
-          height: 'auto',
-        }}
       />
     </div>
   );
