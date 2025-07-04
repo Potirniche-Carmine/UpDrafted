@@ -718,7 +718,7 @@ export function RecruiterProfile({
             <Card className="overflow-hidden">
               <CardContent className="p-4 md:p-6">
                 <div className="text-center space-y-4">
-                  <div className="relative w-20 h-20 md:w-28 md:h-28 lg:w-32 lg:h-32 mx-auto">
+                  <div className="relative w-20 h-20 md:w-28 md:h-28 lg:w-32 lg:h-32 mx-auto flex-shrink-0">
                     {profileData.profileImage ? (
                       <Image
                         src={profileData.profileImage.includes('?') ? profileData.profileImage : `${profileData.profileImage}?v=1`}
