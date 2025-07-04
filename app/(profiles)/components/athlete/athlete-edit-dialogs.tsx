@@ -170,6 +170,13 @@ export function AthleteEditDialogs({
       return;
     }
 
+    // Prevent auto-focus on dialog open
+    setTimeout(() => {
+      if (document.activeElement && document.activeElement instanceof HTMLElement) {
+        document.activeElement.blur();
+      }
+    }, 0);
+
     switch (dialogType) {
       case 'basic-info':
         const heightParts = profileData.height.match(/(\d+)'(\d+)"/);
