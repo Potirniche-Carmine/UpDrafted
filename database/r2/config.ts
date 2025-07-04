@@ -1,4 +1,4 @@
-import { S3Client, PutObjectCommand, DeleteObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3';
+import { S3Client, PutObjectCommand, DeleteObjectCommand, GetObjectCommand, ListObjectsV2Command } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 
 // Configure R2 client
@@ -171,6 +171,45 @@ export function generateFileKey(originalName: string, prefix?: string): string {
  */
 export function getR2KeyFromUrl(url: string): string {
   return url.replace(`${R2_PUBLIC_URL}/`, '');
+}
+
+/**
+ * List all objects in an R2 bucket
+ * @param prefix - Optional prefix to filter objects
+ * @param isPrivateBucket - Whether to list objects from private bucket
+ * @returns Array of object keys
+ */
+export async function listR2Objects(
+  prefix?: string,
+  isPrivateBucket: boolean = false
+): Promise<string[]> {
+  const bucketName = isPrivateBucket ? R2_PRIVATE_BUCKET_NAME : R2_PUBLIC_BUCKET_NAME;
+  const objects: string[] = [];
+  
+  let continuationToken: string | undefined;
+  
+  do {
+    const command = new ListObjectsV2Command({
+      Bucket: bucketName,
+      Prefix: prefix,
+      ContinuationToken: continuationToken,
+    });
+    
+    try {
+      const response = await r2Client.send(command);
+      
+      if (response.Contents) {
+        objects.push(...response.Contents.map(obj => obj.Key!).filter(Boolean));
+      }
+      
+      continuationToken = response.NextContinuationToken;
+    } catch (error) {
+      console.error('Error listing R2 objects:', error);
+      throw error;
+    }
+  } while (continuationToken);
+  
+  return objects;
 }
 
 // Backward compatibility exports
