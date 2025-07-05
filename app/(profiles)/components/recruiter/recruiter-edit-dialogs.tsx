@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -142,12 +143,21 @@ export function RecruiterEditDialogs({
         setOrganizationLogoPreview(null);
         setSelectedOrganizationFile(null);
         break;
+      case 'add-sport':
+        setEditData({
+          newSport: '',
+          graduationYears: [],
+          positions: [],
+          scholarshipsAvailable: '',
+          recruitingPhilosophy: ''
+        });
+        break;
     }
   }, [dialogType, profileData, selectedSport]);
 
   const validateField = (field: string, value: string | number): string | null => {
     // Required field validation
-    if (['fullName', 'title', 'sportRecruiting', 'organizationName', 'city', 'state'].includes(field)) {
+    if (['fullName', 'title', 'sportRecruiting', 'organizationName', 'city', 'state', 'newSport'].includes(field)) {
       if (!value || value.toString().trim() === '') {
         return 'This field is required';
       }
@@ -361,6 +371,20 @@ export function RecruiterEditDialogs({
     await handleImageUpload(file, imageType);
   };
 
+  // Helper function to check if add-sport form is valid
+  const isAddSportFormValid = () => {
+    if (dialogType !== 'add-sport') return true;
+    
+    return (
+      editData.newSport && 
+      editData.newSport.trim() !== '' &&
+      editData.graduationYears && 
+      editData.graduationYears.length > 0 &&
+      editData.recruitingPhilosophy && 
+      editData.recruitingPhilosophy.trim() !== ''
+    );
+  };
+
   const handleSave = () => {
     // Image uploads handle their own saving
     if (dialogType === 'profile-image' || dialogType === 'organization-logo') {
@@ -446,6 +470,27 @@ export function RecruiterEditDialogs({
           showcaseVideoTitle: editData.showcaseVideoTitle || undefined,
           showcaseVideoUrl: editData.showcaseVideoUrl || undefined,
           showcaseVideoEmbedUrl: embedUrl || undefined
+        };
+        break;
+      case 'add-sport':
+        // Validate that the new sport isn't already in the profile
+        const currentSports = [profileData.sportRecruiting, ...(profileData.secondarySports || [])];
+        if (currentSports.includes(editData.newSport)) {
+          setValidationErrors({ newSport: 'This sport is already added to your profile' });
+          return;
+        }
+        
+        updates = {
+          secondarySports: [...(profileData.secondarySports || []), editData.newSport],
+          sportSpecificNeeds: {
+            ...profileData.sportSpecificNeeds,
+            [editData.newSport]: {
+              graduationYears: editData.graduationYears,
+              positions: editData.positions,
+              scholarshipsAvailable: editData.scholarshipsAvailable === '' ? undefined : Number(editData.scholarshipsAvailable),
+              recruitingPhilosophy: editData.recruitingPhilosophy
+            }
+          }
         };
         break;
     }
@@ -892,6 +937,150 @@ export function RecruiterEditDialogs({
           />
         );
 
+      case 'add-sport':
+        const availablePositionsForNewSport = editData.newSport ? getPositionsForSport(editData.newSport) : [];
+        const existingSports = [profileData.sportRecruiting, ...(profileData.secondarySports || [])];
+        const availableSports = getSportsList().filter(sport => !existingSports.includes(sport));
+        
+        const toggleNeedsYear = (year: number) => {
+          const currentYears = editData.graduationYears || [];
+          const newYears = currentYears.includes(year)
+            ? currentYears.filter((y: number) => y !== year)
+            : [...currentYears, year];
+          handleFieldChange('graduationYears', newYears);
+        };
+
+        const toggleNeedsPosition = (position: string) => {
+          const currentPositions = editData.positions || [];
+          const newPositions = currentPositions.includes(position)
+            ? currentPositions.filter((p: string) => p !== position)
+            : [...currentPositions, position];
+          handleFieldChange('positions', newPositions);
+        };
+        
+        return (
+          <div className="space-y-6">
+            <div className="space-y-3">
+              <Label htmlFor="newSport" className="text-base font-medium">Select Sport *</Label>
+              <Select 
+                value={editData.newSport || ''} 
+                onValueChange={(value) => {
+                  handleFieldChange('newSport', value);
+                  // Reset positions when sport changes
+                  handleFieldChange('positions', []);
+                }}
+              >
+                <SelectTrigger className="h-11 bg-background">
+                  <SelectValue placeholder="Select a sport to add" />
+                </SelectTrigger>
+                <SelectContent className="z-[70]">
+                  {availableSports.map((sport) => (
+                    <SelectItem key={sport} value={sport}>
+                      {sport}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {validationErrors.newSport && (
+                <p className="text-sm text-red-500 mt-1">{validationErrors.newSport}</p>
+              )}
+              {availableSports.length === 0 && (
+                <p className="text-sm text-muted-foreground mt-1">
+                  All available sports have already been added to your profile.
+                </p>
+              )}
+            </div>
+
+            {editData.newSport && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg">Recruiting Needs for {editData.newSport}</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  {/* Graduation Years */}
+                  <div className="space-y-3">
+                    <Label className="text-base font-medium">Graduation Years Currently Recruiting *</Label>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                      {GRADUATION_YEARS.map(year => (
+                        <div key={year} className="flex items-center space-x-2">
+                          <Checkbox
+                            id={`${editData.newSport}-year-${year}`}
+                            checked={(editData.graduationYears || []).includes(year)}
+                            onCheckedChange={() => toggleNeedsYear(year)}
+                          />
+                          <Label htmlFor={`${editData.newSport}-year-${year}`} className="text-sm cursor-pointer">
+                            {year}
+                          </Label>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Positions */}
+                  <div className="space-y-3">
+                    <Label className="text-base font-medium">Positions Currently Recruiting *</Label>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      {availablePositionsForNewSport.map(position => (
+                        <div key={position} className="flex items-center space-x-2">
+                          <Checkbox
+                            id={`${editData.newSport}-position-${position}`}
+                            checked={(editData.positions || []).includes(position)}
+                            onCheckedChange={() => toggleNeedsPosition(position)}
+                          />
+                          <Label htmlFor={`${editData.newSport}-position-${position}`} className="text-sm cursor-pointer">
+                            {position}
+                          </Label>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Scholarships Available */}
+                  <div className="space-y-3">
+                    <Label htmlFor={`${editData.newSport}-scholarships`} className="text-base font-medium">Scholarships Available (Optional)</Label>
+                    <Input
+                      id={`${editData.newSport}-scholarships`}
+                      type="number"
+                      min="0"
+                      max="100"
+                      placeholder="e.g., 5"
+                      value={editData.scholarshipsAvailable ?? ''}
+                      onChange={(e) => handleFieldChange('scholarshipsAvailable', e.target.value)}
+                      className="h-11 bg-background"
+                      autoComplete="off"
+                      inputMode="numeric"
+                    />
+                    {validationErrors.scholarshipsAvailable && (
+                      <p className="text-sm text-red-500 mt-1">{validationErrors.scholarshipsAvailable}</p>
+                    )}
+                    <p className="text-xs text-muted-foreground">
+                      Number of scholarships or spots available for this sport (leave blank if not applicable)
+                    </p>
+                  </div>
+
+                  {/* Sport-Specific Recruiting Philosophy */}
+                  <div className="space-y-3">
+                    <Label htmlFor={`${editData.newSport}-philosophy`} className="text-base font-medium">Recruiting Philosophy for {editData.newSport} *</Label>
+                    <Textarea
+                      id={`${editData.newSport}-philosophy`}
+                      placeholder={`Describe what you look for in ${editData.newSport} athletes, your coaching style for this sport, and what makes your ${editData.newSport} program unique.`}
+                      value={editData.recruitingPhilosophy || ''}
+                      onChange={(e) => handleFieldChange('recruitingPhilosophy', e.target.value)}
+                      className="min-h-24 bg-background resize-none"
+                      maxLength={FIELD_LIMITS.RECRUITING_PHILOSOPHY}
+                      autoComplete="off"
+                      inputMode="text"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      {(editData.recruitingPhilosophy || '').length}/{FIELD_LIMITS.RECRUITING_PHILOSOPHY} characters
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+          </div>
+        );
+
       default:
         return <div>Dialog content not found</div>;
     }
@@ -916,6 +1105,8 @@ export function RecruiterEditDialogs({
         return 'Edit Profile Picture';
       case 'organization-logo':
         return 'Edit Organization Logo';
+      case 'add-sport':
+        return 'Add New Sport';
       default:
         return 'Edit Profile';
     }
@@ -939,8 +1130,9 @@ export function RecruiterEditDialogs({
           <Button variant="outline" onClick={onClose} disabled={isUploading}>
             Cancel
           </Button>
-          {dialogType !== 'profile-image' && dialogType !== 'organization-logo' && (
-            <Button onClick={handleSave} disabled={isUploading}>
+          {dialogType !== 'profile-image' && dialogType !== 'organization-logo' && 
+           !(dialogType === 'add-sport' && !editData.newSport) && (
+            <Button onClick={handleSave} disabled={isUploading || !isAddSportFormValid()}>
               <Save className="w-4 h-4 mr-2" />
               Save Changes
             </Button>

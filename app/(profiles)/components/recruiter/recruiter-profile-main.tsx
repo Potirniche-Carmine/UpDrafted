@@ -148,23 +148,36 @@ const SportSpecificNeedsSection = ({
     <Card className="border-primary/20">
       <CardHeader>
         <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <CardTitle className="text-lg font-semibold flex items-center gap-2 text-primary">
-              <Target className="w-5 h-5" />
-              Current Recruiting Needs
-            </CardTitle>
-            {isOwnProfile && hasAnyNeeds && (
-              <Button 
-                size="sm" 
-                variant="outline"
-                className="text-xs px-2 py-1"
-                onClick={() => onEditSection('recruiting-needs', selectedSport)}
-              >
-                <Edit className="w-3 h-3 mr-1" />
-                Edit
-              </Button>
-            )}
-          </div>
+                      <div className="flex items-center justify-between">
+              <CardTitle className="text-lg font-semibold flex items-center gap-2 text-primary">
+                <Target className="w-5 h-5" />
+                Current Recruiting Needs
+              </CardTitle>
+              {isOwnProfile && (
+                <div className="flex items-center gap-2">
+                  <Button 
+                    size="sm" 
+                    variant="outline"
+                    className="text-xs px-2 py-1"
+                    onClick={() => onEditSection('add-sport')}
+                  >
+                    <Plus className="w-3 h-3 mr-1" />
+                    Add Sport
+                  </Button>
+                  {hasAnyNeeds && (
+                    <Button 
+                      size="sm" 
+                      variant="outline"
+                      className="text-xs px-2 py-1"
+                      onClick={() => onEditSection('recruiting-needs', selectedSport)}
+                    >
+                      <Edit className="w-3 h-3 mr-1" />
+                      Edit
+                    </Button>
+                  )}
+                </div>
+              )}
+            </div>
           
           {/* Sport Selector - Only show if multiple sports */}
           {allSports.length > 1 && (
