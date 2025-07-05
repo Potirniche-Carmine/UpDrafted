@@ -62,7 +62,7 @@ const SocialMediaSection = memo(({ socialMedia, isOwnProfile, onEdit }: {
   return (
     <div className="pt-2 relative">
       <div className="flex items-center justify-between mb-2">
-        {isOwnProfile && (
+        {isOwnProfile && (socialMedia?.instagram || socialMedia?.twitter) && (
           <Button
             size="sm"
             variant="ghost"
