@@ -710,10 +710,9 @@ export async function PUT(
     }
 
     let profileType = userWithProfile.role;
-    const isAdminUpdatingDemo = profileType === 'admin';
     
     // Special handling for admin users with demo profiles
-    if (isAdminUpdatingDemo) {
+    if (profileType === 'admin') {
       // For admin users, determine profile type from the data structure being sent
       if (sanitizedData.sport && sanitizedData.graduationYear) {
         profileType = 'athlete';
@@ -772,27 +771,16 @@ export async function PUT(
         profileUpdateData.instagramHandle = socialMedia?.instagram || null;
         profileUpdateData.twitterHandle = socialMedia?.twitter || null;
       }
-
-      // Update the athlete profile in the database
-      console.log('About to update athlete profile with data:', JSON.stringify(profileUpdateData, null, 2));
-      console.log('Profile user ID:', profileUserId);
-      console.log('Is admin updating demo:', isAdminUpdatingDemo);
       
       try {
-        if (isAdminUpdatingDemo) {
-          // Use admin demo profile operations
-          updatedProfile = await adminOperations.updateDemoAthleteProfile(currentUserId, profileUpdateData);
-        } else {
-          // Use regular athlete operations
-          updatedProfile = await athleteOperations.updateAthleteProfile(profileUserId, profileUpdateData);
-        }
+        updatedProfile = await athleteOperations.updateAthleteProfile(profileUserId, profileUpdateData);
       } catch (dbError) {
         console.error('Database error during athlete profile update:', dbError);
         throw dbError;
       }
       
-      // Handle measurables updates if provided (skip for admin demo profiles)
-      if (!isAdminUpdatingDemo && sanitizedData.measurables !== undefined && Array.isArray(sanitizedData.measurables)) {
+      // Handle measurables updates if provided
+      if (sanitizedData.measurables !== undefined && Array.isArray(sanitizedData.measurables)) {
         // Transform client measurables data to database format, preserving client IDs as clientId
         const measurablesData: (NewAthleteMeasurable & { clientId?: string })[] = sanitizedData.measurables.map((measurable: {
           id: string | number;
@@ -816,8 +804,8 @@ export async function PUT(
         }
       }
 
-      // Handle video updates if provided (skip for admin demo profiles)
-      if (!isAdminUpdatingDemo && sanitizedData.youtubeVideos !== undefined && Array.isArray(sanitizedData.youtubeVideos)) {
+      // Handle video updates if provided
+      if (sanitizedData.youtubeVideos !== undefined && Array.isArray(sanitizedData.youtubeVideos)) {
         // Transform client videos data to database format
         const videosData: NewAthleteVideo[] = sanitizedData.youtubeVideos.map((video: {
           title: string;
@@ -839,17 +827,9 @@ export async function PUT(
       }
       
       // Re-fetch the complete profile with all related data to ensure consistency
-      if (isAdminUpdatingDemo) {
-        // For admin demo profiles, get the demo profile data
-        const demoProfiles = await adminOperations.getDemoProfiles(currentUserId);
-        if (demoProfiles.athlete) {
-          updatedProfile = demoProfiles.athlete;
-        }
-      } else {
-        const refetchedProfile = await athleteOperations.getAthleteProfile(profileUserId);
-        if (refetchedProfile) {
-          updatedProfile = refetchedProfile;
-        }
+      const refetchedProfile = await athleteOperations.getAthleteProfile(profileUserId);
+      if (refetchedProfile) {
+        updatedProfile = refetchedProfile;
       }
       
     } else if (profileType === 'coach') {
@@ -875,16 +855,10 @@ export async function PUT(
       if (sanitizedData.showcaseVideoEmbedUrl !== undefined) profileUpdateData.showcaseVideoEmbedUrl = sanitizedData.showcaseVideoEmbedUrl as string;
 
       // Update the coach profile in the database
-      if (isAdminUpdatingDemo) {
-        // Use admin demo profile operations
-        updatedProfile = await adminOperations.updateDemoCoachProfile(currentUserId, profileUpdateData);
-      } else {
-        // Use regular coach operations
-        updatedProfile = await coachOperations.updateCoachProfile(profileUserId, profileUpdateData);
-      }
+      updatedProfile = await coachOperations.updateCoachProfile(profileUserId, profileUpdateData);
       
-      // Handle recruiting needs updates if provided (skip for admin demo profiles)
-      if (!isAdminUpdatingDemo && sanitizedData.recruitingNeeds !== undefined && updatedProfile?.id) {
+      // Handle recruiting needs updates if provided
+      if (sanitizedData.recruitingNeeds !== undefined && updatedProfile?.id) {
         const recruitingNeeds = sanitizedData.recruitingNeeds as {
           graduationYears?: number[];
           positions?: string[];
@@ -913,17 +887,9 @@ export async function PUT(
       }
       
       // Re-fetch the complete profile with all related data to ensure consistency
-      if (isAdminUpdatingDemo) {
-        // For admin demo profiles, get the demo profile data
-        const demoProfiles = await adminOperations.getDemoProfiles(currentUserId);
-        if (demoProfiles.coach) {
-          updatedProfile = demoProfiles.coach;
-        }
-      } else {
-        const refetchedProfile = await coachOperations.getCoachProfile(profileUserId);
-        if (refetchedProfile) {
-          updatedProfile = refetchedProfile;
-        }
+      const refetchedProfile = await coachOperations.getCoachProfile(profileUserId);
+      if (refetchedProfile) {
+        updatedProfile = refetchedProfile;
       }
       
     } else if (profileType === 'recruiter') {
@@ -934,6 +900,7 @@ export async function PUT(
       if (sanitizedData.fullName !== undefined) profileUpdateData.fullName = sanitizedData.fullName as string;
       if (sanitizedData.title !== undefined) profileUpdateData.title = sanitizedData.title as string;
       if (sanitizedData.sportRecruiting !== undefined) profileUpdateData.sportRecruiting = sanitizedData.sportRecruiting as string;
+      if (sanitizedData.secondarySports !== undefined) profileUpdateData.secondarySports = sanitizedData.secondarySports as string[];
       if (sanitizedData.organizationName !== undefined) profileUpdateData.organizationName = sanitizedData.organizationName as string;
       if (sanitizedData.city !== undefined) profileUpdateData.city = sanitizedData.city as string;
       if (sanitizedData.state !== undefined) profileUpdateData.state = sanitizedData.state as string;
@@ -949,16 +916,10 @@ export async function PUT(
       if (sanitizedData.showcaseVideoEmbedUrl !== undefined) profileUpdateData.showcaseVideoEmbedUrl = sanitizedData.showcaseVideoEmbedUrl as string;
 
       // Update the recruiting profile in the database
-      if (isAdminUpdatingDemo) {
-        // Use admin demo profile operations
-        updatedProfile = await adminOperations.updateDemoRecruitingProfile(currentUserId, profileUpdateData);
-      } else {
-        // Use regular recruiting operations
-        updatedProfile = await recruitingOperations.updateRecruitingProfile(profileUserId, profileUpdateData);
-      }
+      updatedProfile = await recruitingOperations.updateRecruitingProfile(profileUserId, profileUpdateData);
       
-      // Handle sport-specific recruiting needs updates if provided (skip for admin demo profiles)
-      if (!isAdminUpdatingDemo && sanitizedData.sportSpecificNeeds !== undefined && updatedProfile?.id) {
+      // Handle sport-specific recruiting needs updates if provided
+      if (sanitizedData.sportSpecificNeeds !== undefined && updatedProfile?.id) {
         const sportSpecificNeeds = sanitizedData.sportSpecificNeeds as { [sport: string]: {
           graduationYears: number[];
           positions: string[];
@@ -1000,17 +961,9 @@ export async function PUT(
       }
       
       // Re-fetch the complete profile with all related data to ensure consistency
-      if (isAdminUpdatingDemo) {
-        // For admin demo profiles, get the demo profile data
-        const demoProfiles = await adminOperations.getDemoProfiles(currentUserId);
-        if (demoProfiles.recruiter) {
-          updatedProfile = demoProfiles.recruiter;
-        }
-      } else {
-        const refetchedProfile = await recruitingOperations.getRecruitingProfile(profileUserId);
-        if (refetchedProfile) {
-          updatedProfile = refetchedProfile;
-        }
+      const refetchedProfile = await recruitingOperations.getRecruitingProfile(profileUserId);
+      if (refetchedProfile) {
+        updatedProfile = refetchedProfile;
       }
       
     } else {
