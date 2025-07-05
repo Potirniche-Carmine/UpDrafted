@@ -130,9 +130,14 @@ export default function RecruiterForm({ data, onInputChange }: RecruiterFormProp
     
     onInputChange('sportSpecificNeeds', newSportSpecificNeeds);
     
-    // Set active sport for needs if not set
-    if (!activeSportForNeeds && allSports.length > 0) {
-      setActiveSportForNeeds(allSports[0]);
+    // Set active sport for needs if not set or if current active sport is no longer in the list
+    if (allSports.length > 0) {
+      if (!activeSportForNeeds || !allSports.includes(activeSportForNeeds)) {
+        setActiveSportForNeeds(allSports[0]);
+      }
+    } else {
+      // If no sports selected, clear the active sport
+      setActiveSportForNeeds('');
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [data.sportCoaching, data.secondarySportsRecruiting]);
