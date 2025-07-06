@@ -135,6 +135,8 @@
     -moz-osx-font-smoothing: grayscale;
     font-feature-settings: "kern" 1;
     font-kerning: normal;
+    font-size: 1.25rem; /* 20px base size - 50% larger than default 16px */
+    line-height: 1.6; /* Better readability */
   }
   
   /* Ensure proper font rendering for all text elements */
