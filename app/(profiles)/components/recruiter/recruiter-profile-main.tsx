@@ -1105,14 +1105,14 @@ export function RecruiterProfile({
             )}
 
             {/* Call to Action for Athletes */}
-            <Card className="border-primary/20 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-950 dark:to-purple-950">
-              <CardContent className="text-center py-8">
-                <Users className="w-12 h-12 mx-auto text-primary mb-4" />
-                <h3 className="text-xl font-bold mb-2">Ready to Take the Next Step?</h3>
-                <p className="text-muted-foreground mb-4">
-                  Join our {profileData.sportRecruiting} program and compete at the highest level while pursuing your academic goals.
-                </p>
-                {!isOwnProfile && (
+            {!isOwnProfile && (
+              <Card className="border-primary/20 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-950 dark:to-purple-950">
+                <CardContent className="text-center py-8">
+                  <Users className="w-12 h-12 mx-auto text-primary mb-4" />
+                  <h3 className="text-xl font-bold mb-2">Ready to Take the Next Step?</h3>
+                  <p className="text-muted-foreground mb-4">
+                    Join our {profileData.sportRecruiting} program and compete at the highest level while pursuing your academic goals.
+                  </p>
                   <Button
                     size="lg"
                     className="bg-blue-600 hover:bg-blue-700"
@@ -1121,9 +1121,9 @@ export function RecruiterProfile({
                     <Trophy className="w-5 h-5 mr-2" />
                     Express Interest
                   </Button>
-                )}
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+            )}
           </div>
         </div>
       </div>
