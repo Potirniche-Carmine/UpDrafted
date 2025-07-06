@@ -649,6 +649,16 @@ export const activityOperations = {
       return { action: 'skipped', reason: 'self-view' };
     }
 
+    // Check if viewer or viewed user is an admin - skip logging for admin immunity
+    const [viewer, viewedUser] = await Promise.all([
+      userOperations.getUserWithProfile(viewerId),
+      userOperations.getUserWithProfile(viewedUserId)
+    ]);
+
+    if (viewer?.role === 'admin' || viewedUser?.role === 'admin') {
+      return { action: 'skipped', reason: 'admin-immunity' };
+    }
+
     // Check if a record already exists for this combination
     const existingRecord = await db.query.activityLog.findFirst({
       where: and(
@@ -1378,6 +1388,16 @@ export const notificationOperations = {
 
   // Helper function to create profile view notification (first time only)
   async createProfileViewNotification(viewedUserId: string, viewerUserId: string) {
+    // Check if viewer or viewed user is an admin - skip notifications for admin immunity
+    const [viewer, viewedUser] = await Promise.all([
+      userOperations.getUserWithProfile(viewerUserId),
+      userOperations.getUserWithProfile(viewedUserId)
+    ]);
+
+    if (viewer?.role === 'admin' || viewedUser?.role === 'admin') {
+      return null; // Skip notification for admin immunity
+    }
+
     const viewerInfo = await profileOperations.getUserProfileInfo(viewerUserId);
     if (!viewerInfo) return null;
 
