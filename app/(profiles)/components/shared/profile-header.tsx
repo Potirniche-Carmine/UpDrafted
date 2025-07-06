@@ -17,7 +17,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useRouter } from "next/navigation";
-import { ChevronLeft, Flag, Star, Share2, Copy, Mail, MessageCircle, Save, Clock, CheckCircle, X, Eye, Edit } from "lucide-react";
+import { ChevronLeft, Flag, Star, Share2, Copy, Mail, MessageCircle, Save, Clock, CheckCircle, X,Edit } from "lucide-react";
 import { ReportDialog } from "./report-dialog";
 
 interface ProfileHeaderProps {
