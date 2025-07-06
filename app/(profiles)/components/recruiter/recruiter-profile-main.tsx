@@ -436,8 +436,78 @@ export function RecruiterProfile({
       };
       const token = await windowWithClerk.Clerk?.session?.getToken();
       
+      // Check if images need to be removed
+      const profileImageRemoved = data.profileImage && !profileData.profileImage;
+      const organizationLogoRemoved = data.organizationLogo && !profileData.organizationLogo;
+      
+      // Handle image removal first if needed
+      if (profileImageRemoved || organizationLogoRemoved) {
+        if (profileImageRemoved) {
+          const formData = new FormData();
+          formData.append('userId', profileData.userId || profileData.id);
+          formData.append('imageType', 'profile');
+          
+          // Add demo profile type for admin users
+          if (isAdmin && viewingAs) {
+            formData.append('demoProfileType', viewingAs);
+          }
+          
+          // Remove any existing cache-busting parameters before sending for deletion
+          const cleanUrl = data.profileImage!.split('?')[0];
+          formData.append('currentImageUrl', cleanUrl);
+          formData.append('removeOnly', 'true'); // Flag to only remove, not replace
+
+          const imageResponse = await fetch('/api/profile/upload-image', {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${token}`,
+            },
+            body: formData,
+          });
+
+          if (!imageResponse.ok) {
+            throw new Error('Failed to remove profile image');
+          }
+        }
+        
+        if (organizationLogoRemoved) {
+          const formData = new FormData();
+          formData.append('userId', profileData.userId || profileData.id);
+          formData.append('imageType', 'organization');
+          
+          // Add demo profile type for admin users
+          if (isAdmin && viewingAs) {
+            formData.append('demoProfileType', viewingAs);
+          }
+          
+          // Remove any existing cache-busting parameters before sending for deletion
+          const cleanUrl = data.organizationLogo!.split('?')[0];
+          formData.append('currentImageUrl', cleanUrl);
+          formData.append('removeOnly', 'true'); // Flag to only remove, not replace
+
+          const imageResponse = await fetch('/api/profile/upload-image', {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${token}`,
+            },
+            body: formData,
+          });
+
+          if (!imageResponse.ok) {
+            throw new Error('Failed to remove organization logo');
+          }
+        }
+      }
+      
       // Use userId (Clerk user ID) instead of id (database primary key)
       const userIdForApi = profileData.userId || profileData.id;
+      
+      // Prepare profile data for saving, converting undefined to null for removed images
+      const dataToSave = {
+        ...profileData,
+        profileImage: profileData.profileImage === undefined ? null : profileData.profileImage,
+        organizationLogo: profileData.organizationLogo === undefined ? null : profileData.organizationLogo
+      };
       
       const response = await fetch(`/api/profile/${userIdForApi}`, {
         method: 'PUT',
@@ -445,7 +515,7 @@ export function RecruiterProfile({
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`,
         },
-        body: JSON.stringify(profileData),
+        body: JSON.stringify(dataToSave),
       });
 
       if (!response.ok) {
@@ -491,76 +561,16 @@ export function RecruiterProfile({
     setHasUnsavedChanges(false);
   };
 
-  const handleRemoveImage = async (imageType: 'profile' | 'organization') => {
-    const imageName = imageType === 'profile' ? 'profile image' : 'organization logo';
+  const handleRemoveImage = (imageType: 'profile' | 'organization') => {
+    // Remove image from frontend and mark as unsaved change
+    const updates: Partial<RecruiterProfileData> = {};
+    if (imageType === 'profile') {
+      updates.profileImage = undefined;
+    } else {
+      updates.organizationLogo = undefined;
+    }
     
-    if (!confirm(`Are you sure you want to remove your ${imageName}?`)) {
-      return;
-    }
-
-    setIsSaving(true);
-    try {
-      // Get the current user's auth token
-      const windowWithClerk = window as unknown as {
-        Clerk?: {
-          session?: {
-            getToken: () => Promise<string>;
-          };
-        };
-      };
-      const token = await windowWithClerk.Clerk?.session?.getToken();
-      
-      const currentImageUrl = imageType === 'profile' 
-        ? profileData.profileImage 
-        : profileData.organizationLogo;
-
-      if (!currentImageUrl) {
-        alert('No image to remove');
-        return;
-      }
-
-      const formData = new FormData();
-      formData.append('userId', profileData.userId || profileData.id);
-      formData.append('imageType', imageType);
-      
-      // Add demo profile type for admin users
-      if (isAdmin && viewingAs) {
-        formData.append('demoProfileType', viewingAs);
-      }
-      
-      // Remove any existing cache-busting parameters before sending for deletion
-      const cleanUrl = currentImageUrl.split('?')[0];
-      formData.append('currentImageUrl', cleanUrl);
-      formData.append('removeOnly', 'true'); // Flag to only remove, not replace
-
-      const response = await fetch('/api/profile/upload-image', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-        body: formData,
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to remove image');
-      }
-
-      // Update profile data immediately
-      const updates: Partial<RecruiterProfileData> = {};
-      if (imageType === 'profile') {
-        updates.profileImage = undefined;
-      } else {
-        updates.organizationLogo = undefined;
-      }
-      
-      updateProfileData(updates);
-      
-    } catch (error) {
-      console.error(`Error removing ${imageName}:`, error);
-      alert(`Failed to remove ${imageName}. Please try again.`);
-    } finally {
-      setIsSaving(false);
-    }
+    updateProfileData(updates);
   };
 
   const handleConnectClick = () => {
@@ -762,7 +772,6 @@ export function RecruiterProfile({
                             variant="destructive"
                             className="absolute -top-2 -right-2 rounded-full p-1 h-6 w-6"
                             onClick={() => handleRemoveImage('profile')}
-                            disabled={isSaving}
                           >
                             <X className="w-3 h-3" />
                           </Button>
@@ -883,7 +892,6 @@ export function RecruiterProfile({
                             variant="destructive"
                             onClick={() => handleRemoveImage('organization')}
                             className="p-1 h-6 w-6"
-                            disabled={isSaving}
                           >
                             <X className="w-3 h-3" />
                           </Button>

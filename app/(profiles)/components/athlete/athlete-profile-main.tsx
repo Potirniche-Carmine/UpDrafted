@@ -424,8 +424,46 @@ export function AthleteProfile({
       };
       const token = await windowWithClerk.Clerk?.session?.getToken();
       
+      // Check if profile image needs to be removed
+      const profileImageRemoved = data.profileImage && !safeProfileData.profileImage;
+      
+      // Handle image removal first if needed
+      if (profileImageRemoved) {
+        const formData = new FormData();
+        formData.append('userId', safeProfileData.userId || safeProfileData.id);
+        formData.append('imageType', 'profile');
+        
+        // Add demo profile type for admin users
+        if (isAdmin && viewingAs) {
+          formData.append('demoProfileType', viewingAs);
+        }
+        
+        // Remove any existing cache-busting parameters before sending for deletion
+        const cleanUrl = data.profileImage!.split('?')[0];
+        formData.append('currentImageUrl', cleanUrl);
+        formData.append('removeOnly', 'true'); // Flag to only remove, not replace
+
+        const imageResponse = await fetch('/api/profile/upload-image', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+          body: formData,
+        });
+
+        if (!imageResponse.ok) {
+          throw new Error('Failed to remove profile image');
+        }
+      }
+      
       // Use userId (Clerk user ID) instead of id (database primary key)
       const userIdForApi = safeProfileData.userId || safeProfileData.id;
+      
+      // Prepare profile data for saving, converting undefined to null for removed images
+      const dataToSave = {
+        ...safeProfileData,
+        profileImage: safeProfileData.profileImage === undefined ? null : safeProfileData.profileImage
+      };
       
       const response = await fetch(`/api/profile/${userIdForApi}`, {
         method: 'PUT',
@@ -433,7 +471,7 @@ export function AthleteProfile({
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`,
         },
-        body: JSON.stringify(safeProfileData),
+        body: JSON.stringify(dataToSave),
       });
 
       if (!response.ok) {
@@ -484,69 +522,13 @@ export function AthleteProfile({
     }
   };
 
-  const handleRemoveImage = async () => {
-    const confirmed = window.confirm('Are you sure you want to remove your profile picture? This action cannot be undone.');
+  const handleRemoveImage = () => {
+    // Remove image from frontend and mark as unsaved change
+    const updates: Partial<AthleteProfileData> = {
+      profileImage: undefined
+    };
     
-    if (!confirmed) return;
-
-    setIsSaving(true);
-    try {
-      // Get auth token
-      const windowWithClerk = window as unknown as {
-        Clerk?: {
-          session?: {
-            getToken: () => Promise<string>;
-          };
-        };
-      };
-      const token = await windowWithClerk.Clerk?.session?.getToken();
-
-      // Get current image URL for deletion
-      const currentImageUrl = safeProfileData.profileImage;
-
-      if (!currentImageUrl) {
-        alert('No image to remove');
-        return;
-      }
-
-      const formData = new FormData();
-      formData.append('userId', safeProfileData.userId || safeProfileData.id);
-      formData.append('imageType', 'profile');
-      
-      // Add demo profile type for admin users
-      if (isAdmin && viewingAs) {
-        formData.append('demoProfileType', viewingAs);
-      }
-      
-      // Remove any existing cache-busting parameters before sending for deletion
-      const cleanUrl = currentImageUrl.split('?')[0];
-      formData.append('currentImageUrl', cleanUrl);
-      formData.append('removeOnly', 'true'); // Flag to only remove, not replace
-
-      const response = await fetch('/api/profile/upload-image', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-        body: formData,
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to remove image');
-      }
-
-      // Update profile data immediately
-      const updates: Partial<AthleteProfileData> = {
-        profileImage: undefined
-      };
-      
-      updateProfileData(updates);      
-    } catch (error) {
-      console.error('Error removing profile picture:', error);
-      alert('Failed to remove profile picture. Please try again.');
-    } finally {
-      setIsSaving(false);
-    }
+    updateProfileData(updates);
   };
 
   const handleConnectClick = () => {
@@ -883,7 +865,6 @@ export function AthleteProfile({
                             variant="destructive"
                             className="absolute -top-2 -right-2 rounded-full p-1 h-6 w-6"
                             onClick={handleRemoveImage}
-                            disabled={isSaving}
                           >
                             <X className="w-3 h-3" />
                           </Button>
