@@ -328,9 +328,13 @@ export function AthleteProfile({
   const [connectionDialogOpen, setConnectionDialogOpen] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
   const [currentConnectionStatus, setCurrentConnectionStatus] = useState(connectionStatus);
+  const [isPreviewMode, setIsPreviewMode] = useState(false);
   
   // Safety check: if profileData becomes undefined during save operations, use original data
   const safeProfileData = profileData || data;
+  
+  // Calculate effective ownership - in preview mode, treat as if viewing someone else's profile
+  const effectiveIsOwnProfile = isOwnProfile && !isPreviewMode;
   
   // Memoize computed values
   const allSports = useMemo(() => {
@@ -354,8 +358,8 @@ export function AthleteProfile({
   }, [safeProfileData]);
   
   const canDraft = useMemo(() => 
-    !isOwnProfile && (effectiveRole === 'coach' || effectiveRole === 'recruiter'),
-    [isOwnProfile, effectiveRole]
+    !effectiveIsOwnProfile && (effectiveRole === 'coach' || effectiveRole === 'recruiter'),
+    [effectiveIsOwnProfile, effectiveRole]
   );
 
   // Track if profile data has changed from original
@@ -408,7 +412,7 @@ export function AthleteProfile({
   };
 
   const saveProfile = async () => {
-    if (!isOwnProfile || !hasUnsavedChanges) return;
+    if (!effectiveIsOwnProfile || !hasUnsavedChanges) return;
     
     setIsSaving(true);
     const startTime = Date.now();
@@ -529,6 +533,14 @@ export function AthleteProfile({
     };
     
     updateProfileData(updates);
+  };
+
+  const handlePreviewProfile = () => {
+    setIsPreviewMode(true);
+  };
+
+  const handleEditProfile = () => {
+    setIsPreviewMode(false);
   };
 
   const handleConnectClick = () => {
@@ -766,6 +778,9 @@ export function AthleteProfile({
         onDeclineConnection={handleDeclineConnection}
         onReport={() => {}}
         onShare={onShare}
+        onPreviewProfile={isOwnProfile ? handlePreviewProfile : undefined}
+        onEditProfile={isOwnProfile ? handleEditProfile : undefined}
+        isPreviewMode={isPreviewMode}
         connectLabel="Draft"
         profileName={safeProfileData.fullName}
         profileType="athlete"
@@ -850,7 +865,7 @@ export function AthleteProfile({
                         </span>
                       </div>
                     )}
-                    {isOwnProfile && (
+                    {effectiveIsOwnProfile && (
                       <>
                         <Button
                           size="sm"
@@ -882,7 +897,7 @@ export function AthleteProfile({
                           Verified
                         </Badge>
                       )}
-                      {isOwnProfile && (
+                      {effectiveIsOwnProfile && (
                         <Button
                           size="sm"
                           variant="ghost"
@@ -951,7 +966,7 @@ export function AthleteProfile({
                 {/* Social Media Links */}
                 <SocialMediaSection 
                   socialMedia={safeProfileData.socialMedia} 
-                  isOwnProfile={isOwnProfile}
+                  isOwnProfile={effectiveIsOwnProfile}
                   onEdit={() => handleEditSection('social-media')}
                 />
               </CardContent>
@@ -964,7 +979,7 @@ export function AthleteProfile({
               actScore={safeProfileData.actScore}
               intendedMajor={safeProfileData.intendedMajor}
               educationLevel={safeProfileData.educationLevel}
-              isOwnProfile={isOwnProfile}
+              isOwnProfile={effectiveIsOwnProfile}
               onEditSection={handleEditSection}
             />
           </div>
@@ -977,7 +992,7 @@ export function AthleteProfile({
                 <CardHeader>
                   <div className="flex items-center justify-between">
                     <CardTitle>About {safeProfileData.fullName.split(' ')[0]}</CardTitle>
-                    {isOwnProfile && (
+                    {effectiveIsOwnProfile && (
                       <Button 
                         size="sm" 
                         variant="ghost"
@@ -993,7 +1008,7 @@ export function AthleteProfile({
                   <p className="text-muted-foreground leading-relaxed">{safeProfileData.personalStatement}</p>
                 </CardContent>
               </Card>
-            ) : isOwnProfile && (
+            ) : effectiveIsOwnProfile && (
               <Card>
                 <CardHeader>
                   <div className="flex items-center justify-between">
@@ -1034,15 +1049,15 @@ export function AthleteProfile({
               allSports={allSports}
               selectedSport={selectedSport}
               onSportChange={setSelectedSport}
-              isOwnProfile={isOwnProfile}
+              isOwnProfile={effectiveIsOwnProfile}
               onEditSection={handleEditSection}
             />
 
             {/* Verification Section */}
-            {isOwnProfile && (
+            {effectiveIsOwnProfile && (
               <VerificationSection
                 profileData={safeProfileData}
-                isOwnProfile={isOwnProfile}
+                isOwnProfile={effectiveIsOwnProfile}
                 onEditMaxPreps={safeProfileData.isVerified ? undefined : () => handleEditSection('maxpreps-verification')}
                 onShowVerificationDialog={() => handleEditSection('manual-verification')}
                 hasPendingVerification={hasPendingVerification}
@@ -1051,12 +1066,12 @@ export function AthleteProfile({
             )}
             
             {/* Hudl Profile */}
-            {(safeProfileData.hudlUrl || isOwnProfile) && (
+            {(safeProfileData.hudlUrl || effectiveIsOwnProfile) && (
               <Card>
                 <CardHeader>
                   <div className="flex items-center justify-between">
                     <CardTitle>Hudl Profile</CardTitle>
-                    {isOwnProfile && (
+                    {effectiveIsOwnProfile && (
                       <Button 
                         size="sm" 
                         variant="ghost"
@@ -1082,7 +1097,7 @@ export function AthleteProfile({
                         </Button>
                       </Link>
                     </div>
-                  ) : isOwnProfile && (
+                  ) : effectiveIsOwnProfile && (
                     <div className="bg-muted/50 rounded-lg p-4">
                       <div className="text-center">
                         <p className="font-medium text-muted-foreground mb-2">Hudl Profile Not Added</p>
@@ -1104,12 +1119,12 @@ export function AthleteProfile({
             )}
 
             {/* YouTube Videos */}
-            {(safeProfileData.youtubeVideos && safeProfileData.youtubeVideos.length > 0) || isOwnProfile ? (
+            {(safeProfileData.youtubeVideos && safeProfileData.youtubeVideos.length > 0) || effectiveIsOwnProfile ? (
               <Card>
                 <CardHeader>
                   <div className="flex items-center justify-between">
                     <CardTitle>Highlight Videos</CardTitle>
-                    {isOwnProfile && (
+                    {effectiveIsOwnProfile && (
                       <Button 
                         size="sm" 
                         variant="ghost"
@@ -1136,23 +1151,23 @@ export function AthleteProfile({
                               title={video.title}
                             />
                           </div>
-                        </div>
-                      ))}
-                    </div>
-                  ) : isOwnProfile && (
-                    <div className="bg-muted/50 rounded-lg p-4">
-                      <div className="text-center">
-                        <p className="font-medium text-muted-foreground mb-2">No Highlight Videos Added</p>
-                        <p className="text-sm text-muted-foreground mb-4">
-                          Add YouTube videos to showcase your best plays and skills
-                        </p>
-                        <Button 
-                          variant="outline"
-                          onClick={() => handleEditSection('video-highlights')}
-                        >
-                          <Plus className="w-4 h-4 mr-2" />
-                          Add Videos
-                        </Button>
+                                              </div>
+                    ))}
+                  </div>
+                ) : effectiveIsOwnProfile && (
+                  <div className="bg-muted/50 rounded-lg p-4">
+                    <div className="text-center">
+                      <p className="font-medium text-muted-foreground mb-2">No Highlight Videos Added</p>
+                      <p className="text-sm text-muted-foreground mb-4">
+                        Add YouTube videos to showcase your best plays and skills
+                      </p>
+                      <Button 
+                        variant="outline"
+                        onClick={() => handleEditSection('video-highlights')}
+                      >
+                        <Plus className="w-4 h-4 mr-2" />
+                        Add Videos
+                      </Button>
                       </div>
                     </div>
                   )}

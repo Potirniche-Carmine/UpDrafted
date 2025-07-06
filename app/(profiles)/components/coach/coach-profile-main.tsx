@@ -138,16 +138,20 @@ export function CoachProfile({
   const [connectionDialogOpen, setConnectionDialogOpen] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
   const [currentConnectionStatus, setCurrentConnectionStatus] = useState(connectionStatus);
+  const [isPreviewMode, setIsPreviewMode] = useState(false);
     const { user } = useUser();
   const effectiveRole = user?.publicMetadata?.role as string;
   
   // Get admin role information for demo profile uploads
   const { isAdmin, viewingAs } = useRoleView();
 
+  // Calculate effective ownership - in preview mode, treat as if viewing someone else's profile
+  const effectiveIsOwnProfile = isOwnProfile && !isPreviewMode;
+
   // Determine if current user can connect to this coach
   const canConnect = useMemo(() => 
-    !isOwnProfile && (effectiveRole === 'athlete' || effectiveRole === 'recruiter' || effectiveRole === 'coach'),
-    [isOwnProfile, effectiveRole]
+    !effectiveIsOwnProfile && (effectiveRole === 'athlete' || effectiveRole === 'recruiter' || effectiveRole === 'coach'),
+    [effectiveIsOwnProfile, effectiveRole]
   );
 
   // Track if profile data has changed from original
@@ -210,7 +214,7 @@ export function CoachProfile({
   };
 
   const saveProfile = async () => {
-    if (!isOwnProfile || !hasUnsavedChanges) return;
+    if (!effectiveIsOwnProfile || !hasUnsavedChanges) return;
     
     setIsSaving(true);
     const startTime = Date.now();
@@ -368,6 +372,14 @@ export function CoachProfile({
     updateProfileData(updates);
   };
 
+  const handlePreviewProfile = () => {
+    setIsPreviewMode(true);
+  };
+
+  const handleEditProfile = () => {
+    setIsPreviewMode(false);
+  };
+
   const handleConnectClick = () => {
     if (canConnect && currentConnectionStatus === "none") {
       setConnectionDialogOpen(true);
@@ -508,6 +520,9 @@ export function CoachProfile({
         onDeclineConnection={handleWithdrawConnection}
         onReport={() => {}}
         onShare={onShare}
+        onPreviewProfile={isOwnProfile ? handlePreviewProfile : undefined}
+        onEditProfile={isOwnProfile ? handleEditProfile : undefined}
+        isPreviewMode={isPreviewMode}
         connectLabel="Connect with Coach"
         profileName={profileData.fullName}
         profileType="coach"
@@ -521,7 +536,7 @@ export function CoachProfile({
         onDiscardChanges={discardChanges}
               />
         {/* Connection Dialog */}
-      {!isOwnProfile && canConnect && (
+      {!effectiveIsOwnProfile && canConnect && (
         <ConnectionDialog
           open={connectionDialogOpen}
           onOpenChange={setConnectionDialogOpen}
@@ -588,7 +603,7 @@ export function CoachProfile({
                         </span>
                       </div>
                     )}
-                    {isOwnProfile && (
+                    {effectiveIsOwnProfile && (
                       <>
                         <Button
                           size="sm"
@@ -625,7 +640,7 @@ export function CoachProfile({
                           Unverified
                         </Badge>
                       )}
-                      {isOwnProfile && (
+                      {effectiveIsOwnProfile && (
                         <Button
                           size="sm"
                           variant="ghost"
@@ -653,7 +668,7 @@ export function CoachProfile({
                       instagram: profileData.instagramHandle,
                       twitter: profileData.twitterHandle
                     }} 
-                    isOwnProfile={isOwnProfile}
+                    isOwnProfile={effectiveIsOwnProfile}
                     onEdit={() => handleEditSection('social-media')}
                   />
                 </div>
@@ -673,7 +688,7 @@ export function CoachProfile({
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-base md:text-lg">Program Links</CardTitle>
-                  {isOwnProfile && (
+                  {effectiveIsOwnProfile && (
                     <Button
                       size="sm"
                       variant="ghost"
@@ -691,7 +706,7 @@ export function CoachProfile({
                   <div className="text-center relative">
                     <div className="flex items-center justify-between mb-3">
                       <p className="text-sm text-muted-foreground">Organization Logo</p>
-                      {isOwnProfile && (
+                      {effectiveIsOwnProfile && (
                         <div className="flex gap-1">
                           <Button
                             size="sm"
@@ -720,7 +735,7 @@ export function CoachProfile({
                       />
                     </div>
                   </div>
-                ) : isOwnProfile && (
+                ) : effectiveIsOwnProfile && (
                   <div className="text-center py-4 border-2 border-dashed border-muted rounded-lg">
                     <p className="text-sm text-muted-foreground mb-2">
                       Add organization logo
@@ -760,7 +775,7 @@ export function CoachProfile({
                   </div>
                 )}
 
-                {!profileData.programWebsite && !profileData.schoolWebsite && isOwnProfile && (
+                {!profileData.programWebsite && !profileData.schoolWebsite && effectiveIsOwnProfile && (
                   <div className="text-center py-4 border-2 border-dashed border-muted rounded-lg">
                     <p className="text-sm text-muted-foreground mb-2">
                       Add website links
@@ -779,10 +794,10 @@ export function CoachProfile({
             </Card>
 
             {/* Verification Section - Show for own profile or admin viewing */}
-            {(isOwnProfile || (effectiveRole && hasPendingVerification !== undefined)) && (
+            {(effectiveIsOwnProfile || (effectiveRole && hasPendingVerification !== undefined)) && (
               <CoachVerificationSection
                 profileData={profileData}
-                isOwnProfile={isOwnProfile}
+                isOwnProfile={effectiveIsOwnProfile}
                 onShowVerificationDialog={() => handleEditSection('verification')}
                 hasPendingVerification={hasPendingVerification}
                 pendingSubmittedAt={pendingSubmittedAt}
@@ -798,7 +813,7 @@ export function CoachProfile({
                 <CardHeader>
                   <div className="flex items-center justify-between">
                     <CardTitle>About Coach {profileData.fullName.split(' ')[0]}</CardTitle>
-                    {isOwnProfile && (
+                    {effectiveIsOwnProfile && (
                       <Button
                         size="sm"
                         variant="ghost"
@@ -814,7 +829,7 @@ export function CoachProfile({
                   <p className="text-muted-foreground leading-relaxed">{profileData.personalStatement}</p>
                 </CardContent>
               </Card>
-            ) : isOwnProfile && (
+            ) : effectiveIsOwnProfile && (
               <Card>
                 <CardHeader>
                   <div className="flex items-center justify-between">
@@ -858,7 +873,7 @@ export function CoachProfile({
                       <Target className="w-5 h-5" />
                       Current Recruiting Needs - {profileData.sportCoaching}
                     </CardTitle>
-                    {isOwnProfile && (
+                    {effectiveIsOwnProfile && (
                       <Button
                         size="sm"
                         variant="ghost"
@@ -909,7 +924,7 @@ export function CoachProfile({
                     <div className="flex items-center gap-2 mb-2">
                       <Users className="w-5 h-5 text-blue-600" />
                       <h4 className="font-medium">What We&apos;re Looking For</h4>
-                      {isOwnProfile && (
+                      {effectiveIsOwnProfile && (
                         <Button
                           size="sm"
                           variant="ghost"
@@ -924,7 +939,7 @@ export function CoachProfile({
                       <p className="text-sm text-muted-foreground">
                         {profileData.recruitingNeeds.recruitingPhilosophy}
                       </p>
-                    ) : isOwnProfile ? (
+                    ) : effectiveIsOwnProfile ? (
                       <div className="text-center py-2">
                         <p className="text-sm text-muted-foreground mb-2">
                           Add what you&apos;re looking for in student-athletes
@@ -947,7 +962,7 @@ export function CoachProfile({
                   </div>
                 </CardContent>
               </Card>
-            ) : isOwnProfile ? (
+            ) : effectiveIsOwnProfile ? (
               <Card className="border-primary/20">
                 <CardHeader>
                   <div className="flex items-center justify-between">
@@ -985,12 +1000,12 @@ export function CoachProfile({
             ) : null}
 
             {/* Showcase Video */}
-            {(profileData.showcaseVideoUrl || isOwnProfile) && (
+            {(profileData.showcaseVideoUrl || effectiveIsOwnProfile) && (
               <Card>
                 <CardHeader>
                   <div className="flex items-center justify-between">
                     <CardTitle>Program Showcase</CardTitle>
-                    {isOwnProfile && (
+                    {effectiveIsOwnProfile && (
                       <Button
                         size="sm"
                         variant="ghost"
@@ -1017,7 +1032,7 @@ export function CoachProfile({
                         />
                       </div>
                     </div>
-                  ) : isOwnProfile ? (
+                  ) : effectiveIsOwnProfile ? (
                     <div className="text-center py-8">
                       <Globe className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
                       <h3 className="font-medium text-muted-foreground mb-2">Showcase your program</h3>
@@ -1038,7 +1053,7 @@ export function CoachProfile({
             )}
 
             {/* Call to Action for Athletes */}
-            {!isOwnProfile && (
+            {!effectiveIsOwnProfile && (
               <Card className="border-primary/20 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-950 dark:to-purple-950">
                 <CardContent className="text-center py-8">
                   <Users className="w-12 h-12 mx-auto text-primary mb-4" />
