@@ -370,15 +370,23 @@ export async function GET(
     }
 
     // Track profile view if not viewing own profile
-    if (!isOwnProfile) {
+    // Skip activity logging if viewer is admin OR profile owner is admin (for demo profiles)
+    if (!isOwnProfile && currentUserRole !== 'admin') {
       try {
-        await activityOperations.logActivity(currentUserId, profileUserId, 'profile_view', {
-          viewerRole: currentUserRole,
-          timestamp: new Date().toISOString()
-        });
+        // Check if the profile owner is an admin (to skip logging for demo profiles)
+        const profileOwner = await userOperations.getUserWithProfile(profileUserId);
+        const profileOwnerRole = profileOwner?.role;
         
-        // Create notification for profile view
-        await notificationOperations.createProfileViewNotification(profileUserId, currentUserId);
+        // Only log activity if profile owner is NOT an admin
+        if (profileOwnerRole !== 'admin') {
+          await activityOperations.logActivity(currentUserId, profileUserId, 'profile_view', {
+            viewerRole: currentUserRole,
+            timestamp: new Date().toISOString()
+          });
+          
+          // Create notification for profile view
+          await notificationOperations.createProfileViewNotification(profileUserId, currentUserId);
+        }
       } catch (error) {
         // Log error but don't fail the request
         console.error('Failed to log profile view:', error);
