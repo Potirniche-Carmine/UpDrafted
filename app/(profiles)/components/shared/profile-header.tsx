@@ -17,7 +17,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useRouter } from "next/navigation";
-import { ChevronLeft, Flag, Star, Share2, Copy, Mail, MessageCircle, Save, Clock, CheckCircle, X } from "lucide-react";
+import { ChevronLeft, Flag, Star, Share2, Copy, Mail, MessageCircle, Save, Clock, CheckCircle, X, Eye, Edit } from "lucide-react";
 import { ReportDialog } from "./report-dialog";
 
 interface ProfileHeaderProps {
@@ -28,6 +28,9 @@ interface ProfileHeaderProps {
   onDeclineConnection?: () => void;
   onReport?: () => void;
   onShare?: () => void;
+  onPreviewProfile?: () => void;
+  onEditProfile?: () => void;
+  isPreviewMode?: boolean;
   connectLabel?: string;
   profileName?: string;
   profileType?: "athlete" | "coach" | "recruiter";
@@ -51,6 +54,9 @@ export function ProfileHeader({
   onDeclineConnection,
   onReport,
   onShare,
+  onPreviewProfile,
+  onEditProfile,
+  isPreviewMode = false,
   connectLabel = "Connect",
   profileName = "this profile",
   profileType = "coach",
@@ -221,6 +227,19 @@ export function ProfileHeader({
             
             {/* Right side actions */}
             <div className="flex gap-2">
+              {/* Preview/Edit Profile toggle for own profile without unsaved changes */}
+              {isOwnProfile && !hasUnsavedChanges && (onPreviewProfile || onEditProfile) && (
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={isPreviewMode ? onEditProfile : onPreviewProfile}
+                  className="text-blue-600 border-blue-600 hover:bg-blue-50"
+                >
+                  <Edit className="w-4 h-4 mr-1" />
+                  {isPreviewMode ? "Edit Profile" : "Preview Profile"}
+                </Button>
+              )}
+              
               {/* Save buttons for own profile */}
               {isOwnProfile && hasUnsavedChanges && (
                 <>
@@ -299,6 +318,19 @@ export function ProfileHeader({
                 <ChevronLeft className="w-4 h-4 mr-1" />
                 Back to Search
               </Button>
+              
+              {/* Preview/Edit Profile toggle for own profile without unsaved changes on mobile */}
+              {isOwnProfile && !hasUnsavedChanges && (onPreviewProfile || onEditProfile) && (
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={isPreviewMode ? onEditProfile : onPreviewProfile}
+                  className="text-blue-600 border-blue-600 hover:bg-blue-50"
+                >
+                  <Edit className="w-4 h-4 mr-1" />
+                  {isPreviewMode ? "Edit" : "Preview"}
+                </Button>
+              )}
               
               {/* Save buttons for own profile on mobile */}
               {isOwnProfile && hasUnsavedChanges && (

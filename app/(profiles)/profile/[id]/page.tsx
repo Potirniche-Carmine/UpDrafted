@@ -127,6 +127,10 @@ function ProfileContent({ profileId }: { profileId: string }) {
   const [error, setError] = useState<string | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
   const retryTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  
+  // Check if we're in preview mode
+  const isPreviewMode = typeof window !== 'undefined' && 
+    new URLSearchParams(window.location.search).get('preview') === 'true';
 
   const fetchProfile = useCallback(async (retryCount = 0, forceFresh = false) => {
     // Cancel any existing request and retry timeout
@@ -393,12 +397,15 @@ function ProfileContent({ profileId }: { profileId: string }) {
     return null;
   }
 
+  // Override isOwnProfile if we're in preview mode
+  const effectiveIsOwnProfile = isPreviewMode ? false : profileData.isOwnProfile;
+
   return (
     <>
       {profileData.profileType === 'athlete' && (
         <AthleteProfileWrapper
           data={profileData.profile as AthleteProfileData}
-          isOwnProfile={profileData.isOwnProfile}
+          isOwnProfile={effectiveIsOwnProfile}
           connectionStatus={profileData.connectionStatus}
           connectionDirection={profileData.connectionDirection}
           hasPendingVerification={profileData.hasPendingVerification}
@@ -409,7 +416,7 @@ function ProfileContent({ profileId }: { profileId: string }) {
       {profileData.profileType === 'coach' && (
         <CoachProfileWrapper
           data={profileData.profile as CoachProfileData}
-          isOwnProfile={profileData.isOwnProfile}
+          isOwnProfile={effectiveIsOwnProfile}
           connectionStatus={profileData.connectionStatus}
           connectionDirection={profileData.connectionDirection}
           hasPendingVerification={profileData.hasPendingVerification}
@@ -420,7 +427,7 @@ function ProfileContent({ profileId }: { profileId: string }) {
       {profileData.profileType === 'recruiter' && (
         <RecruiterProfileWrapper
           data={profileData.profile as RecruitingProfileData}
-          isOwnProfile={profileData.isOwnProfile}
+          isOwnProfile={effectiveIsOwnProfile}
           connectionStatus={profileData.connectionStatus}
           connectionDirection={profileData.connectionDirection}
           hasPendingVerification={profileData.hasPendingVerification}
