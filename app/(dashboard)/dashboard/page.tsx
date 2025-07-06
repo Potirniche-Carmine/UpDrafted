@@ -372,7 +372,7 @@ function DashboardContent({
           <div className="lg:col-span-2">
             <Card className="border-border/50">
               <CardHeader>
-                <CardTitle className="text-foreground">Quick Navigation</CardTitle>
+                <CardTitle className="text-foreground text-lg">Quick Navigation</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-4">
@@ -389,14 +389,14 @@ function DashboardContent({
             {/* Calendar Date */}
             <Card className="border-border/50">
               <CardHeader className="pb-3">
-                <CardTitle className="text-foreground flex items-center">
-                  <Calendar className="mr-2 h-5 w-5 text-[#01ae79]" />
+                <CardTitle className="text-foreground flex items-center text-lg">
+                  <Calendar className="mr-2 h-6 w-6 text-[#01ae79]" />
                   Today
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="text-center p-4 bg-muted/30 rounded-md">
-                  <p className="text-lg font-medium text-foreground">{formattedDate}</p>
+                  <p className="text-xl font-semibold text-foreground">{formattedDate}</p>
                 </div>
               </CardContent>
             </Card>
@@ -404,34 +404,34 @@ function DashboardContent({
             {/* NCAA Rules */}
             <Card className="border-border/50">
               <CardHeader className="pb-3">
-                <CardTitle className="text-foreground flex items-center">
-                  <FileText className="mr-2 h-5 w-5 text-[#01ae79]" />
+                <CardTitle className="text-foreground flex items-center text-lg">
+                  <FileText className="mr-2 h-6 w-6 text-[#01ae79]" />
                   NCAA Recruiting Periods
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="space-y-3">
+                <div className="space-y-4">
                   {ncaaRules.map((rule, index) => (
-                    <div key={index} className="space-y-1">
-                      <h3 className="text-sm font-medium text-foreground flex items-center">
-                        <Info className="h-3 w-3 text-[#01ae79] mr-2 flex-shrink-0" />
+                    <div key={index} className="space-y-2">
+                      <h3 className="text-base font-semibold text-foreground flex items-center">
+                        <Info className="h-4 w-4 text-[#01ae79] mr-2 flex-shrink-0" />
                         {rule.title}
                       </h3>
-                      <p className="text-xs text-muted-foreground leading-relaxed line-clamp-3">{rule.description}</p>
+                      <p className="text-sm text-muted-foreground leading-relaxed line-clamp-4">{rule.description}</p>
                       {index < ncaaRules.length - 1 && (
-                        <div className="pt-1.5 border-b border-border/50"></div>
+                        <div className="pt-2 border-b border-border/50"></div>
                       )}
                     </div>
                   ))}
-                  <div className="pt-2">
+                  <div className="pt-3">
                     <Button 
                       variant="outline" 
                       size="sm" 
-                      className="w-full border-[#01ae79] text-[#01ae79] hover:bg-[#01ae79] hover:text-white text-xs py-2" 
+                      className="w-full border-[#01ae79] text-[#01ae79] hover:bg-[#01ae79] hover:text-white text-sm py-2.5" 
                       onClick={() => window.open('https://www.ncsasports.org/ncaa-eligibility-center/recruiting-rules', '_blank')}
                     >
                       <span className="truncate">NCAA Rules & Periods</span>
-                      <ArrowRight className="h-3 w-3 ml-1 flex-shrink-0" />
+                      <ArrowRight className="h-4 w-4 ml-2 flex-shrink-0" />
                     </Button>
                   </div>
                 </div>
@@ -467,15 +467,15 @@ function NavCard({
         onClick={shouldDisable ? undefined : item.onClick}
       >
         <CardContent className="flex flex-col items-center text-center p-4 min-h-[120px] justify-center">
-          <div className={`h-10 w-10 rounded-full bg-[${item.color}]/10 flex items-center justify-center mb-3 ${
+          <div className={`h-12 w-12 rounded-full bg-[${item.color}]/10 flex items-center justify-center mb-3 ${
             profileNavigating && isViewProfileAction ? 'animate-pulse' : ''
           }`}>
             <IconComponent 
-              className={`h-5 w-5 text-[${item.color}]`} 
+              className={`h-6 w-6 text-[${item.color}]`} 
             />
           </div>
-          <h3 className="font-medium text-foreground mb-1 text-sm">{item.label}</h3>
-          <p className="text-xs text-muted-foreground line-clamp-2">{item.description}</p>
+          <h3 className="font-semibold text-foreground mb-2 text-base">{item.label}</h3>
+          <p className="text-sm text-muted-foreground line-clamp-2">{item.description}</p>
         </CardContent>
       </Card>
     );
@@ -485,13 +485,13 @@ function NavCard({
     <Link href={item.href}>
       <Card className="group transition-all duration-300 hover:shadow-lg hover:shadow-[#01ae79]/5 border-border/50 hover:border-[#01ae79]/20 dark:hover:border-[#01ae79]/30 cursor-pointer h-full">
         <CardContent className="flex flex-col items-center text-center p-4 min-h-[120px] justify-center">
-          <div className={`h-10 w-10 rounded-full bg-[${item.color}]/10 flex items-center justify-center mb-3`}>
+          <div className={`h-12 w-12 rounded-full bg-[${item.color}]/10 flex items-center justify-center mb-3`}>
             <IconComponent 
-              className={`h-5 w-5 text-[${item.color}]`} 
+              className={`h-6 w-6 text-[${item.color}]`} 
             />
           </div>
-          <h3 className="font-medium text-foreground mb-1 text-sm">{item.label}</h3>
-          <p className="text-xs text-muted-foreground line-clamp-2">{item.description}</p>
+          <h3 className="font-semibold text-foreground mb-2 text-base">{item.label}</h3>
+          <p className="text-sm text-muted-foreground line-clamp-2">{item.description}</p>
         </CardContent>
       </Card>
     </Link>
