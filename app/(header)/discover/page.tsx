@@ -247,6 +247,7 @@ function SearchPageContent() {
   // Filter states
   const [showMobileFilters, setShowMobileFilters] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
+  const [showDiscoverButton, setShowDiscoverButton] = useState(true);
   
   // Refs for infinite scroll
   const observerRef = useRef<IntersectionObserver | null>(null);
@@ -351,6 +352,13 @@ function SearchPageContent() {
   // Store all results from the search
   const [allUsers, setAllUsers] = useState<DiscoverUser[]>([]);
 
+  // Show discover button when filters change
+  useEffect(() => {
+    if (!showDiscoverButton) {
+      setShowDiscoverButton(true);
+    }
+  }, [selectedSports, selectedDivisions, selectedStates]);
+
   // Filter displayed users based on active tab
   const displayedUsers = useMemo(() => {
     if (!hasSearched || allUsers.length === 0) return [];
@@ -370,6 +378,7 @@ function SearchPageContent() {
     }
     
     setShowMobileFilters(false);
+    setShowDiscoverButton(false);
     loadUsers(1, true);
   };
 
@@ -381,6 +390,7 @@ function SearchPageContent() {
     setShowMobileFilters(false);
     setAllUsers([]);
     setHasSearched(false);
+    setShowDiscoverButton(true);
     setError(null);
   };
 
@@ -643,17 +653,19 @@ function SearchPageContent() {
                   />
                 </div>
 
-                <Button 
-                  onClick={handleDiscover}
-                  disabled={activeFiltersCount === 0}
-                  className="w-full bg-[#01ae79] hover:bg-[#01ae79]/90 text-white disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <Search className="h-4 w-4 mr-2" />
-                  Discover
-                </Button>
+                {showDiscoverButton && (
+                  <Button 
+                    onClick={handleDiscover}
+                    disabled={activeFiltersCount === 0}
+                    className="w-full bg-[#01ae79] hover:bg-[#01ae79]/90 text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <Search className="h-4 w-4 mr-2" />
+                    Discover
+                  </Button>
+                )}
                 
                 <div className="h-6 flex items-center justify-center mt-2">
-                  {activeFiltersCount === 0 && (
+                  {activeFiltersCount === 0 && showDiscoverButton && (
                     <p className="text-xs text-muted-foreground text-center">
                       Select at least one filter to discover profiles
                     </p>
@@ -755,18 +767,20 @@ function SearchPageContent() {
                     >
                       Clear All
                     </Button>
-                    <Button 
-                      onClick={handleDiscover}
-                      disabled={activeFiltersCount === 0}
-                      className="flex-1 bg-[#01ae79] hover:bg-[#01ae79]/90 text-white disabled:opacity-50"
-                    >
-                      <Search className="h-4 w-4 mr-2" />
-                      Discover
-                    </Button>
+                    {showDiscoverButton && (
+                      <Button 
+                        onClick={handleDiscover}
+                        disabled={activeFiltersCount === 0}
+                        className="flex-1 bg-[#01ae79] hover:bg-[#01ae79]/90 text-white disabled:opacity-50"
+                      >
+                        <Search className="h-4 w-4 mr-2" />
+                        Discover
+                      </Button>
+                    )}
                   </div>
                   
                   <div className="h-6 flex items-center justify-center mt-2">
-                    {activeFiltersCount === 0 && (
+                    {activeFiltersCount === 0 && showDiscoverButton && (
                       <p className="text-xs text-muted-foreground text-center">
                         Select at least one filter to discover profiles
                       </p>
@@ -815,16 +829,18 @@ function SearchPageContent() {
                       <p className="text-muted-foreground mb-4">
                         Select your filters and click &quot;Discover&quot; to find athletes, coaches, and recruiters.
                       </p>
-                      <Button 
-                        onClick={handleDiscover} 
-                        disabled={activeFiltersCount === 0}
-                        className="bg-[#01ae79] hover:bg-[#01ae79]/90 text-white disabled:opacity-50"
-                      >
-                        <Search className="h-4 w-4 mr-2" />
-                        Discover
-                      </Button>
+                      {showDiscoverButton && (
+                        <Button 
+                          onClick={handleDiscover} 
+                          disabled={activeFiltersCount === 0}
+                          className="bg-[#01ae79] hover:bg-[#01ae79]/90 text-white disabled:opacity-50"
+                        >
+                          <Search className="h-4 w-4 mr-2" />
+                          Discover
+                        </Button>
+                      )}
                       <div className="h-6 flex items-center justify-center mt-2">
-                        {activeFiltersCount === 0 && (
+                        {activeFiltersCount === 0 && showDiscoverButton && (
                           <p className="text-xs text-muted-foreground text-center">
                             Select at least one filter to get started
                           </p>
