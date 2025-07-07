@@ -238,7 +238,6 @@ function SearchPageContent() {
   const [selectedStates, setSelectedStates] = useState<FilterOption[]>([]);
   
   // Data and loading states
-  const [users, setUsers] = useState<DiscoverUser[]>([]);
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(false);
   const [hasMore, setHasMore] = useState(true);
@@ -284,7 +283,7 @@ function SearchPageContent() {
     try {
       if (isNewSearch) {
         setInitialLoading(true);
-        setUsers([]); // Clear previous results
+        setAllUsers([]); // Clear previous results
         setHasSearched(true);
       } else {
         setLoading(true);
@@ -305,11 +304,8 @@ function SearchPageContent() {
         pageSize: '10' // Show 10 profiles per load
       });
 
-      // Add role filter based on active tab
-      const tabRole = getTabRole(activeTab);
-      if (tabRole) {
-        params.append('role', tabRole);
-      }
+      // Don't filter by role in API call - we'll filter client-side
+      // This allows users to switch between tabs without losing results
 
       // Add filters
       selectedSports.forEach(sport => 
@@ -336,10 +332,10 @@ function SearchPageContent() {
       const data: DiscoverResponse = await response.json();
       
       if (isNewSearch) {
-        setUsers(data.results);
+        setAllUsers(data.results);
         setPage(1);
       } else {
-        setUsers(prev => [...prev, ...data.results]);
+        setAllUsers(prev => [...prev, ...data.results]);
       }
       
       setHasMore(data.results.length === 10); // If we got less than 10, no more pages
@@ -350,14 +346,20 @@ function SearchPageContent() {
       setLoading(false);
       setInitialLoading(false);
     }
-  }, [activeTab, selectedSports, selectedDivisions, selectedStates]);
+  }, [selectedSports, selectedDivisions, selectedStates]);
 
-  // Clear search results when tab changes
-  useEffect(() => {
-    setUsers([]);
-    setHasSearched(false);
-    setError(null);
-  }, [activeTab]);
+  // Store all results from the search
+  const [allUsers, setAllUsers] = useState<DiscoverUser[]>([]);
+
+  // Filter displayed users based on active tab
+  const displayedUsers = useMemo(() => {
+    if (!hasSearched || allUsers.length === 0) return [];
+    
+    const tabRole = getTabRole(activeTab);
+    if (!tabRole) return allUsers; // 'all' tab shows all users
+    
+    return allUsers.filter(user => user.role === tabRole);
+  }, [allUsers, activeTab, hasSearched]);
 
   // Discover/Search function
   const handleDiscover = () => {
@@ -377,7 +379,7 @@ function SearchPageContent() {
     setSelectedDivisions([]);
     setSelectedStates([]);
     setShowMobileFilters(false);
-    setUsers([]);
+    setAllUsers([]);
     setHasSearched(false);
     setError(null);
   };
@@ -829,7 +831,7 @@ function SearchPageContent() {
                         )}
                       </div>
                     </div>
-                  ) : users.length === 0 ? (
+                  ) : displayedUsers.length === 0 ? (
                     <div className="text-center py-8">
                       <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
                       <h3 className="text-lg font-medium text-foreground mb-2">No users found</h3>
@@ -850,7 +852,7 @@ function SearchPageContent() {
                       {/* Results Count */}
                       <div className="mb-4">
                         <p className="text-sm text-muted-foreground">
-                          Showing {users.length}
+                          Showing {displayedUsers.length}
                           {activeFiltersCount > 0 && (
                             <span className="ml-2">
                               • <span className="font-medium">{activeFiltersCount}</span> filter{activeFiltersCount !== 1 ? 's' : ''} applied
@@ -861,7 +863,7 @@ function SearchPageContent() {
 
                       {/* User Grid */}
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-                        {users.map(renderUserCard)}
+                        {displayedUsers.map(renderUserCard)}
                       </div>
 
                       {/* Infinite Scroll Trigger */}
@@ -881,7 +883,7 @@ function SearchPageContent() {
                         </div>
                       )}
 
-                      {!hasMore && users.length > 10 && (
+                      {!hasMore && allUsers.length > 10 && (
                         <div className="text-center py-4">
                           <p className="text-muted-foreground text-sm">You&apos;ve reached the end!</p>
                         </div>
