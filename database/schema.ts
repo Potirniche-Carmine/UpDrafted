@@ -21,6 +21,7 @@ export const initiatedByEnum = pgEnum('initiated_by', ['athlete', 'coach', 'recr
 export const genderEnum = pgEnum('gender', ['male', 'female', 'coed']);
 export const reportStatusEnum = pgEnum('report_status', ['pending', 'under_review', 'resolved', 'dismissed']);
 export const verificationRequestStatusEnum = pgEnum('verification_request_status', ['pending', 'approved', 'rejected', 'under_review']);
+export const verificationTypeEnum = pgEnum('verification_type', ['general', 'transfer_portal']);
 export const educationLevelEnum = pgEnum('education_level', ['high_school', 'undergraduate', 'graduate', 'associate']);
 export const notificationTypeEnum = pgEnum('notification_type', ['profileView', 'newConnection', 'newMessage', 'systemUpdate', 'premiumFeature', 'connectionAccepted']);
 
@@ -59,6 +60,9 @@ export const athleteProfiles = pgTable('athlete_profiles', {
   gender: text('gender'),
   maxprepsUrl: text('maxpreps_url'),
   isVerified: boolean('is_verified').default(false),
+  isTransferPortalVerified: boolean('is_transfer_portal_verified').default(false),
+  transferPortalVerifiedAt: timestamp('transfer_portal_verified_at', { withTimezone: true }),
+  isOnTransferPortal: boolean('is_on_transfer_portal').default(false),
   hudlUrl: text('hudl_url'),
   hudlEmbedUrl: text('hudl_embed_url'),
   instagramHandle: text('instagram_handle'),
@@ -73,6 +77,7 @@ export const athleteProfiles = pgTable('athlete_profiles', {
   index('idx_athlete_profiles_graduation_year').on(table.graduationYear),
   index('idx_athlete_profiles_education_level').on(table.educationLevel),
   index('idx_athlete_profiles_is_demo').on(table.isDemoProfile),
+  index('idx_athlete_profiles_transfer_portal_verified').on(table.isTransferPortalVerified),
   unique('athlete_profiles_user_id_unique').on(table.userId),
 ]);
 
@@ -268,6 +273,7 @@ export const verificationRequests = pgTable('verification_requests', {
   id: serial('id').primaryKey(),
   userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
   role: userRoleEnum('role').notNull(),
+  verificationType: verificationTypeEnum('verification_type').default('general').notNull(),
   status: verificationRequestStatusEnum('status').default('pending').notNull(),
   submittedAt: timestamp('submitted_at', { withTimezone: true }).defaultNow().notNull(),
   reviewedAt: timestamp('reviewed_at', { withTimezone: true }),
@@ -281,7 +287,8 @@ export const verificationRequests = pgTable('verification_requests', {
   index('idx_verification_requests_user_id').on(table.userId),
   index('idx_verification_requests_status').on(table.status),
   index('idx_verification_requests_submitted_at').on(table.submittedAt),
-  unique('verification_requests_user_id_unique').on(table.userId),
+  index('idx_verification_requests_verification_type').on(table.verificationType),
+  unique('verification_requests_user_id_verification_type_unique').on(table.userId, table.verificationType),
 ]);
 
 export const verificationFiles = pgTable('verification_files', {

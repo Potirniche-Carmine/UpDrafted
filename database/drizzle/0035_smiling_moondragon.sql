@@ -1,0 +1,1 @@
+ALTER TABLE "athlete_profiles" ADD COLUMN "is_on_transfer_portal" boolean DEFAULT false;

@@ -543,6 +543,21 @@ async function handleSendMessage(userId: string, body: SendMessageRequestBody) {
         await messageOperations.updateConversationConnectionStatus(conversation.id, true);
       }
     }
+
+    // TRANSFER PORTAL VERIFICATION: Check if partner athlete requires transfer portal verification
+    const partnerUser = await profileOperations.getUserWithProfile(partnerId);
+    if (partnerUser && partnerUser.role === 'athlete' && partnerUser.athleteProfile) {
+      const educationLevel = partnerUser.athleteProfile.educationLevel;
+      if (educationLevel === 'undergraduate' || educationLevel === 'graduate') {
+        if (!partnerUser.athleteProfile.isTransferPortalVerified) {
+          return NextResponse.json({
+            success: false,
+            error: 'Cannot send message: This athlete must be verified for NCAA Transfer Portal before messages can be sent.',
+            transferPortalRequired: true
+          }, { status: 403 });
+        }
+      }
+    }
     
     // Proceed with sending the message
     await messageOperations.sendMessage(
@@ -666,6 +681,21 @@ async function handleGetOrCreateConversation(userId: string, body: GetOrCreateCo
     const connection = await connectionOperations.getConnectionBetweenUsers(userId, partnerId);
     if (!connection || connection.status !== 'connected') {
       return NextResponse.json({ success: false, error: 'A connection is required to start a conversation.' }, { status: 403 });
+    }
+
+    // TRANSFER PORTAL VERIFICATION: Check if partner athlete requires transfer portal verification
+    const partnerUser = await profileOperations.getUserWithProfile(partnerId);
+    if (partnerUser && partnerUser.role === 'athlete' && partnerUser.athleteProfile) {
+      const educationLevel = partnerUser.athleteProfile.educationLevel;
+      if (educationLevel === 'undergraduate' || educationLevel === 'graduate') {
+        if (!partnerUser.athleteProfile.isTransferPortalVerified) {
+          return NextResponse.json({
+            success: false,
+            error: 'Cannot start conversation: This athlete must be verified for NCAA Transfer Portal before conversations can be created.',
+            transferPortalRequired: true
+          }, { status: 403 });
+        }
+      }
     }
 
     // Check for an existing conversation

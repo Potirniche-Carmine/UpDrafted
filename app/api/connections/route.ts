@@ -92,6 +92,19 @@ export async function POST(request: NextRequest) {
       return createErrorResponse('Athletes cannot connect to other athletes', 400);
     }
 
+    // TRANSFER PORTAL VERIFICATION: Check if target athlete requires transfer portal verification
+    if (targetUser.role === 'athlete' && targetUser.athleteProfile) {
+      const educationLevel = targetUser.athleteProfile.educationLevel;
+      if (educationLevel === 'undergraduate' || educationLevel === 'graduate') {
+        if (!targetUser.athleteProfile.isTransferPortalVerified) {
+          return createErrorResponse(
+            'This athlete must be verified for NCAA Transfer Portal before connections can be made. They need to complete transfer portal verification first.',
+            403
+          );
+        }
+      }
+    }
+
     // Create the connection using user IDs
     const connection = await connectionOperations.createConnection(
       currentUserId,

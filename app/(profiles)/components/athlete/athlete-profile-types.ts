@@ -31,6 +31,8 @@ export interface AthleteProfileData {
   // Verification
   maxPrepsUrl?: string;
   isVerified: boolean;
+  isTransferPortalVerified?: boolean;
+  transferPortalVerifiedAt?: string;
 
   // Media
   hudlUrl?: string;
