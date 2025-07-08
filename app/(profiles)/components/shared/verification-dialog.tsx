@@ -22,13 +22,18 @@ import {
   X,
   Shield,
   CheckCircle,
+  GraduationCap,
+  Users,
 } from "lucide-react";
 import { useAuth } from "@clerk/nextjs";
+
+type EducationLevel = 'high_school' | 'undergraduate' | 'graduate' | 'associate';
 
 interface VerificationDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   role: "coach" | "recruiter" | "athlete";
+  educationLevel?: EducationLevel;
   onVerificationSubmitted?: () => void;
 }
 
@@ -43,23 +48,47 @@ interface VerificationFile {
   uploading?: boolean;
 }
 
-export function VerificationDialog({ open, onOpenChange, role, onVerificationSubmitted }: VerificationDialogProps) {
+type VerificationType = "general" | "transfer_portal";
+
+export function VerificationDialog({ 
+  open, 
+  onOpenChange, 
+  role, 
+  educationLevel,
+  onVerificationSubmitted 
+}: VerificationDialogProps) {
   const { userId } = useAuth();
+  const [verificationType, setVerificationType] = useState<VerificationType>("general");
   const [files, setFiles] = useState<VerificationFile[]>([]);
   const [linkUrl, setLinkUrl] = useState("");
   const [linkDescription, setLinkDescription] = useState("");
+  const [transferPortalEmail, setTransferPortalEmail] = useState("");
   const [additionalInfo, setAdditionalInfo] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitSuccess, setSubmitSuccess] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
+  // Email validation function
+  const isValidEmail = (email: string): boolean => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  };
+
+  // Check if transfer portal verification should be available
+  // Note: This component doesn't have access to competitionLevel, so we show the option for all college athletes
+  // The verification logic on the backend should handle the actual requirements
+  const isTransferPortalEligible = role === "athlete" && 
+    (educationLevel === "undergraduate" || educationLevel === "graduate");
+
   // Reset form when dialog opens/closes
   React.useEffect(() => {
     if (!open) {
       // Reset form when dialog closes
+      setVerificationType("general");
       setFiles([]);
       setLinkUrl("");
       setLinkDescription("");
+      setTransferPortalEmail("");
       setAdditionalInfo("");
       setSubmitSuccess(false);
       setErrorMessage(null);
@@ -67,14 +96,28 @@ export function VerificationDialog({ open, onOpenChange, role, onVerificationSub
       // Clear messages when dialog opens
       setSubmitSuccess(false);
       setErrorMessage(null);
+      // Set default verification type based on eligibility
+      if (isTransferPortalEligible) {
+        setVerificationType("transfer_portal");
+      } else {
+        setVerificationType("general");
+      }
     }
-  }, [open]);
+  }, [open, isTransferPortalEligible]);
 
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const uploadedFiles = Array.from(event.target.files || []);
     
     uploadedFiles.forEach((file) => {
-      const fileType = file.type.startsWith("image/") ? "image" : "pdf";
+      let fileType: "pdf" | "image" | "link";
+      if (file.type.startsWith("image/")) {
+        fileType = "image";
+      } else if (file.type.startsWith("video/")) {
+        fileType = "image"; // Treat videos as images for display purposes
+      } else {
+        fileType = "pdf";
+      }
+      
       const newFile: VerificationFile = {
         id: Math.random().toString(36).substr(2, 9),
         name: file.name,
@@ -177,7 +220,10 @@ export function VerificationDialog({ open, onOpenChange, role, onVerificationSub
         },
         body: JSON.stringify({
           role,
-          additionalInfo,
+          verificationType,
+          additionalInfo: verificationType === "transfer_portal" && transferPortalEmail 
+            ? `Transfer Portal Email: ${transferPortalEmail}\n\n${additionalInfo}` 
+            : additionalInfo,
           links,
         }),
       });
@@ -230,12 +276,27 @@ export function VerificationDialog({ open, onOpenChange, role, onVerificationSub
     }
   };
 
-  const canSubmit = files.length > 0 && !isSubmitting;
+  const canSubmit = files.length > 0 && !isSubmitting && 
+    (verificationType !== "transfer_portal" || (transferPortalEmail.trim().length > 0 && isValidEmail(transferPortalEmail)));
 
-  // Get role-specific content
-  const getRoleContent = () => {
-    switch (role) {
-      case "athlete":
+  // Get content based on role and verification type
+  const getVerificationContent = () => {
+    if (role === "athlete") {
+      if (verificationType === "transfer_portal") {
+        return {
+          title: "Transfer Portal Verification",
+          description: "Verify your NCAA Transfer Portal status to connect with coaches and recruiters.",
+          proofList: [
+            "• Screenshot of NCAA Transfer Portal email confirmation",
+            "• Short video/screen recording showing email verification",
+            "• NCAA Transfer Portal database listing (screenshot)",
+            "• Official letter from compliance office",
+            "• School athletic department confirmation email"
+          ],
+          helpText: "You must be officially entered in the NCAA Transfer Portal. We'll verify your email ownership through a confirmation process.",
+          emailVerificationNote: "💡 Enter your Transfer Portal email address and submit a screenshot showing this email. After submission, you&apos;ll receive a verification email to prove ownership.",
+        };
+      } else {
         return {
           title: "Get Verified as an Athlete",
           description: "Submit documentation to verify your athletic participation and build trust with coaches and recruiters.",
@@ -251,36 +312,37 @@ export function VerificationDialog({ open, onOpenChange, role, onVerificationSub
           ],
           helpText: "This verification is for athletes playing club sports, intramurals, or college teams without MaxPreps profiles.",
         };
-      case "coach":
-        return {
-          title: "Get Verified as a Coach",
-          description: "Submit documentation to verify your credentials and build trust with athletes.",
-          proofList: [
-            "• Official school/program roster listing you as staff",
-            "• Program website page showing your position",
-            "• Official business card or ID badge",
-            "• Letter of employment or contract (personal info can be redacted)",
-            "• LinkedIn profile or official bio page"
-          ],
-          helpText: "This helps athletes know they're connecting with legitimate coaches.",
-        };
-      case "recruiter":
-        return {
-          title: "Get Verified as a Recruiter",
-          description: "Submit documentation to verify your credentials and build trust with athletes.",
-          proofList: [
-            "• Official school/program roster listing you as staff",
-            "• Program website page showing your position",
-            "• Official business card or ID badge",
-            "• Letter of employment or contract (personal info can be redacted)",
-            "• LinkedIn profile or official bio page"
-          ],
-          helpText: "This helps athletes know they're connecting with legitimate recruiters.",
-        };
+      }
+    } else if (role === "coach") {
+      return {
+        title: "Get Verified as a Coach",
+        description: "Submit documentation to verify your credentials and build trust with athletes.",
+        proofList: [
+          "• Official school/program roster listing you as staff",
+          "• Program website page showing your position",
+          "• Official business card or ID badge",
+          "• Letter of employment or contract (personal info can be redacted)",
+          "• LinkedIn profile or official bio page"
+        ],
+        helpText: "This helps athletes know they're connecting with legitimate coaches.",
+      };
+    } else if (role === "recruiter") {
+      return {
+        title: "Get Verified as a Recruiter",
+        description: "Submit documentation to verify your credentials and build trust with athletes.",
+        proofList: [
+          "• Official school/program roster listing you as staff",
+          "• Program website page showing your position",
+          "• Official business card or ID badge",
+          "• Letter of employment or contract (personal info can be redacted)",
+          "• LinkedIn profile or official bio page"
+        ],
+        helpText: "This helps athletes know they're connecting with legitimate recruiters.",
+      };
     }
   };
 
-  const roleContent = getRoleContent();
+  const verificationContent = getVerificationContent();
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -288,28 +350,118 @@ export function VerificationDialog({ open, onOpenChange, role, onVerificationSub
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-lg sm:text-xl">
             <Shield className="w-5 h-5 text-blue-600 flex-shrink-0" />
-            <span className="break-words">{roleContent.title}</span>
+            <span className="break-words">{verificationContent?.title}</span>
           </DialogTitle>
           <DialogDescription className="text-sm sm:text-base">
-            {roleContent.description}
+            {verificationContent?.description}
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4 sm:space-y-6">
+          {/* Verification Type Selection for Transfer Portal Eligible Athletes */}
+          {isTransferPortalEligible && (
+            <div className="space-y-3">
+              <Label className="text-sm sm:text-base font-medium">Verification Type</Label>
+              <div className="grid grid-cols-1 gap-3">
+                <div
+                  className={`cursor-pointer rounded-lg border-2 p-4 transition-all ${
+                    verificationType === "transfer_portal"
+                      ? "border-blue-500 bg-blue-50 dark:bg-blue-950/20"
+                      : "border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600"
+                  }`}
+                  onClick={() => setVerificationType("transfer_portal")}
+                >
+                  <div className="flex items-start gap-3">
+                    <div className="flex-shrink-0 mt-1">
+                      <GraduationCap className="w-5 h-5 text-blue-600" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2">
+                        <h4 className="font-medium text-sm sm:text-base">Transfer Portal Verification</h4>
+                        <Badge className="bg-blue-600 text-white text-xs">Required</Badge>
+                      </div>
+                      <p className="text-xs sm:text-sm text-muted-foreground mt-1">
+                        Required for undergraduate and graduate athletes to connect and message with coaches/recruiters
+                      </p>
+                    </div>
+                  </div>
+                </div>
+                <div
+                  className={`cursor-pointer rounded-lg border-2 p-4 transition-all ${
+                    verificationType === "general"
+                      ? "border-green-500 bg-green-50 dark:bg-green-950/20"
+                      : "border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600"
+                  }`}
+                  onClick={() => setVerificationType("general")}
+                >
+                  <div className="flex items-start gap-3">
+                    <div className="flex-shrink-0 mt-1">
+                      <Users className="w-5 h-5 text-green-600" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <h4 className="font-medium text-sm sm:text-base">General Athlete Verification</h4>
+                      <p className="text-xs sm:text-sm text-muted-foreground mt-1">
+                        For club sports, intramurals, or general athletic participation verification
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Transfer Portal Email Field - Only show for transfer portal verification */}
+          {verificationType === "transfer_portal" && (
+            <div>
+              <Label htmlFor="transfer-portal-email" className="text-sm sm:text-base font-medium">
+                Transfer Portal Email Address *
+              </Label>
+              <Input
+                id="transfer-portal-email"
+                type="email"
+                placeholder="athlete@university.edu"
+                value={transferPortalEmail}
+                onChange={(e) => setTransferPortalEmail(e.target.value)}
+                className={`mt-2 w-full min-w-0 text-sm sm:text-base ${
+                  transferPortalEmail && !isValidEmail(transferPortalEmail) 
+                    ? 'border-red-500 focus:border-red-500 focus:ring-red-500' 
+                    : ''
+                }`}
+                disabled={isSubmitting}
+                required
+              />
+              {transferPortalEmail && !isValidEmail(transferPortalEmail) && (
+                <p className="text-xs text-red-600 mt-1">
+                  Please enter a valid email address (must contain @ and domain)
+                </p>
+              )}
+              <p className="text-xs text-muted-foreground mt-1">
+                This must match the email address visible in your Transfer Portal confirmation screenshot. We&apos;ll use this to verify ownership through email confirmation.
+              </p>
+            </div>
+          )}
+
           {/* What to Submit Section */}
           <div className="bg-blue-50 dark:bg-blue-950/20 rounded-lg p-3 sm:p-4">
             <h4 className="font-medium text-blue-900 dark:text-blue-100 mb-2 text-sm sm:text-base">
               What can you submit as proof?
             </h4>
             <ul className="text-xs sm:text-sm text-blue-800 dark:text-blue-200 space-y-1">
-              {roleContent.proofList.map((item, index) => (
+              {verificationContent?.proofList.map((item: string, index: number) => (
                 <li key={index}>{item}</li>
               ))}
             </ul>
             {role === "athlete" && (
               <div className="mt-3 p-2 bg-blue-100 dark:bg-blue-900/30 rounded border border-blue-200 dark:border-blue-800">
                 <p className="text-xs sm:text-sm text-blue-700 dark:text-blue-200 font-medium">
-                  💡 {roleContent.helpText}
+                  💡 {verificationContent?.helpText}
+                </p>
+              </div>
+            )}
+            {verificationType === "transfer_portal" && verificationContent?.emailVerificationNote && (
+              <div className="mt-3 p-2 bg-yellow-100 dark:bg-yellow-900/30 rounded border border-yellow-200 dark:border-yellow-800">
+                <p className="text-xs sm:text-sm text-yellow-700 dark:text-yellow-200 font-medium">
+                  {verificationContent.emailVerificationNote}
                 </p>
               </div>
             )}
@@ -318,14 +470,14 @@ export function VerificationDialog({ open, onOpenChange, role, onVerificationSub
           {/* File Upload */}
           <div>
             <Label htmlFor="file-upload" className="text-sm sm:text-base font-medium">
-              Upload Documents or Images
+              {verificationType === "transfer_portal" ? "Upload Transfer Portal Evidence" : "Upload Documents or Images"}
             </Label>
             <div className="mt-2">
               <input
                 id="file-upload"
                 type="file"
                 multiple
-                accept=".pdf,.jpg,.jpeg,.png,image/jpeg,image/jpg,image/png,image/webp"
+                accept=".pdf,.jpg,.jpeg,.png,.mp4,.mov,image/jpeg,image/jpg,image/png,image/webp,video/mp4,video/quicktime"
                 onChange={handleFileUpload}
                 className="hidden"
                 capture="environment"
@@ -337,10 +489,18 @@ export function VerificationDialog({ open, onOpenChange, role, onVerificationSub
                 disabled={isSubmitting}
               >
                 <Upload className="w-4 h-4 mr-2 flex-shrink-0" />
-                <span className="break-words">Choose Files (PDF, Images)</span>
+                <span className="break-words">
+                  {verificationType === "transfer_portal" 
+                    ? "Choose Files (Screenshots, Videos, PDFs)" 
+                    : "Choose Files (PDF, Images)"
+                  }
+                </span>
               </Button>
               <p className="text-xs text-muted-foreground mt-1">
-                Take photos or upload existing files (Max 10MB per file)
+                {verificationType === "transfer_portal" 
+                  ? "Screenshots of emails, screen recordings, or official documents (Max 10MB per file)"
+                  : "Take photos or upload existing files (Max 10MB per file)"
+                }
               </p>
             </div>
           </div>
@@ -437,9 +597,12 @@ export function VerificationDialog({ open, onOpenChange, role, onVerificationSub
             </Label>
             <Textarea
               id="additional-info"
-              placeholder={role === "athlete" 
-                ? "Tell us about your athletic background, what sports you play, at what level, etc..."
-                : "Any additional context or information that might help with verification..."
+              placeholder={
+                verificationType === "transfer_portal" 
+                  ? "Provide any additional details about your transfer portal status, school names, dates, or verification process..."
+                  : role === "athlete" 
+                    ? "Tell us about your athletic background, what sports you play, at what level, etc..."
+                    : "Any additional context or information that might help with verification..."
               }
               value={additionalInfo}
               onChange={(e) => setAdditionalInfo(e.target.value)}
@@ -527,6 +690,7 @@ export function VerificationDialog({ open, onOpenChange, role, onVerificationSub
                 setFiles([]);
                 setLinkUrl("");
                 setLinkDescription("");
+                setTransferPortalEmail("");
                 setAdditionalInfo("");
                 setErrorMessage(null);
                 onOpenChange(false);

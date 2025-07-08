@@ -75,12 +75,10 @@ export function CoachEditDialogs({
       return;
     }
 
-    // Prevent auto-focus on dialog open
-    setTimeout(() => {
-      if (document.activeElement && document.activeElement instanceof HTMLElement) {
-        document.activeElement.blur();
-      }
-    }, 0);
+    // Prevent auto-focus on dialog open - remove setTimeout
+    if (document.activeElement && document.activeElement instanceof HTMLElement) {
+      document.activeElement.blur();
+    }
 
     switch (dialogType) {
       case 'basic-info':

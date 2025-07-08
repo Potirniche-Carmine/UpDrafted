@@ -21,6 +21,7 @@ export const initiatedByEnum = pgEnum('initiated_by', ['athlete', 'coach', 'recr
 export const genderEnum = pgEnum('gender', ['male', 'female', 'coed']);
 export const reportStatusEnum = pgEnum('report_status', ['pending', 'under_review', 'resolved', 'dismissed']);
 export const verificationRequestStatusEnum = pgEnum('verification_request_status', ['pending', 'approved', 'rejected', 'under_review']);
+export const verificationTypeEnum = pgEnum('verification_type', ['general', 'transfer_portal']);
 export const educationLevelEnum = pgEnum('education_level', ['high_school', 'undergraduate', 'graduate', 'associate']);
 export const notificationTypeEnum = pgEnum('notification_type', ['profileView', 'newConnection', 'newMessage', 'systemUpdate', 'premiumFeature', 'connectionAccepted']);
 
@@ -46,6 +47,7 @@ export const athleteProfiles = pgTable('athlete_profiles', {
   graduationYear: integer('graduation_year').notNull(),
   division: text('division'),
   educationLevel: educationLevelEnum('education_level').notNull().default('high_school'),
+  competitionLevel: text('competition_level'),
   organizationName: text('organization_name').notNull(),
   city: text('city').notNull(),
   state: text('state').notNull(),
@@ -59,6 +61,8 @@ export const athleteProfiles = pgTable('athlete_profiles', {
   gender: text('gender'),
   maxprepsUrl: text('maxpreps_url'),
   isVerified: boolean('is_verified').default(false),
+  transferPortalVerifiedAt: timestamp('transfer_portal_verified_at', { withTimezone: true }),
+  isOnTransferPortal: boolean('is_on_transfer_portal').default(false),
   hudlUrl: text('hudl_url'),
   hudlEmbedUrl: text('hudl_embed_url'),
   instagramHandle: text('instagram_handle'),
@@ -203,7 +207,6 @@ export const connections = pgTable('connections', {
   index('idx_connections_from_user_id').on(table.fromUserId),
   index('idx_connections_to_user_id').on(table.toUserId),
   index('idx_connections_status').on(table.status),
-  // Compound indexes for optimized connection queries
   index('idx_connections_from_status').on(table.fromUserId, table.status),
   index('idx_connections_to_status').on(table.toUserId, table.status),
   unique('connections_users_unique').on(table.fromUserId, table.toUserId),
@@ -236,7 +239,6 @@ export const conversations = pgTable('conversations', {
   index('idx_conversations_user2_id').on(table.user2Id),
   index('idx_conversations_last_message_at').on(table.lastMessageAt),
   index('idx_conversations_connection_active').on(table.connectionActive),
-  // Compound indexes for optimized conversation queries
   index('idx_conversations_user1_lastmessage').on(table.user1Id, table.lastMessageAt.desc()),
   index('idx_conversations_user2_lastmessage').on(table.user2Id, table.lastMessageAt.desc()),
   unique('conversations_users_unique').on(table.user1Id, table.user2Id),
@@ -258,7 +260,6 @@ export const messages = pgTable('messages', {
   index('idx_messages_sender_id').on(table.senderId),
   index('idx_messages_created_at').on(table.createdAt),
   index('idx_messages_is_read').on(table.isRead),
-  // Compound indexes for optimized message queries
   index('idx_messages_conversation_created').on(table.conversationId, table.createdAt.desc()),
   index('idx_messages_sender_read').on(table.senderId, table.isRead),
   index('idx_messages_conversation_read').on(table.conversationId, table.isRead),
@@ -268,6 +269,7 @@ export const verificationRequests = pgTable('verification_requests', {
   id: serial('id').primaryKey(),
   userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
   role: userRoleEnum('role').notNull(),
+  verificationType: verificationTypeEnum('verification_type').default('general').notNull(),
   status: verificationRequestStatusEnum('status').default('pending').notNull(),
   submittedAt: timestamp('submitted_at', { withTimezone: true }).defaultNow().notNull(),
   reviewedAt: timestamp('reviewed_at', { withTimezone: true }),
@@ -281,7 +283,8 @@ export const verificationRequests = pgTable('verification_requests', {
   index('idx_verification_requests_user_id').on(table.userId),
   index('idx_verification_requests_status').on(table.status),
   index('idx_verification_requests_submitted_at').on(table.submittedAt),
-  unique('verification_requests_user_id_unique').on(table.userId),
+  index('idx_verification_requests_verification_type').on(table.verificationType),
+  unique('verification_requests_user_id_verification_type_unique').on(table.userId, table.verificationType),
 ]);
 
 export const verificationFiles = pgTable('verification_files', {

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireRole } from '@/utils/roles';
 import { db } from '@/database/db';
 import { verificationRequests, verificationFiles } from '@/database/schema';
-import { eq } from 'drizzle-orm';
+import { eq, and } from 'drizzle-orm';
 import { withRateLimit } from '@/utils/rate-limiting';
 import { createErrorResponse, createSuccessResponse, invalidateCache } from '@/utils/security-cache';
 
@@ -19,19 +19,27 @@ export async function handleVerificationSubmit(request: NextRequest): Promise<Ne
     if (!rateLimitCheck.success && rateLimitCheck.response) return rateLimitCheck.response;
 
     // Parse request body
-    const { role, additionalInfo, links } = await request.json();
+    const { role, verificationType = 'general', additionalInfo, links } = await request.json();
 
     // Validate role
     if (!role || !['athlete', 'coach', 'recruiter'].includes(role)) {
       return createErrorResponse('Invalid role', 400);
     }
 
+    // Validate verification type
+    if (!verificationType || !['general', 'transfer_portal'].includes(verificationType)) {
+      return createErrorResponse('Invalid verification type', 400);
+    }
+
     try {
-      // Check if user already has a verification request
+      // Check if user already has a verification request of this type
       const existingRequest = await db
         .select()
         .from(verificationRequests)
-        .where(eq(verificationRequests.userId, userId))
+        .where(and(
+          eq(verificationRequests.userId, userId),
+          eq(verificationRequests.verificationType, verificationType)
+        ))
         .limit(1);
 
       if (existingRequest.length > 0) {
@@ -44,6 +52,7 @@ export async function handleVerificationSubmit(request: NextRequest): Promise<Ne
             .update(verificationRequests)
             .set({
               status: 'pending',
+              verificationType: verificationType,
               submittedAt: new Date(),
               reviewedAt: null,
               reviewedBy: null,
@@ -90,6 +99,7 @@ export async function handleVerificationSubmit(request: NextRequest): Promise<Ne
       const verificationRequest = await db.insert(verificationRequests).values({
         userId: userId,
         role: role,
+        verificationType: verificationType,
         status: 'pending',
         additionalInfo: additionalInfo || null,
       }).returning();

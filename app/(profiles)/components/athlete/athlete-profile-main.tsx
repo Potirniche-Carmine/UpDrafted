@@ -19,7 +19,8 @@ import {
   Zap,
   Target,
   Timer,
-  X
+  X,
+  AlertTriangle
 } from "lucide-react";
 import { ProfileHeader } from "../shared/profile-header";
 import { AcademicSummaryCard } from "../shared/academic-summary-card";
@@ -29,6 +30,7 @@ import { VerificationDialog } from "../shared/verification-dialog";
 import { useRoleView } from '@/hooks/use-role-view';
 import { AthleteProfileData, AthleteProfileProps, Measurable } from './athlete-profile-types';
 import { ConnectionDialog } from "../shared/connection-dialog";
+import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
 import { useUser } from "@clerk/nextjs";
 
 // Memoize heavy components
@@ -311,6 +313,14 @@ export function AthleteProfile({
   onShare,
   hasPendingVerification,
   pendingSubmittedAt,
+  hasRejectedVerification,
+  rejectionReason,
+  rejectedAt,
+  hasPendingTransferPortalVerification,
+  transferPortalPendingSubmittedAt,
+  hasRejectedTransferPortalVerification,
+  transferPortalRejectionReason,
+  transferPortalRejectedAt,
   connectionStatus = "none",
   connectionDirection
 }: AthleteProfileProps) {
@@ -329,6 +339,23 @@ export function AthleteProfile({
   const [isConnecting, setIsConnecting] = useState(false);
   const [currentConnectionStatus, setCurrentConnectionStatus] = useState(connectionStatus);
   const [isPreviewMode, setIsPreviewMode] = useState(false);
+  
+  // Confirmation dialog state
+  const [confirmationDialog, setConfirmationDialog] = useState<{
+    open: boolean;
+    title: string;
+    description: string;
+    confirmText: string;
+    variant: "warning" | "danger" | "info" | "success";
+    onConfirm: () => void;
+  }>({
+    open: false,
+    title: "",
+    description: "",
+    confirmText: "Confirm",
+    variant: "warning",
+    onConfirm: () => {}
+  });
   
   // Safety check: if profileData becomes undefined during save operations, use original data
   const safeProfileData = profileData || data;
@@ -398,17 +425,13 @@ export function AthleteProfile({
       return;
     }
     
+    // Set measurable ID and dialog state consistently without setTimeout
     if (measurableId) {
       setMeasurableIdToEdit(measurableId);
-      // Use setTimeout to ensure state update completes before opening dialog
-      setTimeout(() => {
-        setEditDialogOpen(section);
-      }, 0);
     } else {
-      // Clear any existing measurable ID if none provided
       setMeasurableIdToEdit(null);
-      setEditDialogOpen(section);
     }
+    setEditDialogOpen(section);
   };
 
   const saveProfile = async () => {
@@ -484,6 +507,15 @@ export function AthleteProfile({
 
       const result = await response.json();
       if (result.success) {
+        // Check if we should show verification dialog after successful save
+        const savedProfile = result.profile;
+        const shouldShowTransferPortalVerification = 
+          savedProfile &&
+          (savedProfile.educationLevel === 'undergraduate' || savedProfile.educationLevel === 'graduate') &&
+          savedProfile.competitionLevel &&
+          ['division_1', 'division_2', 'division_3'].includes(savedProfile.competitionLevel) &&
+          !savedProfile.isOnTransferPortal;
+
         // Remove beforeunload listener to prevent popup during reload
         if (beforeUnloadHandlerRef.current) {
           window.removeEventListener('beforeunload', beforeUnloadHandlerRef.current);
@@ -496,6 +528,13 @@ export function AthleteProfile({
         setProfileData(result.profile);       
         // Update the page data reference so changes are permanent
         Object.assign(data, result.profile);
+        
+        // Show verification dialog if conditions are met
+        if (shouldShowTransferPortalVerification) {
+          setVerificationDialogOpen(true);
+          setIsSaving(false); // Stop loading since we're showing dialog instead of reloading
+          return; // Don't reload the page
+        }
         
         // Ensure minimum loading time of 1.5 seconds for better UX
         const elapsedTime = Date.now() - startTime;
@@ -511,18 +550,33 @@ export function AthleteProfile({
       }
     } catch (error) {
       console.error('Error saving profile:', error);
-      alert('Failed to save profile. Please try again.');
+      setConfirmationDialog({
+        open: true,
+        title: "Save Failed",
+        description: "Failed to save profile. Please try again.",
+        confirmText: "OK",
+        variant: "danger",
+        onConfirm: () => setConfirmationDialog(prev => ({ ...prev, open: false }))
+      });
       setIsSaving(false); // Only turn off loading on error
     }
   };
 
   const discardChanges = () => {
     if (hasUnsavedChanges) {
-      const confirmed = window.confirm('You have unsaved changes. Are you sure you want to discard them?');
-      if (confirmed) {
-        setProfileData(data);
-        setHasUnsavedChanges(false);
-      }
+      setConfirmationDialog({
+        open: true,
+        title: "Discard Changes?",
+        description: "You have unsaved changes. Are you sure you want to discard them?",
+        confirmText: "Discard",
+        variant: "warning",
+        onConfirm: () => {
+          setProfileData(data);
+          setHasUnsavedChanges(false);
+          setIsPreviewMode(false);
+          setConfirmationDialog(prev => ({ ...prev, open: false }));
+        }
+      });
     }
   };
 
@@ -593,7 +647,14 @@ export function AthleteProfile({
       }
     } catch (error) {
       console.error('Error withdrawing connection request:', error);
-      alert(error instanceof Error ? error.message : 'Failed to withdraw connection request. Please try again.');
+      setConfirmationDialog({
+        open: true,
+        title: "Connection Error",
+        description: error instanceof Error ? error.message : 'Failed to withdraw connection request. Please try again.',
+        confirmText: "OK",
+        variant: "danger",
+        onConfirm: () => setConfirmationDialog(prev => ({ ...prev, open: false }))
+      });
     } finally {
       setIsConnecting(false);
     }
@@ -643,7 +704,14 @@ export function AthleteProfile({
       }
     } catch (error) {
       console.error('Error accepting connection request:', error);
-      alert(error instanceof Error ? error.message : 'Failed to accept connection request. Please try again.');
+      setConfirmationDialog({
+        open: true,
+        title: "Connection Error",
+        description: error instanceof Error ? error.message : 'Failed to accept connection request. Please try again.',
+        confirmText: "OK",
+        variant: "danger",
+        onConfirm: () => setConfirmationDialog(prev => ({ ...prev, open: false }))
+      });
     } finally {
       setIsConnecting(false);
     }
@@ -693,7 +761,14 @@ export function AthleteProfile({
       }
     } catch (error) {
       console.error('Error declining connection request:', error);
-      alert(error instanceof Error ? error.message : 'Failed to decline connection request. Please try again.');
+      setConfirmationDialog({
+        open: true,
+        title: "Connection Error",
+        description: error instanceof Error ? error.message : 'Failed to decline connection request. Please try again.',
+        confirmText: "OK",
+        variant: "danger",
+        onConfirm: () => setConfirmationDialog(prev => ({ ...prev, open: false }))
+      });
     } finally {
       setIsConnecting(false);
     }
@@ -741,7 +816,14 @@ export function AthleteProfile({
       }
     } catch (error) {
       console.error('Error sending connection request:', error);
-      alert(error instanceof Error ? error.message : 'Failed to send connection request. Please try again.');
+      setConfirmationDialog({
+        open: true,
+        title: "Connection Error",
+        description: error instanceof Error ? error.message : 'Failed to send connection request. Please try again.',
+        confirmText: "OK",
+        variant: "danger",
+        onConfirm: () => setConfirmationDialog(prev => ({ ...prev, open: false }))
+      });
     } finally {
       setIsConnecting(false);
     }
@@ -810,6 +892,11 @@ export function AthleteProfile({
         open={verificationDialogOpen}
         onOpenChange={setVerificationDialogOpen}
         role="athlete"
+        educationLevel={safeProfileData.educationLevel}
+        onVerificationSubmitted={() => {
+          // Refresh the page or update verification status
+          window.location.reload();
+        }}
       />
 
       {/* Edit Dialogs */}
@@ -828,17 +915,26 @@ export function AthleteProfile({
         onSave={(updates: Partial<AthleteProfileData>) => {
           try {
             updateProfileData(updates);
-            // Use setTimeout to ensure state update completes before closing dialog
-            setTimeout(() => {
-              setEditDialogOpen(null);
-              setMeasurableIdToEdit(null);
-            }, 0);
+            // Close dialog immediately after updating data
+            setEditDialogOpen(null);
+            setMeasurableIdToEdit(null);
           } catch (error) {
             console.error('Error updating profile data:', error);
             // Keep dialog open if there's an error
           }
         }}
         selectedSport={selectedSport}
+      />
+
+      {/* Confirmation Dialog */}
+      <ConfirmationDialog
+        open={confirmationDialog.open}
+        onOpenChange={(open) => setConfirmationDialog(prev => ({ ...prev, open }))}
+        title={confirmationDialog.title}
+        description={confirmationDialog.description}
+        confirmText={confirmationDialog.confirmText}
+        variant={confirmationDialog.variant}
+        onConfirm={confirmationDialog.onConfirm}
       />
 
       <div className="container py-4 md:py-8">
@@ -889,14 +985,9 @@ export function AthleteProfile({
                   </div>
 
                   <div className="space-y-2">
+                    {/* Name and Edit Button - Always together */}
                     <div className="flex items-center justify-center gap-2">
                       <h1 className="text-lg md:text-xl font-bold">{safeProfileData.fullName}</h1>
-                      {safeProfileData.isVerified && (
-                        <Badge className="bg-green-600 text-white text-xs">
-                          <Shield className="w-3 h-3 mr-1" />
-                          Verified
-                        </Badge>
-                      )}
                       {effectiveIsOwnProfile && (
                         <Button
                           size="sm"
@@ -908,9 +999,37 @@ export function AthleteProfile({
                         </Button>
                       )}
                     </div>
+                    
+                    {/* Verified Badge - Below name on mobile, cleaner layout */}
+                    {safeProfileData.isVerified && (
+                      <div className="flex justify-center">
+                        <Badge className={`text-white text-xs ${
+                          safeProfileData.isOnTransferPortal === true
+                            ? 'bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700' 
+                            : 'bg-emerald-600 hover:bg-emerald-700'
+                        }`}>
+                          <Shield className="w-3 h-3 mr-1" />
+                          {safeProfileData.isOnTransferPortal === true ? 'Verified Transfer' : 'Verified'}
+                        </Badge>
+                      </div>
+                    )}
+
+                    {/* Unverified Transfer Badge - For D1/D2/D3 athletes who need transfer portal verification */}
+                    {!safeProfileData.isVerified && 
+                     (safeProfileData.educationLevel === 'undergraduate' || safeProfileData.educationLevel === 'graduate') &&
+                     safeProfileData.competitionLevel &&
+                     ['division_1', 'division_2', 'division_3'].includes(safeProfileData.competitionLevel) &&
+                     !safeProfileData.transferPortalVerifiedAt && (
+                      <div className="flex justify-center">
+                        <Badge variant="outline" className="border-orange-300 text-orange-600 text-xs">
+                          <AlertTriangle className="w-3 h-3 mr-1" />
+                          Unverified Transfer
+                        </Badge>
+                      </div>
+                    )}
 
                     <div className="flex flex-wrap justify-center gap-2 mb-3">
-                      <Badge className="bg-[#01ae79] text-white hover:bg-[#01ae79]/90 text-xs">
+                      <Badge className="bg-gradient-to-r from-cyan-500 to-teal-600 text-white hover:from-cyan-600 hover:to-teal-700 text-xs shadow-md">
                         {safeProfileData.sport}
                       </Badge>
                       {safeProfileData.secondarySports?.map(sport => (
@@ -928,8 +1047,8 @@ export function AthleteProfile({
                       <p className="text-center break-words">{safeProfileData.organizationName}</p>
                       <p className="text-center">Class of {safeProfileData.graduationYear}</p>
                       
-                      {/* Education Level Badge */}
-                      <div className="flex items-center justify-center pt-2">
+                      {/* Education Level and Competition Level Badges */}
+                      <div className="flex flex-col items-center gap-2 pt-2">
                         <div className="flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-lg shadow-md">
                           <GraduationCap className="w-4 h-4" />
                           <span className="text-sm font-medium">
@@ -939,6 +1058,29 @@ export function AthleteProfile({
                             {safeProfileData.educationLevel === 'associate' && 'Community College Student'}
                           </span>
                         </div>
+                        
+                        {/* Competition Level Badge - Only show for college athletes */}
+                        {safeProfileData.competitionLevel && (safeProfileData.educationLevel === 'undergraduate' || safeProfileData.educationLevel === 'graduate') && (
+                          <div className={`flex items-center gap-2 px-3 py-2 text-white rounded-lg shadow-md text-sm font-medium ${
+                            safeProfileData.competitionLevel === 'division_1' 
+                              ? 'bg-gradient-to-r from-red-600 to-red-700' 
+                              : safeProfileData.competitionLevel === 'division_2'
+                              ? 'bg-gradient-to-r from-orange-600 to-orange-700'
+                              : safeProfileData.competitionLevel === 'division_3'
+                              ? 'bg-gradient-to-r from-green-600 to-green-700'
+                              : 'bg-gradient-to-r from-gray-600 to-gray-700'
+                          }`}>
+                            <Trophy className="w-4 h-4" />
+                            <span>
+                              {safeProfileData.competitionLevel === 'division_1' && 'Division 1'}
+                              {safeProfileData.competitionLevel === 'division_2' && 'Division 2'}
+                              {safeProfileData.competitionLevel === 'division_3' && 'Division 3'}
+                              {safeProfileData.competitionLevel === 'club' && 'Club Sports'}
+                              {safeProfileData.competitionLevel === 'intramural' && 'Intramural'}
+                              {safeProfileData.competitionLevel === 'other' && 'Other Division'}
+                            </span>
+                          </div>
+                        )}
                       </div>
                     </div>
 
@@ -1056,12 +1198,21 @@ export function AthleteProfile({
             {/* Verification Section */}
             {effectiveIsOwnProfile && (
               <VerificationSection
-                profileData={safeProfileData}
+                profileData={data}
+                displayData={safeProfileData}
                 isOwnProfile={effectiveIsOwnProfile}
                 onEditMaxPreps={safeProfileData.isVerified ? undefined : () => handleEditSection('maxpreps-verification')}
                 onShowVerificationDialog={() => handleEditSection('manual-verification')}
                 hasPendingVerification={hasPendingVerification}
                 pendingSubmittedAt={pendingSubmittedAt}
+                hasRejectedVerification={hasRejectedVerification}
+                rejectionReason={rejectionReason}
+                rejectedAt={rejectedAt}
+                hasPendingTransferPortalVerification={hasPendingTransferPortalVerification}
+                transferPortalPendingSubmittedAt={transferPortalPendingSubmittedAt}
+                hasRejectedTransferPortalVerification={hasRejectedTransferPortalVerification}
+                transferPortalRejectionReason={transferPortalRejectionReason}
+                transferPortalRejectedAt={transferPortalRejectedAt}
               />
             )}
             

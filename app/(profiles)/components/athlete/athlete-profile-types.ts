@@ -18,6 +18,7 @@ export interface AthleteProfileData {
   secondarySports?: string[];
   graduationYear: number;
   educationLevel: EducationLevel;
+  competitionLevel?: string; // 'division_1', 'division_2', 'division_3', 'naia', 'njcaa', 'club', 'intramural', 'recreational'
   organizationName: string;
   city: string;
   state: string;
@@ -31,6 +32,8 @@ export interface AthleteProfileData {
   // Verification
   maxPrepsUrl?: string;
   isVerified: boolean;
+  transferPortalVerifiedAt?: string;
+  isOnTransferPortal?: boolean;
 
   // Media
   hudlUrl?: string;
@@ -68,6 +71,15 @@ export interface AthleteProfileProps {
   onShare?: () => void;
   hasPendingVerification?: boolean;
   pendingSubmittedAt?: string;
+  hasRejectedVerification?: boolean;
+  rejectionReason?: string;
+  rejectedAt?: string;
+  // Transfer Portal Verification Status
+  hasPendingTransferPortalVerification?: boolean;
+  transferPortalPendingSubmittedAt?: string;
+  hasRejectedTransferPortalVerification?: boolean;
+  transferPortalRejectionReason?: string;
+  transferPortalRejectedAt?: string;
   connectionStatus?: "none" | "pending" | "connected";
   connectionDirection?: "incoming" | "outgoing" | null;
 }
