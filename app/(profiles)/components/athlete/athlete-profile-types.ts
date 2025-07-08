@@ -71,6 +71,15 @@ export interface AthleteProfileProps {
   onShare?: () => void;
   hasPendingVerification?: boolean;
   pendingSubmittedAt?: string;
+  hasRejectedVerification?: boolean;
+  rejectionReason?: string;
+  rejectedAt?: string;
+  // Transfer Portal Verification Status
+  hasPendingTransferPortalVerification?: boolean;
+  transferPortalPendingSubmittedAt?: string;
+  hasRejectedTransferPortalVerification?: boolean;
+  transferPortalRejectionReason?: string;
+  transferPortalRejectedAt?: string;
   connectionStatus?: "none" | "pending" | "connected";
   connectionDirection?: "incoming" | "outgoing" | null;
 }

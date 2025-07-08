@@ -81,6 +81,12 @@ interface ProfileApiResponse {
   hasRejectedVerification?: boolean;
   rejectionReason?: string;
   rejectedAt?: string;
+  // Transfer Portal Verification Status
+  hasPendingTransferPortalVerification?: boolean;
+  transferPortalPendingSubmittedAt?: string;
+  hasRejectedTransferPortalVerification?: boolean;
+  transferPortalRejectionReason?: string;
+  transferPortalRejectedAt?: string;
 }
 
 export default function ProfilePage({ params }: ProfilePageProps) {
@@ -410,6 +416,14 @@ function ProfileContent({ profileId }: { profileId: string }) {
           connectionDirection={profileData.connectionDirection}
           hasPendingVerification={profileData.hasPendingVerification}
           pendingSubmittedAt={profileData.pendingSubmittedAt}
+          hasRejectedVerification={profileData.hasRejectedVerification}
+          rejectionReason={profileData.rejectionReason}
+          rejectedAt={profileData.rejectedAt}
+          hasPendingTransferPortalVerification={profileData.hasPendingTransferPortalVerification}
+          transferPortalPendingSubmittedAt={profileData.transferPortalPendingSubmittedAt}
+          hasRejectedTransferPortalVerification={profileData.hasRejectedTransferPortalVerification}
+          transferPortalRejectionReason={profileData.transferPortalRejectionReason}
+          transferPortalRejectedAt={profileData.transferPortalRejectedAt}
         />
       )}
 

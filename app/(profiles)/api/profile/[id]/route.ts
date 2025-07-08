@@ -4,7 +4,7 @@ import { userOperations, athleteOperations, coachOperations, recruitingOperation
 import { R2_PUBLIC_URL, constructR2Url } from '@/database/r2';
 import { NewAthleteProfile, NewAthleteMeasurable, NewAthleteVideo, NewCoachProfile, NewRecruitingProfile, verificationRequests, AthleteProfile, CoachProfile, RecruitingProfile } from '@/database/schema';
 import { db } from '@/database/db';
-import { eq } from 'drizzle-orm';
+import { eq, and } from 'drizzle-orm';
 import { sanitizeProfileData } from '@/utils/sanitization';
 import { EducationLevel } from '@/app/(onboarding)/lib/onboarding';
 import { withRateLimit } from '@/utils/rate-limiting';
@@ -321,8 +321,7 @@ export async function GET(
           adminViewingRole = adminPrefs.currentViewingRole;
           shouldShowDemoProfile = true;
         }
-      } catch (error) {
-        console.error('Failed to get admin preferences:', error);
+      } catch {
         // Continue with normal flow if admin preferences fail
       }
     }
@@ -349,6 +348,122 @@ export async function GET(
           // Transform the demo profile data to match the component interface
           const transformedProfile = transformProfileData(demoProfileData, profileType);
 
+          // Fetch REAL verification status for the current user (admin) when viewing demo profiles
+          let realVerificationStatus = {};
+          
+          if (profileType === 'athlete') {
+            try {
+              // Fetch general verification request for the current admin user
+              const generalVerificationRequest = await db
+                .select({
+                  status: verificationRequests.status,
+                  submittedAt: verificationRequests.submittedAt,
+                  reviewedAt: verificationRequests.reviewedAt,
+                  rejectionReason: verificationRequests.rejectionReason
+                })
+                .from(verificationRequests)
+                .where(and(
+                  eq(verificationRequests.userId, currentUserId), // Use current user's ID, not demo profile
+                  eq(verificationRequests.verificationType, 'general')
+                ))
+                .limit(1);
+
+              // Fetch transfer portal verification request for the current admin user
+              const transferPortalVerificationRequest = await db
+                .select({
+                  status: verificationRequests.status,
+                  submittedAt: verificationRequests.submittedAt,
+                  reviewedAt: verificationRequests.reviewedAt,
+                  rejectionReason: verificationRequests.rejectionReason
+                })
+                .from(verificationRequests)
+                .where(and(
+                  eq(verificationRequests.userId, currentUserId), // Use current user's ID, not demo profile
+                  eq(verificationRequests.verificationType, 'transfer_portal')
+                ))
+                .limit(1);
+
+              // Handle general verification status
+              if (generalVerificationRequest.length > 0) {
+                const verification = generalVerificationRequest[0];
+                
+                if (verification.status === 'pending' || verification.status === 'under_review') {
+                  realVerificationStatus = {
+                    hasPendingVerification: true,
+                    pendingSubmittedAt: verification.submittedAt.toISOString()
+                  };
+                } else if (verification.status === 'rejected') {
+                  realVerificationStatus = {
+                    hasRejectedVerification: true,
+                    rejectionReason: verification.rejectionReason,
+                    rejectedAt: verification.reviewedAt?.toISOString(),
+                    submittedAt: verification.submittedAt.toISOString()
+                  };
+                }
+              }
+
+              // Handle transfer portal verification status
+              if (transferPortalVerificationRequest.length > 0) {
+                const verification = transferPortalVerificationRequest[0];
+                
+                if (verification.status === 'pending' || verification.status === 'under_review') {
+                  realVerificationStatus = {
+                    ...realVerificationStatus,
+                    hasPendingTransferPortalVerification: true,
+                    transferPortalPendingSubmittedAt: verification.submittedAt.toISOString()
+                  };
+                } else if (verification.status === 'rejected') {
+                  realVerificationStatus = {
+                    ...realVerificationStatus,
+                    hasRejectedTransferPortalVerification: true,
+                    transferPortalRejectionReason: verification.rejectionReason,
+                    transferPortalRejectedAt: verification.reviewedAt?.toISOString(),
+                    transferPortalSubmittedAt: verification.submittedAt.toISOString()
+                  };
+                }
+              }
+            } catch {
+              // Continue without verification status if there's an error
+            }
+          } else if (profileType === 'coach' || profileType === 'recruiter') {
+            try {
+              // Fetch general verification request for coaches/recruiters
+              const verificationRequest = await db
+                .select({
+                  status: verificationRequests.status,
+                  submittedAt: verificationRequests.submittedAt,
+                  reviewedAt: verificationRequests.reviewedAt,
+                  rejectionReason: verificationRequests.rejectionReason
+                })
+                .from(verificationRequests)
+                .where(and(
+                  eq(verificationRequests.userId, currentUserId), // Use current user's ID
+                  eq(verificationRequests.verificationType, 'general')
+                ))
+                .limit(1);
+
+              if (verificationRequest.length > 0) {
+                const verification = verificationRequest[0];
+                
+                if (verification.status === 'pending' || verification.status === 'under_review') {
+                  realVerificationStatus = {
+                    hasPendingVerification: true,
+                    pendingSubmittedAt: verification.submittedAt.toISOString()
+                  };
+                } else if (verification.status === 'rejected') {
+                  realVerificationStatus = {
+                    hasRejectedVerification: true,
+                    rejectionReason: verification.rejectionReason,
+                    rejectedAt: verification.reviewedAt?.toISOString(),
+                    submittedAt: verification.submittedAt.toISOString()
+                  };
+                }
+              }
+            } catch {
+              // Continue without verification status if there's an error
+            }
+          }
+
           const responseData = {
             success: true,
             profile: transformedProfile,
@@ -358,13 +473,14 @@ export async function GET(
             canEdit: true,
             currentUserRole,
             isDemoProfile: true, // Flag to indicate this is a demo profile
-            adminViewingRole
+            adminViewingRole,
+            // Add REAL verification status from database
+            ...realVerificationStatus
           };
 
           return NextResponse.json(responseData);
         }
-      } catch (error) {
-        console.error('Error fetching demo profile:', error);
+      } catch {
         // Fall through to normal profile fetching if demo profile fails
       }
     }
@@ -387,9 +503,8 @@ export async function GET(
           // Create notification for profile view
           await notificationOperations.createProfileViewNotification(profileUserId, currentUserId);
         }
-      } catch (error) {
+      } catch {
         // Log error but don't fail the request
-        console.error('Failed to log profile view:', error);
       }
     }
 
@@ -417,7 +532,8 @@ export async function GET(
 
         // Check for verification request status if it's the user's own profile
         if (isOwnProfile) {
-          const verificationRequest = await db
+          // Fetch general verification request
+          const generalVerificationRequest = await db
             .select({
               status: verificationRequests.status,
               submittedAt: verificationRequests.submittedAt,
@@ -425,11 +541,32 @@ export async function GET(
               rejectionReason: verificationRequests.rejectionReason
             })
             .from(verificationRequests)
-            .where(eq(verificationRequests.userId, profileUserId))
+            .where(and(
+              eq(verificationRequests.userId, profileUserId),
+              eq(verificationRequests.verificationType, 'general')
+            ))
             .limit(1);
 
-          if (verificationRequest.length > 0) {
-            const verification = verificationRequest[0];
+          // Fetch transfer portal verification request
+          const transferPortalVerificationRequest = await db
+            .select({
+              status: verificationRequests.status,
+              submittedAt: verificationRequests.submittedAt,
+              reviewedAt: verificationRequests.reviewedAt,
+              rejectionReason: verificationRequests.rejectionReason
+            })
+            .from(verificationRequests)
+            .where(and(
+              eq(verificationRequests.userId, profileUserId),
+              eq(verificationRequests.verificationType, 'transfer_portal')
+            ))
+            .limit(1);
+
+
+
+          // Handle general verification status
+          if (generalVerificationRequest.length > 0) {
+            const verification = generalVerificationRequest[0];
             
             if (verification.status === 'pending' || verification.status === 'under_review') {
               verificationStatus = {
@@ -445,6 +582,29 @@ export async function GET(
               };
             } else if (verification.status === 'approved') {
               // This should already be reflected in the isVerified field on the profile
+            }
+          }
+
+          // Handle transfer portal verification status
+          if (transferPortalVerificationRequest.length > 0) {
+            const verification = transferPortalVerificationRequest[0];
+            
+            if (verification.status === 'pending' || verification.status === 'under_review') {
+              verificationStatus = {
+                ...verificationStatus,
+                hasPendingTransferPortalVerification: true,
+                transferPortalPendingSubmittedAt: verification.submittedAt.toISOString()
+              };
+            } else if (verification.status === 'rejected') {
+              verificationStatus = {
+                ...verificationStatus,
+                hasRejectedTransferPortalVerification: true,
+                transferPortalRejectionReason: verification.rejectionReason,
+                transferPortalRejectedAt: verification.reviewedAt?.toISOString(),
+                transferPortalSubmittedAt: verification.submittedAt.toISOString()
+              };
+            } else if (verification.status === 'approved') {
+              // This should already be reflected in the transferPortalVerifiedAt field on the profile
             }
           }
         }
@@ -568,8 +728,7 @@ export async function GET(
             connectionDirection = existingConnection.fromUserId === currentUserId ? "outgoing" : "incoming";
           }
         }
-      } catch (connectionError) {
-        console.error('Error checking connection status:', connectionError);
+      } catch {
         // Don't fail the whole request if connection check fails
       }
     }

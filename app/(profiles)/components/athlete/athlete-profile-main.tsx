@@ -19,7 +19,8 @@ import {
   Zap,
   Target,
   Timer,
-  X
+  X,
+  AlertTriangle
 } from "lucide-react";
 import { ProfileHeader } from "../shared/profile-header";
 import { AcademicSummaryCard } from "../shared/academic-summary-card";
@@ -312,6 +313,14 @@ export function AthleteProfile({
   onShare,
   hasPendingVerification,
   pendingSubmittedAt,
+  hasRejectedVerification,
+  rejectionReason,
+  rejectedAt,
+  hasPendingTransferPortalVerification,
+  transferPortalPendingSubmittedAt,
+  hasRejectedTransferPortalVerification,
+  transferPortalRejectionReason,
+  transferPortalRejectedAt,
   connectionStatus = "none",
   connectionDirection
 }: AthleteProfileProps) {
@@ -1005,6 +1014,20 @@ export function AthleteProfile({
                       </div>
                     )}
 
+                    {/* Unverified Transfer Badge - For D1/D2/D3 athletes who need transfer portal verification */}
+                    {!safeProfileData.isVerified && 
+                     (safeProfileData.educationLevel === 'undergraduate' || safeProfileData.educationLevel === 'graduate') &&
+                     safeProfileData.competitionLevel &&
+                     ['division_1', 'division_2', 'division_3'].includes(safeProfileData.competitionLevel) &&
+                     !safeProfileData.transferPortalVerifiedAt && (
+                      <div className="flex justify-center">
+                        <Badge variant="outline" className="border-orange-300 text-orange-600 text-xs">
+                          <AlertTriangle className="w-3 h-3 mr-1" />
+                          Unverified Transfer
+                        </Badge>
+                      </div>
+                    )}
+
                     <div className="flex flex-wrap justify-center gap-2 mb-3">
                       <Badge className="bg-gradient-to-r from-cyan-500 to-teal-600 text-white hover:from-cyan-600 hover:to-teal-700 text-xs shadow-md">
                         {safeProfileData.sport}
@@ -1182,6 +1205,14 @@ export function AthleteProfile({
                 onShowVerificationDialog={() => handleEditSection('manual-verification')}
                 hasPendingVerification={hasPendingVerification}
                 pendingSubmittedAt={pendingSubmittedAt}
+                hasRejectedVerification={hasRejectedVerification}
+                rejectionReason={rejectionReason}
+                rejectedAt={rejectedAt}
+                hasPendingTransferPortalVerification={hasPendingTransferPortalVerification}
+                transferPortalPendingSubmittedAt={transferPortalPendingSubmittedAt}
+                hasRejectedTransferPortalVerification={hasRejectedTransferPortalVerification}
+                transferPortalRejectionReason={transferPortalRejectionReason}
+                transferPortalRejectedAt={transferPortalRejectedAt}
               />
             )}
             

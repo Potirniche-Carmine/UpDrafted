@@ -10,6 +10,15 @@ interface AthleteProfileWrapperProps {
   connectionDirection?: "incoming" | "outgoing" | null;
   hasPendingVerification?: boolean;
   pendingSubmittedAt?: string;
+  hasRejectedVerification?: boolean;
+  rejectionReason?: string;
+  rejectedAt?: string;
+  // Transfer Portal Verification Status
+  hasPendingTransferPortalVerification?: boolean;
+  transferPortalPendingSubmittedAt?: string;
+  hasRejectedTransferPortalVerification?: boolean;
+  transferPortalRejectionReason?: string;
+  transferPortalRejectedAt?: string;
 }
 
 export function AthleteProfileWrapper({ 
@@ -18,7 +27,15 @@ export function AthleteProfileWrapper({
   connectionStatus,
   connectionDirection,
   hasPendingVerification,
-  pendingSubmittedAt 
+  pendingSubmittedAt,
+  hasRejectedVerification,
+  rejectionReason,
+  rejectedAt,
+  hasPendingTransferPortalVerification,
+  transferPortalPendingSubmittedAt,
+  hasRejectedTransferPortalVerification,
+  transferPortalRejectionReason,
+  transferPortalRejectedAt
 }: AthleteProfileWrapperProps) {
   const handleConnect = () => {
   };
@@ -34,6 +51,14 @@ export function AthleteProfileWrapper({
       onShare={handleShare}
       hasPendingVerification={hasPendingVerification}
       pendingSubmittedAt={pendingSubmittedAt}
+      hasRejectedVerification={hasRejectedVerification}
+      rejectionReason={rejectionReason}
+      rejectedAt={rejectedAt}
+      hasPendingTransferPortalVerification={hasPendingTransferPortalVerification}
+      transferPortalPendingSubmittedAt={transferPortalPendingSubmittedAt}
+      hasRejectedTransferPortalVerification={hasRejectedTransferPortalVerification}
+      transferPortalRejectionReason={transferPortalRejectionReason}
+      transferPortalRejectedAt={transferPortalRejectedAt}
       connectionStatus={connectionStatus}
       connectionDirection={connectionDirection}
     />
