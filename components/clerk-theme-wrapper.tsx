@@ -4,6 +4,7 @@ import { ClerkProvider as OriginalClerkProvider } from "@clerk/nextjs";
 import { dark } from "@clerk/themes";
 import { useTheme } from "next-themes";
 import React from "react";
+import { ImpersonationHandler } from "./impersonation-handler";
 
 interface ClerkProviderWrapperProps {
   children: React.ReactNode;
@@ -26,6 +27,7 @@ export function ClerkProviderWrapper({
         variables: { ...appearanceVariables },
       }}
     >
+      <ImpersonationHandler />
       {children}
     </OriginalClerkProvider>
   );

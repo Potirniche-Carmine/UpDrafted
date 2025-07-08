@@ -280,7 +280,7 @@ export async function GET(
     const auth = await requireAnyRole();
     if (auth instanceof NextResponse) return auth;
 
-    const { userId: currentUserId, role: currentUserRole } = auth;
+    const { userId: currentUserId, role: currentUserRole, isImpersonation, actorUserId, actorRole } = auth;
 
     // Rate limiting
     const rateLimitResult = await withRateLimit(request, 'general', currentUserId, currentUserRole);
@@ -305,9 +305,22 @@ export async function GET(
       );
     }
 
+    // Debug logging for impersonation
+    if (isImpersonation) {
+      console.log('🎭 Impersonation detected:', {
+        impersonatedUserId: currentUserId,
+        impersonatedRole: currentUserRole,
+        actorUserId,
+        actorRole,
+        profileUserId,
+        willTreatAsOwnProfile: isImpersonation === true && actorRole === 'admin'
+      });
+    }
+
     // Check if the current user is viewing their own profile
-    const isOwnProfile = currentUserId === profileUserId;
-    const isAdmin = currentUserRole === 'admin';
+    // During impersonation, treat as own profile so admin can edit
+    const isOwnProfile = currentUserId === profileUserId || (isImpersonation === true && actorRole === 'admin');
+    const isAdmin = currentUserRole === 'admin' || (isImpersonation === true && actorRole === 'admin');
 
     // ADMIN DEMO PROFILE HANDLING
     // If admin is viewing their own profile, check if they're viewing as a different role
@@ -744,6 +757,10 @@ export async function GET(
       currentUserRole,
       connectionStatus: !isOwnProfile ? connectionStatus : undefined,
       connectionDirection: !isOwnProfile ? connectionDirection : undefined,
+      // Add impersonation information
+      isImpersonation: isImpersonation === true,
+      actorUserId: isImpersonation === true ? actorUserId : undefined,
+      actorRole: isImpersonation === true ? actorRole : undefined,
       ...(verificationStatus && verificationStatus)
     };
 

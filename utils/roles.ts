@@ -11,8 +11,15 @@ export const checkRoleWithAuth = (sessionClaims: { metadata: { role: Roles } }, 
   return sessionClaims?.metadata.role === role
 }
 
-export const requireAnyRole = async (): Promise<{ userId: string; role: Roles } | NextResponse> => {
-  const { userId, sessionClaims } = await auth()
+export const requireAnyRole = async (): Promise<{ 
+  userId: string; 
+  role: Roles; 
+  isImpersonation?: boolean;
+  actorUserId?: string;
+  actorRole?: Roles;
+} | NextResponse> => {
+  const authResult = await auth()
+  const { userId, sessionClaims } = authResult
   
   if (!userId) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -26,11 +33,40 @@ export const requireAnyRole = async (): Promise<{ userId: string; role: Roles } 
     }, { status: 403 })
   }
 
-  return { userId, role: userRole }
+  // Check for impersonation by examining the session claims
+  // During impersonation, Clerk provides actor information in the session
+  const isImpersonation = !!(authResult as any).actor || !!(sessionClaims as any)?.actor
+  let actorUserId: string | undefined
+  let actorRole: Roles | undefined
+
+  if (isImpersonation) {
+    // Extract actor information from the session
+    const actorInfo = (authResult as any).actor || (sessionClaims as any)?.actor
+    if (actorInfo) {
+      actorUserId = actorInfo.sub || actorInfo.id
+      // For impersonation, the actor is typically an admin
+      actorRole = 'admin'
+    }
+  }
+
+  return { 
+    userId, 
+    role: userRole,
+    isImpersonation,
+    actorUserId,
+    actorRole
+  }
 }
 
-export const requireRole = async (allowedRoles: Roles[]): Promise<{ userId: string; role: Roles } | NextResponse> => {
-  const { userId, sessionClaims } = await auth()
+export const requireRole = async (allowedRoles: Roles[]): Promise<{ 
+  userId: string; 
+  role: Roles;
+  isImpersonation?: boolean;
+  actorUserId?: string;
+  actorRole?: Roles;
+} | NextResponse> => {
+  const authResult = await auth()
+  const { userId, sessionClaims } = authResult
   
   if (!userId) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -44,17 +80,56 @@ export const requireRole = async (allowedRoles: Roles[]): Promise<{ userId: stri
     }, { status: 403 })
   }
 
-  return { userId, role: userRole }
+  // Check for impersonation
+  const isImpersonation = !!(authResult as any).actor || !!(sessionClaims as any)?.actor
+  let actorUserId: string | undefined
+  let actorRole: Roles | undefined
+
+  if (isImpersonation) {
+    const actorInfo = (authResult as any).actor || (sessionClaims as any)?.actor
+    if (actorInfo) {
+      actorUserId = actorInfo.sub || actorInfo.id
+      actorRole = 'admin'
+    }
+  }
+
+  return { 
+    userId, 
+    role: userRole,
+    isImpersonation,
+    actorUserId,
+    actorRole
+  }
 }
 
-export const requireAdmin = async (): Promise<{ userId: string; role: 'admin' } | NextResponse> => {
+export const requireAdmin = async (): Promise<{ 
+  userId: string; 
+  role: 'admin';
+  isImpersonation?: boolean;
+  actorUserId?: string;
+  actorRole?: Roles;
+} | NextResponse> => {
   const result = await requireRole(['admin'])
   if (result instanceof NextResponse) return result
-  return result as { userId: string; role: 'admin' }
+  return result as { 
+    userId: string; 
+    role: 'admin';
+    isImpersonation?: boolean;
+    actorUserId?: string;
+    actorRole?: Roles;
+  }
 }
 
-export const requireOwnershipOrAdmin = async (resourceUserId: string): Promise<{ userId: string; role: Roles; isOwner: boolean } | NextResponse> => {
-  const { userId, sessionClaims } = await auth()
+export const requireOwnershipOrAdmin = async (resourceUserId: string): Promise<{ 
+  userId: string; 
+  role: Roles; 
+  isOwner: boolean;
+  isImpersonation?: boolean;
+  actorUserId?: string;
+  actorRole?: Roles;
+} | NextResponse> => {
+  const authResult = await auth()
+  const { userId, sessionClaims } = authResult
   
   if (!userId) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -69,11 +144,34 @@ export const requireOwnershipOrAdmin = async (resourceUserId: string): Promise<{
   const isOwner = userId === resourceUserId
   const isAdmin = userRole === 'admin'
   
-  if (!isOwner && !isAdmin) {
+  // Check for impersonation
+  const isImpersonation = !!(authResult as any).actor || !!(sessionClaims as any)?.actor
+  let actorUserId: string | undefined
+  let actorRole: Roles | undefined
+
+  if (isImpersonation) {
+    const actorInfo = (authResult as any).actor || (sessionClaims as any)?.actor
+    if (actorInfo) {
+      actorUserId = actorInfo.sub || actorInfo.id
+      actorRole = 'admin'
+    }
+  }
+
+  // During impersonation, treat as if the actor (admin) has access
+  const hasAccess = isOwner || isAdmin || isImpersonation
+  
+  if (!hasAccess) {
     return NextResponse.json({ 
       error: 'Forbidden - You can only access your own resources' 
     }, { status: 403 })
   }
 
-  return { userId, role: userRole, isOwner }
+  return { 
+    userId, 
+    role: userRole, 
+    isOwner,
+    isImpersonation,
+    actorUserId,
+    actorRole
+  }
 }

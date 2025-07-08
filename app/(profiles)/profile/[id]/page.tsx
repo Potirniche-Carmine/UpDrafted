@@ -76,6 +76,10 @@ interface ProfileApiResponse {
   currentUserRole: string;
   connectionStatus?: "none" | "pending" | "connected";
   connectionDirection?: "incoming" | "outgoing" | null;
+  // Impersonation fields
+  isImpersonation?: boolean;
+  actorUserId?: string;
+  actorRole?: string;
   hasPendingVerification?: boolean;
   pendingSubmittedAt?: string;
   hasRejectedVerification?: boolean;
