@@ -18,6 +18,7 @@ export interface AthleteProfileData {
   secondarySports?: string[];
   graduationYear: number;
   educationLevel: EducationLevel;
+  competitionLevel?: string; // 'division_1', 'division_2', 'division_3', 'naia', 'njcaa', 'club', 'intramural', 'recreational'
   organizationName: string;
   city: string;
   state: string;
@@ -31,8 +32,8 @@ export interface AthleteProfileData {
   // Verification
   maxPrepsUrl?: string;
   isVerified: boolean;
-  isTransferPortalVerified?: boolean;
   transferPortalVerifiedAt?: string;
+  isOnTransferPortal?: boolean;
 
   // Media
   hudlUrl?: string;

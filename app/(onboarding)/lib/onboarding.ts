@@ -14,6 +14,7 @@ export interface OnboardingFormData {
   secondarySports: string[];
   graduationYear: number | null;
   educationLevel: EducationLevel;
+  competitionLevel: string;
   organizationName: string;
   city: string;
   state: string;
@@ -70,6 +71,7 @@ export interface OnboardingProfileData {
   secondarySports?: string[];
   graduationYear?: number;
   educationLevel?: EducationLevel;
+  competitionLevel?: string;
   organizationName?: string;
   city: string;
   state: string;
@@ -118,6 +120,7 @@ export function convertFormDataToProfileData(formData: OnboardingFormData): Onbo
     secondarySports: formData.secondarySports,
     graduationYear: formData.graduationYear || undefined,
     educationLevel: formData.educationLevel,
+    competitionLevel: formData.competitionLevel || undefined,
     organizationName: formData.organizationName.trim(),
     city: formData.city.trim(),
     state: formData.state,

@@ -47,6 +47,7 @@ export const athleteProfiles = pgTable('athlete_profiles', {
   graduationYear: integer('graduation_year').notNull(),
   division: text('division'),
   educationLevel: educationLevelEnum('education_level').notNull().default('high_school'),
+  competitionLevel: text('competition_level'),
   organizationName: text('organization_name').notNull(),
   city: text('city').notNull(),
   state: text('state').notNull(),
@@ -60,7 +61,6 @@ export const athleteProfiles = pgTable('athlete_profiles', {
   gender: text('gender'),
   maxprepsUrl: text('maxpreps_url'),
   isVerified: boolean('is_verified').default(false),
-  isTransferPortalVerified: boolean('is_transfer_portal_verified').default(false),
   transferPortalVerifiedAt: timestamp('transfer_portal_verified_at', { withTimezone: true }),
   isOnTransferPortal: boolean('is_on_transfer_portal').default(false),
   hudlUrl: text('hudl_url'),
@@ -77,7 +77,6 @@ export const athleteProfiles = pgTable('athlete_profiles', {
   index('idx_athlete_profiles_graduation_year').on(table.graduationYear),
   index('idx_athlete_profiles_education_level').on(table.educationLevel),
   index('idx_athlete_profiles_is_demo').on(table.isDemoProfile),
-  index('idx_athlete_profiles_transfer_portal_verified').on(table.isTransferPortalVerified),
   unique('athlete_profiles_user_id_unique').on(table.userId),
 ]);
 
@@ -208,7 +207,6 @@ export const connections = pgTable('connections', {
   index('idx_connections_from_user_id').on(table.fromUserId),
   index('idx_connections_to_user_id').on(table.toUserId),
   index('idx_connections_status').on(table.status),
-  // Compound indexes for optimized connection queries
   index('idx_connections_from_status').on(table.fromUserId, table.status),
   index('idx_connections_to_status').on(table.toUserId, table.status),
   unique('connections_users_unique').on(table.fromUserId, table.toUserId),
@@ -241,7 +239,6 @@ export const conversations = pgTable('conversations', {
   index('idx_conversations_user2_id').on(table.user2Id),
   index('idx_conversations_last_message_at').on(table.lastMessageAt),
   index('idx_conversations_connection_active').on(table.connectionActive),
-  // Compound indexes for optimized conversation queries
   index('idx_conversations_user1_lastmessage').on(table.user1Id, table.lastMessageAt.desc()),
   index('idx_conversations_user2_lastmessage').on(table.user2Id, table.lastMessageAt.desc()),
   unique('conversations_users_unique').on(table.user1Id, table.user2Id),
@@ -263,7 +260,6 @@ export const messages = pgTable('messages', {
   index('idx_messages_sender_id').on(table.senderId),
   index('idx_messages_created_at').on(table.createdAt),
   index('idx_messages_is_read').on(table.isRead),
-  // Compound indexes for optimized message queries
   index('idx_messages_conversation_created').on(table.conversationId, table.createdAt.desc()),
   index('idx_messages_sender_read').on(table.senderId, table.isRead),
   index('idx_messages_conversation_read').on(table.conversationId, table.isRead),

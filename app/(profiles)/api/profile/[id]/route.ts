@@ -138,8 +138,8 @@ const validateBasicFields = (data: Record<string, unknown>) => {
     errors.push('Personal statement must be under 1000 characters');
   }
   
-  // Numeric validation
-  if (data.gpa !== undefined && (typeof data.gpa !== 'number' || data.gpa < 0 || data.gpa > 5)) {
+  // Numeric validation - allow null/undefined for optional fields
+  if (data.gpa !== undefined && data.gpa !== null && (typeof data.gpa !== 'number' || data.gpa < 0 || data.gpa > 5)) {
     errors.push('GPA must be a number between 0 and 5');
   }
   
@@ -752,6 +752,7 @@ export async function PUT(
       if (sanitizedData.secondarySports !== undefined) profileUpdateData.secondarySports = sanitizedData.secondarySports as string[];
       if (sanitizedData.graduationYear !== undefined) profileUpdateData.graduationYear = sanitizedData.graduationYear as number;
       if (sanitizedData.educationLevel !== undefined) profileUpdateData.educationLevel = sanitizedData.educationLevel as EducationLevel;
+      if (sanitizedData.competitionLevel !== undefined) profileUpdateData.competitionLevel = sanitizedData.competitionLevel as string;
       if (sanitizedData.organizationName !== undefined) profileUpdateData.organizationName = sanitizedData.organizationName as string;
       if (sanitizedData.city !== undefined) profileUpdateData.city = sanitizedData.city as string;
       if (sanitizedData.state !== undefined) profileUpdateData.state = sanitizedData.state as string;

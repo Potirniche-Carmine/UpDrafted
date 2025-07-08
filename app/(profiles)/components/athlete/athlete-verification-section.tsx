@@ -4,12 +4,13 @@ import React from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Edit, Plus, Shield, ExternalLink, Clock } from "lucide-react";
+import { Edit, Plus, Shield, ExternalLink, Clock, CheckCircle2, AlertCircle, GraduationCap } from "lucide-react";
 import Link from "next/link";
 import { AthleteProfileData } from "./athlete-profile-types";
 
 interface VerificationSectionProps {
-  profileData: AthleteProfileData;
+  profileData: AthleteProfileData; // Original database data for verification logic
+  displayData?: AthleteProfileData; // Current data including unsaved changes for display
   isOwnProfile: boolean;
   onEditMaxPreps?: () => void;
   onShowVerificationDialog: () => void;
@@ -19,6 +20,7 @@ interface VerificationSectionProps {
 
 export function VerificationSection({
   profileData,
+  displayData,
   isOwnProfile,
   onEditMaxPreps,
   onShowVerificationDialog,
@@ -26,116 +28,288 @@ export function VerificationSection({
   pendingSubmittedAt
 }: VerificationSectionProps) {
 
+  // Use displayData for UI display, profileData for verification logic
+  const currentData = displayData || profileData;
+
   // Check if transfer portal verification is required for this athlete
+  // Use ORIGINAL database data (profileData) to determine verification requirements
+  // This prevents showing verification requirements for unsaved changes
   const requiresTransferPortalVerification = 
-    profileData.educationLevel === 'undergraduate' || profileData.educationLevel === 'graduate';
+    (profileData.educationLevel === 'undergraduate' || profileData.educationLevel === 'graduate') &&
+    profileData.competitionLevel &&
+    ['division_1', 'division_2', 'division_3'].includes(profileData.competitionLevel);
 
   // Check if this is a high school athlete (only they should see MaxPreps)
-  const isHighSchoolAthlete = profileData.educationLevel === 'high_school';
+  const isHighSchoolAthlete = currentData.educationLevel === 'high_school';
 
-  // If user is verified but has no MaxPreps URL, they were manually verified
-  // For undergraduate/graduate athletes, still show the section if they need transfer portal verification
-  // For college athletes (non-high school), hide if verified and no transfer portal verification needed
-  if (profileData.isVerified && !profileData.maxPrepsUrl && !requiresTransferPortalVerification) {
+  // Get the verification status for display
+  const getVerificationStatus = () => {
+    if (requiresTransferPortalVerification) {
+      // For university students, combine verification statuses
+      const isTransferPortalVerified = currentData.isOnTransferPortal === true;
+      const isFullyVerified = currentData.isVerified && isTransferPortalVerified;
+      const hasTransferPortalStatus = currentData.isOnTransferPortal !== undefined;
+      
+      return {
+        type: 'university',
+        isVerified: isFullyVerified,
+        isTransferPortalVerified: isTransferPortalVerified,
+        isOnTransferPortal: currentData.isOnTransferPortal || false,
+        hasTransferPortalStatus,
+        needsVerification: !isFullyVerified || hasPendingVerification
+      };
+    } else {
+      // For high school athletes
+      return {
+        type: 'high_school',
+        isVerified: currentData.isVerified || false,
+        hasMaxPreps: !!currentData.maxPrepsUrl,
+        needsVerification: !currentData.isVerified || hasPendingVerification
+      };
+    }
+  };
+
+  const status = getVerificationStatus();
+
+  // Show different verification badges based on athlete type and status
+  const renderVerificationBadges = () => {
+    if (status.type === 'university') {
+      const badges = [];
+      
+      // General verification badge
+      if (status.isVerified) {
+        badges.push(
+          <Badge key="verified" className="bg-emerald-600 hover:bg-emerald-700 text-white border-0">
+            <CheckCircle2 className="w-3 h-3 mr-1" />
+            Verified Athlete
+          </Badge>
+        );
+      }
+      
+      // Transfer portal status badge
+      if (status.isTransferPortalVerified) {
+        // Show "Not in Transfer Portal" for D1/D2/D3 athletes when verified but not in portal
+        if (!status.isOnTransferPortal && 
+            ['division_1', 'division_2', 'division_3'].includes(currentData.competitionLevel || '')) {
+          badges.push(
+            <Badge key="portal-not-active" className="bg-gray-600 hover:bg-gray-700 text-white border-0">
+              <GraduationCap className="w-3 h-3 mr-1" />
+              Not in Transfer Portal
+            </Badge>
+          );
+        }
+        // Don't show "In Transfer Portal" badge per user request
+      } else {
+        // Show "Portal Status Required" for D1/D2/D3 athletes
+        if (['division_1', 'division_2', 'division_3'].includes(currentData.competitionLevel || '')) {
+          badges.push(
+            <Badge key="portal-unverified" className="bg-amber-600 hover:bg-amber-700 text-white border-0">
+              <AlertCircle className="w-3 h-3 mr-1" />
+              Portal Status Required
+            </Badge>
+          );
+        }
+      }
+      
+      return badges;
+    } else {
+      // High school badges
+      if (status.isVerified) {
+        return [
+          <Badge key="verified" className="bg-emerald-600 hover:bg-emerald-700 text-white border-0">
+            <CheckCircle2 className="w-3 h-3 mr-1" />
+            Verified Athlete
+          </Badge>
+        ];
+      }
+    }
+    
+    return [];
+  };
+
+  // If verified and no special requirements, don't show section
+  if (status.type === 'high_school' && status.isVerified && !status.hasMaxPreps && !hasPendingVerification) {
     return null;
   }
 
-  // Check if user should see manual verification option
-  // For high school athletes: Hide if they have MaxPreps URL, are verified, or have pending request
-  // For college athletes: Hide if they are verified or have pending request (MaxPreps not relevant)
-  const shouldShowManualVerification = isHighSchoolAthlete 
-    ? (!profileData.maxPrepsUrl && !profileData.isVerified && !hasPendingVerification)
-    : (!profileData.isVerified && !hasPendingVerification && !requiresTransferPortalVerification);
-
-  // Show pending verification status
-  const shouldShowPendingVerification = hasPendingVerification;
-
-  // Determine if MaxPreps editing should be allowed
-  const canEditMaxPreps = isOwnProfile && onEditMaxPreps && !profileData.isVerified;
-
   return (
-    <Card>
-      <CardHeader>
+    <Card className="border-0 shadow-sm bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-950">
+      <CardHeader className="pb-4">
         <div className="flex items-center justify-between">
-          <CardTitle className="flex items-center gap-2">
-            <Shield className="w-5 h-5 text-blue-600" />
-            Athlete Verification
-          </CardTitle>
-          {canEditMaxPreps && (
-            <Button 
-              size="sm" 
-              variant="ghost"
-              onClick={onEditMaxPreps}
-            >
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900 rounded-lg flex items-center justify-center">
+              <Shield className="w-5 h-5 text-blue-600" />
+            </div>
+            <div>
+              <CardTitle className="text-lg font-semibold">Verification Status</CardTitle>
+              <p className="text-sm text-muted-foreground">Athletic credentials and portal status</p>
+            </div>
+          </div>
+          {status.type === 'high_school' && isOwnProfile && onEditMaxPreps && !currentData.isVerified && (
+            <Button size="sm" variant="ghost" onClick={onEditMaxPreps}>
               <Edit className="w-4 h-4 mr-1" />
               Edit
             </Button>
           )}
         </div>
+        
+        {/* Display badges */}
+        {renderVerificationBadges().length > 0 && (
+          <div className="flex flex-wrap gap-2 mt-3">
+            {renderVerificationBadges()}
+          </div>
+        )}
       </CardHeader>
-      <CardContent>
-        <div className="space-y-4">
-          {/* MaxPreps Section - Only show for high school athletes */}
-          {isHighSchoolAthlete && profileData.maxPrepsUrl ? (
-            <div className="bg-gradient-to-r from-blue-50 to-green-50 dark:from-blue-950 dark:to-green-950 rounded-lg p-4">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-1">
-                    <p className="font-medium">MaxPreps Profile</p>
-                    {profileData.isVerified && (
-                      <Badge className="bg-green-600 text-white text-xs">
-                        <Shield className="w-3 h-3 mr-1" />
-                        Verified
-                      </Badge>
-                    )}
+      
+      <CardContent className="space-y-6">
+        {/* High School MaxPreps Section */}
+        {isHighSchoolAthlete && currentData.maxPrepsUrl && (
+          <div className="bg-white dark:bg-slate-800 rounded-xl p-6 border border-slate-200 dark:border-slate-700">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 mb-2">
+                  <div className="w-8 h-8 bg-green-100 dark:bg-green-900 rounded-lg flex items-center justify-center">
+                    <ExternalLink className="w-4 h-4 text-green-600" />
                   </div>
-                  <p className="text-sm text-muted-foreground">
-                    Official high school stats, game logs, and team roster verification
-                    {profileData.isVerified && (
-                      <span className="block text-green-600 dark:text-green-400 font-medium mt-1">
-                        ✓ Profile verified and locked for security
-                      </span>
-                    )}
+                  <h3 className="font-semibold text-slate-900 dark:text-slate-100">MaxPreps Profile</h3>
+                </div>
+                <p className="text-sm text-slate-600 dark:text-slate-400 mb-1">
+                  Official high school stats, game logs, and team roster verification
+                </p>
+                {currentData.isVerified && (
+                  <p className="text-sm text-emerald-600 dark:text-emerald-400 font-medium">
+                    ✓ Profile verified and secured
                   </p>
-                </div>
-                <div className="flex-shrink-0 w-full sm:w-auto">
-                  <Link href={profileData.maxPrepsUrl} target="_blank" className="block">
-                    <Button className="bg-[#01ae79] hover:bg-[#01ae79]/90 text-white w-full sm:w-auto">
-                      <ExternalLink className="w-4 h-4 mr-1" />
-                      <span className="whitespace-nowrap">View Official Stats</span>
-                    </Button>
-                  </Link>
-                </div>
+                )}
               </div>
-              {!profileData.isVerified && (
-                <div className="mt-3 bg-orange-50 dark:bg-orange-950/20 border border-orange-200 dark:border-orange-800 rounded-lg p-3">
-                  <p className="text-sm text-orange-700 dark:text-orange-200">
-                    <strong>Note:</strong> MaxPreps is the official source for high school sports verification. 
-                    Your profile name must match your MaxPreps athlete page to receive verified status.
-                  </p>
-                </div>
-              )}
-              {profileData.isVerified && (
-                <div className="mt-3 bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800 rounded-lg p-3">
-                  <p className="text-sm text-green-700 dark:text-green-200">
-                    <strong>Verified:</strong> Your MaxPreps profile has been verified and is locked for security. 
-                    This prevents impersonation and maintains the integrity of your athletic credentials.
-                  </p>
-                </div>
-              )}
+              <div className="flex-shrink-0">
+                <Link href={currentData.maxPrepsUrl!} target="_blank">
+                  <Button className="bg-[#01ae79] hover:bg-[#01ae79]/90 text-white">
+                    <ExternalLink className="w-4 h-4 mr-2" />
+                    View Stats
+                  </Button>
+                </Link>
+              </div>
             </div>
-          ) : isHighSchoolAthlete ? (
-            <div className="bg-blue-50 dark:bg-blue-950/20 rounded-lg p-4">
-              <div className="text-center">
-                <div className="w-16 h-16 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Shield className="w-8 h-8 text-blue-600" />
-                </div>
-                <h3 className="font-medium text-blue-900 dark:text-blue-100 mb-2">High School Athletes</h3>
-                <p className="text-sm text-blue-700 dark:text-blue-200 mb-4 px-2">
+          </div>
+        )}
+
+        {/* University Transfer Portal Section */}
+        {requiresTransferPortalVerification && (
+          <div className={`rounded-xl p-6 border transition-all ${
+            status.isTransferPortalVerified 
+              ? 'bg-emerald-50 dark:bg-emerald-950/20 border-emerald-200 dark:border-emerald-800' 
+              : 'bg-amber-50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-800'
+          }`}>
+            <div className="text-center space-y-4">
+              <div className={`w-16 h-16 rounded-full flex items-center justify-center mx-auto ${
+                status.isTransferPortalVerified 
+                  ? 'bg-emerald-100 dark:bg-emerald-900' 
+                  : 'bg-amber-100 dark:bg-amber-900'
+              }`}>
+                <GraduationCap className={`w-8 h-8 ${
+                  status.isTransferPortalVerified 
+                    ? 'text-emerald-600' 
+                    : 'text-amber-600'
+                }`} />
+              </div>
+              
+              <div>
+                <h3 className={`font-semibold mb-2 ${
+                  status.isTransferPortalVerified 
+                    ? 'text-emerald-900 dark:text-emerald-100' 
+                    : 'text-amber-900 dark:text-amber-100'
+                }`}>
+                  {status.isTransferPortalVerified ? 'Transfer Portal Status Confirmed' : 'Transfer Portal Verification Required'}
+                </h3>
+                
+                <p className={`text-sm mb-4 ${
+                  status.isTransferPortalVerified 
+                    ? 'text-emerald-700 dark:text-emerald-200' 
+                    : 'text-amber-700 dark:text-amber-200'
+                }`}>
+                  {status.isTransferPortalVerified 
+                    ? `Your NCAA Transfer Portal status has been confirmed. ${
+                        status.isOnTransferPortal 
+                          ? 'You are currently in the transfer portal and can connect with coaches.' 
+                          : 'You are not currently in the transfer portal.'
+                      }`
+                    : `As a ${currentData.competitionLevel === 'division_1' ? 'D1' : currentData.competitionLevel === 'division_2' ? 'D2' : currentData.educationLevel} athlete, you must confirm your NCAA Transfer Portal status before coaches and recruiters can connect with you.`
+                  }
+                </p>
+
+                {!status.isTransferPortalVerified && isOwnProfile && (
+                  <Button 
+                    onClick={onShowVerificationDialog}
+                    className="bg-amber-600 hover:bg-amber-700 text-white mb-4"
+                  >
+                    <Shield className="w-4 h-4 mr-2" />
+                    Confirm Portal Status
+                  </Button>
+                )}
+
+                {status.isTransferPortalVerified && currentData.transferPortalVerifiedAt && (
+                  <div className={`inline-block px-3 py-2 rounded-lg text-xs font-medium ${
+                    status.isTransferPortalVerified 
+                      ? 'bg-emerald-100 dark:bg-emerald-900/50 text-emerald-800 dark:text-emerald-200' 
+                      : 'bg-amber-100 dark:bg-amber-900/50 text-amber-800 dark:text-amber-200'
+                  }`}>
+                    Verified: {new Date(currentData.transferPortalVerifiedAt!).toLocaleDateString()}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Manual Verification Section */}
+        {((isHighSchoolAthlete && !currentData.maxPrepsUrl && !currentData.isVerified && !hasPendingVerification) ||
+          (!requiresTransferPortalVerification && !currentData.isVerified && !hasPendingVerification)) && (
+          <div className="bg-white dark:bg-slate-800 rounded-xl p-6 border border-slate-200 dark:border-slate-700">
+            <div className="text-center space-y-4">
+              <div className="w-16 h-16 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center mx-auto">
+                <Shield className="w-8 h-8 text-blue-600" />
+              </div>
+              
+              <div>
+                <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">
+                  {isHighSchoolAthlete ? "Club & College Athletes" : "Athlete Verification"}
+                </h3>
+                <p className="text-sm text-slate-600 dark:text-slate-400 mb-4">
+                  {isHighSchoolAthlete 
+                    ? "Playing club sports, intramurals, or college teams? Get verified with team rosters, photos, or other documentation."
+                    : "Get verified as a legitimate athlete with team rosters, photos, or other documentation."
+                  }
+                </p>
+                {isOwnProfile && (
+                  <Button 
+                    onClick={onShowVerificationDialog}
+                    className="bg-blue-600 hover:bg-blue-700 text-white"
+                  >
+                    <Shield className="w-4 h-4 mr-2" />
+                    Apply for Verification
+                  </Button>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* High School MaxPreps Prompt */}
+        {isHighSchoolAthlete && !currentData.maxPrepsUrl && !currentData.isVerified && !hasPendingVerification && (
+          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/20 dark:to-indigo-950/20 rounded-xl p-6 border border-blue-200 dark:border-blue-800">
+            <div className="text-center space-y-4">
+              <div className="w-16 h-16 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center mx-auto">
+                <ExternalLink className="w-8 h-8 text-blue-600" />
+              </div>
+              
+              <div>
+                <h3 className="font-semibold text-blue-900 dark:text-blue-100 mb-2">High School Athletes</h3>
+                <p className="text-sm text-blue-700 dark:text-blue-200 mb-4">
                   MaxPreps is the official source for high school sports stats and verification. 
                   Link your MaxPreps profile to showcase official stats and get verified instantly.
                 </p>
-                {canEditMaxPreps && (
+                {isOwnProfile && onEditMaxPreps && (
                   <Button 
                     variant="outline"
                     className="border-blue-300 text-blue-700 hover:bg-blue-100 dark:border-blue-700 dark:text-blue-200 dark:hover:bg-blue-900"
@@ -147,156 +321,51 @@ export function VerificationSection({
                 )}
               </div>
             </div>
-          ) : null}
+          </div>
+        )}
 
-          {/* Transfer Portal Verification Section - Only show for undergraduate/graduate athletes */}
-          {requiresTransferPortalVerification && (
-            <div className="bg-purple-50 dark:bg-purple-950/20 rounded-lg p-4">
-              <div className="text-center">
-                <div className={`w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 ${
-                  profileData.isTransferPortalVerified 
-                    ? 'bg-green-100 dark:bg-green-900' 
-                    : 'bg-purple-100 dark:bg-purple-900'
-                }`}>
-                  <Shield className={`w-8 h-8 ${
-                    profileData.isTransferPortalVerified 
-                      ? 'text-green-600' 
-                      : 'text-purple-600'
-                  }`} />
-                </div>
-                
-                {profileData.isTransferPortalVerified ? (
-                  <>
-                    <div className="mb-2">
-                      <h3 className="font-medium text-green-900 dark:text-green-100 text-center mb-2">
-                        Transfer Portal Status Confirmed
-                      </h3>
-                      <div className="flex justify-center">
-                        <Badge className="bg-blue-600 text-white text-xs sm:text-sm">
-                          <Shield className="w-3 h-3 mr-1" />
-                          Portal Verified
-                        </Badge>
-                      </div>
-                    </div>
-                    <p className="text-sm text-green-700 dark:text-green-200 mb-3 px-2">
-                      Your NCAA Transfer Portal status has been confirmed. You can now connect and message with coaches and recruiters.
-                    </p>
-                    <div className="bg-green-100 dark:bg-green-900/50 rounded-lg p-3 border border-green-200 dark:border-green-700">
-                      <p className="text-xs text-green-800 dark:text-green-200">
-                        <strong>Transfer Portal Confirmed:</strong> {profileData.transferPortalVerifiedAt 
-                          ? new Date(profileData.transferPortalVerifiedAt).toLocaleDateString()
-                          : 'Recently'
-                        }
-                      </p>
-                    </div>
-                  </>
-                ) : (
-                  <>
-                    <div className="mb-2">
-                      <h3 className="font-medium text-purple-900 dark:text-purple-100 text-center mb-2">
-                        Transfer Portal Confirmation Required
-                      </h3>
-                      <div className="flex justify-center">
-                        <Badge className="bg-red-600 text-white text-xs sm:text-sm">Required</Badge>
-                      </div>
-                    </div>
-                    <p className="text-sm text-purple-700 dark:text-purple-200 mb-4 px-2">
-                      As an {profileData.educationLevel} athlete, you must confirm your NCAA Transfer Portal status 
-                      before coaches and recruiters can connect with you or send messages.
-                    </p>
-                    
-                    {isOwnProfile && (
-                      <Button 
-                        onClick={onShowVerificationDialog}
-                        className="bg-purple-600 hover:bg-purple-700 text-white mb-3"
-                      >
-                        <Shield className="w-4 h-4 mr-2" />
-                        Confirm Transfer Portal Status
-                      </Button>
-                    )}
-                    
-                    <div className="bg-orange-50 dark:bg-orange-950/20 border border-orange-200 dark:border-orange-800 rounded-lg p-3">
-                      <p className="text-xs text-orange-700 dark:text-orange-200">
-                        <strong>Required:</strong> You must submit proof of your NCAA Transfer Portal entry, 
-                        including a screenshot of your portal confirmation email.
-                      </p>
-                    </div>
-                  </>
-                )}
+        {/* Pending Verification Section */}
+        {hasPendingVerification && (
+          <div className="bg-yellow-50 dark:bg-yellow-950/20 rounded-xl p-6 border border-yellow-200 dark:border-yellow-800">
+            <div className="text-center space-y-4">
+              <div className="w-16 h-16 bg-yellow-100 dark:bg-yellow-900 rounded-full flex items-center justify-center mx-auto">
+                <Clock className="w-8 h-8 text-yellow-600" />
               </div>
-            </div>
-          )}
-
-          {/* Manual Verification Section - Only show if not already verified and no MaxPreps */}
-          {shouldShowManualVerification && (
-            <div className="bg-green-50 dark:bg-green-950/20 rounded-lg p-4">
-              <div className="text-center">
-                <div className="w-16 h-16 bg-green-100 dark:bg-green-900 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Shield className="w-8 h-8 text-green-600" />
-                </div>
-                <h3 className="font-medium text-green-900 dark:text-green-100 mb-2">
-                  {isHighSchoolAthlete ? "Club & College Athletes" : "Athlete Verification"}
-                </h3>
-                <p className="text-sm text-green-700 dark:text-green-200 mb-4 px-2">
-                  {isHighSchoolAthlete 
-                    ? "Playing club sports, intramurals, or college teams? Get manually verified with team rosters, photos, or other documentation."
-                    : "Get verified as a legitimate athlete with team rosters, photos, or other documentation."
-                  }
-                </p>
-                {isOwnProfile && (
-                  <Button 
-                    onClick={onShowVerificationDialog}
-                    className="bg-green-600 hover:bg-green-700 text-white"
-                  >
-                    <Shield className="w-4 h-4 mr-2" />
-                    Apply for Manual Verification
-                  </Button>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* Pending Verification Section */}
-          {shouldShowPendingVerification && (
-            <div className="bg-yellow-50 dark:bg-yellow-950/20 rounded-lg p-4 border border-yellow-200 dark:border-yellow-800">
-              <div className="text-center">
-                <div className="w-16 h-16 bg-yellow-100 dark:bg-yellow-900 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Clock className="w-8 h-8 text-yellow-600" />
-                </div>
-                <h3 className="font-medium text-yellow-900 dark:text-yellow-100 mb-2">Verification Pending</h3>
-                <p className="text-sm text-yellow-700 dark:text-yellow-200 mb-3">
+              
+              <div>
+                <h3 className="font-semibold text-yellow-900 dark:text-yellow-100 mb-2">Verification Pending</h3>
+                <p className="text-sm text-yellow-700 dark:text-yellow-200 mb-4">
                   Your verification request is being reviewed by our team. This usually takes 1-3 business days.
                 </p>
-                <div className="bg-yellow-100 dark:bg-yellow-900/50 rounded-lg p-3 border border-yellow-200 dark:border-yellow-700">
-                  <p className="text-xs text-yellow-800 dark:text-yellow-200">
-                    <strong>Submitted:</strong> {pendingSubmittedAt ? new Date(pendingSubmittedAt).toLocaleDateString() : 'Recently'}
-                  </p>
-                  <p className="text-xs text-yellow-800 dark:text-yellow-200 mt-1">
-                    You&apos;ll see a verified badge on your profile once approved.
-                  </p>
+                <div className="inline-block px-3 py-2 bg-yellow-100 dark:bg-yellow-900/50 rounded-lg text-xs font-medium text-yellow-800 dark:text-yellow-200">
+                  Submitted: {pendingSubmittedAt ? new Date(pendingSubmittedAt).toLocaleDateString() : 'Recently'}
                 </div>
               </div>
             </div>
-          )}
+          </div>
+        )}
 
-          {/* Help Section - Only show if manual verification is shown */}
-          {shouldShowManualVerification && (
-            <div className="bg-gray-50 dark:bg-gray-950/20 border border-gray-200 dark:border-gray-800 rounded-lg p-3">
-              <h4 className="font-medium text-gray-900 dark:text-gray-100 mb-2 text-sm">
-                Which verification is right for me?
-              </h4>
-              <ul className="text-xs text-gray-700 dark:text-gray-300 space-y-1">
-                {isHighSchoolAthlete && (
-                  <li>• <strong>MaxPreps:</strong> High school athletes with official stats</li>
-                )}
-                <li>• <strong>Manual:</strong> {isHighSchoolAthlete 
-                  ? "Club sports, intramurals, college teams, or athletes without MaxPreps"
-                  : "Club sports, intramurals, or general athletic participation verification"
-                }</li>
-              </ul>
-            </div>
-          )}
-        </div>
+        {/* Help Section */}
+        {((isHighSchoolAthlete && !currentData.maxPrepsUrl && !currentData.isVerified && !hasPendingVerification) ||
+          (!requiresTransferPortalVerification && !currentData.isVerified && !hasPendingVerification)) && (
+          <div className="bg-slate-50 dark:bg-slate-900/50 rounded-lg p-4 border border-slate-200 dark:border-slate-800">
+            <h4 className="font-medium text-slate-900 dark:text-slate-100 mb-2 text-sm">
+              Which verification is right for me?
+            </h4>
+            <ul className="text-xs text-slate-600 dark:text-slate-400 space-y-1">
+              {isHighSchoolAthlete && (
+                <li>• <strong>MaxPreps:</strong> High school athletes with official stats</li>
+              )}
+              <li>• <strong>Manual:</strong> {isHighSchoolAthlete 
+                ? "Club sports, intramurals, college teams, or athletes without MaxPreps"
+                : "Club sports, intramurals, or general athletic participation verification"
+              }</li>
+              {requiresTransferPortalVerification && (
+                <li>• <strong>Transfer Portal:</strong> Required for undergraduate/graduate athletes to connect with coaches</li>
+              )}
+            </ul>
+          </div>
+        )}
       </CardContent>
     </Card>
   );

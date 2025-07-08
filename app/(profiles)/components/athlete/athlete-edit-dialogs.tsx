@@ -15,6 +15,7 @@ import { EducationLevel } from '@/app/(onboarding)/lib/onboarding';
 import { sanitizeProfileData } from '@/utils/sanitization';
 import { FileUpload } from '@/components/ui/file-upload';
 import { useRoleView } from '@/hooks/use-role-view';
+import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
 
 // Import field validation
 const FIELD_LIMITS = {
@@ -40,6 +41,16 @@ const EDUCATION_LEVEL_OPTIONS = [
   { value: 'associate', label: 'Community College (Associate)' },
   { value: 'undergraduate', label: 'Undergraduate' },
   { value: 'graduate', label: 'Graduate School' },
+];
+
+const COMPETITION_LEVEL_OPTIONS = [
+  { value: 'division_1', label: 'Division 1 (D1)' },
+  { value: 'division_2', label: 'Division 2 (D2)' },
+  { value: 'division_3', label: 'Division 3 (D3)' },
+  { value: 'naia', label: 'NAIA' },
+  { value: 'club', label: 'Club Sports' },
+  { value: 'intramural', label: 'Intramural' },
+  { value: 'other', label: 'Other' },
 ];
 
 // Month and year options
@@ -84,6 +95,7 @@ export interface AthleteProfileData {
   secondarySports?: string[];
   graduationYear: number;
   educationLevel: EducationLevel;
+  competitionLevel?: string;
   organizationName: string;
   city: string;
   state: string;
@@ -146,6 +158,23 @@ export function AthleteEditDialogs({
   // Get admin role information for demo profile uploads
   const { isAdmin, viewingAs } = useRoleView();
 
+  // Confirmation dialog state
+  const [confirmationDialog, setConfirmationDialog] = useState<{
+    open: boolean;
+    title: string;
+    description: string;
+    confirmText: string;
+    variant: "warning" | "danger" | "info" | "success";
+    onConfirm: () => void;
+  }>({
+    open: false,
+    title: "",
+    description: "",
+    confirmText: "Confirm",
+    variant: "warning",
+    onConfirm: () => {}
+  });
+
   // Initialize tempVideos when dialog opens
   useEffect(() => {
     if (dialogType === 'video-highlights') {
@@ -166,7 +195,7 @@ export function AthleteEditDialogs({
   // Initialize edit data when dialog opens
   useEffect(() => {
     if (!dialogType) {
-      // Clean up state when dialog is closed
+      // Clean up state immediately when dialog is closed
       setProfileImagePreview(null);
       setSelectedProfileFile(null);
       setValidationErrors({});
@@ -174,12 +203,10 @@ export function AthleteEditDialogs({
       return;
     }
 
-    // Prevent auto-focus on dialog open
-    setTimeout(() => {
-      if (document.activeElement && document.activeElement instanceof HTMLElement) {
-        document.activeElement.blur();
-      }
-    }, 0);
+    // Prevent auto-focus on dialog open - remove setTimeout
+    if (document.activeElement && document.activeElement instanceof HTMLElement) {
+      document.activeElement.blur();
+    }
 
     switch (dialogType) {
       case 'basic-info':
@@ -189,6 +216,7 @@ export function AthleteEditDialogs({
           sport: profileData.sport,
           secondarySports: profileData.secondarySports || [],
           educationLevel: profileData.educationLevel,
+          competitionLevel: profileData.competitionLevel || '',
           city: profileData.city,
           state: profileData.state,
           organizationName: profileData.organizationName,
@@ -336,8 +364,14 @@ export function AthleteEditDialogs({
         }
         break;
       case 'gpa':
-        if (typeof value === 'number' && (value < NUMERIC_LIMITS.GPA.min || value > NUMERIC_LIMITS.GPA.max)) {
-          return `GPA must be between ${NUMERIC_LIMITS.GPA.min} and ${NUMERIC_LIMITS.GPA.max}`;
+        if (typeof value === 'string' && value.trim()) {
+          const numValue = parseFloat(value);
+          if (isNaN(numValue)) {
+            return 'GPA must be a valid number';
+          }
+          if (numValue < NUMERIC_LIMITS.GPA.min || numValue > NUMERIC_LIMITS.GPA.max) {
+            return `GPA must be between ${NUMERIC_LIMITS.GPA.min} and ${NUMERIC_LIMITS.GPA.max}`;
+          }
         }
         break;
       case 'instagram':
@@ -678,18 +712,26 @@ export function AthleteEditDialogs({
         updates.sport = editData.sport;
         updates.secondarySports = editData.secondarySports;
         updates.educationLevel = editData.educationLevel;
+        updates.competitionLevel = editData.competitionLevel;
         updates.positions = editData.positions;
         updates.city = editData.city;
         updates.state = editData.state;
-        updates.gpa = editData.gpa;
-        updates.satScore = editData.satScore;
-        updates.actScore = editData.actScore;
-        updates.height = editData.height;
-        updates.weight = editData.weight;
+        updates.organizationName = editData.organizationName;
+        updates.graduationYear = editData.graduationYear;
+        // Construct height from feet and inches
+        if (editData.heightFeet && editData.heightInches) {
+          updates.height = `${editData.heightFeet}'${editData.heightInches}"`;
+        }
+        // Clean weight format (remove 'lbs' if user added it)
+        if (editData.weight) {
+          const cleanWeight = String(editData.weight).replace(/\s*lbs?\s*/gi, '').trim();
+          updates.weight = cleanWeight ? `${cleanWeight} lbs` : '';
+        }
         break;
 
       case 'academic-info':
-        updates.gpa = editData.gpa;
+        // Convert GPA string to number for saving
+        updates.gpa = editData.gpa && String(editData.gpa).trim() ? parseFloat(String(editData.gpa)) : editData.gpa;
         updates.satScore = editData.satScore;
         updates.actScore = editData.actScore;
         updates.intendedMajor = editData.intendedMajor;
@@ -888,6 +930,31 @@ export function AthleteEditDialogs({
                 </Select>
               </div>
 
+              {/* Competition Level - Only show for undergraduate/graduate */}
+              {(editData.educationLevel === 'undergraduate' || editData.educationLevel === 'graduate') && (
+                <div className="space-y-2">
+                  <Label htmlFor="edit-competitionLevel">Competition Level</Label>
+                  <Select
+                    value={String(editData.competitionLevel || '')}
+                    onValueChange={(value) => {
+                      setEditData(prev => ({ ...prev, competitionLevel: value }));
+                    }}
+                  >
+                    <SelectTrigger className="h-12" id="edit-competitionLevel">
+                      <SelectValue placeholder="Select competition level" />
+                    </SelectTrigger>
+                    <SelectContent className="z-[70]">
+                      {COMPETITION_LEVEL_OPTIONS.map((option) => (
+                        <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">
+                    D1, D2, and D3 athletes require transfer portal verification to connect with coaches
+                  </p>
+                </div>
+              )}
+
               {/* Secondary Sports */}
               <div className="space-y-2">
                 <Label htmlFor="edit-secondarySports">Secondary Sports</Label>
@@ -1020,7 +1087,7 @@ export function AthleteEditDialogs({
                       value={editData.heightFeet as string || ''}
                       onValueChange={(value) => setEditData(prev => ({ ...prev, heightFeet: value }))}
                     >
-                      <SelectTrigger className="h-12">
+                      <SelectTrigger className={`h-12 ${!editData.heightFeet ? 'border-red-300' : ''}`}>
                         <SelectValue placeholder="Feet" />
                       </SelectTrigger>
                       <SelectContent className="z-[70]">
@@ -1033,7 +1100,7 @@ export function AthleteEditDialogs({
                       value={editData.heightInches as string || ''}
                       onValueChange={(value) => setEditData(prev => ({ ...prev, heightInches: value }))}
                     >
-                      <SelectTrigger className="h-12">
+                      <SelectTrigger className={`h-12 ${!editData.heightInches ? 'border-red-300' : ''}`}>
                         <SelectValue placeholder="In" />
                       </SelectTrigger>
                       <SelectContent className="z-[70]">
@@ -1043,6 +1110,9 @@ export function AthleteEditDialogs({
                       </SelectContent>
                     </Select>
                   </div>
+                  {(!editData.heightFeet || !editData.heightInches) && (
+                    <p className="text-sm text-red-500">Please select both feet and inches</p>
+                  )}
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="edit-weight">Weight *</Label>
@@ -1078,13 +1148,13 @@ export function AthleteEditDialogs({
                 <Label htmlFor="edit-gpa">GPA</Label>
                 <Input
                   id="edit-gpa"
-                  type="number"
+                  type="text"
                   step="0.01"
                   min="0"
                   max="5.0"
                   placeholder="3.85"
                   value={String(editData.gpa || '')}
-                  onChange={(e) => handleFieldChange('gpa', e.target.value ? parseFloat(e.target.value) : '')}
+                  onChange={(e) => handleFieldChange('gpa', e.target.value)}
                   className={`h-12 ${validationErrors.gpa ? 'border-red-500' : ''}`}
                   autoComplete="off"
                   inputMode="decimal"
@@ -1693,43 +1763,67 @@ export function AthleteEditDialogs({
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => {
-      if (!open && !isDirty) {
-        onClose();
-      } else if (!open && isDirty) {
-        // Only show confirmation if there are unsaved changes
-        if (window.confirm('Are you sure you want to close? Any unsaved changes will be lost.')) {
-          setIsDirty(false);
+    <>
+      <Dialog open={isOpen} onOpenChange={(open) => {
+        if (!open && !isDirty) {
           onClose();
+        } else if (!open && isDirty) {
+          // Show custom confirmation dialog instead of window.confirm
+          setConfirmationDialog({
+            open: true,
+            title: "Discard Changes?",
+            description: "You have unsaved changes. Are you sure you want to close? Any unsaved changes will be lost.",
+            confirmText: "Discard",
+            variant: "warning",
+            onConfirm: () => {
+              setIsDirty(false);
+              setConfirmationDialog(prev => ({ ...prev, open: false }));
+              onClose();
+            }
+          });
         }
-      }
-    }}>
-      <DialogContent className={`${dialogType === 'basic-info' ? "sm:max-w-2xl max-w-lg" : "sm:max-w-md max-w-lg"} z-[60]`}>
-        {getDialogContent()}
-        {dialogType === 'delete-measurable' ? (
-          <DialogFooter className="sm:justify-start">
-            <Button variant="outline" onClick={onClose}>Cancel</Button>
-            <Button 
-              variant="destructive" 
-              onClick={handleDeleteMeasurable}
-              disabled={!measurableIdToEdit}
-            >
-              Delete Metric
-            </Button>
-          </DialogFooter>
-        ) : dialogType !== 'profile-image' ? (
-          <DialogFooter>
-            <Button variant="outline" onClick={onClose}>Cancel</Button>
-            <Button 
-              onClick={handleSave}
-              disabled={!canSave() || isUploading}
-            >
-              <Save className="w-4 h-4 mr-2" />
-              Save Changes
-            </Button>
-          </DialogFooter>
-        ) : null}
-      </DialogContent>
-    </Dialog>
+      }}>
+        <DialogContent className={`${dialogType === 'basic-info' ? "sm:max-w-2xl max-w-lg" : "sm:max-w-md max-w-lg"} z-[60]`}>
+          {getDialogContent()}
+          {/* Only render footer if dialog type exists (prevents flash during close) */}
+          {dialogType && (
+            dialogType === 'delete-measurable' ? (
+              <DialogFooter className="sm:justify-start">
+                <Button variant="outline" onClick={onClose}>Cancel</Button>
+                <Button 
+                  variant="destructive" 
+                  onClick={handleDeleteMeasurable}
+                  disabled={!measurableIdToEdit}
+                >
+                  Delete Metric
+                </Button>
+              </DialogFooter>
+            ) : dialogType !== 'profile-image' ? (
+              <DialogFooter>
+                <Button variant="outline" onClick={onClose}>Cancel</Button>
+                <Button 
+                  onClick={handleSave}
+                  disabled={!canSave() || isUploading}
+                >
+                  <Save className="w-4 h-4 mr-2" />
+                  Save Changes
+                </Button>
+              </DialogFooter>
+            ) : null
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Confirmation Dialog */}
+      <ConfirmationDialog
+        open={confirmationDialog.open}
+        onOpenChange={(open) => setConfirmationDialog(prev => ({ ...prev, open }))}
+        title={confirmationDialog.title}
+        description={confirmationDialog.description}
+        confirmText={confirmationDialog.confirmText}
+        variant={confirmationDialog.variant}
+        onConfirm={confirmationDialog.onConfirm}
+      />
+    </>
   );
 } 

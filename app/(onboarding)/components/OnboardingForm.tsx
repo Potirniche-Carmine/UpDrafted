@@ -26,6 +26,7 @@ const initialData: OnboardingData = {
   secondarySports: [],
   graduationYear: null,
   educationLevel: "high_school",
+  competitionLevel: "",
   organizationName: "",
   city: "",
   state: "",
@@ -168,6 +169,11 @@ export default function OnboardingForm({ role, onBack }: OnboardingFormProps) {
         data.personalStatement
       );
 
+      // Competition level is required for undergraduate and graduate students
+      const competitionLevelRequirement = (data.educationLevel === 'undergraduate' || data.educationLevel === 'graduate') 
+        ? !!data.competitionLevel 
+        : true;
+
       // Academic requirements depend on education level
       let academicRequirements = false;
       if (data.educationLevel === 'high_school') {
@@ -178,7 +184,7 @@ export default function OnboardingForm({ role, onBack }: OnboardingFormProps) {
         academicRequirements = true;
       }
 
-      return baseRequirements && academicRequirements;
+      return baseRequirements && competitionLevelRequirement && academicRequirements;
     } else if (data.role === 'coach') {
       // Base requirements for coaches
       const baseRequirements = !!(

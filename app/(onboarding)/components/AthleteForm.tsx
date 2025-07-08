@@ -34,6 +34,16 @@ const EDUCATION_LEVEL_OPTIONS = [
   { value: 'graduate', label: 'Graduate School' },
 ];
 
+const COMPETITION_LEVEL_OPTIONS = [
+  { value: 'division_1', label: 'Division 1 (D1)' },
+  { value: 'division_2', label: 'Division 2 (D2)' },
+  { value: 'division_3', label: 'Division 3 (D3)' },
+  { value: 'naia', label: 'NAIA' },
+  { value: 'club', label: 'Club Sports' },
+  { value: 'intramural', label: 'Intramural' },
+  { value: 'other', label: 'Other' },
+];
+
 const getSchoolLabel = (educationLevel: EducationLevel) => {
   switch (educationLevel) {
     case 'high_school':
@@ -294,9 +304,21 @@ export default function AthleteForm({ data, onInputChange }: AthleteFormProps) {
       <div className="space-y-3">
         <Label htmlFor="educationLevel" className="text-base font-medium">Education Level *</Label>
         <Select value={data.educationLevel} onValueChange={(value) => {
-          onInputChange('educationLevel', value as EducationLevel);
+          const newEducationLevel = value as EducationLevel;
+          onInputChange('educationLevel', newEducationLevel);
+          
           // Re-validate HUDL URL when education level changes (may become required/optional)
-          validateAndUpdateField('hudlUrl', data.hudlUrl);
+          // We need to check the new education level, not the old one
+          const newErrors = { ...validationErrors };
+          const isHighSchool = newEducationLevel === 'high_school';
+          
+          if (isHighSchool && !data.hudlUrl?.trim()) {
+            newErrors.hudlUrl = 'Hudl URL is required for high school athletes';
+          } else {
+            delete newErrors.hudlUrl;
+          }
+          
+          setValidationErrors(newErrors);
         }}>
           <SelectTrigger className="h-11 bg-background">
             <SelectValue placeholder="Are you a high school or college athlete?" />
@@ -311,6 +333,8 @@ export default function AthleteForm({ data, onInputChange }: AthleteFormProps) {
           This helps us customize your profile and determine requirements like HUDL.
         </p>
       </div>
+
+
 
       {/* Primary Sport Selection */}
       <div className="space-y-3">
@@ -370,6 +394,29 @@ export default function AthleteForm({ data, onInputChange }: AthleteFormProps) {
               </div>
             ))}
           </div>
+        </div>
+      )}
+
+      {/* Competition Level - Show for undergraduate and graduate students */}
+      {(data.educationLevel === 'undergraduate' || data.educationLevel === 'graduate') && (
+        <div className="space-y-3">
+          <Label htmlFor="competitionLevel" className="text-base font-medium">Competition Level *</Label>
+          <Select value={data.competitionLevel} onValueChange={(value) => onInputChange('competitionLevel', value)}>
+            <SelectTrigger className="h-11 bg-background w-full" style={{ height: '2.75rem' }}>
+              <SelectValue placeholder="Select your competition level" />
+            </SelectTrigger>
+            <SelectContent>
+              {COMPETITION_LEVEL_OPTIONS.map(option => (
+                <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <p className="text-xs text-muted-foreground">
+            {['division_1', 'division_2', 'division_3'].includes(data.competitionLevel) 
+              ? "⚠️ Transfer portal verification will be required for D1, D2, and D3 athletes to connect with coaches and recruiters"
+              : "This helps coaches and recruiters understand your athletic background"
+            }
+          </p>
         </div>
       )}
 

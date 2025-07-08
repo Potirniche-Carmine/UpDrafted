@@ -548,8 +548,13 @@ async function handleSendMessage(userId: string, body: SendMessageRequestBody) {
     const partnerUser = await profileOperations.getUserWithProfile(partnerId);
     if (partnerUser && partnerUser.role === 'athlete' && partnerUser.athleteProfile) {
       const educationLevel = partnerUser.athleteProfile.educationLevel;
-      if (educationLevel === 'undergraduate' || educationLevel === 'graduate') {
-        if (!partnerUser.athleteProfile.isTransferPortalVerified) {
+      const competitionLevel = partnerUser.athleteProfile.competitionLevel;
+      
+      // Only D1, D2, and D3 college athletes need transfer portal verification
+      if ((educationLevel === 'undergraduate' || educationLevel === 'graduate') && 
+          competitionLevel && 
+          ['division_1', 'division_2', 'division_3'].includes(competitionLevel)) {
+        if (!partnerUser.athleteProfile.isOnTransferPortal) {
           return NextResponse.json({
             success: false,
             error: 'Cannot send message: This athlete must be verified for NCAA Transfer Portal before messages can be sent.',
@@ -687,8 +692,13 @@ async function handleGetOrCreateConversation(userId: string, body: GetOrCreateCo
     const partnerUser = await profileOperations.getUserWithProfile(partnerId);
     if (partnerUser && partnerUser.role === 'athlete' && partnerUser.athleteProfile) {
       const educationLevel = partnerUser.athleteProfile.educationLevel;
-      if (educationLevel === 'undergraduate' || educationLevel === 'graduate') {
-        if (!partnerUser.athleteProfile.isTransferPortalVerified) {
+      const competitionLevel = partnerUser.athleteProfile.competitionLevel;
+      
+      // Only D1, D2, and D3 college athletes need transfer portal verification
+      if ((educationLevel === 'undergraduate' || educationLevel === 'graduate') && 
+          competitionLevel && 
+          ['division_1', 'division_2', 'division_3'].includes(competitionLevel)) {
+        if (!partnerUser.athleteProfile.isOnTransferPortal) {
           return NextResponse.json({
             success: false,
             error: 'Cannot start conversation: This athlete must be verified for NCAA Transfer Portal before conversations can be created.',

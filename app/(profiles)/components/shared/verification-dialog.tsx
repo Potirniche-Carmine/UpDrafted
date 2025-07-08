@@ -68,7 +68,15 @@ export function VerificationDialog({
   const [submitSuccess, setSubmitSuccess] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
+  // Email validation function
+  const isValidEmail = (email: string): boolean => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  };
+
   // Check if transfer portal verification should be available
+  // Note: This component doesn't have access to competitionLevel, so we show the option for all college athletes
+  // The verification logic on the backend should handle the actual requirements
   const isTransferPortalEligible = role === "athlete" && 
     (educationLevel === "undergraduate" || educationLevel === "graduate");
 
@@ -269,7 +277,7 @@ export function VerificationDialog({
   };
 
   const canSubmit = files.length > 0 && !isSubmitting && 
-    (verificationType !== "transfer_portal" || transferPortalEmail.trim().length > 0);
+    (verificationType !== "transfer_portal" || (transferPortalEmail.trim().length > 0 && isValidEmail(transferPortalEmail)));
 
   // Get content based on role and verification type
   const getVerificationContent = () => {
@@ -411,13 +419,22 @@ export function VerificationDialog({
               <Input
                 id="transfer-portal-email"
                 type="email"
-                placeholder="Enter the email address shown in your Transfer Portal confirmation"
+                placeholder="athlete@university.edu"
                 value={transferPortalEmail}
                 onChange={(e) => setTransferPortalEmail(e.target.value)}
-                className="mt-2 w-full min-w-0 text-sm sm:text-base"
+                className={`mt-2 w-full min-w-0 text-sm sm:text-base ${
+                  transferPortalEmail && !isValidEmail(transferPortalEmail) 
+                    ? 'border-red-500 focus:border-red-500 focus:ring-red-500' 
+                    : ''
+                }`}
                 disabled={isSubmitting}
                 required
               />
+              {transferPortalEmail && !isValidEmail(transferPortalEmail) && (
+                <p className="text-xs text-red-600 mt-1">
+                  Please enter a valid email address (must contain @ and domain)
+                </p>
+              )}
               <p className="text-xs text-muted-foreground mt-1">
                 This must match the email address visible in your Transfer Portal confirmation screenshot. We&apos;ll use this to verify ownership through email confirmation.
               </p>
