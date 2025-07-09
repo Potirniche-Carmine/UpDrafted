@@ -1,0 +1,36 @@
+User-agent: *
+
+# Block everything by default
+Disallow: /
+
+# Allow only public footer pages
+Allow: /$
+Allow: /about$
+Allow: /for-athletes$
+Allow: /for-coaches$
+Allow: /for-recruiters$
+Allow: /contact$
+Allow: /terms-of-service$
+Allow: /privacy-policy$
+
+# Block all other areas
+Disallow: /admin/
+Disallow: /api/
+Disallow: /_next/
+Disallow: /dashboard/
+Disallow: /onboarding/
+Disallow: /sign-in/
+Disallow: /sign-up/
+Disallow: /profile/
+Disallow: /search/
+Disallow: /discover/
+Disallow: /messages/
+Disallow: /notifications/
+Disallow: /connections/
+Disallow: /activity/
+Disallow: /pricing/
+
+Sitemap: https://updrafted.us/sitemap.xml
+
+# Crawl delay for respectful crawling
+Crawl-delay: 1 
