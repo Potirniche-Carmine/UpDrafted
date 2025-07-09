@@ -15,6 +15,8 @@ import {
 } from "@/components/ui/dialog";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { ReportDialog } from '../../(profiles)/components/shared/report-dialog';
+import { OfflineIndicator } from '../../../components/offline-indicator';
+import { useOfflineStatus } from '../../../hooks/use-offline-status';
 
 // Define real API types
 interface Conversation {
@@ -156,6 +158,7 @@ export default function MessagingPage() {
   const [loading, setLoading] = useState(true);
   const [sendingMessage, setSendingMessage] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { isOffline } = useOfflineStatus();
   const [isNewMessageDialogOpen, setIsNewMessageDialogOpen] = useState(false);
   const [connections, setConnections] = useState<Array<{id: string, name: string, imageUrl: string | null, role: string, division?: string, educationLevel?: string}>>([]);
   const [loadingConnections, setLoadingConnections] = useState(false);
@@ -516,6 +519,12 @@ export default function MessagingPage() {
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newMessage.trim() || !selectedConversationId || sendingMessage || !activeConversation?.connectionActive) return;
+    
+    // Prevent sending messages when offline
+    if (isOffline) {
+      setError('Cannot send messages while offline. Please check your connection.');
+      return;
+    }
     
     // Check word limit (400 words max)
     const wordCount = getWordCount(newMessage);
@@ -941,6 +950,12 @@ export default function MessagingPage() {
                     </div>
                   </div>
 
+                  {/* Offline Indicator */}
+                  <OfflineIndicator 
+                    className="p-4 pb-0" 
+                    onRetry={() => window.location.reload()}
+                  />
+
                   {/* Messages Area */}
                   <div 
                     ref={messagesContainerRef}
@@ -1012,7 +1027,7 @@ export default function MessagingPage() {
                           placeholder={!activeConversation?.connectionActive ? "You are no longer connected." : "Type a message..."}
                           className="w-full flex-1 bg-background border border-border/30 rounded-lg px-3 py-2 text-base sm:text-sm resize-none focus:outline-none focus:ring-2 focus:ring-[#01ae79] focus:border-[#01ae79] disabled:cursor-not-allowed disabled:opacity-50 min-h-[40px] max-h-[120px] overflow-y-auto transition-all"
                           rows={1}
-                          disabled={sendingMessage || !activeConversation?.connectionActive}
+                          disabled={sendingMessage || !activeConversation?.connectionActive || isOffline}
                           style={{ fontSize: '16px' }}
                         />
                         {/* Word Count Display */}
@@ -1031,7 +1046,7 @@ export default function MessagingPage() {
                       <Button 
                         type="submit" 
                         size="icon" 
-                        disabled={!newMessage.trim() || sendingMessage || !activeConversation?.connectionActive}
+                        disabled={!newMessage.trim() || sendingMessage || !activeConversation?.connectionActive || isOffline}
                         className="bg-[#01ae79] hover:bg-[#01ae79]/90 text-white h-12 w-12 rounded-full shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         {sendingMessage ? (

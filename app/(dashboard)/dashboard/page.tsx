@@ -19,6 +19,7 @@ import Link from "next/link"
 import { useProfileNavigation } from '@/hooks/use-profile-navigation'
 import { DashboardHeader } from '../components/dashboard-header'
 import { AuthWrapper } from '../../../components/auth-wrapper'
+import { PWAInstallPrompt } from '../../../components/pwa-install-prompt'
 
 // TypeScript interfaces for navigation items
 interface NavItemWithHref {
@@ -307,6 +308,7 @@ export default function DashboardPage() {
         handleViewProfile={handleViewProfile} 
         profileNavigating={profileNavigating} 
       />
+      <PWAInstallPrompt />
     </AuthWrapper>
   );
 }

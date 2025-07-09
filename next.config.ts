@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import withPWA from 'next-pwa';
 
 // CORS configuration based on environment
 const isDevelopment = process.env.NODE_ENV === 'development';
@@ -163,4 +164,95 @@ const nextConfig: NextConfig = {
   ],
 };
 
-export default nextConfig;
+const pwaConfig = withPWA({
+  dest: 'public',
+  disable: isDevelopment,
+  register: true,
+  skipWaiting: true,
+  runtimeCaching: [
+    // API Routes - Different strategies based on data type
+    {
+      urlPattern: /^.*\/api\/messages.*$/,
+      handler: 'NetworkFirst',
+      options: {
+        cacheName: 'api-messages',
+        networkTimeoutSeconds: 10,
+        expiration: {
+          maxEntries: 50,
+          maxAgeSeconds: 60 * 60, // 1 hour
+        },
+        cacheableResponse: { statuses: [0, 200] },
+      },
+    },
+    {
+      urlPattern: /^.*\/api\/notifications.*$/,
+      handler: 'NetworkFirst',
+      options: {
+        cacheName: 'api-notifications',
+        networkTimeoutSeconds: 5,
+        expiration: {
+          maxEntries: 30,
+          maxAgeSeconds: 15 * 60, // 15 minutes
+        },
+        cacheableResponse: { statuses: [0, 200] },
+      },
+    },
+    {
+      urlPattern: /^.*\/api\/profile.*$/,
+      handler: 'StaleWhileRevalidate',
+      options: {
+        cacheName: 'api-profiles',
+        expiration: {
+          maxEntries: 100,
+          maxAgeSeconds: 24 * 60 * 60, // 24 hours
+        },
+        cacheableResponse: { statuses: [0, 200] },
+      },
+    },
+    // All other API calls
+    {
+      urlPattern: /^.*\/api\/.*$/,
+      handler: 'NetworkFirst',
+      options: {
+        cacheName: 'api-other',
+        networkTimeoutSeconds: 10,
+        expiration: {
+          maxEntries: 100,
+          maxAgeSeconds: 60 * 60, // 1 hour
+        },
+        cacheableResponse: { statuses: [0, 200] },
+      },
+    },
+    // Static assets
+    {
+      urlPattern: /\.(?:png|jpg|jpeg|svg|gif|webp)$/,
+      handler: 'CacheFirst',
+      options: {
+        cacheName: 'images',
+        expiration: {
+          maxEntries: 200,
+          maxAgeSeconds: 30 * 24 * 60 * 60, // 30 days
+        },
+      },
+    },
+    // External resources
+    {
+      urlPattern: /^https?.*/, 
+      handler: 'NetworkFirst',
+      options: {
+        cacheName: 'external-resources',
+        networkTimeoutSeconds: 15,
+        expiration: {
+          maxEntries: 50,
+          maxAgeSeconds: 24 * 60 * 60, // 24 hours
+        },
+        cacheableResponse: { statuses: [0, 200] },
+      },
+    },
+  ],
+});
+
+// @ts-expect-error - next-pwa type compatibility issue with Next.js 15
+const nextConfigWithPWA = pwaConfig(nextConfig);
+
+export default nextConfigWithPWA;
