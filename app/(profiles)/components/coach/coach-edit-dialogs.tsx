@@ -52,13 +52,37 @@ export function CoachEditDialogs({
   onSave
 }: CoachEditDialogsProps) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [editData, setEditData] = useState<Record<string, any>>({});
+  const [editData, setEditData] = useState<Record<string, any>>(() => {
+    // Initialize with current profile data to prevent empty fields on first render
+    return {
+      fullName: profileData.fullName || '',
+      title: profileData.title || '',
+      sportCoaching: profileData.sportCoaching || '',
+      organizationName: profileData.organizationName || '',
+      city: profileData.city || '',
+      state: profileData.state || '',
+      division: profileData.division || '',
+      conference: profileData.conference || '',
+      personalStatement: profileData.personalStatement || '',
+      graduationYears: profileData.recruitingNeeds?.graduationYears || [],
+      positions: profileData.recruitingNeeds?.positions || [],
+      scholarshipsAvailable: profileData.recruitingNeeds?.scholarshipsAvailable ?? '',
+      recruitingPhilosophy: profileData.recruitingNeeds?.recruitingPhilosophy || '',
+      instagram: (profileData.instagramHandle || '').replace('@', ''),
+      twitter: (profileData.twitterHandle || '').replace('@', ''),
+      programWebsite: profileData.programWebsite || '',
+      schoolWebsite: profileData.schoolWebsite || '',
+      showcaseVideoTitle: profileData.showcaseVideoTitle || '',
+      showcaseVideoUrl: profileData.showcaseVideoUrl || ''
+    };
+  });
   const [validationErrors, setValidationErrors] = useState<{[key: string]: string}>({});
   const [isUploading, setIsUploading] = useState(false);
   const [profileImagePreview, setProfileImagePreview] = useState<string | null>(null);
   const [organizationLogoPreview, setOrganizationLogoPreview] = useState<string | null>(null);
   const [selectedProfileFile, setSelectedProfileFile] = useState<File | null>(null);
   const [selectedOrganizationFile, setSelectedOrganizationFile] = useState<File | null>(null);
+  const [preventFocus, setPreventFocus] = useState(false);
 
   // Get admin role information for demo profile uploads
   const { isAdmin, viewingAs } = useRoleView();
@@ -72,66 +96,97 @@ export function CoachEditDialogs({
       setSelectedProfileFile(null);
       setSelectedOrganizationFile(null);
       setValidationErrors({});
+      setPreventFocus(false);
       return;
     }
 
-    // Prevent auto-focus on dialog open - remove setTimeout
-    if (document.activeElement && document.activeElement instanceof HTMLElement) {
-      document.activeElement.blur();
-    }
+    // Prevent auto-focus on dialog open
+    setPreventFocus(true);
+    
+    const preventAutoFocus = () => {
+      if (document.activeElement && document.activeElement instanceof HTMLElement) {
+        document.activeElement.blur();
+      }
+      // Also blur any input or textarea elements that might be auto-focused
+      const focusableElements = document.querySelectorAll('input, textarea, select');
+      focusableElements.forEach(element => {
+        if (element instanceof HTMLElement) {
+          element.blur();
+        }
+      });
+    };
+
+    // Call immediately and after a short delay to ensure it works
+    preventAutoFocus();
+    const timeoutId1 = setTimeout(preventAutoFocus, 100);
+    
+    // Allow focus after dialog is stable
+    const timeoutId2 = setTimeout(() => {
+      setPreventFocus(false);
+    }, 500);
+
+    // Cleanup timeouts on unmount
+    return () => {
+      clearTimeout(timeoutId1);
+      clearTimeout(timeoutId2);
+    };
 
     switch (dialogType) {
       case 'basic-info':
-        setEditData({
-          fullName: profileData.fullName,
-          title: profileData.title,
-          sportCoaching: profileData.sportCoaching,
-          organizationName: profileData.organizationName,
-          city: profileData.city,
-          state: profileData.state,
+        setEditData(prev => ({
+          ...prev,
+          fullName: profileData.fullName || '',
+          title: profileData.title || '',
+          sportCoaching: profileData.sportCoaching || '',
+          organizationName: profileData.organizationName || '',
+          city: profileData.city || '',
+          state: profileData.state || '',
           division: profileData.division || '',
           conference: profileData.conference || ''
-        });
+        }));
         break;
       case 'personal-statement':
-        setEditData({
+        setEditData(prev => ({
+          ...prev,
           personalStatement: profileData.personalStatement || ''
-        });
+        }));
         break;
       case 'recruiting-needs':
-        setEditData({
+        setEditData(prev => ({
+          ...prev,
           graduationYears: profileData.recruitingNeeds?.graduationYears || [],
           positions: profileData.recruitingNeeds?.positions || [],
           scholarshipsAvailable: profileData.recruitingNeeds?.scholarshipsAvailable ?? '',
           recruitingPhilosophy: profileData.recruitingNeeds?.recruitingPhilosophy || ''
-        });
+        }));
         break;
       case 'social-media':
-        setEditData({
+        setEditData(prev => ({
+          ...prev,
           instagram: (profileData.instagramHandle || '').replace('@', ''),
           twitter: (profileData.twitterHandle || '').replace('@', '')
-        });
+        }));
         break;
       case 'program-links':
-        setEditData({
+        setEditData(prev => ({
+          ...prev,
           programWebsite: profileData.programWebsite || '',
           schoolWebsite: profileData.schoolWebsite || ''
-        });
+        }));
         break;
       case 'showcase-video':
-        setEditData({
+        setEditData(prev => ({
+          ...prev,
           showcaseVideoTitle: profileData.showcaseVideoTitle || '',
           showcaseVideoUrl: profileData.showcaseVideoUrl || ''
-        });
+        }));
         break;
       case 'profile-image':
-        setEditData({});
         // Always start fresh for image editing
         setProfileImagePreview(null);
         setSelectedProfileFile(null);
         break;
       case 'organization-logo':
-        setEditData({});
         // Always start fresh for logo editing
         setOrganizationLogoPreview(null);
         setSelectedOrganizationFile(null);
@@ -470,7 +525,7 @@ export function CoachEditDialogs({
                 className={validationErrors.fullName ? 'border-red-500' : ''}
                 autoComplete="off"
                 inputMode="text"
-                
+                tabIndex={preventFocus ? -1 : undefined}
               />
               {validationErrors.fullName && <p className="text-red-500 text-sm">{validationErrors.fullName}</p>}
             </div>
@@ -485,7 +540,7 @@ export function CoachEditDialogs({
                 className={validationErrors.title ? 'border-red-500' : ''}
                 autoComplete="off"
                 inputMode="text"
-                
+                tabIndex={preventFocus ? -1 : undefined}
               />
               {validationErrors.title && <p className="text-red-500 text-sm">{validationErrors.title}</p>}
             </div>
@@ -493,7 +548,7 @@ export function CoachEditDialogs({
             <div className="space-y-2">
               <Label htmlFor="sportCoaching">Sport *</Label>
               <Select value={editData.sportCoaching || ''} onValueChange={(value) => handleFieldChange('sportCoaching', value)}>
-                <SelectTrigger className={validationErrors.sportCoaching ? 'border-red-500' : ''}>
+                <SelectTrigger className={validationErrors.sportCoaching ? 'border-red-500' : ''} tabIndex={preventFocus ? -1 : undefined}>
                   <SelectValue placeholder="Select sport" />
                 </SelectTrigger>
                 <SelectContent className="z-[70]">
@@ -508,7 +563,7 @@ export function CoachEditDialogs({
             <div className="space-y-2">
               <Label htmlFor="division">Division</Label>
               <Select value={editData.division || ''} onValueChange={(value) => handleFieldChange('division', value)}>
-                <SelectTrigger>
+                <SelectTrigger tabIndex={preventFocus ? -1 : undefined}>
                   <SelectValue placeholder="Select division" />
                 </SelectTrigger>
                 <SelectContent className="z-[70]">
@@ -529,7 +584,7 @@ export function CoachEditDialogs({
                 className={validationErrors.organizationName ? 'border-red-500' : ''}
                 autoComplete="off"
                 inputMode="text"
-                
+                tabIndex={preventFocus ? -1 : undefined}
               />
               {validationErrors.organizationName && <p className="text-red-500 text-sm">{validationErrors.organizationName}</p>}
             </div>
@@ -545,14 +600,14 @@ export function CoachEditDialogs({
                   className={validationErrors.city ? 'border-red-500' : ''}
                   autoComplete="off"
                   inputMode="text"
-                  
+                  tabIndex={preventFocus ? -1 : undefined}
                 />
                 {validationErrors.city && <p className="text-red-500 text-sm">{validationErrors.city}</p>}
               </div>
               <div className="space-y-2">
                 <Label htmlFor="state">State *</Label>
                 <Select value={editData.state || ''} onValueChange={(value) => handleFieldChange('state', value)}>
-                  <SelectTrigger className={validationErrors.state ? 'border-red-500' : ''}>
+                  <SelectTrigger className={validationErrors.state ? 'border-red-500' : ''} tabIndex={preventFocus ? -1 : undefined}>
                     <SelectValue placeholder="State" />
                   </SelectTrigger>
                   <SelectContent className="z-[70]">
@@ -574,7 +629,7 @@ export function CoachEditDialogs({
                 placeholder="e.g., Big Ten, SEC, WAC"
                 autoComplete="off"
                 inputMode="text"
-                
+                tabIndex={preventFocus ? -1 : undefined}
               />
             </div>
           </div>
@@ -594,7 +649,7 @@ export function CoachEditDialogs({
                 className={validationErrors.personalStatement ? 'border-red-500' : ''}
                 autoComplete="off"
                 inputMode="text"
-                
+                tabIndex={preventFocus ? -1 : undefined}
               />
               <p className="text-xs text-muted-foreground">
                 {(editData.personalStatement || '').length} / {FIELD_LIMITS.PERSONAL_STATEMENT}
@@ -634,7 +689,7 @@ export function CoachEditDialogs({
                   ))}
                 </div>
                 <Select onValueChange={(value) => addPosition(value)}>
-                  <SelectTrigger>
+                  <SelectTrigger tabIndex={preventFocus ? -1 : undefined}>
                     <SelectValue placeholder="Select a position to add" />
                   </SelectTrigger>
                   <SelectContent className="z-[70]">
@@ -662,7 +717,7 @@ export function CoachEditDialogs({
                 className={validationErrors.scholarshipsAvailable ? 'border-red-500' : ''}
                 autoComplete="off"
                 inputMode="numeric"
-                
+                tabIndex={preventFocus ? -1 : undefined}
               />
               {validationErrors.scholarshipsAvailable && <p className="text-red-500 text-sm">{validationErrors.scholarshipsAvailable}</p>}
             </div>
@@ -678,7 +733,7 @@ export function CoachEditDialogs({
                 className={validationErrors.recruitingPhilosophy ? 'border-red-500' : ''}
                 autoComplete="off"
                 inputMode="text"
-                
+                tabIndex={preventFocus ? -1 : undefined}
               />
               <p className="text-xs text-muted-foreground">
                 {(editData.recruitingPhilosophy || '').length} / {FIELD_LIMITS.RECRUITING_PHILOSOPHY}
@@ -703,7 +758,7 @@ export function CoachEditDialogs({
                   className={validationErrors.instagram ? 'border-red-500' : ''}
                   autoComplete="off"
                   inputMode="text"
-                  
+                  tabIndex={preventFocus ? -1 : undefined}
                 />
               </div>
               {validationErrors.instagram && <p className="text-red-500 text-sm">{validationErrors.instagram}</p>}
@@ -721,7 +776,7 @@ export function CoachEditDialogs({
                   className={validationErrors.twitter ? 'border-red-500' : ''}
                   autoComplete="off"
                   inputMode="text"
-                  
+                  tabIndex={preventFocus ? -1 : undefined}
                 />
               </div>
               {validationErrors.twitter && <p className="text-red-500 text-sm">{validationErrors.twitter}</p>}
@@ -742,7 +797,7 @@ export function CoachEditDialogs({
                 className={validationErrors.programWebsite ? 'border-red-500' : ''}
                 autoComplete="off"
                 inputMode="url"
-                
+                tabIndex={preventFocus ? -1 : undefined}
               />
               {validationErrors.programWebsite && <p className="text-red-500 text-sm">{validationErrors.programWebsite}</p>}
             </div>
@@ -757,7 +812,7 @@ export function CoachEditDialogs({
                 className={validationErrors.schoolWebsite ? 'border-red-500' : ''}
                 autoComplete="off"
                 inputMode="url"
-                
+                tabIndex={preventFocus ? -1 : undefined}
               />
               {validationErrors.schoolWebsite && <p className="text-red-500 text-sm">{validationErrors.schoolWebsite}</p>}
             </div>
@@ -777,7 +832,7 @@ export function CoachEditDialogs({
                 className={validationErrors.showcaseVideoTitle ? 'border-red-500' : ''}
                 autoComplete="off"
                 inputMode="text"
-                
+                tabIndex={preventFocus ? -1 : undefined}
               />
               {validationErrors.showcaseVideoTitle && <p className="text-red-500 text-sm">{validationErrors.showcaseVideoTitle}</p>}
             </div>
@@ -792,7 +847,7 @@ export function CoachEditDialogs({
                 className={validationErrors.showcaseVideoUrl ? 'border-red-500' : ''}
                 autoComplete="off"
                 inputMode="url"
-                
+                tabIndex={preventFocus ? -1 : undefined}
               />
               {validationErrors.showcaseVideoUrl && <p className="text-red-500 text-sm">{validationErrors.showcaseVideoUrl}</p>}
             </div>

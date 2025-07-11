@@ -146,7 +146,34 @@ export function AthleteEditDialogs({
   selectedSport
 }: AthleteEditDialogsProps) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [editData, setEditData] = useState<Record<string, any>>({});
+  const [editData, setEditData] = useState<Record<string, any>>(() => {
+    // Initialize with current profile data to prevent empty fields on first render
+    const heightParts = profileData.height.match(/(\d+)'(\d+)"/);
+    return {
+      fullName: profileData.fullName || '',
+      sport: profileData.sport || '',
+      secondarySports: profileData.secondarySports || [],
+      educationLevel: profileData.educationLevel || '',
+      competitionLevel: profileData.competitionLevel || '',
+      city: profileData.city || '',
+      state: profileData.state || '',
+      organizationName: profileData.organizationName || '',
+      graduationYear: profileData.graduationYear || '',
+      heightFeet: heightParts ? heightParts[1] : '',
+      heightInches: heightParts ? heightParts[2] : '',
+      weight: profileData.weight ? profileData.weight.replace(/\s*lbs?\s*/gi, '') : '',
+      positions: profileData.positions || [],
+      gpa: profileData.gpa || '',
+      satScore: profileData.satScore || '',
+      actScore: profileData.actScore || '',
+      intendedMajor: profileData.intendedMajor || '',
+      personalStatement: profileData.personalStatement || '',
+      instagram: profileData.socialMedia?.instagram || '',
+      twitter: profileData.socialMedia?.twitter || '',
+      maxPrepsUrl: profileData.maxPrepsUrl || '',
+      hudlUrl: profileData.hudlUrl || ''
+    };
+  });
   const [tempVideos, setTempVideos] = useState<typeof profileData.youtubeVideos>([]);
   const [validationErrors, setValidationErrors] = useState<{[key: string]: string}>({});
   const [measurableToEdit, setMeasurableToEdit] = useState<Measurable | null>(null);
@@ -154,6 +181,7 @@ export function AthleteEditDialogs({
   const [profileImagePreview, setProfileImagePreview] = useState<string | null>(null);
   const [selectedProfileFile, setSelectedProfileFile] = useState<File | null>(null);
   const [isDirty, setIsDirty] = useState(false);
+  const [preventFocus, setPreventFocus] = useState(false);
 
   // Get admin role information for demo profile uploads
   const { isAdmin, viewingAs } = useRoleView();
@@ -200,65 +228,99 @@ export function AthleteEditDialogs({
       setSelectedProfileFile(null);
       setValidationErrors({});
       setTempVideos([]); // Clear temp videos when dialog closes
+      setPreventFocus(false);
       return;
     }
 
-    // Prevent auto-focus on dialog open - remove setTimeout
-    if (document.activeElement && document.activeElement instanceof HTMLElement) {
-      document.activeElement.blur();
-    }
+    // Prevent auto-focus on dialog open
+    setPreventFocus(true);
+    
+    const preventAutoFocus = () => {
+      if (document.activeElement && document.activeElement instanceof HTMLElement) {
+        document.activeElement.blur();
+      }
+      // Also blur any input or textarea elements that might be auto-focused
+      const focusableElements = document.querySelectorAll('input, textarea, select');
+      focusableElements.forEach(element => {
+        if (element instanceof HTMLElement) {
+          element.blur();
+        }
+      });
+    };
+
+    // Call immediately and after a short delay to ensure it works
+    preventAutoFocus();
+    const timeoutId1 = setTimeout(preventAutoFocus, 100);
+    
+    // Allow focus after dialog is stable
+    const timeoutId2 = setTimeout(() => {
+      setPreventFocus(false);
+    }, 500);
+
+    // Cleanup timeouts on unmount
+    const cleanupTimeouts = () => {
+      clearTimeout(timeoutId1);
+      clearTimeout(timeoutId2);
+    };
 
     switch (dialogType) {
       case 'basic-info':
         const heightParts = profileData.height.match(/(\d+)'(\d+)"/);
-        setEditData({
-          fullName: profileData.fullName,
-          sport: profileData.sport,
+        setEditData(prev => ({
+          ...prev,
+          fullName: profileData.fullName || '',
+          sport: profileData.sport || '',
           secondarySports: profileData.secondarySports || [],
-          educationLevel: profileData.educationLevel,
+          educationLevel: profileData.educationLevel || '',
           competitionLevel: profileData.competitionLevel || '',
-          city: profileData.city,
-          state: profileData.state,
-          organizationName: profileData.organizationName,
-          graduationYear: profileData.graduationYear,
+          city: profileData.city || '',
+          state: profileData.state || '',
+          organizationName: profileData.organizationName || '',
+          graduationYear: profileData.graduationYear || '',
           heightFeet: heightParts ? heightParts[1] : '',
           heightInches: heightParts ? heightParts[2] : '',
-          weight: profileData.weight.replace(/\s*lbs?\s*/gi, ''),
-          positions: profileData.positions
-        });
+          weight: profileData.weight ? profileData.weight.replace(/\s*lbs?\s*/gi, '') : '',
+          positions: profileData.positions || []
+        }));
         break;
       case 'academic-info':
-        setEditData({
+        setEditData(prev => ({
+          ...prev,
           gpa: profileData.gpa || '',
           satScore: profileData.satScore || '',
           actScore: profileData.actScore || '',
           intendedMajor: profileData.intendedMajor || ''
-        });
+        }));
         break;
       case 'personal-statement':
-        setEditData({
+        setEditData(prev => ({
+          ...prev,
           personalStatement: profileData.personalStatement || ''
-        });
+        }));
         break;
       case 'social-media':
-        setEditData({
+        setEditData(prev => ({
+          ...prev,
           instagram: profileData.socialMedia?.instagram || '',
           twitter: profileData.socialMedia?.twitter || ''
-        });
+        }));
         break;
       case 'maxpreps-verification':
         // SECURITY: Prevent editing MaxPreps URL for verified users
         if (profileData.isVerified && profileData.maxPrepsUrl) {
+          cleanupTimeouts();
           return; // Don't initialize edit data for verified users
         }
-        setEditData({
+        setEditData(prev => ({
+          ...prev,
           maxPrepsUrl: profileData.maxPrepsUrl || ''
-        });
+        }));
         break;
       case 'hudl-highlights':
-        setEditData({
+        setEditData(prev => ({
+          ...prev,
           hudlUrl: profileData.hudlUrl || ''
-        });
+        }));
         break;
       case 'measurable':
       case 'edit-measurable':
@@ -267,7 +329,8 @@ export function AthleteEditDialogs({
       case 'add-measurables':
         if (measurableToEdit) {
           const dateParts = measurableToEdit.measurementDate.split('-');
-          setEditData({
+          setEditData(prev => ({
+            ...prev,
             sport: measurableToEdit.sport,
             label: measurableToEdit.label,
             value: measurableToEdit.value,
@@ -275,14 +338,15 @@ export function AthleteEditDialogs({
             year: dateParts[0] || '',
             isCustom: !getMeasurablesForSport(measurableToEdit.sport).includes(measurableToEdit.label),
             customLabel: !getMeasurablesForSport(measurableToEdit.sport).includes(measurableToEdit.label) ? measurableToEdit.label : ''
-          });
+          }));
         } else {
           // Set default month to current month
           const currentDate = new Date();
           const currentMonth = String(currentDate.getMonth() + 1).padStart(2, '0');
           const currentYear = currentDate.getFullYear();
           
-          setEditData({
+          setEditData(prev => ({
+            ...prev,
             sport: selectedSport,
             label: '',
             value: '',
@@ -290,15 +354,16 @@ export function AthleteEditDialogs({
             year: currentYear.toString(),
             isCustom: false,
             customLabel: ''
-          });
+          }));
         }
         break;
       case 'profile-image':
-        setEditData({});
         // Only reset image state when dialog first opens, not when profileData changes
         // This prevents resetting the form after successful image upload
         break;
     }
+    
+    return cleanupTimeouts;
   }, [dialogType, profileData, measurableToEdit, selectedSport]);
 
   // Separate useEffect to handle profile-image dialog initialization
@@ -885,7 +950,7 @@ export function AthleteEditDialogs({
                   maxLength={FIELD_LIMITS.FULL_NAME}
                   autoComplete="off"
                   inputMode="text"
-                  
+                  tabIndex={preventFocus ? -1 : undefined}
                 />
                 {validationErrors.fullName && (
                   <p className="text-sm text-red-500">{validationErrors.fullName}</p>
@@ -900,7 +965,7 @@ export function AthleteEditDialogs({
                     setEditData(prev => ({ ...prev, sport: value, positions: [] }));
                   }}
                 >
-                  <SelectTrigger className="h-12" id="edit-sport">
+                  <SelectTrigger className="h-12" id="edit-sport" tabIndex={preventFocus ? -1 : undefined}>
                     <SelectValue placeholder="Select sport" />
                   </SelectTrigger>
                   <SelectContent className="z-[70]">
@@ -919,7 +984,7 @@ export function AthleteEditDialogs({
                     setEditData(prev => ({ ...prev, educationLevel: value }));
                   }}
                 >
-                  <SelectTrigger className="h-12" id="edit-educationLevel">
+                  <SelectTrigger className="h-12" id="edit-educationLevel" tabIndex={preventFocus ? -1 : undefined}>
                     <SelectValue placeholder="Select education level" />
                   </SelectTrigger>
                   <SelectContent className="z-[70]">
@@ -940,7 +1005,7 @@ export function AthleteEditDialogs({
                       setEditData(prev => ({ ...prev, competitionLevel: value }));
                     }}
                   >
-                    <SelectTrigger className="h-12" id="edit-competitionLevel">
+                    <SelectTrigger className="h-12" id="edit-competitionLevel" tabIndex={preventFocus ? -1 : undefined}>
                       <SelectValue placeholder="Select competition level" />
                     </SelectTrigger>
                     <SelectContent className="z-[70]">
@@ -960,7 +1025,7 @@ export function AthleteEditDialogs({
                 <Label htmlFor="edit-secondarySports">Secondary Sports</Label>
                 <div className="space-y-2">
                   <Select onValueChange={addSecondarySport}>
-                    <SelectTrigger className="h-12" id="edit-secondarySports">
+                    <SelectTrigger className="h-12" id="edit-secondarySports" tabIndex={preventFocus ? -1 : undefined}>
                       <SelectValue placeholder="Add secondary sport (optional)" />
                     </SelectTrigger>
                     <SelectContent className="z-[70]">
@@ -1021,7 +1086,7 @@ export function AthleteEditDialogs({
                     maxLength={FIELD_LIMITS.CITY}
                     autoComplete="off"
                     inputMode="text"
-                    
+                    tabIndex={preventFocus ? -1 : undefined}
                   />
                   {validationErrors.city && (
                     <p className="text-sm text-red-500">{validationErrors.city}</p>
@@ -1033,7 +1098,7 @@ export function AthleteEditDialogs({
                     value={String(editData.state || '')}
                     onValueChange={(value) => setEditData(prev => ({ ...prev, state: value }))}
                   >
-                    <SelectTrigger className="h-12" id="edit-state">
+                    <SelectTrigger className="h-12" id="edit-state" tabIndex={preventFocus ? -1 : undefined}>
                       <SelectValue placeholder="Select state" />
                     </SelectTrigger>
                     <SelectContent className="z-[70]">
@@ -1056,6 +1121,7 @@ export function AthleteEditDialogs({
                   maxLength={FIELD_LIMITS.ORGANIZATION_NAME}
                   autoComplete="off"
                   inputMode="text"
+                  tabIndex={preventFocus ? -1 : undefined}
                 />
                 {validationErrors.organizationName && (
                   <p className="text-sm text-red-500">{validationErrors.organizationName}</p>
@@ -1124,7 +1190,7 @@ export function AthleteEditDialogs({
                     className={`h-12 ${validationErrors.weight ? 'border-red-500' : ''}`}
                     autoComplete="off"
                     inputMode="numeric"
-                    
+                    tabIndex={preventFocus ? -1 : undefined}
                   />
                   {validationErrors.weight && (
                     <p className="text-sm text-red-500">{validationErrors.weight}</p>
@@ -1158,7 +1224,7 @@ export function AthleteEditDialogs({
                   className={`h-12 ${validationErrors.gpa ? 'border-red-500' : ''}`}
                   autoComplete="off"
                   inputMode="decimal"
-                  
+                  tabIndex={preventFocus ? -1 : undefined}
                 />
                 {validationErrors.gpa && (
                   <p className="text-sm text-red-500">{validationErrors.gpa}</p>
@@ -1180,7 +1246,7 @@ export function AthleteEditDialogs({
                     className="h-12"
                     autoComplete="off"
                     inputMode="numeric"
-                    
+                    tabIndex={preventFocus ? -1 : undefined}
                   />
                   <p className="text-xs text-muted-foreground">400-1600</p>
                 </div>
@@ -1197,7 +1263,7 @@ export function AthleteEditDialogs({
                     className="h-12"
                     autoComplete="off"
                     inputMode="numeric"
-                    
+                    tabIndex={preventFocus ? -1 : undefined}
                   />
                   <p className="text-xs text-muted-foreground">1-36</p>
                 </div>
@@ -1216,7 +1282,7 @@ export function AthleteEditDialogs({
                   maxLength={FIELD_LIMITS.INTENDED_MAJOR}
                   autoComplete="off"
                   inputMode="text"
-                  
+                  tabIndex={preventFocus ? -1 : undefined}
                 />
               </div>
             </div>
@@ -1241,6 +1307,7 @@ export function AthleteEditDialogs({
                   onChange={(e) => handleFieldChange('personalStatement', e.target.value)}
                   className={`min-h-12 ${validationErrors.personalStatement ? 'border-red-500' : ''}`}
                   maxLength={FIELD_LIMITS.PERSONAL_STATEMENT}
+                  tabIndex={preventFocus ? -1 : undefined}
                 />
                 {validationErrors.personalStatement && (
                   <p className="text-sm text-red-500">{validationErrors.personalStatement}</p>
@@ -1274,7 +1341,7 @@ export function AthleteEditDialogs({
                     maxLength={FIELD_LIMITS.INSTAGRAM_HANDLE}
                     autoComplete="off"
                     inputMode="text"
-                    
+                    tabIndex={preventFocus ? -1 : undefined}
                   />
                 </div>
                 {validationErrors.instagram && <p className="text-red-500 text-sm">{validationErrors.instagram}</p>}
@@ -1292,7 +1359,7 @@ export function AthleteEditDialogs({
                     maxLength={FIELD_LIMITS.TWITTER_HANDLE}
                     autoComplete="off"
                     inputMode="text"
-                    
+                    tabIndex={preventFocus ? -1 : undefined}
                   />
                 </div>
                 {validationErrors.twitter && <p className="text-red-500 text-sm">{validationErrors.twitter}</p>}

@@ -307,14 +307,7 @@ export async function GET(
 
     // Debug logging for impersonation
     if (isImpersonation) {
-      console.log('🎭 Impersonation detected:', {
-        impersonatedUserId: currentUserId,
-        impersonatedRole: currentUserRole,
-        actorUserId,
-        actorRole,
-        profileUserId,
-        willTreatAsOwnProfile: isImpersonation === true && actorRole === 'admin'
-      });
+      // Impersonation detected - proceeding with admin access
     }
 
     // Check if the current user is viewing their own profile

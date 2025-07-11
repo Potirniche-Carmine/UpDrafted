@@ -54,13 +54,41 @@ export function RecruiterEditDialogs({
   onSave
 }: RecruiterEditDialogsProps) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [editData, setEditData] = useState<Record<string, any>>({});
+  const [editData, setEditData] = useState<Record<string, any>>(() => {
+    // Initialize with current profile data to prevent empty fields on first render
+    const currentSport = selectedSport || profileData.sportRecruiting;
+    const currentNeeds = profileData.sportSpecificNeeds?.[currentSport];
+    return {
+      fullName: profileData.fullName || '',
+      title: profileData.title || '',
+      sportRecruiting: profileData.sportRecruiting || '',
+      organizationName: profileData.organizationName || '',
+      city: profileData.city || '',
+      state: profileData.state || '',
+      division: profileData.division || '',
+      conference: profileData.conference || '',
+      personalStatement: profileData.personalStatement || '',
+      graduationYears: currentNeeds?.graduationYears || [],
+      positions: currentNeeds?.positions || [],
+      scholarshipsAvailable: currentNeeds?.scholarshipsAvailable ?? '',
+      recruitingPhilosophy: currentNeeds?.recruitingPhilosophy || '',
+      sport: currentSport,
+      instagram: (profileData.instagramHandle || '').replace('@', ''),
+      twitter: (profileData.twitterHandle || '').replace('@', ''),
+      programWebsite: profileData.programWebsite || '',
+      schoolWebsite: profileData.schoolWebsite || '',
+      showcaseVideoTitle: profileData.showcaseVideoTitle || '',
+      showcaseVideoUrl: profileData.showcaseVideoUrl || '',
+      newSport: ''
+    };
+  });
   const [validationErrors, setValidationErrors] = useState<{[key: string]: string}>({});
   const [isUploading, setIsUploading] = useState(false);
   const [profileImagePreview, setProfileImagePreview] = useState<string | null>(null);
   const [organizationLogoPreview, setOrganizationLogoPreview] = useState<string | null>(null);
   const [selectedProfileFile, setSelectedProfileFile] = useState<File | null>(null);
   const [selectedOrganizationFile, setSelectedOrganizationFile] = useState<File | null>(null);
+  const [preventFocus, setPreventFocus] = useState(false);
 
   // Get admin role information for demo profile uploads
   const { isAdmin, viewingAs } = useRoleView();
@@ -74,83 +102,117 @@ export function RecruiterEditDialogs({
       setSelectedProfileFile(null);
       setSelectedOrganizationFile(null);
       setValidationErrors({});
+      setPreventFocus(false);
       return;
     }
 
-    // Prevent auto-focus on dialog open - remove setTimeout
-    if (document.activeElement && document.activeElement instanceof HTMLElement) {
-      document.activeElement.blur();
-    }
+    // Prevent auto-focus on dialog open
+    setPreventFocus(true);
+    
+    const preventAutoFocus = () => {
+      if (document.activeElement && document.activeElement instanceof HTMLElement) {
+        document.activeElement.blur();
+      }
+      // Also blur any input or textarea elements that might be auto-focused
+      const focusableElements = document.querySelectorAll('input, textarea, select');
+      focusableElements.forEach(element => {
+        if (element instanceof HTMLElement) {
+          element.blur();
+        }
+      });
+    };
+
+    // Call immediately and after a short delay to ensure it works
+    preventAutoFocus();
+    const timeoutId1 = setTimeout(preventAutoFocus, 100);
+    
+    // Allow focus after dialog is stable
+    const timeoutId2 = setTimeout(() => {
+      setPreventFocus(false);
+    }, 500);
+
+    // Cleanup timeouts on unmount
+    const cleanupTimeouts = () => {
+      clearTimeout(timeoutId1);
+      clearTimeout(timeoutId2);
+    };
 
     switch (dialogType) {
       case 'basic-info':
-        setEditData({
-          fullName: profileData.fullName,
-          title: profileData.title,
-          sportRecruiting: profileData.sportRecruiting,
-          organizationName: profileData.organizationName,
-          city: profileData.city,
-          state: profileData.state,
+        setEditData(prev => ({
+          ...prev,
+          fullName: profileData.fullName || '',
+          title: profileData.title || '',
+          sportRecruiting: profileData.sportRecruiting || '',
+          organizationName: profileData.organizationName || '',
+          city: profileData.city || '',
+          state: profileData.state || '',
           division: profileData.division || '',
           conference: profileData.conference || ''
-        });
+        }));
         break;
       case 'personal-statement':
-        setEditData({
+        setEditData(prev => ({
+          ...prev,
           personalStatement: profileData.personalStatement || ''
-        });
+        }));
         break;
       case 'recruiting-needs':
         const currentSport = selectedSport || profileData.sportRecruiting;
         const currentNeeds = profileData.sportSpecificNeeds?.[currentSport];
-        setEditData({
+        setEditData(prev => ({
+          ...prev,
           graduationYears: currentNeeds?.graduationYears || [],
           positions: currentNeeds?.positions || [],
           scholarshipsAvailable: currentNeeds?.scholarshipsAvailable ?? '',
           recruitingPhilosophy: currentNeeds?.recruitingPhilosophy || '',
           sport: currentSport
-        });
+        }));
         break;
       case 'social-media':
-        setEditData({
+        setEditData(prev => ({
+          ...prev,
           instagram: (profileData.instagramHandle || '').replace('@', ''),
           twitter: (profileData.twitterHandle || '').replace('@', '')
-        });
+        }));
         break;
       case 'program-links':
-        setEditData({
+        setEditData(prev => ({
+          ...prev,
           programWebsite: profileData.programWebsite || '',
           schoolWebsite: profileData.schoolWebsite || ''
-        });
+        }));
         break;
       case 'showcase-video':
-        setEditData({
+        setEditData(prev => ({
+          ...prev,
           showcaseVideoTitle: profileData.showcaseVideoTitle || '',
           showcaseVideoUrl: profileData.showcaseVideoUrl || ''
-        });
+        }));
         break;
       case 'profile-image':
-        setEditData({});
         // Always start fresh for image editing
         setProfileImagePreview(null);
         setSelectedProfileFile(null);
         break;
       case 'organization-logo':
-        setEditData({});
         // Always start fresh for logo editing
         setOrganizationLogoPreview(null);
         setSelectedOrganizationFile(null);
         break;
       case 'add-sport':
-        setEditData({
+        setEditData(prev => ({
+          ...prev,
           newSport: '',
           graduationYears: [],
           positions: [],
           scholarshipsAvailable: '',
           recruitingPhilosophy: ''
-        });
+        }));
         break;
     }
+    
+    return cleanupTimeouts;
   }, [dialogType, profileData, selectedSport]);
 
   const validateField = (field: string, value: string | number): string | null => {
@@ -520,7 +582,7 @@ export function RecruiterEditDialogs({
                 maxLength={FIELD_LIMITS.FULL_NAME}
                 autoComplete="off"
                 inputMode="text"
-                
+                tabIndex={preventFocus ? -1 : undefined}
               />
               {validationErrors.fullName && (
                 <p className="text-sm text-red-500 mt-1">{validationErrors.fullName}</p>
@@ -537,7 +599,7 @@ export function RecruiterEditDialogs({
                 maxLength={FIELD_LIMITS.TITLE}
                 autoComplete="off"
                 inputMode="text"
-                
+                tabIndex={preventFocus ? -1 : undefined}
               />
               {validationErrors.title && (
                 <p className="text-sm text-red-500 mt-1">{validationErrors.title}</p>
@@ -550,7 +612,7 @@ export function RecruiterEditDialogs({
                 value={editData.sportRecruiting || ''} 
                 onValueChange={(value) => handleFieldChange('sportRecruiting', value)}
               >
-                <SelectTrigger>
+                <SelectTrigger tabIndex={preventFocus ? -1 : undefined}>
                   <SelectValue placeholder="Select sport" />
                 </SelectTrigger>
                 <SelectContent className="z-[70]">
@@ -576,7 +638,7 @@ export function RecruiterEditDialogs({
                 maxLength={FIELD_LIMITS.ORGANIZATION_NAME}
                 autoComplete="off"
                 inputMode="text"
-                
+                tabIndex={preventFocus ? -1 : undefined}
               />
               {validationErrors.organizationName && (
                 <p className="text-sm text-red-500 mt-1">{validationErrors.organizationName}</p>
@@ -594,7 +656,7 @@ export function RecruiterEditDialogs({
                   maxLength={FIELD_LIMITS.CITY}
                   autoComplete="off"
                   inputMode="text"
-                  
+                  tabIndex={preventFocus ? -1 : undefined}
                 />
                 {validationErrors.city && (
                   <p className="text-sm text-red-500 mt-1">{validationErrors.city}</p>
@@ -607,7 +669,7 @@ export function RecruiterEditDialogs({
                   value={editData.state || ''} 
                   onValueChange={(value) => handleFieldChange('state', value)}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger tabIndex={preventFocus ? -1 : undefined}>
                     <SelectValue placeholder="Select state" />
                   </SelectTrigger>
                   <SelectContent className="z-[70]">
@@ -672,7 +734,7 @@ export function RecruiterEditDialogs({
                 maxLength={FIELD_LIMITS.PERSONAL_STATEMENT}
                 autoComplete="off"
                 inputMode="text"
-                
+                tabIndex={preventFocus ? -1 : undefined}
               />
               <p className="text-xs text-muted-foreground mt-1">
                 {(editData.personalStatement || '').length}/{FIELD_LIMITS.PERSONAL_STATEMENT} characters

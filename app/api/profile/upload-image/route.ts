@@ -158,7 +158,6 @@ export async function POST(request: NextRequest) {
       for (const keyToDelete of imagesToDelete) {
         try {
           await deleteFromR2(keyToDelete, false);
-          console.log(`Successfully deleted old image: ${keyToDelete}`);
         } catch (error) {
           console.error(`Failed to delete old image ${keyToDelete}:`, error);
           // Continue - don't fail the upload if old image deletion fails

@@ -3,7 +3,7 @@
 import { ClerkProvider as OriginalClerkProvider } from "@clerk/nextjs";
 import { dark } from "@clerk/themes";
 import { useTheme } from "next-themes";
-import React from "react";
+import React, { Suspense } from "react";
 import { ImpersonationHandler } from "./impersonation-handler";
 
 interface ClerkProviderWrapperProps {
@@ -27,7 +27,9 @@ export function ClerkProviderWrapper({
         variables: { ...appearanceVariables },
       }}
     >
-      <ImpersonationHandler />
+      <Suspense fallback={null}>
+        <ImpersonationHandler />
+      </Suspense>
       {children}
     </OriginalClerkProvider>
   );
