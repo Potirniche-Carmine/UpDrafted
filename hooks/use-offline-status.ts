@@ -13,7 +13,7 @@ export function useOfflineStatus() {
     const handleOnline = () => {
       setIsOnline(true);
       // If user was offline and came back online, mark it
-      if (!navigator.onLine || wasOffline) {
+      if (wasOffline) {
         setWasOffline(false);
       }
     };
