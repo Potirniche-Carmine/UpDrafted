@@ -44,8 +44,11 @@ export const requireAnyRole = async (): Promise<{
     const actorInfo = (authResult as any).actor || (sessionClaims as any)?.actor
     if (actorInfo) {
       actorUserId = actorInfo.sub || actorInfo.id
-      // For impersonation, the actor is typically an admin
-      actorRole = 'admin'
+      // Strong validation: check if actor is actually an admin
+      const actorRoleFromMetadata = actorInfo.metadata?.role || actorInfo.publicMetadata?.role
+      if (actorRoleFromMetadata === 'admin') {
+        actorRole = 'admin'
+      }
     }
   }
 
@@ -89,7 +92,10 @@ export const requireRole = async (allowedRoles: Roles[]): Promise<{
     const actorInfo = (authResult as any).actor || (sessionClaims as any)?.actor
     if (actorInfo) {
       actorUserId = actorInfo.sub || actorInfo.id
-      actorRole = 'admin'
+      const actorRoleFromMetadata = actorInfo.metadata?.role || actorInfo.publicMetadata?.role
+      if (actorRoleFromMetadata === 'admin') {
+        actorRole = 'admin'
+      }
     }
   }
 
@@ -153,7 +159,10 @@ export const requireOwnershipOrAdmin = async (resourceUserId: string): Promise<{
     const actorInfo = (authResult as any).actor || (sessionClaims as any)?.actor
     if (actorInfo) {
       actorUserId = actorInfo.sub || actorInfo.id
-      actorRole = 'admin'
+      const actorRoleFromMetadata = actorInfo.metadata?.role || actorInfo.publicMetadata?.role
+      if (actorRoleFromMetadata === 'admin') {
+        actorRole = 'admin'
+      }
     }
   }
 
