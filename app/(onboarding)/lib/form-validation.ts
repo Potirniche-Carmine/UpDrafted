@@ -199,7 +199,7 @@ export class FormValidator {
       return { isValid: false, error: 'Graduation year is required' };
     }
 
-    // Special validation for high school athletes - only sophomores and above
+    // Special validation for high school athletes - only juniors and above
     if (educationLevel === 'high_school') {
       const currentYear = new Date().getFullYear();
       const currentMonth = new Date().getMonth();
@@ -215,7 +215,7 @@ export class FormValidator {
       if (!validYears.includes(value)) {
         return { 
           isValid: false, 
-          error: `High school athletes must be sophomores or above (Class of ${validYears.join(', ')})` 
+          error: `High school athletes must be juniors or above (Class of ${validYears.join(', ')})` 
         };
       }
     }
