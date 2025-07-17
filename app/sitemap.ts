@@ -1,7 +1,7 @@
 import { MetadataRoute } from 'next'
 
 export default function sitemap(): MetadataRoute.Sitemap {
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://updrafted.us'
+  const baseUrl = 'https://updrafted.us'
   
   // Only include public pages from footer
   return [

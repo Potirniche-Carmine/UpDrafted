@@ -1,16 +1,59 @@
 {
-  "name": "UpDrafted",
+  "name": "UpDrafted - Premier Recruiting Platform",
   "short_name": "UpDrafted",
-  "description": "College Athletic Recruitment Platform",
+  "description": "The premier platform connecting student-athletes with college programs. Access your dashboard, messages, and profile offline.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#22c55e",
+  "orientation": "portrait-primary",
+  "scope": "/",
+  "lang": "en-US",
+  "categories": ["sports", "education", "social"],
   "icons": [
     {
       "src": "/logo.png",
       "sizes": "192x192",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "maskable any"
+    },
+    {
+      "src": "/logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable any"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "/logo.png",
+      "sizes": "540x720",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "UpDrafted Dashboard"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Dashboard",
+      "short_name": "Dashboard",
+      "description": "Go to your dashboard",
+      "url": "/dashboard",
+      "icons": [{ "src": "/logo.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Messages",
+      "short_name": "Messages",
+      "description": "Check your messages",
+      "url": "/messages",
+      "icons": [{ "src": "/logo.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Discover",
+      "short_name": "Discover",
+      "description": "Discover new connections",
+      "url": "/discover",
+      "icons": [{ "src": "/logo.png", "sizes": "192x192" }]
     }
   ]
 } 
