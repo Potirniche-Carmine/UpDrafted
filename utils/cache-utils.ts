@@ -27,12 +27,10 @@ export class PWACacheManager {
           matchingRequests.map(request => cache.delete(request))
         );
       } else {
-        // Clear all API cache
-        const cacheNames = await caches.keys();
+        // Clear all requests from API cache
+        const requests = await cache.keys();
         await Promise.all(
-          cacheNames
-            .filter(name => name.includes('api') || name.includes('https-calls'))
-            .map(name => caches.delete(name))
+          requests.map(request => cache.delete(request))
         );
       }
     } catch (error) {

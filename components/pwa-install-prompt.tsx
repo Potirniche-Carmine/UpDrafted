@@ -114,7 +114,7 @@ export function PWAInstallPrompt() {
     };
 
     initializePrompt();
-  }, [isSignedIn, deferredPrompt]);
+  }, [isSignedIn, deferredPrompt, isMobile, isStandalone, isInstallable, browserType]);
 
   useEffect(() => {
     // Listen for the beforeinstallprompt event
