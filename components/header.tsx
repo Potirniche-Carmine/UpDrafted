@@ -69,14 +69,14 @@ function NavItem({
     <Link
       href={item.href}
       onClick={onClick}
-      className={`transition-colors flex items-center px-3 py-2 group rounded-lg text-muted-foreground hover:text-[#01ae79] hover:bg-[#01ae79]/5 dark:hover:bg-[#01ae79]/10 relative ${className}`}
+      className={`transition-colors flex items-center px-2 md:px-3 py-2 group rounded-lg text-muted-foreground hover:text-[#01ae79] hover:bg-[#01ae79]/5 dark:hover:bg-[#01ae79]/10 relative ${className}`}
       title={item.label}
     >
       <div className="relative">
         {item.icon}
         <NotificationBadge count={notificationCount} />
       </div>
-      <span className="ml-2 text-sm font-medium hidden lg:inline">
+      <span className="ml-2 text-sm font-medium hidden xl:inline">
         {item.label}
       </span>
     </Link>
@@ -201,8 +201,8 @@ export function Header() {
           </div>
         )}
 
-        {/* Desktop/Tablet Navigation - Show on medium screens and up, with labels only on large+ */}
-        <nav className="hidden md:flex items-center space-x-1 lg:space-x-2">
+        {/* Desktop/Tablet Navigation - Show on medium screens and up, with labels only on xl+ */}
+        <nav className="hidden md:flex items-center space-x-0.5 lg:space-x-1 xl:space-x-2">
           {navItemsToDisplay.map((item) => (
             <NavItem
               key={item.key}
@@ -254,7 +254,7 @@ export function Header() {
               variant="outline"
               size="sm"
               onClick={() => router.push('/admin')}
-              className="hidden lg:flex h-8 px-3 text-sm font-medium border-[#01ae79]/20 text-[#01ae79] hover:bg-[#01ae79]/5"
+              className="hidden xl:flex h-8 px-3 text-sm font-medium border-[#01ae79]/20 text-[#01ae79] hover:bg-[#01ae79]/5"
             >
               Admin
             </Button>
@@ -264,12 +264,12 @@ export function Header() {
             <SignInButton mode="modal">
               <Button variant="default" size="sm" className="flex items-center space-x-2 ml-2 bg-[#01ae79] hover:bg-[#01ae79]/90 text-white">
                 <LogIn className="h-4 w-4" />
-                <span className="hidden lg:inline">Sign In</span>
+                <span className="hidden xl:inline">Sign In</span>
               </Button>
             </SignInButton>
             <SignUpButton mode="modal">
               <Button variant="outline" size="sm" className="ml-2 border-[#01ae79]/30 hover:bg-[#01ae79]/5 dark:border-[#01ae79]/30 dark:hover:bg-[#01ae79]/10 text-[#01ae79] hover:text-[#01ae79]">
-                <span className="hidden lg:inline">Sign Up</span>
+                <span className="hidden xl:inline">Sign Up</span>
               </Button>
             </SignUpButton>
           </SignedOut>

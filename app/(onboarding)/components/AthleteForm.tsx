@@ -14,9 +14,9 @@ import { Check, ChevronsUpDown, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { 
   US_STATES, 
-  GRADUATION_YEARS, 
   getPositionsForSport, 
-  getSportsList 
+  getSportsList,
+  getGraduationYearsForEducationLevel
 } from "@/lib/sports-data";
 import { FormValidator, FIELD_LIMITS } from "@/app/(onboarding)/lib/form-validation";
 import { OnboardingData } from "../lib/types";
@@ -284,6 +284,14 @@ export default function AthleteForm({ data, onInputChange }: AthleteFormProps) {
           delete newErrors.twitterHandle;
         }
         break;
+      case 'graduationYear':
+        const graduationResult = FormValidator.validateGraduationYear(value as number, data.educationLevel);
+        if (graduationResult.isValid) {
+          delete newErrors.graduationYear;
+        } else {
+          newErrors.graduationYear = graduationResult.error!;
+        }
+        break;
       case 'personalStatement':
         const statementResult = FormValidator.validateText(value as string, 'Personal statement', FIELD_LIMITS.PERSONAL_STATEMENT, true);
         if (statementResult.isValid) {
@@ -316,6 +324,16 @@ export default function AthleteForm({ data, onInputChange }: AthleteFormProps) {
             newErrors.hudlUrl = 'Hudl URL is required for high school athletes';
           } else {
             delete newErrors.hudlUrl;
+          }
+          
+          // Re-validate graduation year when education level changes
+          if (data.graduationYear) {
+            const graduationResult = FormValidator.validateGraduationYear(data.graduationYear, newEducationLevel);
+            if (graduationResult.isValid) {
+              delete newErrors.graduationYear;
+            } else {
+              newErrors.graduationYear = graduationResult.error!;
+            }
           }
           
           setValidationErrors(newErrors);
@@ -544,17 +562,24 @@ export default function AthleteForm({ data, onInputChange }: AthleteFormProps) {
       <div className={`grid grid-cols-1 md:grid-cols-${shouldShowStandardizedTests(data.educationLevel) ? '4' : '2'} gap-6`}>
         <div className="space-y-3">
           <Label htmlFor="graduationYear" className="text-base font-medium">Graduation Year *</Label>
-          <Select value={data.graduationYear?.toString() || ''} onValueChange={(value) => onInputChange('graduationYear', parseInt(value))}>
-            <SelectTrigger className="h-11 bg-background w-full" style={{ height: '2.75rem' }}>
+          <Select value={data.graduationYear?.toString() || ''} onValueChange={(value) => validateAndUpdateField('graduationYear', parseInt(value))}>
+            <SelectTrigger className={`h-11 bg-background w-full ${validationErrors.graduationYear ? 'border-red-500' : ''}`} style={{ height: '2.75rem' }}>
               <SelectValue placeholder="Year" />
             </SelectTrigger>
             <SelectContent>
-              {GRADUATION_YEARS.map(year => (
+              {getGraduationYearsForEducationLevel(data.educationLevel).map(year => (
                 <SelectItem key={year} value={year.toString()}>{year}</SelectItem>
               ))}
             </SelectContent>
           </Select>
-          {data.educationLevel !== 'high_school' && (
+          {validationErrors.graduationYear && (
+            <p className="text-sm text-red-500">{validationErrors.graduationYear}</p>
+          )}
+          {data.educationLevel === 'high_school' ? (
+            <p className="text-xs text-muted-foreground">
+              ⚠️ Only Juniors and above can sign up to connect with coaches and recruiters
+            </p>
+          ) : (
             <p className="text-xs text-muted-foreground">
               Expected {data.educationLevel === 'graduate' ? 'graduation' : 'completion'} year
             </p>
