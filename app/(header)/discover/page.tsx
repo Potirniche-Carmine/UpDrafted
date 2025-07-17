@@ -357,7 +357,7 @@ function SearchPageContent() {
     if (!showDiscoverButton) {
       setShowDiscoverButton(true);
     }
-  }, [selectedSports, selectedDivisions, selectedStates]);
+  }, [selectedSports, selectedDivisions, selectedStates, showDiscoverButton]);
 
   // Filter displayed users based on active tab
   const displayedUsers = useMemo(() => {
