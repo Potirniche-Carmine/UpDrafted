@@ -193,6 +193,36 @@ export class FormValidator {
     return { isValid: true };
   }
 
+  // Graduation Year validation for high school athletes
+  static validateGraduationYear(value: number | null, educationLevel: string): ValidationResult {
+    if (value === null || value === undefined) {
+      return { isValid: false, error: 'Graduation year is required' };
+    }
+
+    // Special validation for high school athletes - only juniors and above
+    if (educationLevel === 'high_school') {
+      const currentYear = new Date().getFullYear();
+      const currentMonth = new Date().getMonth();
+      
+      // If we're in the first half of the year (Jan-June), we're in the spring of the school year
+      // If we're in the second half (July-Dec), we're in the fall of the new school year
+      const baseYear = currentMonth < 6 ? currentYear : currentYear + 1;
+      
+      // Current seniors graduate this year (baseYear)
+      // Current juniors graduate next year (baseYear + 1) 
+      const validYears = [baseYear, baseYear + 1];
+      
+      if (!validYears.includes(value)) {
+        return { 
+          isValid: false, 
+          error: `High school athletes must be juniors or above (Class of ${validYears.join(', ')})` 
+        };
+      }
+    }
+
+    return { isValid: true };
+  }
+
   // Enhanced MaxPreps URL validation with name matching
   static validateMaxPrepsURL(url: string, profileName: string, required = false): ValidationResult {
     if (required && !url.trim()) {
@@ -349,6 +379,10 @@ export class FormValidator {
     // Intended major validation
     const majorResult = this.validateText(data.intendedMajor, 'Intended major', FIELD_LIMITS.INTENDED_MAJOR, true);
     if (!majorResult.isValid) errors.intendedMajor = majorResult.error!;
+
+    // Graduation year validation
+    const graduationResult = this.validateGraduationYear(data.graduationYear, data.educationLevel);
+    if (!graduationResult.isValid) errors.graduationYear = graduationResult.error!;
 
     // URLs validation
     if (data.maxprepsUrl) {
