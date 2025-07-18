@@ -669,7 +669,7 @@ export default function AthleteForm({ data, onInputChange }: AthleteFormProps) {
 
       <div className="space-y-3">
         <Label htmlFor="hudlUrl" className="text-base font-medium">
-          Hudl Profile URL{data.educationLevel === 'high_school' ? ' *' : ''}
+          Hudl Profile URL
         </Label>
         <Input
           id="hudlUrl"
@@ -684,13 +684,13 @@ export default function AthleteForm({ data, onInputChange }: AthleteFormProps) {
         )}
         {data.educationLevel === 'high_school' ? (
           <p className="text-sm text-muted-foreground">
-            Required for high school athletes. Your Hudl URL must contain your name (e.g., hudl.com/profile/first-last). 
-            Successfully providing this will automatically verify your profile.
+        Optional for high school athletes. Your Hudl URL must contain your name (e.g., hudl.com/profile/first-last). 
+        Successfully providing this will automatically verify your profile.
           </p>
         ) : (
           <p className="text-sm text-muted-foreground">
-            Optional for college athletes. Your Hudl URL should contain your name (e.g., hudl.com/profile/first-last). 
-            Showcase your game footage to professional scouts and recruiters.
+        Optional for college athletes. Your Hudl URL should contain your name (e.g., hudl.com/profile/first-last). 
+        Showcase your game footage to professional scouts and recruiters.
           </p>
         )}
       </div>

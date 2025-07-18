@@ -437,12 +437,8 @@ export class FormValidator {
       const maxprepsResult = this.validateMaxPrepsURL(data.maxprepsUrl, data.fullName);
       if (!maxprepsResult.isValid) errors.maxprepsUrl = maxprepsResult.error!;
     }
-
-    // HUDL URL - mandatory for high school athletes, optional for college athletes
-    const isHighSchool = data.educationLevel === 'high_school';
-    if (isHighSchool && !data.hudlUrl?.trim()) {
-      errors.hudlUrl = 'Hudl URL is required for high school athletes';
-    } else if (data.hudlUrl) {
+    // HUDL URL 
+    if (data.hudlUrl) {
       const hudlResult = this.validateHudlURL(data.hudlUrl, data.fullName);
       if (!hudlResult.isValid) errors.hudlUrl = hudlResult.error!;
     }
