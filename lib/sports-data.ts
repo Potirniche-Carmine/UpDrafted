@@ -232,7 +232,7 @@ export const GRADUATION_YEARS = Array.from(
   (_, i) => new Date().getFullYear() + i
 );
 
-// Get graduation years that are valid for high school athletes (sophomores and above)
+// Get graduation years that are valid for high school athletes (juniors and above)
 export function getValidHighSchoolGraduationYears(): number[] {
   const currentYear = new Date().getFullYear();
   const currentMonth = new Date().getMonth();
@@ -243,7 +243,6 @@ export function getValidHighSchoolGraduationYears(): number[] {
   
   // Current seniors graduate this year (baseYear)
   // Current juniors graduate next year (baseYear + 1)
-  // Current sophomores graduate in 2 years (baseYear + 2)
   return [baseYear, baseYear + 1];
 }
 
