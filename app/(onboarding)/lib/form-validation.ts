@@ -271,6 +271,54 @@ export class FormValidator {
     return { isValid: true };
   }
 
+  // Enhanced Hudl URL validation with name matching
+  static validateHudlURL(url: string, profileName: string, required = false): ValidationResult {
+    if (required && !url.trim()) {
+      return { isValid: false, error: 'Hudl URL is required' };
+    }
+    
+    if (!url) return { isValid: true };
+    
+    if (url.length > FIELD_LIMITS.URL) {
+      return { isValid: false, error: `URL must be ${FIELD_LIMITS.URL} characters or less` };
+    }
+    
+    // Basic Hudl URL pattern
+    const hudlPattern = /^https?:\/\/(www\.)?hudl\.com\/.+/i;
+    if (!hudlPattern.test(url)) {
+      return { isValid: false, error: 'Please enter a valid Hudl URL (e.g., https://www.hudl.com/profile/...)' };
+    }
+    
+    // Extract athlete name from URL path
+    // Expected format: /profile/first-last or /profile/firstname-lastname
+    const profilePattern = /\/profile\/([^\/\?]+)/i;
+    const match = url.match(profilePattern);
+    
+    if (!match) {
+      return { isValid: false, error: 'Hudl URL must include a profile path (/profile/name)' };
+    }
+    
+    const urlName = match[1];
+    if (profileName) {
+      // Convert profile name to expected URL format (first-last)
+      const expectedUrlName = profileName.toLowerCase()
+        .replace(/\s+/g, '-')
+        .replace(/[^a-z0-9\-]/g, '');
+      
+      // Clean up the URL name for comparison
+      const cleanUrlName = urlName.toLowerCase().replace(/[^a-z0-9\-]/g, '');
+      
+      if (cleanUrlName !== expectedUrlName) {
+        return { 
+          isValid: false, 
+          error: `Your Hudl URL name "${urlName}" doesn't match your profile name "${profileName}". The URL should contain "${expectedUrlName}".` 
+        };
+      }
+    }
+    
+    return { isValid: true };
+  }
+
   // URL validation
   static validateURL(value: string, type: 'maxpreps' | 'hudl' | 'general' = 'general', required = false): ValidationResult {
     if (required && !value.trim()) {
@@ -395,7 +443,7 @@ export class FormValidator {
     if (isHighSchool && !data.hudlUrl?.trim()) {
       errors.hudlUrl = 'Hudl URL is required for high school athletes';
     } else if (data.hudlUrl) {
-      const hudlResult = this.validateURL(data.hudlUrl, 'hudl');
+      const hudlResult = this.validateHudlURL(data.hudlUrl, data.fullName);
       if (!hudlResult.isValid) errors.hudlUrl = hudlResult.error!;
     }
 

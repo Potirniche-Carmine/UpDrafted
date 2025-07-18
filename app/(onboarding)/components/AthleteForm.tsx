@@ -250,7 +250,7 @@ export default function AthleteForm({ data, onInputChange }: AthleteFormProps) {
         if (isHighSchool && !(value as string)?.trim()) {
           newErrors.hudlUrl = 'Hudl URL is required for high school athletes';
         } else if (value) {
-          const hudlResult = FormValidator.validateURL(value as string, 'hudl');
+          const hudlResult = FormValidator.validateHudlURL(value as string, data.fullName);
           if (hudlResult.isValid) {
             delete newErrors.hudlUrl;
           } else {
@@ -665,9 +665,6 @@ export default function AthleteForm({ data, onInputChange }: AthleteFormProps) {
         {validationErrors.maxprepsUrl && (
           <p className="text-sm text-red-500">{validationErrors.maxprepsUrl}</p>
         )}
-        <p className="text-sm text-muted-foreground">
-          Optional but highly recommended. If your MaxPreps profile name matches your profile name, you&apos;ll receive a verified athlete badge.
-        </p>
       </div>
 
       <div className="space-y-3">
@@ -676,7 +673,7 @@ export default function AthleteForm({ data, onInputChange }: AthleteFormProps) {
         </Label>
         <Input
           id="hudlUrl"
-          placeholder="https://www.hudl.com/profile/..."
+          placeholder="https://www.hudl.com/profile/first-last"
           value={data.hudlUrl}
           onChange={(e) => validateAndUpdateField('hudlUrl', e.target.value)}
           className={`h-11 bg-background ${validationErrors.hudlUrl ? 'border-red-500' : ''}`}
@@ -687,11 +684,13 @@ export default function AthleteForm({ data, onInputChange }: AthleteFormProps) {
         )}
         {data.educationLevel === 'high_school' ? (
           <p className="text-sm text-muted-foreground">
-            Required for high school athletes. Hudl helps showcase your game footage to college recruiters.
+            Required for high school athletes. Your Hudl URL must contain your name (e.g., hudl.com/profile/first-last). 
+            Successfully providing this will automatically verify your profile.
           </p>
         ) : (
           <p className="text-sm text-muted-foreground">
-            Optional for college athletes. Showcase your game footage to professional scouts and recruiters.
+            Optional for college athletes. Your Hudl URL should contain your name (e.g., hudl.com/profile/first-last). 
+            Showcase your game footage to professional scouts and recruiters.
           </p>
         )}
       </div>
