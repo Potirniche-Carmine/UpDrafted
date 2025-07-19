@@ -25,11 +25,8 @@ export function ImpersonationHandler() {
       setIsImpersonating(true);
 
       try {
-        console.log('Processing impersonation ticket...');
-
         // If user is already signed in, sign them out first
         if (isSignedIn) {
-          console.log('Signing out current user before impersonation...');
           await signOut();
           // Wait a moment for the sign out to complete
           await new Promise(resolve => setTimeout(resolve, 100));

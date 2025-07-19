@@ -154,9 +154,11 @@ export const requireOwnershipOrAdmin = async (resourceUserId: string): Promise<{
   const isImpersonation = !!(authResult as any).actor || !!(sessionClaims as any)?.actor
   let actorUserId: string | undefined
   let actorRole: Roles | undefined
-
+  
+  //If isImpersonation is true then get the actor info
   if (isImpersonation) {
     const actorInfo = (authResult as any).actor || (sessionClaims as any)?.actor
+    //Get the actor info to check if the actors role is an Admin from the meta data.
     if (actorInfo) {
       actorUserId = actorInfo.sub || actorInfo.id
       const actorRoleFromMetadata = actorInfo.metadata?.role || actorInfo.publicMetadata?.role
@@ -167,7 +169,7 @@ export const requireOwnershipOrAdmin = async (resourceUserId: string): Promise<{
   }
 
   // During impersonation, treat as if the actor (admin) has access
-  const hasAccess = isOwner || isAdmin || isImpersonation
+  const hasAccess = isOwner || isAdmin || (isImpersonation && actorRole === 'admin')
   
   if (!hasAccess) {
     return NextResponse.json({ 

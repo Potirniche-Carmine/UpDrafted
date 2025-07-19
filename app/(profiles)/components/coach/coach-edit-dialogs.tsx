@@ -83,6 +83,7 @@ export function CoachEditDialogs({
   const [selectedProfileFile, setSelectedProfileFile] = useState<File | null>(null);
   const [selectedOrganizationFile, setSelectedOrganizationFile] = useState<File | null>(null);
   const [preventFocus, setPreventFocus] = useState(false);
+  const [focusPreventionActive, setFocusPreventionActive] = useState(false);
 
   // Get admin role information for demo profile uploads
   const { isAdmin, viewingAs } = useRoleView();
@@ -97,39 +98,98 @@ export function CoachEditDialogs({
       setSelectedOrganizationFile(null);
       setValidationErrors({});
       setPreventFocus(false);
+      setFocusPreventionActive(false);
       return;
     }
 
-    // Prevent auto-focus on dialog open
+    // Prevent auto-focus on dialog open using a more robust approach
     setPreventFocus(true);
+    setFocusPreventionActive(true);
     
     const preventAutoFocus = () => {
+      // Blur the currently focused element
       if (document.activeElement && document.activeElement instanceof HTMLElement) {
         document.activeElement.blur();
       }
-      // Also blur any input or textarea elements that might be auto-focused
-      const focusableElements = document.querySelectorAll('input, textarea, select');
-      focusableElements.forEach(element => {
-        if (element instanceof HTMLElement) {
-          element.blur();
+      
+      // Blur any focusable elements within the dialog
+      const dialog = document.querySelector('[role="dialog"]');
+      if (dialog) {
+        const focusableElements = dialog.querySelectorAll('input, textarea, select, button, [tabindex]:not([tabindex="-1"])');
+        focusableElements.forEach(element => {
+          if (element instanceof HTMLElement) {
+            element.blur();
+          }
+        });
+      }
+    };
+
+    // Use requestAnimationFrame for better timing and browser compatibility
+    const handleFocusPrevention = () => {
+      preventAutoFocus();
+      
+      // Use a more reliable approach to detect when dialog is fully rendered
+      const checkDialogReady = () => {
+        const dialog = document.querySelector('[role="dialog"]');
+        if (dialog && dialog.getBoundingClientRect().width > 0) {
+          // Dialog is visible and rendered, allow focus
+          setPreventFocus(false);
+          setFocusPreventionActive(false);
+        } else {
+          // Dialog not ready yet, check again
+          requestAnimationFrame(checkDialogReady);
         }
-      });
+      };
+      
+      // Start checking for dialog readiness
+      requestAnimationFrame(checkDialogReady);
     };
 
-    // Call immediately and after a short delay to ensure it works
-    preventAutoFocus();
-    const timeoutId1 = setTimeout(preventAutoFocus, 100);
-    
-    // Allow focus after dialog is stable
-    const timeoutId2 = setTimeout(() => {
-      setPreventFocus(false);
-    }, 500);
+    // Use requestAnimationFrame for immediate execution and better timing
+    requestAnimationFrame(handleFocusPrevention);
 
-    // Cleanup timeouts on unmount
+    // Fallback cleanup function
     return () => {
-      clearTimeout(timeoutId1);
-      clearTimeout(timeoutId2);
+      setPreventFocus(false);
+      setFocusPreventionActive(false);
     };
+  }, [dialogType]); // Only depend on dialogType to prevent infinite re-renders
+
+  // Handle focus prevention with event listeners
+  useEffect(() => {
+    if (!focusPreventionActive) return;
+
+    const handleFocus = (e: FocusEvent) => {
+      // Prevent focus on any element during the prevention period
+      if (e.target instanceof HTMLElement) {
+        e.target.blur();
+      }
+    };
+
+    const handleFocusIn = (e: FocusEvent) => {
+      // Prevent focus from entering the dialog during prevention period
+      if (e.target instanceof HTMLElement) {
+        const dialog = document.querySelector('[role="dialog"]');
+        if (dialog && dialog.contains(e.target)) {
+          e.target.blur();
+        }
+      }
+    };
+
+    // Add event listeners
+    document.addEventListener('focus', handleFocus, true);
+    document.addEventListener('focusin', handleFocusIn, true);
+
+    // Cleanup
+    return () => {
+      document.removeEventListener('focus', handleFocus, true);
+      document.removeEventListener('focusin', handleFocusIn, true);
+    };
+  }, [focusPreventionActive]);
+
+  // Initialize edit data based on dialog type
+  useEffect(() => {
+    if (!dialogType) return;
 
     switch (dialogType) {
       case 'basic-info':
@@ -192,7 +252,7 @@ export function CoachEditDialogs({
         setSelectedOrganizationFile(null);
         break;
     }
-  }, [dialogType, profileData]);
+  }, [dialogType]); // Only depend on dialogType to prevent infinite re-renders
 
   const validateField = (field: string, value: string | number): string | null => {
     // Required field validation
