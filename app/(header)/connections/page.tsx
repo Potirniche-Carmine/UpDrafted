@@ -910,6 +910,7 @@ function App() {
             className="w-full pl-10 pr-4 py-3 border border-border rounded-lg bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-[#01ae79]/20 focus:border-[#01ae79] min-w-0"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
+            style={{ fontSize: '16px' }}
           />
         </div>
 

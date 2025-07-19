@@ -819,10 +819,9 @@ export default function MessagingPage() {
                   <input
                     type="text"
                     placeholder="Search conversations..."
-                    className="w-full pl-9 pr-4 py-2.5 text-sm border border-border/50 bg-background/80 backdrop-blur-sm text-foreground rounded-lg focus:outline-none focus:ring-2 focus:ring-[#01ae79] focus:border-[#01ae79] transition-all text-base md:text-sm"
+                    className="w-full pl-9 pr-4 py-2.5 text-base md:text-sm border border-border/50 bg-background/80 backdrop-blur-sm text-foreground rounded-lg focus:outline-none focus:ring-2 focus:ring-[#01ae79] focus:border-[#01ae79] transition-all"
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    style={{ fontSize: '16px' }}
                   />
                 </div>
               </div>
@@ -1111,7 +1110,7 @@ export default function MessagingPage() {
               <input
                 type="text"
                 placeholder="Search connections..."
-                className="w-full pl-9 pr-4 py-2.5 text-sm border border-border/50 bg-background/80 backdrop-blur-sm text-foreground rounded-lg focus:outline-none focus:ring-2 focus:ring-[#01ae79] focus:border-[#01ae79] transition-all"
+                className="w-full pl-9 pr-4 py-2.5 text-base md:text-sm border border-border/50 bg-background/80 backdrop-blur-sm text-foreground rounded-lg focus:outline-none focus:ring-2 focus:ring-[#01ae79] focus:border-[#01ae79] transition-all"
                 value={connectionSearchTerm}
                 onChange={(e) => setConnectionSearchTerm(e.target.value)}
               />
