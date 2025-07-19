@@ -81,14 +81,6 @@ export function RecruiterEditDialogs({
     if (document.activeElement && document.activeElement instanceof HTMLElement) {
       document.activeElement.blur();
     }
-    
-    // Remove focus from any input elements to prevent mobile keyboard popup
-    const inputs = document.querySelectorAll('input, textarea, select');
-    inputs.forEach((input) => {
-      if (input instanceof HTMLElement) {
-        input.blur();
-      }
-    });
 
     switch (dialogType) {
       case 'basic-info':

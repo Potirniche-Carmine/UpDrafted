@@ -203,7 +203,7 @@ export function AthleteEditDialogs({
       return;
     }
 
-    // Prevent auto-focus on dialog open - remove setTimeout
+    // Prevent auto-focus on dialog open
     if (document.activeElement && document.activeElement instanceof HTMLElement) {
       document.activeElement.blur();
     }
