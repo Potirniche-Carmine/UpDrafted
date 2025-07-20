@@ -819,7 +819,7 @@ export default function MessagingPage() {
                   <input
                     type="text"
                     placeholder="Search conversations..."
-                    className="w-full pl-9 pr-4 py-2.5 text-sm border border-border/50 bg-background/80 backdrop-blur-sm text-foreground rounded-lg focus:outline-none focus:ring-2 focus:ring-[#01ae79] focus:border-[#01ae79] transition-all"
+                    className="w-full pl-9 pr-4 py-2.5 text-base md:text-sm border border-border/50 bg-background/80 backdrop-blur-sm text-foreground rounded-lg focus:outline-none focus:ring-2 focus:ring-[#01ae79] focus:border-[#01ae79] transition-all"
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                   />
@@ -1028,7 +1028,6 @@ export default function MessagingPage() {
                           className="w-full flex-1 bg-background border border-border/30 rounded-lg px-3 py-2 text-base sm:text-sm resize-none focus:outline-none focus:ring-2 focus:ring-[#01ae79] focus:border-[#01ae79] disabled:cursor-not-allowed disabled:opacity-50 min-h-[40px] max-h-[120px] overflow-y-auto transition-all"
                           rows={1}
                           disabled={sendingMessage || !activeConversation?.connectionActive || isOffline}
-                          style={{ fontSize: '16px' }}
                         />
                         {/* Word Count Display */}
                         {newMessage.trim() && (
@@ -1110,7 +1109,7 @@ export default function MessagingPage() {
               <input
                 type="text"
                 placeholder="Search connections..."
-                className="w-full pl-9 pr-4 py-2.5 text-sm border border-border/50 bg-background/80 backdrop-blur-sm text-foreground rounded-lg focus:outline-none focus:ring-2 focus:ring-[#01ae79] focus:border-[#01ae79] transition-all"
+                className="w-full pl-9 pr-4 py-2.5 text-base md:text-sm border border-border/50 bg-background/80 backdrop-blur-sm text-foreground rounded-lg focus:outline-none focus:ring-2 focus:ring-[#01ae79] focus:border-[#01ae79] transition-all"
                 value={connectionSearchTerm}
                 onChange={(e) => setConnectionSearchTerm(e.target.value)}
               />
