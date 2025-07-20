@@ -75,7 +75,7 @@ export function CoachEditDialogs({
       return;
     }
 
-    // Prevent auto-focus on dialog open - remove setTimeout
+    // Prevent auto-focus on dialog open
     if (document.activeElement && document.activeElement instanceof HTMLElement) {
       document.activeElement.blur();
     }
@@ -862,7 +862,10 @@ export function CoachEditDialogs({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+      <DialogContent 
+        className="max-w-2xl max-h-[80vh] overflow-y-auto"
+        onOpenAutoFocus={e => e.preventDefault()}
+      >
         <DialogHeader>
           <DialogTitle>{getDialogTitle()}</DialogTitle>
           <DialogDescription>

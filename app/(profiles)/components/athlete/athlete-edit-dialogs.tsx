@@ -203,7 +203,7 @@ export function AthleteEditDialogs({
       return;
     }
 
-    // Prevent auto-focus on dialog open - remove setTimeout
+    // Prevent auto-focus on dialog open
     if (document.activeElement && document.activeElement instanceof HTMLElement) {
       document.activeElement.blur();
     }
@@ -1783,7 +1783,10 @@ export function AthleteEditDialogs({
           });
         }
       }}>
-        <DialogContent className={`${dialogType === 'basic-info' ? "sm:max-w-2xl max-w-lg" : "sm:max-w-md max-w-lg"} z-[60]`}>
+        <DialogContent 
+          className={`${dialogType === 'basic-info' ? "sm:max-w-2xl max-w-lg" : "sm:max-w-md max-w-lg"} z-[60]`}
+          onOpenAutoFocus={e => e.preventDefault()}
+        >
           {getDialogContent()}
           {/* Only render footer if dialog type exists (prevents flash during close) */}
           {dialogType && (
