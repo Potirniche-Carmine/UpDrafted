@@ -170,7 +170,7 @@ export function Header() {
 
   return (
     <header className="sticky top-0 z-[51] w-full border-b border-[#01ae79]/20 dark:border-[#01ae79]/30 bg-white/95 dark:bg-gray-950/95 backdrop-blur supports-[backdrop-filter]:bg-white/80 dark:supports-[backdrop-filter]:bg-gray-950/80">
-      <div className="w-full flex h-14 lg:h-16 max-w-screen-2xl items-center justify-between px-3 sm:px-4 lg:px-6 xl:px-8 overflow-x-auto min-w-0">
+      <div className="w-full flex h-14 lg:h-16 items-center justify-between px-3 sm:px-4 lg:px-6 xl:px-8 overflow-x-auto min-w-0">
         {/* Logo */}
         <a href="#" onClick={handleLogoClick} className="flex items-center space-x-2 flex-shrink-0 logo-no-flash min-w-0">
           <Image
