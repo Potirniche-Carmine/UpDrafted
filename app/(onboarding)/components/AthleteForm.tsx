@@ -16,11 +16,13 @@ import {
   US_STATES, 
   getPositionsForSport, 
   getSportsList,
-  getGraduationYearsForEducationLevel
+  getGraduationYearsForEducationLevel,
+  DIVISIONS
 } from "@/lib/sports-data";
 import { FormValidator, FIELD_LIMITS } from "@/app/(onboarding)/lib/form-validation";
 import { OnboardingData } from "../lib/types";
 import { EducationLevel } from "../lib/onboarding";
+import { ConferenceSelector } from "@/components/ui/conference-selector";
 
 interface AthleteFormProps {
   data: OnboardingData;
@@ -34,15 +36,8 @@ const EDUCATION_LEVEL_OPTIONS = [
   { value: 'graduate', label: 'Graduate School' },
 ];
 
-const COMPETITION_LEVEL_OPTIONS = [
-  { value: 'division_1', label: 'Division 1 (D1)' },
-  { value: 'division_2', label: 'Division 2 (D2)' },
-  { value: 'division_3', label: 'Division 3 (D3)' },
-  { value: 'naia', label: 'NAIA' },
-  { value: 'club', label: 'Club Sports' },
-  { value: 'intramural', label: 'Intramural' },
-  { value: 'other', label: 'Other' },
-];
+// Filter divisions for athletes (exclude high school since it's handled by education level)
+const ATHLETE_DIVISIONS = DIVISIONS.filter(div => div !== 'High School');
 
 const getSchoolLabel = (educationLevel: EducationLevel) => {
   switch (educationLevel) {
@@ -434,26 +429,37 @@ export default function AthleteForm({ data, onInputChange }: AthleteFormProps) {
         </div>
       )}
 
-      {/* Competition Level - Show for undergraduate and graduate students */}
-      {(data.educationLevel === 'undergraduate' || data.educationLevel === 'graduate') && (
-        <div className="space-y-3">
-          <Label htmlFor="competitionLevel" className="text-base font-medium">Competition Level *</Label>
-          <Select value={data.competitionLevel} onValueChange={(value) => onInputChange('competitionLevel', value)}>
-            <SelectTrigger className="h-11 bg-background w-full" style={{ height: '2.75rem' }}>
-              <SelectValue placeholder="Select your competition level" />
-            </SelectTrigger>
-            <SelectContent>
-              {COMPETITION_LEVEL_OPTIONS.map(option => (
-                <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <p className="text-xs text-muted-foreground">
-            {['division_1', 'division_2', 'division_3'].includes(data.competitionLevel) 
-              ? "⚠️ Transfer portal verification will be required for D1, D2, and D3 athletes to connect with coaches and recruiters"
-              : "This helps coaches and recruiters understand your athletic background"
-            }
-          </p>
+      {/* Division and Conference - Show for college athletes only (not high school) */}
+      {data.educationLevel !== 'high_school' && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="space-y-3">
+            <Label htmlFor="division" className="text-base font-medium">Division *</Label>
+            <Select value={data.division} onValueChange={(value) => onInputChange('division', value)}>
+              <SelectTrigger className="h-11 bg-background w-full">
+                <SelectValue placeholder="Select your division" />
+              </SelectTrigger>
+              <SelectContent>
+                {ATHLETE_DIVISIONS.map(division => (
+                  <SelectItem key={division} value={division}>{division}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground">
+              This helps coaches and recruiters understand your athletic background
+            </p>
+          </div>
+
+          <div className="space-y-3">
+            <ConferenceSelector
+              division={data.division}
+              value={data.conference}
+              onValueChange={(value) => onInputChange('conference', value)}
+              placeholder="Select conference"
+              label="Conference"
+              labelClassName="text-base font-medium"
+              description="Choose your athletic conference for better recruiting visibility"
+            />
+          </div>
         </div>
       )}
 

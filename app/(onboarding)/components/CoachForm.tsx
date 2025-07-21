@@ -21,6 +21,7 @@ import {
 import { FormValidator, FIELD_LIMITS } from "@/app/(onboarding)/lib/form-validation";
 import { OnboardingData } from "../lib/types";
 import { FileUpload } from '@/components/ui/file-upload';
+import { ConferenceSelector } from "@/components/ui/conference-selector";
 
 interface CoachFormProps {
   data: OnboardingData;
@@ -364,19 +365,14 @@ export default function CoachForm({ data, onInputChange }: CoachFormProps) {
           </Select>
         </div>
         <div className="space-y-3">
-          <Label htmlFor="conference" className="text-base font-medium">Conference</Label>
-          <Input
-            id="conference"
-            placeholder="e.g., Big 12, SEC"
+          <ConferenceSelector
+            division={data.division}
             value={data.conference}
-            onChange={(e) => validateAndUpdateField('conference', e.target.value)}
-            className={`h-11 bg-background ${validationErrors.conference ? 'border-red-500' : ''}`}
-            maxLength={FIELD_LIMITS.CONFERENCE}
+            onValueChange={(value) => onInputChange('conference', value)}
+            placeholder="Select conference"
+            label="Conference"
+            labelClassName="text-base font-medium"
           />
-          {validationErrors.conference && (
-            <p className="text-sm text-red-500">{validationErrors.conference}</p>
-          )}
-          <p className="text-xs text-muted-foreground">{data.conference.length}/{FIELD_LIMITS.CONFERENCE} characters</p>
         </div>
       </div>
 

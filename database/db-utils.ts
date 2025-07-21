@@ -15,7 +15,6 @@ import {
   conversations,
   notifications,
   adminRolePreferences,
-  conferences,
   type NewUser,
   type NewAthleteProfile,
   type NewAthleteMeasurable,
@@ -26,7 +25,6 @@ import {
   type NewRecruitingProfileNeeds,
   type NewReport,
   type NewAdminRolePreferences,
-  type NewConference,
   athleteVideos,
 } from './schema';
 import { OnboardingProfileData } from '@/app/(onboarding)/lib/onboarding';
@@ -745,6 +743,7 @@ export const onboardingOperations = {
       weight: profileData.weight!,
       positions: profileData.positions!,
       division: profileData.division,
+      conference: profileData.conference,
       gpa: profileData.gpa ? parseFloat(profileData.gpa) : undefined,
       satScore: profileData.satScore || undefined,
       actScore: profileData.actScore || undefined,
@@ -1257,6 +1256,7 @@ export const profileOperations = {
     let fullName = 'Unknown User';
     let profileImageUrl = null;
     let division = undefined;
+    let conference = undefined;
     let educationLevel = undefined;
     let isVerified = false;
 
@@ -1264,17 +1264,20 @@ export const profileOperations = {
       fullName = user.athleteProfile.fullName;
       profileImageUrl = user.athleteProfile.profileImageR3Key;
       division = user.athleteProfile.division;
+      conference = user.athleteProfile.conference;
       educationLevel = user.athleteProfile.educationLevel;
       isVerified = user.athleteProfile.isVerified ?? false;
     } else if (user.role === 'coach' && user.coachProfile) {
       fullName = user.coachProfile.fullName;
       profileImageUrl = user.coachProfile.profileImageR3Key;
       division = user.coachProfile.division;
+      conference = user.coachProfile.conference;
       isVerified = user.coachProfile.isVerified ?? false;
     } else if (user.role === 'recruiter' && user.recruitingProfile) {
       fullName = user.recruitingProfile.fullName;
       profileImageUrl = user.recruitingProfile.profileImageR3Key;
       division = user.recruitingProfile.division;
+      conference = user.recruitingProfile.conference;
       isVerified = user.recruitingProfile.isVerified ?? false;
     }
 
@@ -1285,6 +1288,7 @@ export const profileOperations = {
         : null,
       role: user.role,
       division,
+      conference,
       educationLevel,
       isVerified,
     };
@@ -1621,105 +1625,3 @@ export const adminOperations = {
     return profile;
   }
 };
-
-// Conference operations
-export const conferenceOperations = {
-  // Get all conferences
-  async getAllConferences() {
-    return await db.query.conferences.findMany({
-      where: eq(conferences.isActive, true),
-      orderBy: [asc(conferences.division), asc(conferences.name)]
-    });
-  },
-
-  // Get conferences by division
-  async getConferencesByDivision(division: 'NCAA Division I' | 'NCAA Division II' | 'NCAA Division III' | 'NAIA' | 'NJCAA Division I' | 'NJCAA Division II' | 'NJCAA Division III' | 'Junior College' | 'Community College' | 'High School' | 'Club Sports') {
-    return await db.query.conferences.findMany({
-      where: and(
-        eq(conferences.division, division),
-        eq(conferences.isActive, true)
-      ),
-      orderBy: [asc(conferences.name)]
-    });
-  },
-
-  // Get conferences by region
-  async getConferencesByRegion(region: string) {
-    return await db.query.conferences.findMany({
-      where: and(
-        eq(conferences.region, region),
-        eq(conferences.isActive, true)
-      ),
-      orderBy: [asc(conferences.division), asc(conferences.name)]
-    });
-  },
-
-  // Search conferences by name
-  async searchConferencesByName(searchTerm: string) {
-    return await db.query.conferences.findMany({
-      where: and(
-        sql`LOWER(${conferences.name}) LIKE LOWER(${'%' + searchTerm + '%'})`,
-        eq(conferences.isActive, true)
-      ),
-      orderBy: [asc(conferences.division), asc(conferences.name)]
-    });
-  },
-
-  // Get conference by ID
-  async getConferenceById(id: number) {
-    return await db.query.conferences.findFirst({
-      where: eq(conferences.id, id)
-    });
-  },
-
-  // Create new conference
-  async createConference(conferenceData: NewConference) {
-    const [conference] = await db.insert(conferences).values(conferenceData).returning();
-    return conference;
-  },
-
-  // Update conference
-  async updateConference(id: number, conferenceData: Partial<NewConference>) {
-    const [conference] = await db
-      .update(conferences)
-      .set({ ...conferenceData, updatedAt: new Date() })
-      .where(eq(conferences.id, id))
-      .returning();
-    return conference;
-  },
-
-  // Delete conference (soft delete by setting isActive to false)
-  async deleteConference(id: number) {
-    const [conference] = await db
-      .update(conferences)
-      .set({ isActive: false, updatedAt: new Date() })
-      .where(eq(conferences.id, id))
-      .returning();
-    return conference;
-  },
-
-  // Get all divisions
-  async getAllDivisions() {
-    const result = await db
-      .selectDistinct({ division: conferences.division })
-      .from(conferences)
-      .where(eq(conferences.isActive, true))
-      .orderBy(asc(conferences.division));
-    
-    return result.map(r => r.division);
-  },
-
-  // Get all regions
-  async getAllRegions() {
-    const result = await db
-      .selectDistinct({ region: conferences.region })
-      .from(conferences)
-      .where(and(
-        eq(conferences.isActive, true),
-        sql`${conferences.region} IS NOT NULL`
-      ))
-      .orderBy(asc(conferences.region));
-    
-    return result.map(r => r.region);
-  }
-}; 

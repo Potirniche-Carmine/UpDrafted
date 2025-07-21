@@ -281,6 +281,13 @@
       "when": 1753135563652,
       "tag": "0039_modern_punisher",
       "breakpoints": true
+    },
+    {
+      "idx": 40,
+      "version": "7",
+      "when": 1753136501773,
+      "tag": "0040_oval_kat_farrell",
+      "breakpoints": true
     }
   ]
 }

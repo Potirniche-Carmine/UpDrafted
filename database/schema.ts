@@ -24,8 +24,6 @@ export const verificationRequestStatusEnum = pgEnum('verification_request_status
 export const verificationTypeEnum = pgEnum('verification_type', ['general', 'transfer_portal']);
 export const educationLevelEnum = pgEnum('education_level', ['high_school', 'undergraduate', 'graduate', 'associate']);
 export const notificationTypeEnum = pgEnum('notification_type', ['profileView', 'newConnection', 'newMessage', 'systemUpdate', 'premiumFeature', 'connectionAccepted']);
-export const divisionEnum = pgEnum('division', ['NCAA Division I', 'NCAA Division II', 'NCAA Division III', 'NAIA', 'NJCAA Division I', 'NJCAA Division II', 'NJCAA Division III', 'Junior College', 'Community College', 'High School', 'Club Sports']);
-
 
 export const users = pgTable('users', {
   id: text('id').primaryKey(),
@@ -47,6 +45,7 @@ export const athleteProfiles = pgTable('athlete_profiles', {
   secondarySports: text('secondary_sports').array(),
   graduationYear: integer('graduation_year').notNull(),
   division: text('division'),
+  conference: text('conference'),
   educationLevel: educationLevelEnum('education_level').notNull().default('high_school'),
   competitionLevel: text('competition_level'),
   organizationName: text('organization_name').notNull(),
@@ -351,22 +350,6 @@ export const adminRolePreferences = pgTable('admin_role_preferences', {
   index('idx_admin_role_preferences_user_id').on(table.userId),
   unique('admin_role_preferences_user_id_unique').on(table.userId),
 ]);
-
-export const conferences = pgTable('conferences', {
-  id: serial('id').primaryKey(),
-  name: text('name').notNull(),
-  division: divisionEnum('division').notNull(),
-  region: text('region'),
-  abbreviation: text('abbreviation'),
-  isActive: boolean('is_active').default(true).notNull(),
-  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
-  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
-}, (table) => [
-  index('idx_conferences_division').on(table.division),
-  index('idx_conferences_is_active').on(table.isActive),
-  unique('conferences_name_division_unique').on(table.name, table.division),
-]);
-
 export const usersRelations = relations(users, ({ one, many }) => ({
   athleteProfile: one(athleteProfiles, {
     fields: [users.id],
@@ -549,5 +532,3 @@ export type Notification = typeof notifications.$inferSelect;
 export type NewNotification = typeof notifications.$inferInsert;
 export type AdminRolePreferences = typeof adminRolePreferences.$inferSelect;
 export type NewAdminRolePreferences = typeof adminRolePreferences.$inferInsert;
-export type Conference = typeof conferences.$inferSelect;
-export type NewConference = typeof conferences.$inferInsert; 
