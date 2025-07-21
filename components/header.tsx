@@ -170,9 +170,9 @@ export function Header() {
 
   return (
     <header className="sticky top-0 z-[51] w-full border-b border-[#01ae79]/20 dark:border-[#01ae79]/30 bg-white/95 dark:bg-gray-950/95 backdrop-blur supports-[backdrop-filter]:bg-white/80 dark:supports-[backdrop-filter]:bg-gray-950/80">
-      <div className="container mx-auto flex h-14 lg:h-16 max-w-screen-2xl items-center justify-between px-3 sm:px-4 lg:px-6 xl:px-8">
+      <div className="w-full flex h-14 lg:h-16 max-w-screen-2xl items-center justify-between px-3 sm:px-4 lg:px-6 xl:px-8 overflow-x-auto min-w-0">
         {/* Logo */}
-        <a href="#" onClick={handleLogoClick} className="flex items-center space-x-2 flex-shrink-0 logo-no-flash">
+        <a href="#" onClick={handleLogoClick} className="flex items-center space-x-2 flex-shrink-0 logo-no-flash min-w-0">
           <Image
             src="/updrafted-logo.png"
             alt="UpDrafted Logo"
@@ -261,17 +261,21 @@ export function Header() {
           )}
 
           <SignedOut>
+            {/* Mobile: Only show Sign In icon, hide Sign Up */}
             <SignInButton mode="modal">
-              <Button variant="default" size="sm" className="flex items-center space-x-2 ml-2 bg-[#01ae79] hover:bg-[#01ae79]/90 text-white">
+              <Button variant="default" size="sm" className="bg-[#01ae79] hover:bg-[#01ae79]/90 text-white md:flex md:items-center">
                 <LogIn className="h-4 w-4" />
-                <span className="hidden xl:inline">Sign In</span>
+                <span className="hidden md:inline ml-2">Sign In</span>
               </Button>
             </SignInButton>
-            <SignUpButton mode="modal">
-              <Button variant="outline" size="sm" className="ml-2 border-[#01ae79]/30 hover:bg-[#01ae79]/5 dark:border-[#01ae79]/30 dark:hover:bg-[#01ae79]/10 text-[#01ae79] hover:text-[#01ae79]">
-                <span className="hidden xl:inline">Sign Up</span>
-              </Button>
-            </SignUpButton>
+            {/* Only show Sign Up on md+ screens */}
+            <div className="hidden md:block">
+              <SignUpButton mode="modal">
+                <Button variant="outline" size="sm" className="ml-2 border-[#01ae79]/30 hover:bg-[#01ae79]/5 dark:border-[#01ae79]/30 dark:hover:bg-[#01ae79]/10 text-[#01ae79] hover:text-[#01ae79]">
+                  <span>Sign Up</span>
+                </Button>
+              </SignUpButton>
+            </div>
           </SignedOut>
         </nav>
 
@@ -358,18 +362,27 @@ export function Header() {
                 </SheetContent>
               </Sheet>
             )}
-
             <UserButton
               appearance={userButtonAppearance}
             />
           </SignedIn>
 
           <SignedOut>
+            {/* Mobile: Only show Sign In icon, hide Sign Up */}
             <SignInButton mode="modal">
-              <Button variant="default" size="sm" className="bg-[#01ae79] hover:bg-[#01ae79]/90 text-white">
+              <Button variant="default" size="sm" className="bg-[#01ae79] hover:bg-[#01ae79]/90 text-white md:flex md:items-center">
                 <LogIn className="h-4 w-4" />
+                <span className="hidden md:inline ml-2">Sign In</span>
               </Button>
             </SignInButton>
+            {/* Only show Sign Up on md+ screens */}
+            <div className="hidden md:block">
+              <SignUpButton mode="modal">
+                <Button variant="outline" size="sm" className="ml-2 border-[#01ae79]/30 hover:bg-[#01ae79]/5 dark:border-[#01ae79]/30 dark:hover:bg-[#01ae79]/10 text-[#01ae79] hover:text-[#01ae79]">
+                  <span>Sign Up</span>
+                </Button>
+              </SignUpButton>
+            </div>
           </SignedOut>
         </div>
       </div>
