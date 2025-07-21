@@ -90,7 +90,6 @@ export interface AthleteProfileData {
   secondarySports?: string[];
   graduationYear: number;
   educationLevel: EducationLevel;
-  competitionLevel?: string;
   division?: string;
   conference?: string;
   organizationName: string;
@@ -213,7 +212,6 @@ export function AthleteEditDialogs({
           sport: profileData.sport,
           secondarySports: profileData.secondarySports || [],
           educationLevel: profileData.educationLevel,
-          competitionLevel: profileData.competitionLevel || '',
           division: profileData.division || '',
           conference: profileData.conference || '',
           city: profileData.city,
@@ -736,7 +734,6 @@ export function AthleteEditDialogs({
         updates.sport = editData.sport;
         updates.secondarySports = editData.secondarySports;
         updates.educationLevel = editData.educationLevel;
-        updates.competitionLevel = editData.competitionLevel;
         updates.division = editData.division;
         updates.conference = editData.conference;
         updates.positions = editData.positions;
@@ -968,7 +965,11 @@ export function AthleteEditDialogs({
                     <Select
                       value={String(editData.division || '')}
                       onValueChange={(value) => {
-                        setEditData(prev => ({ ...prev, division: value, conference: '' }));
+                        setEditData(prev => ({ 
+                          ...prev, 
+                          division: value,
+                          conference: '' 
+                        }));
                       }}
                     >
                       <SelectTrigger className="h-12" id="edit-division">

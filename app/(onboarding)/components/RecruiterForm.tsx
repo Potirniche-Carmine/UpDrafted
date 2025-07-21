@@ -434,19 +434,22 @@ export default function RecruiterForm({ data, onInputChange }: RecruiterFormProp
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="space-y-3">
           <Label htmlFor="division" className="text-base font-medium">Division *</Label>
-          <Select
-            value={data.division}
-            onValueChange={(value) => onInputChange('division', value)}
-          >
-            <SelectTrigger className="h-11 bg-background" style={{ height: '2.75rem' }}>
-              <SelectValue placeholder="Select division" />
-            </SelectTrigger>
-            <SelectContent>
-              {DIVISIONS.map(division => (
-                <SelectItem key={division} value={division}>{division}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <div className="flex gap-1">
+            <Select
+              value={data.division}
+              onValueChange={(value) => onInputChange('division', value)}
+            >
+              <SelectTrigger className="h-11 bg-background flex-1">
+                <SelectValue placeholder="Select division" />
+              </SelectTrigger>
+              <SelectContent>
+                {DIVISIONS.map(division => (
+                  <SelectItem key={division} value={division}>{division}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <div className="w-9 h-11"></div>
+          </div>
         </div>
         <div className="space-y-3">
           <ConferenceSelector
@@ -456,6 +459,7 @@ export default function RecruiterForm({ data, onInputChange }: RecruiterFormProp
             placeholder="Select conference"
             label="Conference"
             labelClassName="text-base font-medium"
+            height="h-11"
           />
         </div>
       </div>

@@ -435,7 +435,7 @@ export default function AthleteForm({ data, onInputChange }: AthleteFormProps) {
           <div className="space-y-3">
             <Label htmlFor="division" className="text-base font-medium">Division *</Label>
             <Select value={data.division} onValueChange={(value) => onInputChange('division', value)}>
-              <SelectTrigger className="h-11 bg-background w-full">
+              <SelectTrigger className="h-11 bg-background">
                 <SelectValue placeholder="Select your division" />
               </SelectTrigger>
               <SelectContent>
@@ -458,6 +458,7 @@ export default function AthleteForm({ data, onInputChange }: AthleteFormProps) {
               label="Conference"
               labelClassName="text-base font-medium"
               description="Choose your athletic conference for better recruiting visibility"
+              height="h-11"
             />
           </div>
         </div>
