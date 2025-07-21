@@ -9,7 +9,7 @@ if (!fs.existsSync(iconsDir)) {
 }
 
 // Source logo (assuming you have a high-res logo at this path)
-const sourceImage = path.join(__dirname, '../public/logo.png');
+const sourceImage = path.join(__dirname, '../public/icon.png');
 
 // Define all the icon sizes we need
 const icons = [

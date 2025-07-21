@@ -162,16 +162,37 @@ export default function AthleteForm({ data, onInputChange }: AthleteFormProps) {
   // Validate field and update errors
   const validateAndUpdateField = (field: keyof OnboardingData, value: string | number | null) => {
     const newErrors = { ...validationErrors };
-    
+    let newFullName = data.fullName;
+    if (field === 'fullName') {
+      newFullName = value as string;
+    }
     switch (field) {
-      case 'fullName':
+      case 'fullName': {
         const nameResult = FormValidator.validateName(value as string, true);
         if (nameResult.isValid) {
           delete newErrors.fullName;
         } else {
           newErrors.fullName = nameResult.error!;
         }
+        // Re-validate Hudl and MaxPreps URLs with new name
+        if (data.hudlUrl) {
+          const hudlResult = FormValidator.validateHudlURL(data.hudlUrl, value as string);
+          if (hudlResult.isValid) {
+            delete newErrors.hudlUrl;
+          } else {
+            newErrors.hudlUrl = hudlResult.error!;
+          }
+        }
+        if (data.maxprepsUrl) {
+          const maxprepsResult = FormValidator.validateMaxPrepsURL(data.maxprepsUrl, value as string);
+          if (maxprepsResult.isValid) {
+            delete newErrors.maxprepsUrl;
+          } else {
+            newErrors.maxprepsUrl = maxprepsResult.error!;
+          }
+        }
         break;
+      }
       case 'organizationName':
         const orgResult = FormValidator.validateText(value as string, getSchoolLabel(data.educationLevel), FIELD_LIMITS.ORGANIZATION_NAME, true);
         if (orgResult.isValid) {
@@ -235,7 +256,7 @@ export default function AthleteForm({ data, onInputChange }: AthleteFormProps) {
         break;
       case 'maxprepsUrl':
         if (value) {
-          const maxprepsResult = FormValidator.validateURL(value as string, 'maxpreps');
+          const maxprepsResult = FormValidator.validateMaxPrepsURL(value as string, newFullName);
           if (maxprepsResult.isValid) {
             delete newErrors.maxprepsUrl;
           } else {
@@ -246,11 +267,9 @@ export default function AthleteForm({ data, onInputChange }: AthleteFormProps) {
         }
         break;
       case 'hudlUrl':
-        const isHighSchool = data.educationLevel === 'high_school';
-        if (isHighSchool && !(value as string)?.trim()) {
-          newErrors.hudlUrl = 'Hudl URL is required for high school athletes';
-        } else if (value) {
-          const hudlResult = FormValidator.validateURL(value as string, 'hudl');
+        if (value) {
+          // Accept Hudl URLs with or without protocol, and show error if name is missing
+          const hudlResult = FormValidator.validateHudlURL(value as string, newFullName);
           if (hudlResult.isValid) {
             delete newErrors.hudlUrl;
           } else {
@@ -656,7 +675,7 @@ export default function AthleteForm({ data, onInputChange }: AthleteFormProps) {
         <Label htmlFor="maxprepsUrl" className="text-base font-medium">MaxPreps Profile URL</Label>
         <Input
           id="maxprepsUrl"
-          placeholder="https://www.maxpreps.com/athlete/..."
+          placeholder={data.fullName ? `maxpreps.com/athletes/${data.fullName.toLowerCase().replace(/\s+/g, '-')}` : "maxpreps.com/athletes/your-name"}
           value={data.maxprepsUrl}
           onChange={(e) => validateAndUpdateField('maxprepsUrl', e.target.value)}
           className={`h-11 bg-background ${validationErrors.maxprepsUrl ? 'border-red-500' : ''}`}
@@ -665,18 +684,15 @@ export default function AthleteForm({ data, onInputChange }: AthleteFormProps) {
         {validationErrors.maxprepsUrl && (
           <p className="text-sm text-red-500">{validationErrors.maxprepsUrl}</p>
         )}
-        <p className="text-sm text-muted-foreground">
-          Optional but highly recommended. If your MaxPreps profile name matches your profile name, you&apos;ll receive a verified athlete badge.
-        </p>
       </div>
 
       <div className="space-y-3">
         <Label htmlFor="hudlUrl" className="text-base font-medium">
-          Hudl Profile URL{data.educationLevel === 'high_school' ? ' *' : ''}
+          Hudl Profile URL
         </Label>
         <Input
           id="hudlUrl"
-          placeholder="https://www.hudl.com/profile/..."
+          placeholder={data.fullName ? `hudl.com/profile/${data.fullName.toLowerCase().replace(/\s+/g, '-')}` : "hudl.com/profile/your-name"}
           value={data.hudlUrl}
           onChange={(e) => validateAndUpdateField('hudlUrl', e.target.value)}
           className={`h-11 bg-background ${validationErrors.hudlUrl ? 'border-red-500' : ''}`}
@@ -687,11 +703,13 @@ export default function AthleteForm({ data, onInputChange }: AthleteFormProps) {
         )}
         {data.educationLevel === 'high_school' ? (
           <p className="text-sm text-muted-foreground">
-            Required for high school athletes. Hudl helps showcase your game footage to college recruiters.
+        Optional for high school athletes. Your Hudl URL must contain your name (e.g., hudl.com/profile/{data.fullName ? data.fullName.toLowerCase().replace(/\s+/g, '-') : 'your-name'}). 
+        Successfully providing this will automatically verify your profile.
           </p>
         ) : (
           <p className="text-sm text-muted-foreground">
-            Optional for college athletes. Showcase your game footage to professional scouts and recruiters.
+        Optional for college athletes. Your Hudl URL should contain your name (e.g., hudl.com/profile/{data.fullName ? data.fullName.toLowerCase().replace(/\s+/g, '-') : 'your-name'}). 
+        Showcase your game footage to professional scouts and recruiters.
           </p>
         )}
       </div>

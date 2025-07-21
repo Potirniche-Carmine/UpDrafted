@@ -92,6 +92,13 @@ export async function POST(request: NextRequest) {
     let validationErrors
     if (role === 'athlete') {
       validationErrors = FormValidator.validateAthleteForm(rawProfileData)
+      // Hudl verification logic
+      const hudlResult = FormValidator.validateHudlURL(rawProfileData.hudlUrl, rawProfileData.fullName)
+      if (hudlResult.isValid && rawProfileData.hudlUrl) {
+        rawProfileData.hudlVerified = true;
+      } else {
+        rawProfileData.hudlVerified = false;
+      }
     } else {
       validationErrors = FormValidator.validateCoachRecruiterForm(rawProfileData)
     }
@@ -289,6 +296,17 @@ export async function POST(request: NextRequest) {
         })
       }
 
+      let isVerified = false;
+      
+      // Set verification status based on role and admin status
+      if (!isAdmin) {
+        if (role === 'athlete' && 'athleteProfile' in result) {
+          isVerified = result.athleteProfile.isVerified || false;
+        } else if ((role === 'coach' || role === 'recruiter') && 'profile' in result) {
+          isVerified = result.profile.isVerified || false;
+        }
+      }
+
       return NextResponse.json(
         { 
           message: 'Profile created successfully', 
@@ -296,7 +314,8 @@ export async function POST(request: NextRequest) {
           role,
           profileId,
           profileImageUrl,
-          organizationLogoUrl
+          organizationLogoUrl,
+          isVerified
         },
         { status: 200 }
       )
