@@ -3,15 +3,14 @@
 import React from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Edit, Plus, Shield, ExternalLink, Clock, GraduationCap, X } from "lucide-react";
-import Link from "next/link";
+import { Plus, Shield, ExternalLink, Clock, GraduationCap, X } from "lucide-react";
 import { AthleteProfileData } from "./athlete-profile-types";
 
 interface VerificationSectionProps {
   profileData: AthleteProfileData; // Original database data for verification logic
   displayData?: AthleteProfileData; // Current data including unsaved changes for display
   isOwnProfile: boolean;
-  onEditMaxPreps?: () => void;
+  onEditHudl?: () => void;
   onShowVerificationDialog: () => void;
   hasPendingVerification?: boolean;
   pendingSubmittedAt?: string;
@@ -30,7 +29,7 @@ export function VerificationSection({
   profileData,
   displayData,
   isOwnProfile,
-  onEditMaxPreps,
+  onEditHudl,
   onShowVerificationDialog,
   hasPendingVerification = false,
   pendingSubmittedAt,
@@ -55,7 +54,7 @@ export function VerificationSection({
     profileData.competitionLevel &&
     ['division_1', 'division_2', 'division_3'].includes(profileData.competitionLevel);
 
-  // Check if this is a high school athlete (only they should see MaxPreps)
+  // Check if this is a high school athlete (only they should see Hudl)
   const isHighSchoolAthlete = currentData.educationLevel === 'high_school';
 
   // Get the verification status for display
@@ -80,7 +79,7 @@ export function VerificationSection({
       return {
         type: 'high_school',
         isVerified: currentData.isVerified || false,
-        hasMaxPreps: !!currentData.maxPrepsUrl,
+        hasHudl: !!currentData.hudlUrl,
         needsVerification: !currentData.isVerified || hasPendingVerification
       };
     }
@@ -95,12 +94,15 @@ export function VerificationSection({
   const shouldShowTransferPortalVerified = requiresTransferPortalVerification && status.isTransferPortalVerified;
 
   // General Verification Logic (following coach/recruiter pattern)  
-  const shouldShowGeneralManual = !requiresTransferPortalVerification && !currentData.isVerified && !hasPendingVerification && !hasRejectedVerification;
+  const shouldShowGeneralManual = !requiresTransferPortalVerification && !currentData.isVerified && !hasPendingVerification && !hasRejectedVerification && !(isHighSchoolAthlete && currentData.hudlUrl);
   const shouldShowGeneralPending = hasPendingVerification;
   const shouldShowGeneralRejected = hasRejectedVerification;
 
-  // If verified and no special requirements, don't show section
-  if (status.type === 'high_school' && status.isVerified && !status.hasMaxPreps && !hasPendingVerification) {
+  // Determine if we should show the verification section (not including Hudl display)
+  const shouldShowVerificationSection = shouldShowTransferPortalManual || shouldShowTransferPortalPending || shouldShowTransferPortalRejected || shouldShowTransferPortalVerified || shouldShowGeneralManual || shouldShowGeneralPending || shouldShowGeneralRejected;
+
+  // If no verification sections needed, don't render
+  if (!shouldShowVerificationSection) {
     return null;
   }
 
@@ -117,49 +119,11 @@ export function VerificationSection({
               <p className="text-sm text-muted-foreground">Athletic credentials and portal status</p>
             </div>
           </div>
-          {status.type === 'high_school' && isOwnProfile && onEditMaxPreps && !currentData.isVerified && (
-            <Button size="sm" variant="ghost" onClick={onEditMaxPreps}>
-              <Edit className="w-4 h-4 mr-1" />
-              Edit
-            </Button>
-          )}
         </div>
         
       </CardHeader>
       
       <CardContent className="space-y-6">
-        {/* High School MaxPreps Section */}
-        {isHighSchoolAthlete && currentData.maxPrepsUrl && (
-          <div className="bg-white dark:bg-slate-800 rounded-xl p-6 border border-slate-200 dark:border-slate-700">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 mb-2">
-                  <div className="w-8 h-8 bg-green-100 dark:bg-green-900 rounded-lg flex items-center justify-center">
-                    <ExternalLink className="w-4 h-4 text-green-600" />
-                  </div>
-                  <h3 className="font-semibold text-slate-900 dark:text-slate-100">MaxPreps Profile</h3>
-                </div>
-                <p className="text-sm text-slate-600 dark:text-slate-400 mb-1">
-                  Official high school stats, game logs, and team roster verification
-                </p>
-                {currentData.isVerified && (
-                  <p className="text-sm text-emerald-600 dark:text-emerald-400 font-medium">
-                    ✓ Profile verified and secured
-                  </p>
-                )}
-              </div>
-              <div className="flex-shrink-0">
-                <Link href={currentData.maxPrepsUrl!} target="_blank">
-                  <Button className="bg-[#01ae79] hover:bg-[#01ae79]/90 text-white">
-                    <ExternalLink className="w-4 h-4 mr-2" />
-                    View Stats
-                  </Button>
-                </Link>
-              </div>
-            </div>
-          </div>
-        )}
-
         {/* University Transfer Portal Section - Only show when verified */}
         {shouldShowTransferPortalVerified && (
           <div className="bg-emerald-50 dark:bg-emerald-950/20 border-emerald-200 dark:border-emerald-800 rounded-xl p-6 border transition-all">
@@ -326,30 +290,30 @@ export function VerificationSection({
           </div>
         )}
 
-        {/* High School MaxPreps Prompt */}
-        {isHighSchoolAthlete && !currentData.maxPrepsUrl && shouldShowGeneralManual && (
-          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/20 dark:to-indigo-950/20 rounded-xl p-4 sm:p-6 border border-blue-200 dark:border-blue-800">
+        {/* High School Hudl Prompt */}
+        {isHighSchoolAthlete && !currentData.hudlUrl && shouldShowGeneralManual && (
+          <div className="bg-gradient-to-r from-slate-50 to-slate-100 dark:from-slate-950/20 dark:to-slate-900/20 rounded-xl p-4 sm:p-6 border border-slate-200 dark:border-slate-800">
             <div className="text-center space-y-3 sm:space-y-4">
-              <div className="w-12 h-12 sm:w-16 sm:h-16 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center mx-auto">
-                <ExternalLink className="w-6 h-6 sm:w-8 sm:h-8 text-blue-600" />
+              <div className="w-12 h-12 sm:w-16 sm:h-16 bg-emerald-100 dark:bg-emerald-900 rounded-full flex items-center justify-center mx-auto">
+                <ExternalLink className="w-6 h-6 sm:w-8 sm:h-8 text-emerald-600" />
               </div>
               
               <div className="space-y-3">
-                <h3 className="font-semibold text-base sm:text-lg text-blue-900 dark:text-blue-100">High School Athletes</h3>
-                <p className="text-sm text-blue-700 dark:text-blue-200 px-2 sm:px-4">
-                  MaxPreps is the official source for high school sports stats and verification. 
-                  Link your MaxPreps profile to showcase official stats and get verified instantly.
+                <h3 className="font-semibold text-base sm:text-lg text-slate-900 dark:text-slate-100">High School Athletes</h3>
+                <p className="text-sm text-slate-700 dark:text-slate-300 px-2 sm:px-4">
+                  Hudl is the premier platform for showcasing game film and highlight reels. 
+                  Link your Hudl profile to display your athletic performance videos.
                 </p>
               </div>
-              {isOwnProfile && onEditMaxPreps && (
+              {isOwnProfile && onEditHudl && (
                 <div className="pt-2">
                   <Button 
                     variant="outline"
-                    className="w-full sm:w-auto border-blue-300 text-blue-700 hover:bg-blue-100 dark:border-blue-700 dark:text-blue-200 dark:hover:bg-blue-900 text-sm sm:text-base py-2.5 sm:py-2 px-4 sm:px-6"
-                    onClick={onEditMaxPreps}
+                    className="w-full sm:w-auto border-slate-300 text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800 text-sm sm:text-base py-2.5 sm:py-2 px-4 sm:px-6"
+                    onClick={onEditHudl}
                   >
                     <Plus className="w-4 h-4 mr-2 flex-shrink-0" />
-                    Add MaxPreps URL
+                    Add Hudl URL
                   </Button>
                 </div>
               )}
@@ -426,10 +390,10 @@ export function VerificationSection({
             </h4>
             <ul className="text-xs text-slate-600 dark:text-slate-400 space-y-1">
               {isHighSchoolAthlete && (
-                <li>• <strong>MaxPreps:</strong> High school athletes with official stats</li>
+                <li>• <strong>Hudl:</strong> High school athletes with game film and highlight videos</li>
               )}
               <li>• <strong>Manual:</strong> {isHighSchoolAthlete 
-                ? "Club sports, intramurals, college teams, or athletes without MaxPreps"
+                ? "Club sports, intramurals, college teams, or athletes without Hudl"
                 : "Club sports, intramurals, or general athletic participation verification"
               }</li>
               {requiresTransferPortalVerification && (

@@ -232,6 +232,34 @@ export const GRADUATION_YEARS = Array.from(
   (_, i) => new Date().getFullYear() + i
 );
 
+// Get graduation years that are valid for high school athletes (juniors and above)
+export function getValidHighSchoolGraduationYears(): number[] {
+  const currentYear = new Date().getFullYear();
+  const currentMonth = new Date().getMonth();
+  
+  // If we're in the first half of the year (Jan-June), we're in the spring of the school year
+  // If we're in the second half (July-Dec), we're in the fall of the new school year
+  const baseYear = currentMonth < 6 ? currentYear : currentYear + 1;
+  
+  // Current seniors graduate this year (baseYear)
+  // Current juniors graduate next year (baseYear + 1)
+  return [baseYear, baseYear + 1];
+}
+
+// Check if a graduation year is valid for high school athletes
+export function isValidHighSchoolGraduationYear(year: number): boolean {
+  const validYears = getValidHighSchoolGraduationYears();
+  return validYears.includes(year);
+}
+
+// Get filtered graduation years for high school athletes
+export function getGraduationYearsForEducationLevel(educationLevel: string): number[] {
+  if (educationLevel === 'high_school') {
+    return getValidHighSchoolGraduationYears();
+  }
+  return GRADUATION_YEARS;
+}
+
 export function getPositionsForSport(sport: string): string[] {
   const sportData = SPORTS_DATA.find(s => s.sport === sport);
   return sportData?.positions || [];

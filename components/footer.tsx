@@ -50,7 +50,7 @@ export function Footer() {
           <div className="space-y-4 md:col-span-2">
             <Link href="/" className="flex items-center space-x-2">
               <Image 
-                src="/logo.png" 
+                src="/updrafted-logo.png" 
                 alt="UpDrafted Logo" 
                 width={150} 
                 height={40} 

@@ -203,7 +203,7 @@ export function AthleteEditDialogs({
       return;
     }
 
-    // Prevent auto-focus on dialog open - remove setTimeout
+    // Prevent auto-focus on dialog open
     if (document.activeElement && document.activeElement instanceof HTMLElement) {
       document.activeElement.blur();
     }
@@ -333,8 +333,29 @@ export function AthleteEditDialogs({
       case 'hudlUrl':
         if (value && typeof value === 'string') {
           const trimmedValue = value.trim();
-          if (trimmedValue && !trimmedValue.includes('hudl.com')) {
-            return 'Please enter a valid Hudl URL (must contain hudl.com)';
+          
+          // Validate Hudl URL format: [https://][www.]hudl.com/profile/{id}/{name}
+          const hudlRegex = /^(https?:\/\/)?(www\.)?hudl\.com\/profile\/\d+\/[\w-]+/i;
+          
+          if (trimmedValue && !hudlRegex.test(trimmedValue)) {
+            return 'Please enter a valid Hudl profile URL (e.g., hudl.com/profile/12345/your-name)';
+          }
+          
+          // Extract athlete name for validation - just check if name appears anywhere in URL
+          if (trimmedValue) {
+            const athleteName = profileData.fullName.toLowerCase();
+            const nameParts = athleteName.split(' ').filter(part => part.length > 1); // Filter out single character parts
+            
+            // Convert URL to lowercase for case-insensitive matching
+            const urlLower = trimmedValue.toLowerCase();
+            
+            // Check if at least first and last name appear somewhere in the URL
+            const firstNameMatch = nameParts[0] && urlLower.includes(nameParts[0]);
+            const lastNameMatch = nameParts[nameParts.length - 1] && urlLower.includes(nameParts[nameParts.length - 1]);
+            
+            if (!firstNameMatch || !lastNameMatch) {
+              return `Hudl URL should contain your name (${profileData.fullName}) to verify it's your profile`;
+            }
           }
         }
         break;
@@ -386,19 +407,23 @@ export function AthleteEditDialogs({
       case 'maxPrepsUrl':
         if (typeof value === 'string' && value.trim()) {
           const url = value.trim();
-          // Check if it's a valid MaxPreps URL
-          if (!url.includes('maxpreps.com')) {
-            return 'Please enter a valid MaxPreps URL';
+          
+          // Validate MaxPreps URL format: [https://][www.]maxpreps.com/{state}/{city}/{school}/athletes/{name}
+          // More flexible - just check for maxpreps.com and athletes path
+          const maxPrepsRegex = /^(https?:\/\/)?(www\.)?maxpreps\.com\/.*\/athletes\//i;
+          
+          if (!maxPrepsRegex.test(url)) {
+            return 'Please enter a valid MaxPreps athlete URL that contains "/athletes/" in the path';
           }
           
-          // Extract athlete name for validation
+          // Extract athlete name for validation - just check if name appears anywhere in URL
           const athleteName = profileData.fullName.toLowerCase();
           const nameParts = athleteName.split(' ').filter(part => part.length > 1); // Filter out single character parts
           
           // Convert URL to lowercase for case-insensitive matching
           const urlLower = url.toLowerCase();
           
-          // Check if at least first and last name appear in the URL
+          // Check if at least first and last name appear somewhere in the URL
           const firstNameMatch = nameParts[0] && urlLower.includes(nameParts[0]);
           const lastNameMatch = nameParts[nameParts.length - 1] && urlLower.includes(nameParts[nameParts.length - 1]);
           
@@ -758,6 +783,10 @@ export function AthleteEditDialogs({
 
       case 'hudl-highlights':
         updates.hudlUrl = editData.hudlUrl || undefined;
+        // For high school athletes, adding Hudl verifies their profile
+        if (profileData.educationLevel === 'high_school' && editData.hudlUrl) {
+          updates.isVerified = true;
+        }
         break;
 
       case 'measurable':
@@ -1329,7 +1358,7 @@ export function AthleteEditDialogs({
                   <Label htmlFor="edit-maxPrepsUrl">MaxPreps Profile URL</Label>
                   <Input
                     id="edit-maxPrepsUrl"
-                    placeholder="https://www.maxpreps.com/..."
+                    placeholder={`maxpreps.com/state/city/school/athletes/${profileData.fullName.toLowerCase().replace(/\s+/g, '-')}/sport`}
                     value={editData.maxPrepsUrl || ''}
                     onChange={(e) => handleFieldChange('maxPrepsUrl', e.target.value)}
                     className={`h-12 ${validationErrors.maxPrepsUrl ? 'border-red-500' : ''}`}
@@ -1339,7 +1368,7 @@ export function AthleteEditDialogs({
                     <p className="text-sm text-red-500">{validationErrors.maxPrepsUrl}</p>
                   )}
                   <p className="text-sm text-muted-foreground">
-                    Add your MaxPreps profile to showcase official stats and verification. The URL should contain your name to verify it&apos;s your profile.
+                    Add your MaxPreps athlete profile URL. Example: maxpreps.com/ca/los-angeles/school-name/athletes/{profileData.fullName.toLowerCase().replace(/\s+/g, '-')}/football/
                   </p>
                 </div>
               )}
@@ -1359,7 +1388,7 @@ export function AthleteEditDialogs({
                 <Label htmlFor="edit-hudlUrl">Hudl Profile URL</Label>
                 <Input
                   id="edit-hudlUrl"
-                  placeholder="https://www.hudl.com/..."
+                  placeholder={`hudl.com/profile/12345/${profileData.fullName.toLowerCase().replace(/\s+/g, '-')}`}
                   value={editData.hudlUrl || ''}
                   onChange={(e) => handleFieldChange('hudlUrl', e.target.value)}
                   className={`h-12 ${validationErrors.hudlUrl ? 'border-red-500' : ''}`}
@@ -1372,7 +1401,7 @@ export function AthleteEditDialogs({
                   <p className="text-sm text-red-500">{validationErrors.hudlUrl}</p>
                 )}
                 <p className="text-sm text-muted-foreground">
-                  Add your Hudl profile link to showcase game film and highlight reels
+                  Add your Hudl profile URL. Example: hudl.com/profile/12345/{profileData.fullName.toLowerCase().replace(/\s+/g, '-')}
                 </p>
               </div>
             </div>
@@ -1783,7 +1812,10 @@ export function AthleteEditDialogs({
           });
         }
       }}>
-        <DialogContent className={`${dialogType === 'basic-info' ? "sm:max-w-2xl max-w-lg" : "sm:max-w-md max-w-lg"} z-[60]`}>
+        <DialogContent 
+          className={`${dialogType === 'basic-info' ? "sm:max-w-2xl max-w-lg" : "sm:max-w-md max-w-lg"} z-[60]`}
+          onOpenAutoFocus={e => e.preventDefault()}
+        >
           {getDialogContent()}
           {/* Only render footer if dialog type exists (prevents flash during close) */}
           {dialogType && (

@@ -261,13 +261,13 @@ const SocialMediaSection = memo(({ socialMedia, isOwnProfile, onEdit }: {
       </div>
       
       {socialMedia?.instagram || socialMedia?.twitter ? (
-        <div className="flex flex-col sm:flex-row justify-center gap-2 sm:gap-3">
+        <div className="flex flex-col justify-center gap-2">
           {socialMedia.instagram && (
             <a
               href={`https://instagram.com/${socialMedia.instagram.replace('@', '')}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center justify-center gap-2 px-2 sm:px-3 py-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-lg hover:opacity-90 transition-opacity min-w-0"
+              className="flex items-center justify-center gap-2 px-3 py-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-lg hover:opacity-90 transition-opacity min-w-0"
               title={`@${socialMedia.instagram.replace('@', '')}`}
             >
               <Instagram className="w-4 h-4 flex-shrink-0" />
@@ -281,7 +281,7 @@ const SocialMediaSection = memo(({ socialMedia, isOwnProfile, onEdit }: {
               href={`https://twitter.com/${socialMedia.twitter.replace('@', '')}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center justify-center gap-2 px-2 sm:px-3 py-2 bg-blue-500 text-white rounded-lg hover:opacity-90 transition-opacity min-w-0"
+              className="flex items-center justify-center gap-2 px-3 py-2 bg-blue-500 text-white rounded-lg hover:opacity-90 transition-opacity min-w-0"
               title={`@${socialMedia.twitter.replace('@', '')}`}
             >
               <Twitter className="w-4 h-4 flex-shrink-0" />
@@ -1201,7 +1201,7 @@ export function AthleteProfile({
                 profileData={data}
                 displayData={safeProfileData}
                 isOwnProfile={effectiveIsOwnProfile}
-                onEditMaxPreps={safeProfileData.isVerified ? undefined : () => handleEditSection('maxpreps-verification')}
+                onEditHudl={safeProfileData.isVerified ? undefined : () => handleEditSection('hudl-highlights')}
                 onShowVerificationDialog={() => handleEditSection('manual-verification')}
                 hasPendingVerification={hasPendingVerification}
                 pendingSubmittedAt={pendingSubmittedAt}
@@ -1216,8 +1216,8 @@ export function AthleteProfile({
               />
             )}
             
-            {/* Hudl Profile */}
-            {(safeProfileData.hudlUrl || effectiveIsOwnProfile) && (
+            {/* Hudl Profile - High School Athletes */}
+            {safeProfileData.educationLevel === 'high_school' && (safeProfileData.hudlUrl || effectiveIsOwnProfile) && (
               <Card>
                 <CardHeader>
                   <div className="flex items-center justify-between">
@@ -1239,12 +1239,12 @@ export function AthleteProfile({
                     <div className="bg-muted rounded-lg p-4 flex items-center justify-between">
                       <div>
                         <p className="font-medium">Hudl Profile</p>
-                        <p className="text-sm text-muted-foreground">Game film and highlight reels</p>
+                        <p className="text-sm text-muted-foreground">Game film, highlight reels, and athletic performance videos</p>
                       </div>
                       <Link href={safeProfileData.hudlUrl} target="_blank">
-                        <Button variant="outline" size="sm">
+                        <Button variant="outline" size="sm" className="bg-emerald-600 hover:bg-emerald-700 text-white border-emerald-600">
                           <ExternalLink className="w-4 h-4 mr-1" />
-                          View Hudl
+                          View Film
                         </Button>
                       </Link>
                     </div>
@@ -1261,6 +1261,59 @@ export function AthleteProfile({
                         >
                           <Plus className="w-4 h-4 mr-2" />
                           Add Hudl URL
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            )}
+            
+            {/* MaxPreps Profile */}
+            {(safeProfileData.maxPrepsUrl || effectiveIsOwnProfile) && (
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <CardTitle>MaxPreps Profile</CardTitle>
+                    {effectiveIsOwnProfile && (
+                      <Button 
+                        size="sm" 
+                        variant="ghost"
+                        onClick={() => handleEditSection('maxpreps-verification')}
+                      >
+                        <Edit className="w-4 h-4 mr-1" />
+                        Edit
+                      </Button>
+                    )}
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  {safeProfileData.maxPrepsUrl ? (
+                    <div className="bg-muted rounded-lg p-4 flex items-center justify-between">
+                      <div>
+                        <p className="font-medium">MaxPreps Profile</p>
+                        <p className="text-sm text-muted-foreground">Official high school stats and verification</p>
+                      </div>
+                      <Link href={safeProfileData.maxPrepsUrl} target="_blank">
+                        <Button variant="outline" size="sm" className="bg-[#01ae79] hover:bg-[#01ae79]/90 text-white border-[#01ae79]">
+                          <ExternalLink className="w-4 h-4 mr-1" />
+                          View Stats
+                        </Button>
+                      </Link>
+                    </div>
+                  ) : effectiveIsOwnProfile && (
+                    <div className="bg-muted/50 rounded-lg p-4">
+                      <div className="text-center">
+                        <p className="font-medium text-muted-foreground mb-2">MaxPreps Profile Not Added</p>
+                        <p className="text-sm text-muted-foreground mb-4">
+                          Add your MaxPreps profile to showcase official stats and verification
+                        </p>
+                        <Button 
+                          variant="outline"
+                          onClick={() => handleEditSection('maxpreps-verification')}
+                        >
+                          <Plus className="w-4 h-4 mr-2" />
+                          Add MaxPreps URL
                         </Button>
                       </div>
                     </div>

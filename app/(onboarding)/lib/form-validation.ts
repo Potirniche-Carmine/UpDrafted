@@ -193,51 +193,107 @@ export class FormValidator {
     return { isValid: true };
   }
 
+  // Graduation Year validation for high school athletes
+  static validateGraduationYear(value: number | null, educationLevel: string): ValidationResult {
+    if (value === null || value === undefined) {
+      return { isValid: false, error: 'Graduation year is required' };
+    }
+
+    // Special validation for high school athletes - only juniors and above
+    if (educationLevel === 'high_school') {
+      const currentYear = new Date().getFullYear();
+      const currentMonth = new Date().getMonth();
+      
+      // If we're in the first half of the year (Jan-June), we're in the spring of the school year
+      // If we're in the second half (July-Dec), we're in the fall of the new school year
+      const baseYear = currentMonth < 6 ? currentYear : currentYear + 1;
+      
+      // Current seniors graduate this year (baseYear)
+      // Current juniors graduate next year (baseYear + 1) 
+      const validYears = [baseYear, baseYear + 1];
+      
+      if (!validYears.includes(value)) {
+        return { 
+          isValid: false, 
+          error: `High school athletes must be juniors or above (Class of ${validYears.join(', ')})` 
+        };
+      }
+    }
+
+    return { isValid: true };
+  }
+
   // Enhanced MaxPreps URL validation with name matching
   static validateMaxPrepsURL(url: string, profileName: string, required = false): ValidationResult {
     if (required && !url.trim()) {
       return { isValid: false, error: 'MaxPreps URL is required' };
     }
-    
     if (!url) return { isValid: true };
-    
     if (url.length > FIELD_LIMITS.URL) {
       return { isValid: false, error: `URL must be ${FIELD_LIMITS.URL} characters or less` };
     }
+
+    // Flexible MaxPreps URL validation that accepts various formats
+    const maxprepsRegex = /^(https?:\/\/)?(www\.)?maxpreps\.com.*$/i;
     
-    // Basic MaxPreps URL pattern
-    const maxprepsPattern = /^https?:\/\/(www\.)?maxpreps\.com\/.+/i;
-    if (!maxprepsPattern.test(url)) {
-      return { isValid: false, error: 'Please enter a valid MaxPreps URL (e.g., https://www.maxpreps.com/...)' };
+    if (!maxprepsRegex.test(url.trim())) {
+      return { isValid: false, error: 'Please enter a valid MaxPreps URL (e.g., maxpreps.com/athlete/...)' };
     }
-    
-    // Extract athlete name from URL path
-    // Expected format: /athletes/first-last/ or /athletes/first-lastname/
-    const athletePattern = /\/athletes\/([^\/]+)/i;
-    const match = url.match(athletePattern);
-    
-    if (!match) {
-      return { isValid: false, error: 'MaxPreps URL must include an athlete profile path (/athletes/name)' };
-    }
-    
-    const urlName = match[1];
+
+    // Check if athlete's name appears in the URL (flexible matching)
     if (profileName) {
-      // Convert profile name to expected URL format (first-last)
-      const expectedUrlName = profileName.toLowerCase()
-        .replace(/\s+/g, '-')
-        .replace(/[^a-z0-9\-]/g, '');
+      const firstName = profileName.split(' ')[0]?.toLowerCase() || '';
+      const lastName = profileName.split(' ').slice(-1)[0]?.toLowerCase() || '';
+      const urlLower = url.toLowerCase();
       
-      // Clean up the URL name for comparison
-      const cleanUrlName = urlName.toLowerCase().replace(/[^a-z0-9\-]/g, '');
+      const firstNameFound = !firstName || urlLower.includes(firstName);
+      const lastNameFound = !lastName || urlLower.includes(lastName);
       
-      if (cleanUrlName !== expectedUrlName) {
+      if (!firstNameFound || !lastNameFound) {
         return { 
           isValid: false, 
-          error: `Your MaxPreps URL name "${urlName}" doesn't match your profile name "${profileName}". The URL should contain "${expectedUrlName}".` 
+          error: `MaxPreps URL should contain your name (${profileName}) to verify it's your profile` 
         };
       }
     }
+
+    return { isValid: true };
+  }
+
+  // Enhanced Hudl URL validation with name matching
+  static validateHudlURL(url: string, profileName: string, required = false): ValidationResult {
+    if (required && !url.trim()) {
+      return { isValid: false, error: 'Hudl URL is required' };
+    }
+    if (!url) return { isValid: true };
+    if (url.length > FIELD_LIMITS.URL) {
+      return { isValid: false, error: `URL must be ${FIELD_LIMITS.URL} characters or less` };
+    }
+
+    // Flexible Hudl URL validation that accepts various formats
+    const hudlRegex = /^(https?:\/\/)?(www\.)?hudl\.com.*$/i;
     
+    if (!hudlRegex.test(url.trim())) {
+      return { isValid: false, error: 'Please enter a valid Hudl URL (e.g., hudl.com/profile/...)' };
+    }
+
+    // Check if athlete's name appears in the URL (flexible matching)
+    if (profileName) {
+      const firstName = profileName.split(' ')[0]?.toLowerCase() || '';
+      const lastName = profileName.split(' ').slice(-1)[0]?.toLowerCase() || '';
+      const urlLower = url.toLowerCase();
+      
+      const firstNameFound = !firstName || urlLower.includes(firstName);
+      const lastNameFound = !lastName || urlLower.includes(lastName);
+      
+      if (!firstNameFound || !lastNameFound) {
+        return { 
+          isValid: false, 
+          error: `Hudl URL should contain your name (${profileName}) to verify it's your profile` 
+        };
+      }
+    }
+
     return { isValid: true };
   }
 
@@ -350,18 +406,18 @@ export class FormValidator {
     const majorResult = this.validateText(data.intendedMajor, 'Intended major', FIELD_LIMITS.INTENDED_MAJOR, true);
     if (!majorResult.isValid) errors.intendedMajor = majorResult.error!;
 
+    // Graduation year validation
+    const graduationResult = this.validateGraduationYear(data.graduationYear, data.educationLevel);
+    if (!graduationResult.isValid) errors.graduationYear = graduationResult.error!;
+
     // URLs validation
     if (data.maxprepsUrl) {
       const maxprepsResult = this.validateMaxPrepsURL(data.maxprepsUrl, data.fullName);
       if (!maxprepsResult.isValid) errors.maxprepsUrl = maxprepsResult.error!;
     }
-
-    // HUDL URL - mandatory for high school athletes, optional for college athletes
-    const isHighSchool = data.educationLevel === 'high_school';
-    if (isHighSchool && !data.hudlUrl?.trim()) {
-      errors.hudlUrl = 'Hudl URL is required for high school athletes';
-    } else if (data.hudlUrl) {
-      const hudlResult = this.validateURL(data.hudlUrl, 'hudl');
+    // HUDL URL 
+    if (data.hudlUrl) {
+      const hudlResult = this.validateHudlURL(data.hudlUrl, data.fullName);
       if (!hudlResult.isValid) errors.hudlUrl = hudlResult.error!;
     }
 
