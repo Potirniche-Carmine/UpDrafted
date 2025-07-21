@@ -267,10 +267,7 @@ export default function AthleteForm({ data, onInputChange }: AthleteFormProps) {
         }
         break;
       case 'hudlUrl':
-        const isHighSchool = data.educationLevel === 'high_school';
-        if (isHighSchool && !(value as string)?.trim()) {
-          newErrors.hudlUrl = 'Hudl URL is required for high school athletes';
-        } else if (value) {
+        if (value) {
           // Accept Hudl URLs with or without protocol, and show error if name is missing
           const hudlResult = FormValidator.validateHudlURL(value as string, newFullName);
           if (hudlResult.isValid) {
@@ -678,7 +675,7 @@ export default function AthleteForm({ data, onInputChange }: AthleteFormProps) {
         <Label htmlFor="maxprepsUrl" className="text-base font-medium">MaxPreps Profile URL</Label>
         <Input
           id="maxprepsUrl"
-          placeholder="https://www.maxpreps.com/athlete/..."
+          placeholder={data.fullName ? `maxpreps.com/athletes/${data.fullName.toLowerCase().replace(/\s+/g, '-')}` : "maxpreps.com/athletes/your-name"}
           value={data.maxprepsUrl}
           onChange={(e) => validateAndUpdateField('maxprepsUrl', e.target.value)}
           className={`h-11 bg-background ${validationErrors.maxprepsUrl ? 'border-red-500' : ''}`}
@@ -695,7 +692,7 @@ export default function AthleteForm({ data, onInputChange }: AthleteFormProps) {
         </Label>
         <Input
           id="hudlUrl"
-          placeholder="https://www.hudl.com/profile/first-last"
+          placeholder={data.fullName ? `hudl.com/profile/${data.fullName.toLowerCase().replace(/\s+/g, '-')}` : "hudl.com/profile/your-name"}
           value={data.hudlUrl}
           onChange={(e) => validateAndUpdateField('hudlUrl', e.target.value)}
           className={`h-11 bg-background ${validationErrors.hudlUrl ? 'border-red-500' : ''}`}
@@ -706,12 +703,12 @@ export default function AthleteForm({ data, onInputChange }: AthleteFormProps) {
         )}
         {data.educationLevel === 'high_school' ? (
           <p className="text-sm text-muted-foreground">
-        Optional for high school athletes. Your Hudl URL must contain your name (e.g., hudl.com/profile/first-last). 
+        Optional for high school athletes. Your Hudl URL must contain your name (e.g., hudl.com/profile/{data.fullName ? data.fullName.toLowerCase().replace(/\s+/g, '-') : 'your-name'}). 
         Successfully providing this will automatically verify your profile.
           </p>
         ) : (
           <p className="text-sm text-muted-foreground">
-        Optional for college athletes. Your Hudl URL should contain your name (e.g., hudl.com/profile/first-last). 
+        Optional for college athletes. Your Hudl URL should contain your name (e.g., hudl.com/profile/{data.fullName ? data.fullName.toLowerCase().replace(/\s+/g, '-') : 'your-name'}). 
         Showcase your game footage to professional scouts and recruiters.
           </p>
         )}
