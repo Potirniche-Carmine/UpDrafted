@@ -228,46 +228,37 @@ export class FormValidator {
     if (required && !url.trim()) {
       return { isValid: false, error: 'MaxPreps URL is required' };
     }
-    
     if (!url) return { isValid: true };
-    
     if (url.length > FIELD_LIMITS.URL) {
       return { isValid: false, error: `URL must be ${FIELD_LIMITS.URL} characters or less` };
     }
-    
+    // Always add https:// if missing
+    let processedUrl = url.trim();
+    if (!/^https?:\/\//i.test(processedUrl)) {
+      processedUrl = `https://${processedUrl}`;
+    }
     // Basic MaxPreps URL pattern
     const maxprepsPattern = /^https?:\/\/(www\.)?maxpreps\.com\/.+/i;
-    if (!maxprepsPattern.test(url)) {
-      return { isValid: false, error: 'Please enter a valid MaxPreps URL (e.g., https://www.maxpreps.com/...)' };
+    if (!maxprepsPattern.test(processedUrl)) {
+      return { isValid: false, error: 'Please enter a valid MaxPreps URL (e.g., maxpreps.com/athlete/...)' };
     }
-    
     // Extract athlete name from URL path
-    // Expected format: /athletes/first-last/ or /athletes/first-lastname/
     const athletePattern = /\/athletes\/([^\/]+)/i;
-    const match = url.match(athletePattern);
-    
+    const match = processedUrl.match(athletePattern);
     if (!match) {
       return { isValid: false, error: 'MaxPreps URL must include an athlete profile path (/athletes/name)' };
     }
-    
     const urlName = match[1];
     if (profileName) {
-      // Convert profile name to expected URL format (first-last)
-      const expectedUrlName = profileName.toLowerCase()
-        .replace(/\s+/g, '-')
-        .replace(/[^a-z0-9\-]/g, '');
-      
-      // Clean up the URL name for comparison
+      const expectedUrlName = profileName.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9\-]/g, '');
       const cleanUrlName = urlName.toLowerCase().replace(/[^a-z0-9\-]/g, '');
-      
       if (cleanUrlName !== expectedUrlName) {
-        return { 
-          isValid: false, 
-          error: `Your MaxPreps URL name "${urlName}" doesn't match your profile name "${profileName}". The URL should contain "${expectedUrlName}".` 
+        return {
+          isValid: false,
+          error: `Your MaxPreps URL must contain your name (e.g., maxpreps.com/athletes/${expectedUrlName}).`
         };
       }
     }
-    
     return { isValid: true };
   }
 
@@ -276,46 +267,37 @@ export class FormValidator {
     if (required && !url.trim()) {
       return { isValid: false, error: 'Hudl URL is required' };
     }
-    
     if (!url) return { isValid: true };
-    
     if (url.length > FIELD_LIMITS.URL) {
       return { isValid: false, error: `URL must be ${FIELD_LIMITS.URL} characters or less` };
     }
-    
+    // Always add https:// if missing
+    let processedUrl = url.trim();
+    if (!/^https?:\/\//i.test(processedUrl)) {
+      processedUrl = `https://${processedUrl}`;
+    }
     // Basic Hudl URL pattern
     const hudlPattern = /^https?:\/\/(www\.)?hudl\.com\/.+/i;
-    if (!hudlPattern.test(url)) {
-      return { isValid: false, error: 'Please enter a valid Hudl URL (e.g., https://www.hudl.com/profile/...)' };
+    if (!hudlPattern.test(processedUrl)) {
+      return { isValid: false, error: 'Please enter a valid Hudl URL (e.g., hudl.com/profile/...)' };
     }
-    
     // Extract athlete name from URL path
-    // Expected format: /profile/first-last or /profile/firstname-lastname
     const profilePattern = /\/profile\/([^\/\?]+)/i;
-    const match = url.match(profilePattern);
-    
+    const match = processedUrl.match(profilePattern);
     if (!match) {
       return { isValid: false, error: 'Hudl URL must include a profile path (/profile/name)' };
     }
-    
     const urlName = match[1];
     if (profileName) {
-      // Convert profile name to expected URL format (first-last)
-      const expectedUrlName = profileName.toLowerCase()
-        .replace(/\s+/g, '-')
-        .replace(/[^a-z0-9\-]/g, '');
-      
-      // Clean up the URL name for comparison
+      const expectedUrlName = profileName.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9\-]/g, '');
       const cleanUrlName = urlName.toLowerCase().replace(/[^a-z0-9\-]/g, '');
-      
       if (cleanUrlName !== expectedUrlName) {
-        return { 
-          isValid: false, 
-          error: `Your Hudl URL name "${urlName}" doesn't match your profile name "${profileName}". The URL should contain "${expectedUrlName}".` 
+        return {
+          isValid: false,
+          error: `Your Hudl URL must contain your name (e.g., hudl.com/profile/${expectedUrlName}).`
         };
       }
     }
-    
     return { isValid: true };
   }
 

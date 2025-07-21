@@ -162,16 +162,37 @@ export default function AthleteForm({ data, onInputChange }: AthleteFormProps) {
   // Validate field and update errors
   const validateAndUpdateField = (field: keyof OnboardingData, value: string | number | null) => {
     const newErrors = { ...validationErrors };
-    
+    let newFullName = data.fullName;
+    if (field === 'fullName') {
+      newFullName = value as string;
+    }
     switch (field) {
-      case 'fullName':
+      case 'fullName': {
         const nameResult = FormValidator.validateName(value as string, true);
         if (nameResult.isValid) {
           delete newErrors.fullName;
         } else {
           newErrors.fullName = nameResult.error!;
         }
+        // Re-validate Hudl and MaxPreps URLs with new name
+        if (data.hudlUrl) {
+          const hudlResult = FormValidator.validateHudlURL(data.hudlUrl, value as string);
+          if (hudlResult.isValid) {
+            delete newErrors.hudlUrl;
+          } else {
+            newErrors.hudlUrl = hudlResult.error!;
+          }
+        }
+        if (data.maxprepsUrl) {
+          const maxprepsResult = FormValidator.validateMaxPrepsURL(data.maxprepsUrl, value as string);
+          if (maxprepsResult.isValid) {
+            delete newErrors.maxprepsUrl;
+          } else {
+            newErrors.maxprepsUrl = maxprepsResult.error!;
+          }
+        }
         break;
+      }
       case 'organizationName':
         const orgResult = FormValidator.validateText(value as string, getSchoolLabel(data.educationLevel), FIELD_LIMITS.ORGANIZATION_NAME, true);
         if (orgResult.isValid) {
@@ -235,7 +256,7 @@ export default function AthleteForm({ data, onInputChange }: AthleteFormProps) {
         break;
       case 'maxprepsUrl':
         if (value) {
-          const maxprepsResult = FormValidator.validateURL(value as string, 'maxpreps');
+          const maxprepsResult = FormValidator.validateMaxPrepsURL(value as string, newFullName);
           if (maxprepsResult.isValid) {
             delete newErrors.maxprepsUrl;
           } else {
@@ -250,7 +271,8 @@ export default function AthleteForm({ data, onInputChange }: AthleteFormProps) {
         if (isHighSchool && !(value as string)?.trim()) {
           newErrors.hudlUrl = 'Hudl URL is required for high school athletes';
         } else if (value) {
-          const hudlResult = FormValidator.validateHudlURL(value as string, data.fullName);
+          // Accept Hudl URLs with or without protocol, and show error if name is missing
+          const hudlResult = FormValidator.validateHudlURL(value as string, newFullName);
           if (hudlResult.isValid) {
             delete newErrors.hudlUrl;
           } else {
