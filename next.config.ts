@@ -252,7 +252,7 @@ const pwaConfig = withPWA({
   ],
 });
 
-// @ts-expect-error - next-pwa type compatibility issue with Next.js 15
-const nextConfigWithPWA = pwaConfig(nextConfig);
+// Type assertion needed for Next.js 15 compatibility with next-pwa
+const nextConfigWithPWA = pwaConfig(nextConfig as Parameters<typeof withPWA>[0]);
 
 export default nextConfigWithPWA;
