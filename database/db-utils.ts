@@ -743,6 +743,7 @@ export const onboardingOperations = {
       weight: profileData.weight!,
       positions: profileData.positions!,
       division: profileData.division,
+      conference: profileData.conference,
       gpa: profileData.gpa ? parseFloat(profileData.gpa) : undefined,
       satScore: profileData.satScore || undefined,
       actScore: profileData.actScore || undefined,
@@ -1255,6 +1256,7 @@ export const profileOperations = {
     let fullName = 'Unknown User';
     let profileImageUrl = null;
     let division = undefined;
+    let conference = undefined;
     let educationLevel = undefined;
     let isVerified = false;
 
@@ -1262,17 +1264,20 @@ export const profileOperations = {
       fullName = user.athleteProfile.fullName;
       profileImageUrl = user.athleteProfile.profileImageR3Key;
       division = user.athleteProfile.division;
+      conference = user.athleteProfile.conference;
       educationLevel = user.athleteProfile.educationLevel;
       isVerified = user.athleteProfile.isVerified ?? false;
     } else if (user.role === 'coach' && user.coachProfile) {
       fullName = user.coachProfile.fullName;
       profileImageUrl = user.coachProfile.profileImageR3Key;
       division = user.coachProfile.division;
+      conference = user.coachProfile.conference;
       isVerified = user.coachProfile.isVerified ?? false;
     } else if (user.role === 'recruiter' && user.recruitingProfile) {
       fullName = user.recruitingProfile.fullName;
       profileImageUrl = user.recruitingProfile.profileImageR3Key;
       division = user.recruitingProfile.division;
+      conference = user.recruitingProfile.conference;
       isVerified = user.recruitingProfile.isVerified ?? false;
     }
 
@@ -1283,6 +1288,7 @@ export const profileOperations = {
         : null,
       role: user.role,
       division,
+      conference,
       educationLevel,
       isVerified,
     };
@@ -1618,4 +1624,4 @@ export const adminOperations = {
       .returning();
     return profile;
   }
-}; 
+};

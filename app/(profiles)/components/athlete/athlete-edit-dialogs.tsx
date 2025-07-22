@@ -10,12 +10,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Save, X, Plus, Shield } from "lucide-react";
-import { getSportsList, US_STATES, GRADUATION_YEARS, getPositionsForSport, getMeasurablesForSport } from '@/lib/sports-data';
+import { getSportsList, US_STATES, GRADUATION_YEARS, getPositionsForSport, getMeasurablesForSport, DIVISIONS } from '@/lib/sports-data';
 import { EducationLevel } from '@/app/(onboarding)/lib/onboarding';
 import { sanitizeProfileData } from '@/utils/sanitization';
 import { FileUpload } from '@/components/ui/file-upload';
 import { useRoleView } from '@/hooks/use-role-view';
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
+import { ConferenceSelector } from "@/components/ui/conference-selector";
+import { divisionHasConferences } from "@/lib/conference-data";
 
 // Import field validation
 const FIELD_LIMITS = {
@@ -43,15 +45,8 @@ const EDUCATION_LEVEL_OPTIONS = [
   { value: 'graduate', label: 'Graduate School' },
 ];
 
-const COMPETITION_LEVEL_OPTIONS = [
-  { value: 'division_1', label: 'Division 1 (D1)' },
-  { value: 'division_2', label: 'Division 2 (D2)' },
-  { value: 'division_3', label: 'Division 3 (D3)' },
-  { value: 'naia', label: 'NAIA' },
-  { value: 'club', label: 'Club Sports' },
-  { value: 'intramural', label: 'Intramural' },
-  { value: 'other', label: 'Other' },
-];
+// Filter divisions for athletes (exclude high school since it's handled by education level)
+const ATHLETE_DIVISIONS = DIVISIONS.filter(div => div !== 'High School');
 
 // Month and year options
 const MONTH_OPTIONS = [
@@ -95,7 +90,8 @@ export interface AthleteProfileData {
   secondarySports?: string[];
   graduationYear: number;
   educationLevel: EducationLevel;
-  competitionLevel?: string;
+  division?: string;
+  conference?: string;
   organizationName: string;
   city: string;
   state: string;
@@ -216,7 +212,8 @@ export function AthleteEditDialogs({
           sport: profileData.sport,
           secondarySports: profileData.secondarySports || [],
           educationLevel: profileData.educationLevel,
-          competitionLevel: profileData.competitionLevel || '',
+          division: profileData.division || '',
+          conference: profileData.conference || '',
           city: profileData.city,
           state: profileData.state,
           organizationName: profileData.organizationName,
@@ -737,7 +734,8 @@ export function AthleteEditDialogs({
         updates.sport = editData.sport;
         updates.secondarySports = editData.secondarySports;
         updates.educationLevel = editData.educationLevel;
-        updates.competitionLevel = editData.competitionLevel;
+        updates.division = editData.division;
+        updates.conference = editData.conference;
         updates.positions = editData.positions;
         updates.city = editData.city;
         updates.state = editData.state;
@@ -959,28 +957,47 @@ export function AthleteEditDialogs({
                 </Select>
               </div>
 
-              {/* Competition Level - Only show for undergraduate/graduate */}
-              {(editData.educationLevel === 'undergraduate' || editData.educationLevel === 'graduate') && (
-                <div className="space-y-2">
-                  <Label htmlFor="edit-competitionLevel">Competition Level</Label>
-                  <Select
-                    value={String(editData.competitionLevel || '')}
-                    onValueChange={(value) => {
-                      setEditData(prev => ({ ...prev, competitionLevel: value }));
-                    }}
-                  >
-                    <SelectTrigger className="h-12" id="edit-competitionLevel">
-                      <SelectValue placeholder="Select competition level" />
-                    </SelectTrigger>
-                    <SelectContent className="z-[70]">
-                      {COMPETITION_LEVEL_OPTIONS.map((option) => (
-                        <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <p className="text-xs text-muted-foreground">
-                    D1, D2, and D3 athletes require transfer portal verification to connect with coaches
-                  </p>
+              {/* Division and Conference - Only show for college athletes (not high school) */}
+              {editData.educationLevel !== 'high_school' && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-division">Division</Label>
+                    <Select
+                      value={String(editData.division || '')}
+                      onValueChange={(value) => {
+                        setEditData(prev => ({ 
+                          ...prev, 
+                          division: value,
+                          conference: '' 
+                        }));
+                      }}
+                    >
+                      <SelectTrigger className="h-12" id="edit-division">
+                        <SelectValue placeholder="Select division" />
+                      </SelectTrigger>
+                      <SelectContent className="z-[70]">
+                        {ATHLETE_DIVISIONS.map(division => (
+                          <SelectItem key={division} value={division}>{division}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Conference - Only show when division is selected and has conferences */}
+                  {editData.division && divisionHasConferences(editData.division) && (
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-conference">Conference</Label>
+                      <ConferenceSelector
+                        division={editData.division || ''}
+                        value={editData.conference || ''}
+                        onValueChange={(value) => setEditData(prev => ({ ...prev, conference: value }))}
+                        placeholder="Select conference"
+                        label=""
+                        inDialog={true}
+                        height="h-12"
+                      />
+                    </div>
+                  )}
                 </div>
               )}
 

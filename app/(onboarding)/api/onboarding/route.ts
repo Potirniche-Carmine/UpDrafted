@@ -165,6 +165,8 @@ export async function POST(request: NextRequest) {
             organizationName: profileData.organizationName!,
             city: profileData.city,
             state: profileData.state,
+            division: profileData.division,
+            conference: profileData.conference,
             height: profileData.height!,
             weight: profileData.weight!,
             positions: profileData.positions!,
