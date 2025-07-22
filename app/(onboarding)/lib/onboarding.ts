@@ -76,7 +76,7 @@ export interface OnboardingProfileData {
   organizationName?: string;
   city: string;
   state: string;
-  country?: string;
+  country: string;
   height?: string; // Combined from heightFeet and heightInches
   weight?: string;
   positions?: string[];
