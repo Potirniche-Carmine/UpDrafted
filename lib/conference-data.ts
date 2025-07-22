@@ -233,8 +233,12 @@ export function getAllConferences(): string[] {
 
 // Helper to search conferences across all divisions
 export function searchConferences(searchTerm: string): { conference: string; division: string }[] {
+  if (!searchTerm || searchTerm.trim().length < 2) {
+    return [];
+  }
+  
   const results: { conference: string; division: string }[] = [];
-  const lowercaseSearch = searchTerm.toLowerCase();
+  const lowercaseSearch = searchTerm.toLowerCase().trim();
   
   Object.entries(CONFERENCES_BY_DIVISION).forEach(([division, conferences]) => {
     conferences.forEach(conference => {
