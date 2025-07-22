@@ -28,6 +28,7 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
         <meta name="application-name" content="UpDrafted" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
@@ -36,33 +37,33 @@ export default function RootLayout({
         <meta name="format-detection" content="telephone=no" />
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="msapplication-config" content="/icons/browserconfig.xml" />
-        <meta name="msapplication-TileColor" content="#22c55e" />
+        <meta name="msapplication-TileColor" content="#01ae79" />
         <meta name="msapplication-tap-highlight" content="no" />
-        <meta name="theme-color" content="#22c55e" />
+        <meta name="theme-color" content="#01ae79" />
 
-        <link rel="apple-touch-icon" href="/logo.png" />
-        <link rel="apple-touch-icon" sizes="152x152" href="/logo.png" />
-        <link rel="apple-touch-icon" sizes="180x180" href="/logo.png" />
-        <link rel="apple-touch-icon" sizes="167x167" href="/logo.png" />
+        <link rel="apple-touch-icon" href="/icons/icon-192x192.png" />
+        <link rel="apple-touch-icon" sizes="152x152" href="/icons/icon-192x192.png" />
+        <link rel="apple-touch-icon" sizes="180x180" href="/icons/icon-192x192.png" />
+        <link rel="apple-touch-icon" sizes="167x167" href="/icons/icon-192x192.png" />
 
-        <link rel="icon" type="image/png" sizes="32x32" href="/logo.png" />
-        <link rel="icon" type="image/png" sizes="16x16" href="/logo.png" />
+        <link rel="icon" type="image/png" sizes="32x32" href="/icons/favicon-32x32.png" />
+        <link rel="icon" type="image/png" sizes="16x16" href="/icons/favicon-16x16.png" />
         <link rel="manifest" href="/site.webmanifest" />
-        <link rel="mask-icon" href="/logo.png" color="#22c55e" />
+        <link rel="mask-icon" href="/icons/icon-192x192.png" color="#01ae79" />
         <link rel="shortcut icon" href="/favicon.ico" />
 
         <meta name="twitter:card" content="summary" />
         <meta name="twitter:url" content="https://updrafted.us" />
         <meta name="twitter:title" content="UpDrafted" />
         <meta name="twitter:description" content="The premier platform connecting student-athletes with college programs" />
-        <meta name="twitter:image" content="https://updrafted.us/logo.png" />
+        <meta name="twitter:image" content="https://updrafted.us/icons/icon-512x512.png" />
         <meta name="twitter:creator" content="@updrafted" />
         <meta property="og:type" content="website" />
         <meta property="og:title" content="UpDrafted" />
         <meta property="og:description" content="The premier platform connecting student-athletes with college programs" />
         <meta property="og:site_name" content="UpDrafted" />
         <meta property="og:url" content="https://updrafted.us" />
-        <meta property="og:image" content="https://updrafted.us/logo.png" />
+        <meta property="og:image" content="https://updrafted.us/icons/icon-512x512.png" />
 
         <Script
           id="structured-data"
@@ -75,7 +76,7 @@ export default function RootLayout({
                 "name": "UpDrafted",
                 "description": "The premier platform connecting student-athletes with D1, D2, D3, and JUCO college programs.",
                 "url": "https://updrafted.us",
-                "logo": "https://updrafted.us/logo.png"
+                "logo": "https://updrafted.us/icons/icon-512x512.png"
               },
               {
                 "@context": "https://schema.org",

@@ -204,13 +204,16 @@ export class FormValidator {
       const currentYear = new Date().getFullYear();
       const currentMonth = new Date().getMonth();
       
-      // If we're in the first half of the year (Jan-June), we're in the spring of the school year
-      // If we're in the second half (July-Dec), we're in the fall of the new school year
-      const baseYear = currentMonth < 6 ? currentYear : currentYear + 1;
+      // Academic year starts in August (month 7) and ends in May/June
+      // Before August: we're in the spring semester of the current academic year
+      // August or later: we're in the fall semester of the new academic year
+      const isSpring = currentMonth < 7; // January-July is spring semester
+      const academicYear = isSpring ? currentYear : currentYear + 1;
       
-      // Current seniors graduate this year (baseYear)
-      // Current juniors graduate next year (baseYear + 1) 
-      const validYears = [baseYear, baseYear + 1];
+      // Current seniors graduate at the end of this academic year
+      // Current juniors graduate at the end of next academic year
+      // We allow registration for juniors and seniors only
+      const validYears = [academicYear, academicYear + 1];
       
       if (!validYears.includes(value)) {
         return { 
@@ -228,46 +231,72 @@ export class FormValidator {
     if (required && !url.trim()) {
       return { isValid: false, error: 'MaxPreps URL is required' };
     }
-    
     if (!url) return { isValid: true };
-    
     if (url.length > FIELD_LIMITS.URL) {
       return { isValid: false, error: `URL must be ${FIELD_LIMITS.URL} characters or less` };
     }
+
+    // Flexible MaxPreps URL validation that accepts various formats
+    const maxprepsRegex = /^(https?:\/\/)?(www\.)?maxpreps\.com.*$/i;
     
-    // Basic MaxPreps URL pattern
-    const maxprepsPattern = /^https?:\/\/(www\.)?maxpreps\.com\/.+/i;
-    if (!maxprepsPattern.test(url)) {
-      return { isValid: false, error: 'Please enter a valid MaxPreps URL (e.g., https://www.maxpreps.com/...)' };
+    if (!maxprepsRegex.test(url.trim())) {
+      return { isValid: false, error: 'Please enter a valid MaxPreps URL (e.g., maxpreps.com/athlete/...)' };
     }
-    
-    // Extract athlete name from URL path
-    // Expected format: /athletes/first-last/ or /athletes/first-lastname/
-    const athletePattern = /\/athletes\/([^\/]+)/i;
-    const match = url.match(athletePattern);
-    
-    if (!match) {
-      return { isValid: false, error: 'MaxPreps URL must include an athlete profile path (/athletes/name)' };
-    }
-    
-    const urlName = match[1];
+
+    // Check if athlete's name appears in the URL (flexible matching)
     if (profileName) {
-      // Convert profile name to expected URL format (first-last)
-      const expectedUrlName = profileName.toLowerCase()
-        .replace(/\s+/g, '-')
-        .replace(/[^a-z0-9\-]/g, '');
+      const firstName = profileName.split(' ')[0]?.toLowerCase() || '';
+      const lastName = profileName.split(' ').slice(-1)[0]?.toLowerCase() || '';
+      const urlLower = url.toLowerCase();
       
-      // Clean up the URL name for comparison
-      const cleanUrlName = urlName.toLowerCase().replace(/[^a-z0-9\-]/g, '');
+      const firstNameFound = !firstName || urlLower.includes(firstName);
+      const lastNameFound = !lastName || urlLower.includes(lastName);
       
-      if (cleanUrlName !== expectedUrlName) {
+      if (!firstNameFound || !lastNameFound) {
         return { 
           isValid: false, 
-          error: `Your MaxPreps URL name "${urlName}" doesn't match your profile name "${profileName}". The URL should contain "${expectedUrlName}".` 
+          error: `MaxPreps URL should contain your name (${profileName}) to verify it's your profile` 
         };
       }
     }
+
+    return { isValid: true };
+  }
+
+  // Enhanced Hudl URL validation with name matching
+  static validateHudlURL(url: string, profileName: string, required = false): ValidationResult {
+    if (required && !url.trim()) {
+      return { isValid: false, error: 'Hudl URL is required' };
+    }
+    if (!url) return { isValid: true };
+    if (url.length > FIELD_LIMITS.URL) {
+      return { isValid: false, error: `URL must be ${FIELD_LIMITS.URL} characters or less` };
+    }
+
+    // Flexible Hudl URL validation that accepts various formats
+    const hudlRegex = /^(https?:\/\/)?(www\.)?hudl\.com.*$/i;
     
+    if (!hudlRegex.test(url.trim())) {
+      return { isValid: false, error: 'Please enter a valid Hudl URL (e.g., hudl.com/profile/...)' };
+    }
+
+    // Check if athlete's name appears in the URL (flexible matching)
+    if (profileName) {
+      const firstName = profileName.split(' ')[0]?.toLowerCase() || '';
+      const lastName = profileName.split(' ').slice(-1)[0]?.toLowerCase() || '';
+      const urlLower = url.toLowerCase();
+      
+      const firstNameFound = !firstName || urlLower.includes(firstName);
+      const lastNameFound = !lastName || urlLower.includes(lastName);
+      
+      if (!firstNameFound || !lastNameFound) {
+        return { 
+          isValid: false, 
+          error: `Hudl URL should contain your name (${profileName}) to verify it's your profile` 
+        };
+      }
+    }
+
     return { isValid: true };
   }
 
@@ -389,13 +418,9 @@ export class FormValidator {
       const maxprepsResult = this.validateMaxPrepsURL(data.maxprepsUrl, data.fullName);
       if (!maxprepsResult.isValid) errors.maxprepsUrl = maxprepsResult.error!;
     }
-
-    // HUDL URL - mandatory for high school athletes, optional for college athletes
-    const isHighSchool = data.educationLevel === 'high_school';
-    if (isHighSchool && !data.hudlUrl?.trim()) {
-      errors.hudlUrl = 'Hudl URL is required for high school athletes';
-    } else if (data.hudlUrl) {
-      const hudlResult = this.validateURL(data.hudlUrl, 'hudl');
+    // HUDL URL 
+    if (data.hudlUrl) {
+      const hudlResult = this.validateHudlURL(data.hudlUrl, data.fullName);
       if (!hudlResult.isValid) errors.hudlUrl = hudlResult.error!;
     }
 

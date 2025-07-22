@@ -16,7 +16,7 @@ const nextConfig: NextConfig = {
     // Add local patterns for static assets
     localPatterns: [
       {
-        pathname: '/logo.png',
+        pathname: '/updrafted-logo.png',
         search: '',
       },
       {
@@ -169,6 +169,15 @@ const pwaConfig = withPWA({
   disable: isDevelopment,
   register: true,
   skipWaiting: true,
+  // Include our custom icons in the precache
+  additionalManifestEntries: [
+    { url: '/icons/favicon-16x16.png', revision: null },
+    { url: '/icons/favicon-32x32.png', revision: null },
+    { url: '/icons/icon-192x192.png', revision: null },
+    { url: '/icons/icon-384x384.png', revision: null },
+    { url: '/icons/icon-512x512.png', revision: null },
+    { url: '/site.webmanifest', revision: null }
+  ],
   runtimeCaching: [
     // API Routes - Different strategies based on data type
     {
@@ -235,24 +244,29 @@ const pwaConfig = withPWA({
         },
       },
     },
-    // External resources
+    // External resources - conservative caching strategy
     {
       urlPattern: /^https?.*/, 
-      handler: 'NetworkFirst',
+      handler: 'StaleWhileRevalidate',
       options: {
         cacheName: 'external-resources',
-        networkTimeoutSeconds: 15,
         expiration: {
-          maxEntries: 50,
-          maxAgeSeconds: 24 * 60 * 60, // 24 hours
+          maxEntries: 100, // Increased capacity
+          maxAgeSeconds: 7 * 24 * 60 * 60, // 7 days
         },
-        cacheableResponse: { statuses: [0, 200] },
+        cacheableResponse: { statuses: [0, 200, 206] }, // Added 206 for partial content
+        plugins: [{
+          cacheWillUpdate: async ({ response }) => {
+            // Only cache successful responses and avoid caching error pages
+            return response.status === 200 ? response : null;
+          }
+        }]
       },
     },
   ],
 });
 
-// @ts-expect-error - next-pwa type compatibility issue with Next.js 15
-const nextConfigWithPWA = pwaConfig(nextConfig);
+// Type assertion needed for Next.js 15 compatibility with next-pwa
+const nextConfigWithPWA = pwaConfig(nextConfig as Parameters<typeof withPWA>[0]);
 
 export default nextConfigWithPWA;

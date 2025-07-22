@@ -21,6 +21,7 @@ import {
 import { FormValidator, FIELD_LIMITS } from "@/app/(onboarding)/lib/form-validation";
 import { OnboardingData } from "../lib/types";
 import { FileUpload } from '@/components/ui/file-upload';
+import { ConferenceSelector } from "@/components/ui/conference-selector";
 
 interface CoachFormProps {
   data: OnboardingData;
@@ -443,34 +444,33 @@ export default function CoachForm({ data, onInputChange }: CoachFormProps) {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="space-y-3">
           <Label htmlFor="division" className="text-base font-medium">Division *</Label>
-          <Select
-            value={data.division}
-            onValueChange={(value) => onInputChange('division', value)}
-          >
-            <SelectTrigger className="h-11 bg-background" style={{ height: '2.75rem' }}>
-              <SelectValue placeholder="Select division" />
-            </SelectTrigger>
-            <SelectContent>
-              {DIVISIONS.map(division => (
-                <SelectItem key={division} value={division}>{division}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <div className="flex gap-1">
+            <Select
+              value={data.division}
+              onValueChange={(value) => onInputChange('division', value)}
+            >
+              <SelectTrigger className="h-11 bg-background flex-1">
+                <SelectValue placeholder="Select division" />
+              </SelectTrigger>
+              <SelectContent>
+                {DIVISIONS.map(division => (
+                  <SelectItem key={division} value={division}>{division}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <div className="w-9 h-11"></div>
+          </div>
         </div>
         <div className="space-y-3">
-          <Label htmlFor="conference" className="text-base font-medium">Conference</Label>
-          <Input
-            id="conference"
-            placeholder="e.g., Big 12, SEC"
+          <ConferenceSelector
+            division={data.division}
             value={data.conference}
-            onChange={(e) => validateAndUpdateField('conference', e.target.value)}
-            className={`h-11 bg-background ${validationErrors.conference ? 'border-red-500' : ''}`}
-            maxLength={FIELD_LIMITS.CONFERENCE}
+            onValueChange={(value) => onInputChange('conference', value)}
+            placeholder="Select conference"
+            label="Conference"
+            labelClassName="text-base font-medium"
+            height="h-11"
           />
-          {validationErrors.conference && (
-            <p className="text-sm text-red-500">{validationErrors.conference}</p>
-          )}
-          <p className="text-xs text-muted-foreground">{data.conference.length}/{FIELD_LIMITS.CONFERENCE} characters</p>
         </div>
       </div>
 

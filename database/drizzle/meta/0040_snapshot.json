@@ -1,10 +1,6 @@
 {
-<<<<<<< HEAD
-  "id": "c894b798-67a7-494c-9386-3160d9ec33e1",
-=======
-  "id": "5d27d228-808c-45ba-95f6-7f82208be48a",
->>>>>>> 0683bcc122bd43130e7346bd93d3921812be32c2
-  "prevId": "391c41e8-be4c-4c04-bba9-9cde0abdda4d",
+  "id": "64c3f4e8-d215-40e3-8edf-5c396dfe4706",
+  "prevId": "2eb39c69-f08e-4ffb-9b78-01280cf5ae24",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -344,6 +340,12 @@
           "primaryKey": false,
           "notNull": false
         },
+        "conference": {
+          "name": "conference",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
         "education_level": {
           "name": "education_level",
           "type": "education_level",
@@ -370,24 +372,11 @@
           "primaryKey": false,
           "notNull": true
         },
-<<<<<<< HEAD
-        "country": {
-          "name": "country",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-=======
->>>>>>> 0683bcc122bd43130e7346bd93d3921812be32c2
         "state": {
           "name": "state",
           "type": "text",
           "primaryKey": false,
-<<<<<<< HEAD
-          "notNull": false
-=======
           "notNull": true
->>>>>>> 0683bcc122bd43130e7346bd93d3921812be32c2
         },
         "height": {
           "name": "height",
@@ -793,24 +782,11 @@
           "primaryKey": false,
           "notNull": true
         },
-<<<<<<< HEAD
-        "country": {
-          "name": "country",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-=======
->>>>>>> 0683bcc122bd43130e7346bd93d3921812be32c2
         "state": {
           "name": "state",
           "type": "text",
           "primaryKey": false,
-<<<<<<< HEAD
-          "notNull": false
-=======
           "notNull": true
->>>>>>> 0683bcc122bd43130e7346bd93d3921812be32c2
         },
         "is_verified": {
           "name": "is_verified",
@@ -950,121 +926,6 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-<<<<<<< HEAD
-=======
-    "public.conferences": {
-      "name": "conferences",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "serial",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "name": {
-          "name": "name",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "division": {
-          "name": "division",
-          "type": "division",
-          "typeSchema": "public",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "region": {
-          "name": "region",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "abbreviation": {
-          "name": "abbreviation",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "is_active": {
-          "name": "is_active",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "default": true
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        }
-      },
-      "indexes": {
-        "idx_conferences_division": {
-          "name": "idx_conferences_division",
-          "columns": [
-            {
-              "expression": "division",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "idx_conferences_is_active": {
-          "name": "idx_conferences_is_active",
-          "columns": [
-            {
-              "expression": "is_active",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {},
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {
-        "conferences_name_unique": {
-          "name": "conferences_name_unique",
-          "nullsNotDistinct": false,
-          "columns": [
-            "name"
-          ]
-        },
-        "conferences_name_division_unique": {
-          "name": "conferences_name_division_unique",
-          "nullsNotDistinct": false,
-          "columns": [
-            "name",
-            "division"
-          ]
-        }
-      },
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
->>>>>>> 0683bcc122bd43130e7346bd93d3921812be32c2
     "public.connections": {
       "name": "connections",
       "schema": "",
@@ -2093,24 +1954,11 @@
           "primaryKey": false,
           "notNull": true
         },
-<<<<<<< HEAD
-        "country": {
-          "name": "country",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-=======
->>>>>>> 0683bcc122bd43130e7346bd93d3921812be32c2
         "state": {
           "name": "state",
           "type": "text",
           "primaryKey": false,
-<<<<<<< HEAD
-          "notNull": false
-=======
           "notNull": true
->>>>>>> 0683bcc122bd43130e7346bd93d3921812be32c2
         },
         "is_verified": {
           "name": "is_verified",
@@ -2818,26 +2666,6 @@
         "pending"
       ]
     },
-<<<<<<< HEAD
-=======
-    "public.division": {
-      "name": "division",
-      "schema": "public",
-      "values": [
-        "NCAA Division I",
-        "NCAA Division II",
-        "NCAA Division III",
-        "NAIA",
-        "NJCAA Division I",
-        "NJCAA Division II",
-        "NJCAA Division III",
-        "Junior College",
-        "Community College",
-        "High School",
-        "Club Sports"
-      ]
-    },
->>>>>>> 0683bcc122bd43130e7346bd93d3921812be32c2
     "public.education_level": {
       "name": "education_level",
       "schema": "public",

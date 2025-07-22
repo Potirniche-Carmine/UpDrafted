@@ -25,7 +25,6 @@ export const verificationTypeEnum = pgEnum('verification_type', ['general', 'tra
 export const educationLevelEnum = pgEnum('education_level', ['high_school', 'undergraduate', 'graduate', 'associate']);
 export const notificationTypeEnum = pgEnum('notification_type', ['profileView', 'newConnection', 'newMessage', 'systemUpdate', 'premiumFeature', 'connectionAccepted']);
 
-
 export const users = pgTable('users', {
   id: text('id').primaryKey(),
   email: text('email').notNull().unique(),
@@ -46,6 +45,7 @@ export const athleteProfiles = pgTable('athlete_profiles', {
   secondarySports: text('secondary_sports').array(),
   graduationYear: integer('graduation_year').notNull(),
   division: text('division'),
+  conference: text('conference'),
   educationLevel: educationLevelEnum('education_level').notNull().default('high_school'),
   competitionLevel: text('competition_level'),
   organizationName: text('organization_name').notNull(),
@@ -353,7 +353,6 @@ export const adminRolePreferences = pgTable('admin_role_preferences', {
   index('idx_admin_role_preferences_user_id').on(table.userId),
   unique('admin_role_preferences_user_id_unique').on(table.userId),
 ]);
-
 export const usersRelations = relations(users, ({ one, many }) => ({
   athleteProfile: one(athleteProfiles, {
     fields: [users.id],
@@ -535,4 +534,4 @@ export type NewReport = typeof reports.$inferInsert;
 export type Notification = typeof notifications.$inferSelect;
 export type NewNotification = typeof notifications.$inferInsert;
 export type AdminRolePreferences = typeof adminRolePreferences.$inferSelect;
-export type NewAdminRolePreferences = typeof adminRolePreferences.$inferInsert; 
+export type NewAdminRolePreferences = typeof adminRolePreferences.$inferInsert;

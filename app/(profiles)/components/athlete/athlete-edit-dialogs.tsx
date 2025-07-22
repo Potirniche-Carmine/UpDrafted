@@ -10,12 +10,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Save, X, Plus, Shield } from "lucide-react";
-import { getSportsList, US_STATES, GRADUATION_YEARS, getPositionsForSport, getMeasurablesForSport } from '@/lib/sports-data';
+import { getSportsList, US_STATES, GRADUATION_YEARS, getPositionsForSport, getMeasurablesForSport, DIVISIONS } from '@/lib/sports-data';
 import { EducationLevel } from '@/app/(onboarding)/lib/onboarding';
 import { sanitizeProfileData } from '@/utils/sanitization';
 import { FileUpload } from '@/components/ui/file-upload';
 import { useRoleView } from '@/hooks/use-role-view';
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
+import { ConferenceSelector } from "@/components/ui/conference-selector";
+import { divisionHasConferences } from "@/lib/conference-data";
 
 // Import field validation
 const FIELD_LIMITS = {
@@ -43,15 +45,8 @@ const EDUCATION_LEVEL_OPTIONS = [
   { value: 'graduate', label: 'Graduate School' },
 ];
 
-const COMPETITION_LEVEL_OPTIONS = [
-  { value: 'division_1', label: 'Division 1 (D1)' },
-  { value: 'division_2', label: 'Division 2 (D2)' },
-  { value: 'division_3', label: 'Division 3 (D3)' },
-  { value: 'naia', label: 'NAIA' },
-  { value: 'club', label: 'Club Sports' },
-  { value: 'intramural', label: 'Intramural' },
-  { value: 'other', label: 'Other' },
-];
+// Filter divisions for athletes (exclude high school since it's handled by education level)
+const ATHLETE_DIVISIONS = DIVISIONS.filter(div => div !== 'High School');
 
 // Month and year options
 const MONTH_OPTIONS = [
@@ -95,7 +90,8 @@ export interface AthleteProfileData {
   secondarySports?: string[];
   graduationYear: number;
   educationLevel: EducationLevel;
-  competitionLevel?: string;
+  division?: string;
+  conference?: string;
   organizationName: string;
   city: string;
   state: string;
@@ -203,7 +199,7 @@ export function AthleteEditDialogs({
       return;
     }
 
-    // Prevent auto-focus on dialog open - remove setTimeout
+    // Prevent auto-focus on dialog open
     if (document.activeElement && document.activeElement instanceof HTMLElement) {
       document.activeElement.blur();
     }
@@ -216,7 +212,8 @@ export function AthleteEditDialogs({
           sport: profileData.sport,
           secondarySports: profileData.secondarySports || [],
           educationLevel: profileData.educationLevel,
-          competitionLevel: profileData.competitionLevel || '',
+          division: profileData.division || '',
+          conference: profileData.conference || '',
           city: profileData.city,
           state: profileData.state,
           organizationName: profileData.organizationName,
@@ -333,8 +330,29 @@ export function AthleteEditDialogs({
       case 'hudlUrl':
         if (value && typeof value === 'string') {
           const trimmedValue = value.trim();
-          if (trimmedValue && !trimmedValue.includes('hudl.com')) {
-            return 'Please enter a valid Hudl URL (must contain hudl.com)';
+          
+          // Validate Hudl URL format: [https://][www.]hudl.com/profile/{id}/{name}
+          const hudlRegex = /^(https?:\/\/)?(www\.)?hudl\.com\/profile\/\d+\/[\w-]+/i;
+          
+          if (trimmedValue && !hudlRegex.test(trimmedValue)) {
+            return 'Please enter a valid Hudl profile URL (e.g., hudl.com/profile/12345/your-name)';
+          }
+          
+          // Extract athlete name for validation - just check if name appears anywhere in URL
+          if (trimmedValue) {
+            const athleteName = profileData.fullName.toLowerCase();
+            const nameParts = athleteName.split(' ').filter(part => part.length > 1); // Filter out single character parts
+            
+            // Convert URL to lowercase for case-insensitive matching
+            const urlLower = trimmedValue.toLowerCase();
+            
+            // Check if at least first and last name appear somewhere in the URL
+            const firstNameMatch = nameParts[0] && urlLower.includes(nameParts[0]);
+            const lastNameMatch = nameParts[nameParts.length - 1] && urlLower.includes(nameParts[nameParts.length - 1]);
+            
+            if (!firstNameMatch || !lastNameMatch) {
+              return `Hudl URL should contain your name (${profileData.fullName}) to verify it's your profile`;
+            }
           }
         }
         break;
@@ -386,19 +404,23 @@ export function AthleteEditDialogs({
       case 'maxPrepsUrl':
         if (typeof value === 'string' && value.trim()) {
           const url = value.trim();
-          // Check if it's a valid MaxPreps URL
-          if (!url.includes('maxpreps.com')) {
-            return 'Please enter a valid MaxPreps URL';
+          
+          // Validate MaxPreps URL format: [https://][www.]maxpreps.com/{state}/{city}/{school}/athletes/{name}
+          // More flexible - just check for maxpreps.com and athletes path
+          const maxPrepsRegex = /^(https?:\/\/)?(www\.)?maxpreps\.com\/.*\/athletes\//i;
+          
+          if (!maxPrepsRegex.test(url)) {
+            return 'Please enter a valid MaxPreps athlete URL that contains "/athletes/" in the path';
           }
           
-          // Extract athlete name for validation
+          // Extract athlete name for validation - just check if name appears anywhere in URL
           const athleteName = profileData.fullName.toLowerCase();
           const nameParts = athleteName.split(' ').filter(part => part.length > 1); // Filter out single character parts
           
           // Convert URL to lowercase for case-insensitive matching
           const urlLower = url.toLowerCase();
           
-          // Check if at least first and last name appear in the URL
+          // Check if at least first and last name appear somewhere in the URL
           const firstNameMatch = nameParts[0] && urlLower.includes(nameParts[0]);
           const lastNameMatch = nameParts[nameParts.length - 1] && urlLower.includes(nameParts[nameParts.length - 1]);
           
@@ -712,7 +734,8 @@ export function AthleteEditDialogs({
         updates.sport = editData.sport;
         updates.secondarySports = editData.secondarySports;
         updates.educationLevel = editData.educationLevel;
-        updates.competitionLevel = editData.competitionLevel;
+        updates.division = editData.division;
+        updates.conference = editData.conference;
         updates.positions = editData.positions;
         updates.city = editData.city;
         updates.state = editData.state;
@@ -758,6 +781,10 @@ export function AthleteEditDialogs({
 
       case 'hudl-highlights':
         updates.hudlUrl = editData.hudlUrl || undefined;
+        // For high school athletes, adding Hudl verifies their profile
+        if (profileData.educationLevel === 'high_school' && editData.hudlUrl) {
+          updates.isVerified = true;
+        }
         break;
 
       case 'measurable':
@@ -930,28 +957,47 @@ export function AthleteEditDialogs({
                 </Select>
               </div>
 
-              {/* Competition Level - Only show for undergraduate/graduate */}
-              {(editData.educationLevel === 'undergraduate' || editData.educationLevel === 'graduate') && (
-                <div className="space-y-2">
-                  <Label htmlFor="edit-competitionLevel">Competition Level</Label>
-                  <Select
-                    value={String(editData.competitionLevel || '')}
-                    onValueChange={(value) => {
-                      setEditData(prev => ({ ...prev, competitionLevel: value }));
-                    }}
-                  >
-                    <SelectTrigger className="h-12" id="edit-competitionLevel">
-                      <SelectValue placeholder="Select competition level" />
-                    </SelectTrigger>
-                    <SelectContent className="z-[70]">
-                      {COMPETITION_LEVEL_OPTIONS.map((option) => (
-                        <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <p className="text-xs text-muted-foreground">
-                    D1, D2, and D3 athletes require transfer portal verification to connect with coaches
-                  </p>
+              {/* Division and Conference - Only show for college athletes (not high school) */}
+              {editData.educationLevel !== 'high_school' && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-division">Division</Label>
+                    <Select
+                      value={String(editData.division || '')}
+                      onValueChange={(value) => {
+                        setEditData(prev => ({ 
+                          ...prev, 
+                          division: value,
+                          conference: '' 
+                        }));
+                      }}
+                    >
+                      <SelectTrigger className="h-12" id="edit-division">
+                        <SelectValue placeholder="Select division" />
+                      </SelectTrigger>
+                      <SelectContent className="z-[70]">
+                        {ATHLETE_DIVISIONS.map(division => (
+                          <SelectItem key={division} value={division}>{division}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Conference - Only show when division is selected and has conferences */}
+                  {editData.division && divisionHasConferences(editData.division) && (
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-conference">Conference</Label>
+                      <ConferenceSelector
+                        division={editData.division || ''}
+                        value={editData.conference || ''}
+                        onValueChange={(value) => setEditData(prev => ({ ...prev, conference: value }))}
+                        placeholder="Select conference"
+                        label=""
+                        inDialog={true}
+                        height="h-12"
+                      />
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -1329,7 +1375,7 @@ export function AthleteEditDialogs({
                   <Label htmlFor="edit-maxPrepsUrl">MaxPreps Profile URL</Label>
                   <Input
                     id="edit-maxPrepsUrl"
-                    placeholder="https://www.maxpreps.com/..."
+                    placeholder={`maxpreps.com/state/city/school/athletes/${profileData.fullName.toLowerCase().replace(/\s+/g, '-')}/sport`}
                     value={editData.maxPrepsUrl || ''}
                     onChange={(e) => handleFieldChange('maxPrepsUrl', e.target.value)}
                     className={`h-12 ${validationErrors.maxPrepsUrl ? 'border-red-500' : ''}`}
@@ -1339,7 +1385,7 @@ export function AthleteEditDialogs({
                     <p className="text-sm text-red-500">{validationErrors.maxPrepsUrl}</p>
                   )}
                   <p className="text-sm text-muted-foreground">
-                    Add your MaxPreps profile to showcase official stats and verification. The URL should contain your name to verify it&apos;s your profile.
+                    Add your MaxPreps athlete profile URL. Example: maxpreps.com/ca/los-angeles/school-name/athletes/{profileData.fullName.toLowerCase().replace(/\s+/g, '-')}/football/
                   </p>
                 </div>
               )}
@@ -1359,7 +1405,7 @@ export function AthleteEditDialogs({
                 <Label htmlFor="edit-hudlUrl">Hudl Profile URL</Label>
                 <Input
                   id="edit-hudlUrl"
-                  placeholder="https://www.hudl.com/..."
+                  placeholder={`hudl.com/profile/12345/${profileData.fullName.toLowerCase().replace(/\s+/g, '-')}`}
                   value={editData.hudlUrl || ''}
                   onChange={(e) => handleFieldChange('hudlUrl', e.target.value)}
                   className={`h-12 ${validationErrors.hudlUrl ? 'border-red-500' : ''}`}
@@ -1372,7 +1418,7 @@ export function AthleteEditDialogs({
                   <p className="text-sm text-red-500">{validationErrors.hudlUrl}</p>
                 )}
                 <p className="text-sm text-muted-foreground">
-                  Add your Hudl profile link to showcase game film and highlight reels
+                  Add your Hudl profile URL. Example: hudl.com/profile/12345/{profileData.fullName.toLowerCase().replace(/\s+/g, '-')}
                 </p>
               </div>
             </div>
@@ -1783,7 +1829,10 @@ export function AthleteEditDialogs({
           });
         }
       }}>
-        <DialogContent className={`${dialogType === 'basic-info' ? "sm:max-w-2xl max-w-lg" : "sm:max-w-md max-w-lg"} z-[60]`}>
+        <DialogContent 
+          className={`${dialogType === 'basic-info' ? "sm:max-w-2xl max-w-lg" : "sm:max-w-md max-w-lg"} z-[60]`}
+          onOpenAutoFocus={e => e.preventDefault()}
+        >
           {getDialogContent()}
           {/* Only render footer if dialog type exists (prevents flash during close) */}
           {dialogType && (

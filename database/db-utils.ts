@@ -713,6 +713,20 @@ export const onboardingOperations = {
       role: 'athlete',
     });
 
+    // Check if this is a high school athlete with a valid Hudl URL
+    const isHighSchool = profileData.educationLevel === 'high_school';
+    const hasValidHudlUrl = profileData.hudlUrl && profileData.hudlUrl.trim();
+    
+    // Auto-verify high school athletes with valid Hudl URLs
+    // Additional server-side validation to ensure URL matches profile name
+    let shouldAutoVerify = false;
+    if (isHighSchool && hasValidHudlUrl) {
+      // Import validation here to avoid circular imports
+      const { FormValidator } = await import('@/app/(onboarding)/lib/form-validation');
+      const hudlValidation = FormValidator.validateHudlURL(profileData.hudlUrl!, profileData.fullName);
+      shouldAutoVerify = hudlValidation.isValid;
+    }
+
     // Create athlete profile
     const newProfile: NewAthleteProfile = {
       userId,
@@ -729,6 +743,7 @@ export const onboardingOperations = {
       weight: profileData.weight!,
       positions: profileData.positions!,
       division: profileData.division,
+      conference: profileData.conference,
       gpa: profileData.gpa ? parseFloat(profileData.gpa) : undefined,
       satScore: profileData.satScore || undefined,
       actScore: profileData.actScore || undefined,
@@ -739,6 +754,7 @@ export const onboardingOperations = {
       instagramHandle: profileData.instagramHandle || undefined,
       twitterHandle: profileData.twitterHandle || undefined,
       personalStatement: profileData.personalStatement || undefined,
+      isVerified: shouldAutoVerify, // Auto-verify if high school athlete with valid Hudl URL
     };
     
     const athleteProfile = await athleteOperations.createAthleteProfile(newProfile);
@@ -1240,6 +1256,7 @@ export const profileOperations = {
     let fullName = 'Unknown User';
     let profileImageUrl = null;
     let division = undefined;
+    let conference = undefined;
     let educationLevel = undefined;
     let isVerified = false;
 
@@ -1247,17 +1264,20 @@ export const profileOperations = {
       fullName = user.athleteProfile.fullName;
       profileImageUrl = user.athleteProfile.profileImageR3Key;
       division = user.athleteProfile.division;
+      conference = user.athleteProfile.conference;
       educationLevel = user.athleteProfile.educationLevel;
       isVerified = user.athleteProfile.isVerified ?? false;
     } else if (user.role === 'coach' && user.coachProfile) {
       fullName = user.coachProfile.fullName;
       profileImageUrl = user.coachProfile.profileImageR3Key;
       division = user.coachProfile.division;
+      conference = user.coachProfile.conference;
       isVerified = user.coachProfile.isVerified ?? false;
     } else if (user.role === 'recruiter' && user.recruitingProfile) {
       fullName = user.recruitingProfile.fullName;
       profileImageUrl = user.recruitingProfile.profileImageR3Key;
       division = user.recruitingProfile.division;
+      conference = user.recruitingProfile.conference;
       isVerified = user.recruitingProfile.isVerified ?? false;
     }
 
@@ -1268,6 +1288,7 @@ export const profileOperations = {
         : null,
       role: user.role,
       division,
+      conference,
       educationLevel,
       isVerified,
     };
@@ -1603,4 +1624,4 @@ export const adminOperations = {
       .returning();
     return profile;
   }
-}; 
+};
