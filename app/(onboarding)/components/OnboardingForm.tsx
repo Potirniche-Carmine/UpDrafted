@@ -30,6 +30,7 @@ const initialData: OnboardingData = {
   organizationName: "",
   city: "",
   state: "",
+  country: "United States",
   heightFeet: "",
   heightInches: "",
   weight: "",
@@ -161,6 +162,7 @@ export default function OnboardingForm({ role, onBack }: OnboardingFormProps) {
         data.organizationName && 
         data.city && 
         data.state && 
+        data.country &&
         data.heightFeet && 
         data.heightInches &&
         data.weight && 

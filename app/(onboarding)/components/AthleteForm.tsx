@@ -146,6 +146,92 @@ function SportCombobox({
   );
 }
 
+// Add country list for athlete recruiting
+const POPULAR_COUNTRIES = [
+  "United States",
+  "Canada",
+  "United Kingdom",
+  "Australia",
+  "Germany",
+  "France",
+  "Spain",
+  "Italy",
+  "Brazil",
+  "Mexico",
+  "Japan",
+  "South Korea",
+  "Netherlands",
+  "Sweden",
+  "New Zealand"
+];
+
+// Searchable Combobox Component for Country (same UI as SportCombobox)
+function CountryCombobox({
+  value,
+  onValueChange,
+  placeholder
+}: {
+  value: string;
+  onValueChange: (value: string) => void;
+  placeholder: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const [searchValue, setSearchValue] = useState("");
+  const countries = POPULAR_COUNTRIES;
+  const filteredCountries = countries.filter(country =>
+    country.toLowerCase().includes(searchValue.toLowerCase())
+  );
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          variant="outline"
+          role="combobox"
+          aria-expanded={open}
+          className="h-11 w-full justify-between bg-background"
+        >
+          {value || placeholder}
+          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-full p-0" style={{ width: 'var(--radix-popover-trigger-width)' }}>
+        <Command>
+          <CommandInput
+            placeholder="Search country..."
+            value={searchValue}
+            onValueChange={setSearchValue}
+          />
+          <CommandList className="max-h-[200px]">
+            <CommandEmpty>No country found.</CommandEmpty>
+            <CommandGroup>
+              {filteredCountries.map((country) => (
+                <CommandItem
+                  key={country}
+                  value={country}
+                  onSelect={(currentValue) => {
+                    onValueChange(currentValue);
+                    setOpen(false);
+                    setSearchValue("");
+                  }}
+                >
+                  <Check
+                    className={cn(
+                      "mr-2 h-4 w-4",
+                      value === country ? "opacity-100" : "opacity-0"
+                    )}
+                  />
+                  {country}
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
 export default function AthleteForm({ data, onInputChange }: AthleteFormProps) {
   const [validationErrors, setValidationErrors] = useState<{[key: string]: string}>({});
 
@@ -304,6 +390,14 @@ export default function AthleteForm({ data, onInputChange }: AthleteFormProps) {
     
     setValidationErrors(newErrors);
     onInputChange(field, value);
+  };
+
+  // Clear state if country is changed to something other than United States
+  const handleCountryChange = (value: string) => {
+    onInputChange('country', value);
+    if (value !== 'United States' && data.state) {
+      onInputChange('state', '');
+    }
   };
 
   return (
@@ -472,6 +566,15 @@ export default function AthleteForm({ data, onInputChange }: AthleteFormProps) {
         </div>
       </div>
 
+      {/* Move Country field above City and State */}
+      <div className="space-y-3">
+        <Label htmlFor="country" className="text-base font-medium">Country *</Label>
+        <CountryCombobox
+          value={data.country || "United States"}
+          onValueChange={handleCountryChange}
+          placeholder="Select your country"
+        />
+      </div>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="space-y-3">
           <Label htmlFor="city" className="text-base font-medium">City *</Label>
@@ -488,19 +591,21 @@ export default function AthleteForm({ data, onInputChange }: AthleteFormProps) {
           )}
           <p className="text-xs text-muted-foreground">{data.city.length}/{FIELD_LIMITS.CITY} characters</p>
         </div>
-        <div className="space-y-3">
-          <Label htmlFor="state" className="text-base font-medium">State *</Label>
-          <Select value={data.state} onValueChange={(value) => onInputChange('state', value)}>
-            <SelectTrigger className="h-11 bg-background w-full" style={{ height: '2.75rem' }}>
-              <SelectValue placeholder="Select state" />
-            </SelectTrigger>
-            <SelectContent>
-              {US_STATES.map(state => (
-                <SelectItem key={state} value={state}>{state}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+        {data.country === 'United States' && (
+          <div className="space-y-3">
+            <Label htmlFor="state" className="text-base font-medium">State *</Label>
+            <Select value={data.state} onValueChange={(value) => onInputChange('state', value)}>
+              <SelectTrigger className="h-11 bg-background w-full" style={{ height: '2.75rem' }}>
+                <SelectValue placeholder="Select state" />
+              </SelectTrigger>
+              <SelectContent>
+                {US_STATES.map(state => (
+                  <SelectItem key={state} value={state}>{state}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
