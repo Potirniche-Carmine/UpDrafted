@@ -147,7 +147,7 @@ function SportCombobox({
 }
 
 // Add country list for athlete recruiting
-const POPULAR_COUNTRIES = [
+const COUNTRIES = [
   "United States",
   "Canada",
   "United Kingdom",
@@ -177,7 +177,7 @@ function CountryCombobox({
 }) {
   const [open, setOpen] = useState(false);
   const [searchValue, setSearchValue] = useState("");
-  const countries = POPULAR_COUNTRIES;
+  const countries = COUNTRIES;
   const filteredCountries = countries.filter(country =>
     country.toLowerCase().includes(searchValue.toLowerCase())
   );
