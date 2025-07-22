@@ -219,7 +219,7 @@ export function getConferencesForDivision(division: string): string[] {
 
 // Helper function to check if a division has conferences
 export function divisionHasConferences(division: string): boolean {
-  return division !== 'High School' && CONFERENCES_BY_DIVISION[division]?.length > 0;
+  return CONFERENCES_BY_DIVISION[division]?.length > 0;
 }
 
 // Helper function to get all unique conferences
