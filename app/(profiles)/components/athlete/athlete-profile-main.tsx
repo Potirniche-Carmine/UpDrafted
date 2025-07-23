@@ -1043,7 +1043,9 @@ export function AthleteProfile({
                       <div className="flex items-center justify-center gap-1 min-w-0">
                         <MapPin className="w-3 h-3 flex-shrink-0" />
                         <span className="text-center break-words whitespace-normal">
-                          {safeProfileData.city}, {safeProfileData.state}
+                          {/* Only show comma if state exists and country is United States */}
+                          {safeProfileData.city}
+                          {safeProfileData.country === 'United States' && safeProfileData.state ? `, ${safeProfileData.state}` : ''}
                         </span>
                       </div>
                       {safeProfileData.country && (

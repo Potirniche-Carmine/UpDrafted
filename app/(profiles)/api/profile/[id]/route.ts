@@ -910,6 +910,13 @@ export async function PUT(
 
     // Update profile based on type
     if (profileType === 'athlete') {
+      // If country is being changed from 'United States' to another country, set state to null
+      if (
+        sanitizedData.country !== undefined &&
+        sanitizedData.country !== 'United States'
+      ) {
+        sanitizedData.state = null;
+      }
       // First, update the athlete profile data
       const profileUpdateData: Partial<NewAthleteProfile> = {};
       
@@ -932,6 +939,7 @@ export async function PUT(
       if (sanitizedData.actScore !== undefined) profileUpdateData.actScore = sanitizedData.actScore as number;
       if (sanitizedData.intendedMajor !== undefined) profileUpdateData.intendedMajor = sanitizedData.intendedMajor as string;
       if (sanitizedData.personalStatement !== undefined) profileUpdateData.personalStatement = sanitizedData.personalStatement as string;
+      if (sanitizedData.country !== undefined) profileUpdateData.country = sanitizedData.country as string;
       
       // Handle URL fields with correct field names
       if (sanitizedData.maxPrepsUrl !== undefined) profileUpdateData.maxprepsUrl = sanitizedData.maxPrepsUrl as string;
