@@ -101,6 +101,10 @@ function transformProfileData(profileData: Record<string, any>, profileType: str
     if (!transformed.hudlEmbedUrl || transformed.hudlEmbedUrl.trim() === '') {
       transformed.hudlEmbedUrl = undefined;
     }
+    // Add country field
+    if (profileData.country) {
+      transformed.country = profileData.country;
+    }
   } else if (profileType === 'coach' || profileType === 'recruiter') {
     // Preserve userId for client-side API calls
     if (profileData.userId) {
@@ -115,6 +119,10 @@ function transformProfileData(profileData: Record<string, any>, profileType: str
     // Transform organization logo from R3 key to URL using proper R2 configuration
     if (profileData.organizationLogoR3Key) {
       transformed.organizationLogo = constructR2Url(R2_PUBLIC_URL, profileData.organizationLogoR3Key);
+    }
+    // Add country field
+    if (profileData.country) {
+      transformed.country = profileData.country;
     }
   }
 

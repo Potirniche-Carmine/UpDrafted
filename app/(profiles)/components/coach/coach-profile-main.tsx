@@ -660,6 +660,13 @@ export function CoachProfile({
                       <MapPin className="w-3 h-3 md:w-4 md:h-4" />
                       <span>{profileData.city}, {profileData.state}</span>
                     </div>
+                    {profileData.country && (
+                      <div className="flex justify-center mt-1">
+                        <Badge className="bg-gradient-to-r from-blue-600 to-purple-600 text-white text-xs px-3 py-1 shadow-md font-semibold uppercase tracking-wide">
+                          {profileData.country}
+                        </Badge>
+                      </div>
+                    )}
                   </div>
 
                   {/* Social Media Links */}
