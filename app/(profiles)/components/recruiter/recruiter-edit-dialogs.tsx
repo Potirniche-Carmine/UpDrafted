@@ -36,6 +36,25 @@ const NUMERIC_LIMITS = {
   SCHOLARSHIPS_AVAILABLE: { min: 0, max: 50 }
 };
 
+// Add countries list for country select
+const COUNTRIES = [
+  "United States",
+  "Canada",
+  "United Kingdom",
+  "Australia",
+  "Germany",
+  "France",
+  "Spain",
+  "Italy",
+  "Brazil",
+  "Mexico",
+  "Japan",
+  "South Korea",
+  "Netherlands",
+  "Sweden",
+  "New Zealand"
+];
+
 interface RecruiterEditDialogsProps {
   isOpen: boolean;
   dialogType: string | null;
@@ -88,11 +107,21 @@ export function RecruiterEditDialogs({
           fullName: profileData.fullName,
           title: profileData.title,
           sportRecruiting: profileData.sportRecruiting,
+          secondarySports: profileData.secondarySports || [],
           organizationName: profileData.organizationName,
           city: profileData.city,
           state: profileData.state,
+          country: profileData.country || '',
           division: profileData.division || '',
-          conference: profileData.conference || ''
+          conference: profileData.conference || '',
+          personalStatement: profileData.personalStatement || '',
+          programWebsite: profileData.programWebsite || '',
+          schoolWebsite: profileData.schoolWebsite || '',
+          instagramHandle: profileData.instagramHandle || '',
+          twitterHandle: profileData.twitterHandle || '',
+          showcaseVideoTitle: profileData.showcaseVideoTitle || '',
+          showcaseVideoUrl: profileData.showcaseVideoUrl || '',
+          showcaseVideoEmbedUrl: profileData.showcaseVideoEmbedUrl || ''
         });
         break;
       case 'personal-statement':
@@ -155,14 +184,20 @@ export function RecruiterEditDialogs({
 
   const validateField = (field: string, value: string | number): string | null => {
     // Required field validation
-    if (['fullName', 'title', 'sportRecruiting', 'organizationName', 'city', 'state', 'newSport'].includes(field)) {
-      if (!value || value.toString().trim() === '') {
-        return 'This field is required';
+    if (["fullName", "title", "sportRecruiting", "organizationName", "city", "newSport"].includes(field)) {
+      if (!value || value.toString().trim() === "") {
+        return "This field is required";
+      }
+    }
+    if (field === "state") {
+      // Only require state if country is United States or not set
+      if ((!editData.country || editData.country === "United States") && (!value || value.toString().trim() === "")) {
+        return "This field is required";
       }
     }
 
     // String length validation
-    if (typeof value === 'string') {
+    if (typeof value === "string") {
       const limit = FIELD_LIMITS[field.toUpperCase() as keyof typeof FIELD_LIMITS];
       if (limit && value.length > limit) {
         return `Must be ${limit} characters or less`;
@@ -409,16 +444,29 @@ export function RecruiterEditDialogs({
 
     switch (dialogType) {
       case 'basic-info':
-        updates = {
-          fullName: editData.fullName,
-          title: editData.title,
-          sportRecruiting: editData.sportRecruiting,
-          organizationName: editData.organizationName,
-          city: editData.city,
-          state: editData.state,
-          division: editData.division || undefined,
-          conference: editData.conference || undefined
-        };
+        updates.fullName = editData.fullName;
+        updates.title = editData.title;
+        updates.sportRecruiting = editData.sportRecruiting;
+        updates.secondarySports = editData.secondarySports;
+        updates.organizationName = editData.organizationName;
+        updates.city = editData.city;
+        // If country is not United States, clear state
+        if (editData.country && editData.country !== 'United States') {
+          updates.state = '';
+        } else {
+          updates.state = editData.state;
+        }
+        updates.country = editData.country;
+        updates.division = editData.division;
+        updates.conference = editData.conference;
+        updates.personalStatement = editData.personalStatement;
+        updates.programWebsite = editData.programWebsite;
+        updates.schoolWebsite = editData.schoolWebsite;
+        updates.instagramHandle = editData.instagramHandle;
+        updates.twitterHandle = editData.twitterHandle;
+        updates.showcaseVideoTitle = editData.showcaseVideoTitle;
+        updates.showcaseVideoUrl = editData.showcaseVideoUrl;
+        updates.showcaseVideoEmbedUrl = editData.showcaseVideoEmbedUrl;
         break;
       case 'personal-statement':
         updates = {
@@ -583,45 +631,52 @@ export function RecruiterEditDialogs({
               )}
             </div>
 
+            {/* Country select field */}
+            <div className="space-y-2">
+              <Label htmlFor="edit-country">Country *</Label>
+              <Select
+                value={String(editData.country || '')}
+                onValueChange={(value) => setEditData(prev => ({ ...prev, country: value }))}
+              >
+                <SelectTrigger className="h-12" id="edit-country">
+                  <SelectValue placeholder="Select country" />
+                </SelectTrigger>
+                <SelectContent className="z-[70]">
+                  {COUNTRIES.map((country) => (
+                    <SelectItem key={country} value={country}>{country}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="city">City *</Label>
+                <Label htmlFor="edit-city">City *</Label>
                 <Input
-                  id="city"
+                  id="edit-city"
                   value={editData.city || ''}
                   onChange={(e) => handleFieldChange('city', e.target.value)}
-                  placeholder="Enter city"
-                  maxLength={FIELD_LIMITS.CITY}
-                  autoComplete="off"
-                  inputMode="text"
-                  autoFocus={false}
+                  className="h-12"
                 />
-                {validationErrors.city && (
-                  <p className="text-sm text-red-500 mt-1">{validationErrors.city}</p>
-                )}
               </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="state">State *</Label>
-                <Select 
-                  value={editData.state || ''} 
-                  onValueChange={(value) => handleFieldChange('state', value)}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select state" />
-                  </SelectTrigger>
-                  <SelectContent className="z-[70]">
-                    {US_STATES.map((state) => (
-                      <SelectItem key={state} value={state}>
-                        {state}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {validationErrors.state && (
-                  <p className="text-sm text-red-500 mt-1">{validationErrors.state}</p>
-                )}
-              </div>
+              {/* Only show State * if country is United States or not selected */}
+              {(!editData.country || editData.country === 'United States') && (
+                <div className="space-y-2">
+                  <Label htmlFor="edit-state">State *</Label>
+                  <Select
+                    value={String(editData.state || '')}
+                    onValueChange={(value) => setEditData(prev => ({ ...prev, state: value }))}
+                  >
+                    <SelectTrigger className="h-12" id="edit-state">
+                      <SelectValue placeholder="Select state" />
+                    </SelectTrigger>
+                    <SelectContent className="z-[70]">
+                      {US_STATES.map((state) => (
+                        <SelectItem key={state} value={state}>{state}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
             </div>
 
             <div className="space-y-2">

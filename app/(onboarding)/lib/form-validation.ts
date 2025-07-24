@@ -16,7 +16,7 @@ export const FIELD_LIMITS = {
   CITY: 50,
   INTENDED_MAJOR: 50,
   TITLE: 50,
-  CONFERENCE: 50,
+  CONFERENCE: 100,
   PERSONAL_STATEMENT: 400,
   RECRUITING_PHILOSOPHY: 400,
   WHAT_LOOKING_FOR: 400,
@@ -435,6 +435,11 @@ export class FormValidator {
       if (!twitterResult.isValid) errors.twitterHandle = twitterResult.error!;
     }
 
+    // Country validation (required)
+    if (!data.country || !data.country.trim()) {
+      errors.country = 'Country is required';
+    }
+
     // Personal statement validation
     const statementResult = this.validateText(data.personalStatement, 'Personal statement', FIELD_LIMITS.PERSONAL_STATEMENT, true);
     if (!statementResult.isValid) errors.personalStatement = statementResult.error!;
@@ -462,6 +467,13 @@ export class FormValidator {
     const cityResult = this.validateText(data.city, 'City', FIELD_LIMITS.CITY, true);
     if (!cityResult.isValid) errors.city = cityResult.error!;
 
+    // State validation (only required if country is United States)
+    if (data.country === 'United States') {
+      if (!data.state || !data.state.trim()) {
+        errors.state = 'State is required for United States';
+      }
+    }
+
     // Conference validation
     if (data.conference) {
       const confResult = this.validateText(data.conference, 'Conference', FIELD_LIMITS.CONFERENCE);
@@ -488,6 +500,11 @@ export class FormValidator {
     if (data.orgTwitterHandle) {
       const twitterResult = this.validateSocialHandle(data.orgTwitterHandle, 'twitter');
       if (!twitterResult.isValid) errors.orgTwitterHandle = twitterResult.error!;
+    }
+
+    // Country validation (required)
+    if (!data.country || !data.country.trim()) {
+      errors.country = 'Country is required';
     }
 
     // Check that at least one contact method is provided

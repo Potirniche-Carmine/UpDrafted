@@ -138,6 +138,12 @@ export default function OnboardingForm({ role, onBack }: OnboardingFormProps) {
         // Don't call navigateToProfile here to avoid multiple redirects
       } else {
         const errorData = await response.json();
+        if (errorData.validationErrors) {
+          const errorList = Object.entries(errorData.validationErrors)
+            .map(([field, msg]) => `${field}: ${msg}`)
+            .join('\n');
+          throw new Error(`${errorData.error}\n${errorList}`);
+        }
         throw new Error(errorData.error || 'Failed to create profile');
       }
     } catch (error) {
@@ -161,7 +167,7 @@ export default function OnboardingForm({ role, onBack }: OnboardingFormProps) {
         data.educationLevel &&
         data.organizationName && 
         data.city && 
-        data.state && 
+        (data.country === 'United States' ? data.state : true) &&
         data.country &&
         data.heightFeet && 
         data.heightInches &&
@@ -195,7 +201,7 @@ export default function OnboardingForm({ role, onBack }: OnboardingFormProps) {
         data.sportCoaching && 
         data.division && 
         data.city && 
-        data.state &&
+        (data.country === 'United States' ? data.state : true) &&
         (data.orgInstagramHandle || data.orgTwitterHandle || data.programWebsite || data.schoolWebsite) &&
         data.personalStatement
       );
@@ -216,7 +222,7 @@ export default function OnboardingForm({ role, onBack }: OnboardingFormProps) {
         data.sportCoaching && 
         data.division && 
         data.city && 
-        data.state &&
+        (data.country === 'United States' ? data.state : true) &&
         (data.orgInstagramHandle || data.orgTwitterHandle || data.programWebsite || data.schoolWebsite) &&
         data.personalStatement
       );

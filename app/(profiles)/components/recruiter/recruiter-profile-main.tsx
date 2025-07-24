@@ -844,7 +844,11 @@ export function RecruiterProfile({
                     
                     <div className="flex items-center justify-center gap-1 text-xs md:text-sm text-muted-foreground">
                       <MapPin className="w-3 h-3 md:w-4 md:h-4" />
-                      <span>{profileData.city}, {profileData.state}</span>
+                      <span>
+                        {/* Only show comma if state exists and country is United States */}
+                        {profileData.city}
+                        {profileData.country === 'United States' && profileData.state ? `, ${profileData.state}` : ''}
+                      </span>
                     </div>
                     {profileData.country && (
                       <div className="flex justify-center mt-1">

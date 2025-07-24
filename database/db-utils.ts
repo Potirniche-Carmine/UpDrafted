@@ -739,6 +739,7 @@ export const onboardingOperations = {
       organizationName: profileData.organizationName!,
       city: profileData.city!,
       state: profileData.state!,
+      country: profileData.country, // <-- Add this line
       height: profileData.height!,
       weight: profileData.weight!,
       positions: profileData.positions!,
@@ -784,6 +785,7 @@ export const onboardingOperations = {
       conference: profileData.conference || undefined,
       city: profileData.city,
       state: profileData.state,
+      country: profileData.country, // <-- Add this line
       programWebsite: profileData.programWebsite || undefined,
       schoolWebsite: profileData.schoolWebsite || undefined,
       instagramHandle: profileData.orgInstagramHandle || undefined,
@@ -830,6 +832,7 @@ export const onboardingOperations = {
       conference: profileData.conference || undefined,
       city: profileData.city,
       state: profileData.state,
+      country: profileData.country, // <-- Add this line
       programWebsite: profileData.programWebsite || undefined,
       schoolWebsite: profileData.schoolWebsite || undefined,
       instagramHandle: profileData.orgInstagramHandle || undefined,

@@ -1037,6 +1037,7 @@ export async function PUT(
       if (sanitizedData.showcaseVideoTitle !== undefined) profileUpdateData.showcaseVideoTitle = sanitizedData.showcaseVideoTitle as string;
       if (sanitizedData.showcaseVideoUrl !== undefined) profileUpdateData.showcaseVideoUrl = sanitizedData.showcaseVideoUrl as string;
       if (sanitizedData.showcaseVideoEmbedUrl !== undefined) profileUpdateData.showcaseVideoEmbedUrl = sanitizedData.showcaseVideoEmbedUrl as string;
+      if (sanitizedData.country !== undefined) profileUpdateData.country = sanitizedData.country as string;
 
       // Update the coach profile in the database
       updatedProfile = await coachOperations.updateCoachProfile(profileUserId, profileUpdateData);
@@ -1098,6 +1099,7 @@ export async function PUT(
       if (sanitizedData.showcaseVideoTitle !== undefined) profileUpdateData.showcaseVideoTitle = sanitizedData.showcaseVideoTitle as string;
       if (sanitizedData.showcaseVideoUrl !== undefined) profileUpdateData.showcaseVideoUrl = sanitizedData.showcaseVideoUrl as string;
       if (sanitizedData.showcaseVideoEmbedUrl !== undefined) profileUpdateData.showcaseVideoEmbedUrl = sanitizedData.showcaseVideoEmbedUrl as string;
+      if (sanitizedData.country !== undefined) profileUpdateData.country = sanitizedData.country as string;
 
       // Update the recruiting profile in the database
       updatedProfile = await recruitingOperations.updateRecruitingProfile(profileUserId, profileUpdateData);
