@@ -910,10 +910,12 @@ export async function PUT(
 
     // Update profile based on type
     if (profileType === 'athlete') {
-      // If country is being changed from 'United States' to another country, set state to null
+      // If country is being changed from 'United States' to another country, set state to null only if not already null/undefined
       if (
         sanitizedData.country !== undefined &&
-        sanitizedData.country !== 'United States'
+        sanitizedData.country !== 'United States' &&
+        sanitizedData.state !== null &&
+        sanitizedData.state !== undefined
       ) {
         sanitizedData.state = null;
       }
@@ -1017,10 +1019,12 @@ export async function PUT(
       }
       
     } else if (profileType === 'coach') {
-      // If country is being changed from 'United States' to another country, set state to null
+      // If country is being changed from 'United States' to another country, set state to null only if not already null/undefined
       if (
         sanitizedData.country !== undefined &&
-        sanitizedData.country !== 'United States'
+        sanitizedData.country !== 'United States' &&
+        sanitizedData.state !== null &&
+        sanitizedData.state !== undefined
       ) {
         sanitizedData.state = null;
       }
@@ -1085,10 +1089,12 @@ export async function PUT(
       }
       
     } else if (profileType === 'recruiter') {
-      // If country is being changed from 'United States' to another country, set state to null
+      // If country is being changed from 'United States' to another country, set state to null only if not already null/undefined
       if (
         sanitizedData.country !== undefined &&
-        sanitizedData.country !== 'United States'
+        sanitizedData.country !== 'United States' &&
+        sanitizedData.state !== null &&
+        sanitizedData.state !== undefined
       ) {
         sanitizedData.state = null;
       }

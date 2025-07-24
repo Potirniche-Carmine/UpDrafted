@@ -265,7 +265,7 @@ export async function POST(request: NextRequest) {
           result = await onboardingOperations.createAthleteOnboarding(
             userId, 
             email, 
-            { ...profileData, country: profileData.country }, // Ensure country is passed
+            profileData,
             profileImageR3Key
           )
           profileId = result.athleteProfile.id
@@ -274,7 +274,7 @@ export async function POST(request: NextRequest) {
           result = await onboardingOperations.createCoachOnboarding(
             userId, 
             email, 
-            { ...profileData, country: profileData.country }, // Ensure country is passed
+            profileData,
             profileImageR3Key,
             organizationLogoR3Key
           )
@@ -284,7 +284,7 @@ export async function POST(request: NextRequest) {
           result = await onboardingOperations.createRecruiterOnboarding(
             userId, 
             email, 
-            { ...profileData, country: profileData.country }, // Ensure country is passed
+            profileData,
             profileImageR3Key,
             organizationLogoR3Key
           )
