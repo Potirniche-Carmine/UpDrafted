@@ -1017,6 +1017,13 @@ export async function PUT(
       }
       
     } else if (profileType === 'coach') {
+      // If country is being changed from 'United States' to another country, set state to null
+      if (
+        sanitizedData.country !== undefined &&
+        sanitizedData.country !== 'United States'
+      ) {
+        sanitizedData.state = null;
+      }
       // Update coach profile
       const profileUpdateData: Partial<NewCoachProfile> = {};
       
@@ -1078,6 +1085,13 @@ export async function PUT(
       }
       
     } else if (profileType === 'recruiter') {
+      // If country is being changed from 'United States' to another country, set state to null
+      if (
+        sanitizedData.country !== undefined &&
+        sanitizedData.country !== 'United States'
+      ) {
+        sanitizedData.state = null;
+      }
       // Update recruiting profile
       const profileUpdateData: Partial<NewRecruitingProfile> = {};
       
