@@ -166,48 +166,48 @@ interface AthleteEditDialogsProps {
   selectedSport: string;
 }
 
-// Add mockCampExperience at the top of the file for use in the dialog
-const mockCampExperience: Array<{
-  type: 'Camp' | 'Club';
-  name: string;
-  city: string;
-  stateCountry: string;
-  startDate: string;
-  endDate: string;
-  sport: string;
-  description: string;
-}> = [
-  {
-    type: "Camp" as 'Camp',
-    name: "Nike Elite Football Camp",
-    city: "Dallas",
-    stateCountry: "TX",
-    startDate: "June 2023",
-    endDate: "June 2023",
-    sport: "Football",
-    description: "Participated in advanced skills training and scrimmages with top high school athletes. Selected for All-Star team.",
-  },
-  {
-    type: "Club" as 'Club',
-    name: "Dallas Select 7v7",
-    city: "Dallas",
-    stateCountry: "TX",
-    startDate: "Spring 2022",
-    endDate: "Summer 2023",
-    sport: "Flag Football",
-    description: "Starting Wide Receiver. Helped team reach state semifinals."
-  },
-  {
-    type: "Camp" as 'Camp',
-    name: "Adidas National Soccer Showcase",
-    city: "Houston",
-    stateCountry: "TX",
-    startDate: "July 2022",
-    endDate: "July 2022",
-    sport: "Soccer",
-    description: "Trained with top coaches and played in showcase matches."
-  }
-];
+// Add mockCampExperience at the top of the file for use in the dialog - COMMENTED OUT FOR TESTING EMPTY STATE
+// const mockCampExperience: Array<{
+//   type: 'Camp' | 'Club';
+//   name: string;
+//   city: string;
+//   stateCountry: string;
+//   startDate: string;
+//   endDate: string;
+//   sport: string;
+//   description: string;
+// }> = [
+//   {
+//     type: "Camp" as 'Camp',
+//     name: "Nike Elite Football Camp",
+//     city: "Dallas",
+//     stateCountry: "TX",
+//     startDate: "June 2023",
+//     endDate: "June 2023",
+//     sport: "Football",
+//     description: "Participated in advanced skills training and scrimmages with top high school athletes. Selected for All-Star team.",
+//   },
+//   {
+//     type: "Club" as 'Club',
+//     name: "Dallas Select 7v7",
+//     city: "Dallas",
+//     stateCountry: "TX",
+//     startDate: "Spring 2022",
+//     endDate: "Summer 2023",
+//     sport: "Flag Football",
+//     description: "Starting Wide Receiver. Helped team reach state semifinals."
+//   },
+//   {
+//     type: "Camp" as 'Camp',
+//     name: "Adidas National Soccer Showcase",
+//     city: "Houston",
+//     stateCountry: "TX",
+//     startDate: "July 2022",
+//     endDate: "July 2022",
+//     sport: "Soccer",
+//     description: "Trained with top coaches and played in showcase matches."
+//   }
+// ];
 
 export function AthleteEditDialogs({
   isOpen,
@@ -2241,7 +2241,7 @@ export function AthleteEditDialogs({
       setTempCampExperience(
         Array.isArray(profileData.campExperience) && profileData.campExperience.length > 0
           ? profileData.campExperience
-          : mockCampExperience
+          : []
       );
       setCampEditIndex(null);
       setCampForm({ type: 'Camp', name: '', city: '', stateCountry: '', startDate: '', endDate: '', sport: '', description: '' });

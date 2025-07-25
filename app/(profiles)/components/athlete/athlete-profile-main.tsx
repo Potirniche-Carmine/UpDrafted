@@ -306,42 +306,55 @@ const SocialMediaSection = memo(({ socialMedia, isOwnProfile, onEdit }: {
 
 SocialMediaSection.displayName = "SocialMediaSection";
 
-// Demo mock data for camp and club experience
-const mockCampExperience = [
-  {
-    type: "Camp" as 'Camp',
-    name: "Nike Elite Football Camp",
-    city: "Dallas",
-    stateCountry: "TX",
-    startDate: "June 2023",
-    endDate: "June 2023",
-    sport: "Football",
-    description: "Participated in advanced skills training and scrimmages with top high school athletes. Selected for All-Star team.",
-  },
-  {
-    type: "Club" as 'Club',
-    name: "Dallas Select 7v7",
-    city: "Dallas",
-    stateCountry: "TX",
-    startDate: "June 2022",
-    endDate: "July 2023",
-    sport: "Flag Football",
-    description: "Starting Wide Receiver. Helped team reach state semifinals."
-  },
-  {
-    type: "Camp" as 'Camp',
-    name: "Adidas National Soccer Showcase",
-    city: "Houston",
-    stateCountry: "TX",
-    startDate: "July 2022",
-    endDate: "July 2022",
-    sport: "Soccer",
-    description: "Trained with top coaches and played in showcase matches."
-  }
-];
+// Demo mock data for camp and club experience - COMMENTED OUT FOR TESTING EMPTY STATE
+// const mockCampExperience = [
+//   {
+//     type: "Camp" as 'Camp',
+//     name: "Nike Elite Football Camp",
+//     city: "Dallas",
+//     stateCountry: "TX",
+//     startDate: "June 2023",
+//     endDate: "June 2023",
+//     sport: "Football",
+//     description: "Participated in advanced skills training and scrimmages with top high school athletes. Selected for All-Star team.",
+//   },
+//   {
+//     type: "Club" as 'Club',
+//     name: "Dallas Select 7v7",
+//     city: "Dallas",
+//     stateCountry: "TX",
+//     startDate: "June 2022",
+//     endDate: "July 2023",
+//     sport: "Flag Football",
+//     description: "Starting Wide Receiver. Helped team reach state semifinals."
+//   },
+//   {
+//     type: "Camp" as 'Camp',
+//     name: "Adidas National Soccer Showcase",
+//     city: "Houston",
+//     stateCountry: "TX",
+//     startDate: "July 2022",
+//     endDate: "July 2022",
+//     sport: "Soccer",
+//     description: "Trained with top coaches and played in showcase matches."
+//   }
+// ];
 
 // Update CampExperienceCard prop types and usage
-function CampExperienceCard({ experiences, isOwnProfile, onEdit }: { experiences: typeof mockCampExperience, isOwnProfile: boolean, onEdit?: () => void }) {
+function CampExperienceCard({ experiences, isOwnProfile, onEdit }: { 
+  experiences: Array<{
+    type: 'Camp' | 'Club';
+    name: string;
+    city: string;
+    stateCountry: string;
+    startDate: string;
+    endDate: string;
+    sport: string;
+    description: string;
+  }>, 
+  isOwnProfile: boolean, 
+  onEdit?: () => void 
+}) {
   return (
     <Card className="bg-gradient-to-r from-blue-50/50 to-cyan-50/50 dark:from-blue-950/20 dark:to-cyan-950/20 mb-4 w-full max-w-xs mx-auto sm:max-w-full sm:mx-0 min-h-[260px]">
       <CardContent className="p-4">
@@ -352,7 +365,12 @@ function CampExperienceCard({ experiences, isOwnProfile, onEdit }: { experiences
             </div>
             <div>
               <h3 className="font-semibold text-lg">Camp and Club Experience</h3>
-              <p className="text-sm text-muted-foreground">Showcase your athletic journey outside your main team</p>
+              <p className="text-sm text-muted-foreground">
+                {experiences.length === 0 
+                  ? "Start building your athletic resume" 
+                  : "Showcase your athletic journey outside your main team"
+                }
+              </p>
             </div>
           </div>
           {isOwnProfile && (
@@ -364,22 +382,33 @@ function CampExperienceCard({ experiences, isOwnProfile, onEdit }: { experiences
         </div>
         <div className="space-y-4">
           {experiences.length === 0 ? (
-            <div className="bg-white/50 dark:bg-gray-900/50 rounded-lg p-4 text-center">
-              <Trophy className="w-8 h-8 text-blue-600 mx-auto mb-2" />
-              <h4 className="font-medium mb-2">No Camp or Club Experience Added</h4>
-              <p className="text-sm text-muted-foreground mb-3">
-                Add camps, showcases, or clubs you have participated in to highlight your dedication and versatility.
+            <div className="bg-gradient-to-br from-blue-50/80 to-cyan-50/80 dark:from-blue-950/30 dark:to-cyan-950/30 rounded-lg p-6 text-center border border-blue-100/50 dark:border-blue-900/50">
+              <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/50 rounded-full flex items-center justify-center mx-auto mb-3">
+                <Trophy className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+              </div>
+              <h4 className="font-semibold text-base mb-2 text-foreground">No Camp or Club Experience Added</h4>
+              <p className="text-sm text-muted-foreground mb-4 leading-relaxed">
+                Showcase your athletic journey by adding camps, showcases, or clubs you've participated in. This helps coaches see your dedication and versatility beyond your main team.
               </p>
               {isOwnProfile && (
-                <Button size="sm" variant="outline" onClick={onEdit}>
+                <Button size="sm" variant="default" onClick={onEdit} className="bg-blue-600 hover:bg-blue-700 text-white">
                   <Plus className="w-4 h-4 mr-2" />
-                  Add Experience
+                  Add Your First Experience
                 </Button>
               )}
             </div>
           ) : (
             <div className="space-y-3">
-              {experiences.map((exp, idx) => (
+              {experiences.map((exp: {
+                type: 'Camp' | 'Club';
+                name: string;
+                city: string;
+                stateCountry: string;
+                startDate: string;
+                endDate: string;
+                sport: string;
+                description: string;
+              }, idx: number) => (
                 <div key={idx} className="bg-gradient-to-r from-blue-100/60 to-cyan-100/60 dark:from-blue-900/30 dark:to-cyan-900/30 rounded-lg p-4 border border-blue-100 dark:border-blue-900 shadow-sm">
                   {/* Badges always at the top of the card */}
                   <div className="flex gap-1 mb-2">
@@ -925,10 +954,10 @@ export function AthleteProfile({
     }
   };
 
-  // Use campExperience from profileData if present, otherwise fallback to mock
+  // Use campExperience from profileData if present, otherwise use empty array for testing
   const campExperience = safeProfileData.campExperience && safeProfileData.campExperience.length > 0
     ? safeProfileData.campExperience
-    : mockCampExperience;
+    : [];
 
   if (!safeProfileData) {
     return null;
