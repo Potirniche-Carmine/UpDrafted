@@ -30,6 +30,15 @@ export interface AthleteProfileData {
   height: string;
   weight: string;
   positions: string[];
+  campExperience?: Array<{
+    type: 'Camp' | 'Club';
+    name: string;
+    city: string;
+    stateCountry: string;
+    date: string;
+    sport: string;
+    description: string;
+  }>;
 
   // Verification
   maxPrepsUrl?: string;

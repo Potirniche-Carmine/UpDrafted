@@ -306,6 +306,101 @@ const SocialMediaSection = memo(({ socialMedia, isOwnProfile, onEdit }: {
 
 SocialMediaSection.displayName = "SocialMediaSection";
 
+// Demo mock data for camp and club experience
+const mockCampExperience = [
+  {
+    type: "Camp" as 'Camp',
+    name: "Nike Elite Football Camp",
+    city: "Dallas",
+    stateCountry: "TX",
+    date: "June 2023",
+    sport: "Football",
+    description: "Participated in advanced skills training and scrimmages with top high school athletes. Selected for All-Star team.",
+  },
+  {
+    type: "Club" as 'Club',
+    name: "Dallas Select 7v7",
+    city: "Dallas",
+    stateCountry: "TX",
+    date: "Spring 2022 - Summer 2023",
+    sport: "Flag Football",
+    description: "Starting Wide Receiver. Helped team reach state semifinals."
+  },
+  {
+    type: "Camp" as 'Camp',
+    name: "Adidas National Soccer Showcase",
+    city: "Houston",
+    stateCountry: "TX",
+    date: "July 2022",
+    sport: "Soccer",
+    description: "Trained with top coaches and played in showcase matches."
+  }
+];
+
+// Update CampExperienceCard prop types and usage
+function CampExperienceCard({ experiences, isOwnProfile, onEdit }: { experiences: typeof mockCampExperience, isOwnProfile: boolean, onEdit?: () => void }) {
+  return (
+    <Card className="bg-gradient-to-r from-blue-50/50 to-cyan-50/50 dark:from-blue-950/20 dark:to-cyan-950/20 mb-4 w-full max-w-xs mx-auto sm:max-w-full sm:mx-0 min-h-[260px]">
+      <CardContent className="p-4">
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-blue-100 dark:bg-blue-900 rounded-full">
+              <Trophy className="w-5 h-5 text-blue-600" />
+            </div>
+            <div>
+              <h3 className="font-semibold text-lg">Camp and Club Experience</h3>
+              <p className="text-sm text-muted-foreground">Showcase your athletic journey outside your main team</p>
+            </div>
+          </div>
+          {isOwnProfile && (
+            <Button size="sm" variant="ghost" onClick={onEdit}>
+              <Edit className="w-4 h-4 mr-1" />
+              Edit
+            </Button>
+          )}
+        </div>
+        <div className="space-y-4">
+          {experiences.length === 0 ? (
+            <div className="bg-white/50 dark:bg-gray-900/50 rounded-lg p-4 text-center">
+              <Trophy className="w-8 h-8 text-blue-600 mx-auto mb-2" />
+              <h4 className="font-medium mb-2">No Camp or Club Experience Added</h4>
+              <p className="text-sm text-muted-foreground mb-3">
+                Add camps, showcases, or clubs you have participated in to highlight your dedication and versatility.
+              </p>
+              {isOwnProfile && (
+                <Button size="sm" variant="outline" onClick={onEdit}>
+                  <Plus className="w-4 h-4 mr-2" />
+                  Add Experience
+                </Button>
+              )}
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {experiences.map((exp, idx) => (
+                <div key={idx} className="bg-gradient-to-r from-blue-100/60 to-cyan-100/60 dark:from-blue-900/30 dark:to-cyan-900/30 rounded-lg p-4 border border-blue-100 dark:border-blue-900 shadow-sm">
+                  {/* Badges always in fixed place, stacked on mobile, row on sm+ */}
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 mb-1">
+                    <div className="flex gap-1">
+                      <Badge className={`text-white text-[10px] px-2 py-0.5 ${exp.type === 'Camp' ? 'bg-blue-600' : 'bg-cyan-700'}`}>{exp.type === 'Camp' ? 'Camp' : 'Club'}</Badge>
+                      <Badge className="bg-gradient-to-r from-green-400 to-blue-500 text-white text-[10px] px-2 py-0.5">{exp.sport}</Badge>
+                    </div>
+                  </div>
+                  <div className="font-semibold text-base mb-1">{exp.name}</div>
+                  <div className="flex flex-wrap gap-4 text-sm text-muted-foreground mb-1">
+                    <span className="flex items-center gap-1"><MapPin className="w-3 h-3" />{exp.city && exp.stateCountry ? `${exp.city}, ${exp.stateCountry}` : exp.city || exp.stateCountry}</span>
+                    <span>{exp.date}</span>
+                  </div>
+                  <p className="text-sm text-foreground mt-1">{exp.description}</p>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 export function AthleteProfile({ 
   data, 
   isOwnProfile = false, 
@@ -829,6 +924,11 @@ export function AthleteProfile({
     }
   };
 
+  // Use campExperience from profileData if present, otherwise fallback to mock
+  const campExperience = safeProfileData.campExperience && safeProfileData.campExperience.length > 0
+    ? safeProfileData.campExperience
+    : mockCampExperience;
+
   if (!safeProfileData) {
     return null;
   }
@@ -905,7 +1005,8 @@ export function AthleteProfile({
         dialogType={editDialogOpen}
         profileData={{
           ...safeProfileData,
-          measurables: measurablesWithStableIds
+          measurables: measurablesWithStableIds,
+          campExperience: campExperience
         }}
         measurableIdToEdit={measurableIdToEdit}
         onClose={() => {
@@ -942,7 +1043,7 @@ export function AthleteProfile({
           {/* Sidebar - Basic Info */}
           <div className="space-y-4 md:space-y-6">
             {/* Profile Card */}
-            <Card>
+            <Card className="w-full max-w-xs mx-auto sm:max-w-full sm:mx-0 min-h-[260px]">
               <CardContent className="p-4 md:p-6">
                 <div className="text-center">
                   <div className="relative w-24 h-24 md:w-32 md:h-32 mx-auto mb-4 flex-shrink-0">
@@ -1129,17 +1230,24 @@ export function AthleteProfile({
                 />
               </CardContent>
             </Card>
-
-            {/* Academic Summary Card */}
-            <AcademicSummaryCard
-              gpa={safeProfileData.gpa}
-              satScore={safeProfileData.satScore}
-              actScore={safeProfileData.actScore}
-              intendedMajor={safeProfileData.intendedMajor}
-              educationLevel={safeProfileData.educationLevel}
+            {/* Camp Experience / Club Card */}
+            <CampExperienceCard 
+              experiences={campExperience} 
               isOwnProfile={effectiveIsOwnProfile}
-              onEditSection={handleEditSection}
+              onEdit={() => handleEditSection('camp-experience')}
             />
+            {/* Academic Summary Card */}
+            <div className="w-full max-w-xs mx-auto sm:max-w-full sm:mx-0 min-h-[260px]">
+              <AcademicSummaryCard
+                gpa={safeProfileData.gpa}
+                satScore={safeProfileData.satScore}
+                actScore={safeProfileData.actScore}
+                intendedMajor={safeProfileData.intendedMajor}
+                educationLevel={safeProfileData.educationLevel}
+                isOwnProfile={effectiveIsOwnProfile}
+                onEditSection={handleEditSection}
+              />
+            </div>
           </div>
 
           {/* Main Content */}

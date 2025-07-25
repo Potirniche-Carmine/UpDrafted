@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -120,6 +120,15 @@ export interface AthleteProfileData {
   personalStatement?: string;
   achievements?: string[];
   measurables?: Measurable[];
+  campExperience?: Array<{
+    type: 'Camp' | 'Club',
+    name: string,
+    city: string;
+    stateCountry: string;
+    date: string;
+    sport: string,
+    description: string
+  }>;
 }
 
 interface AthleteEditDialogsProps {
@@ -131,6 +140,45 @@ interface AthleteEditDialogsProps {
   onSave: (updates: Partial<AthleteProfileData>) => void;
   selectedSport: string;
 }
+
+// Add mockCampExperience at the top of the file for use in the dialog
+const mockCampExperience: Array<{
+  type: 'Camp' | 'Club';
+  name: string;
+  city: string;
+  stateCountry: string;
+  date: string;
+  sport: string;
+  description: string;
+}> = [
+  {
+    type: "Camp" as 'Camp',
+    name: "Nike Elite Football Camp",
+    city: "Dallas",
+    stateCountry: "TX",
+    date: "June 2023",
+    sport: "Football",
+    description: "Participated in advanced skills training and scrimmages with top high school athletes. Selected for All-Star team.",
+  },
+  {
+    type: "Club" as 'Club',
+    name: "Dallas Select 7v7",
+    city: "Dallas",
+    stateCountry: "TX",
+    date: "Spring 2022 - Summer 2023",
+    sport: "Flag Football",
+    description: "Starting Wide Receiver. Helped team reach state semifinals."
+  },
+  {
+    type: "Camp" as 'Camp',
+    name: "Adidas National Soccer Showcase",
+    city: "Houston",
+    stateCountry: "TX",
+    date: "July 2022",
+    sport: "Soccer",
+    description: "Trained with top coaches and played in showcase matches."
+  }
+];
 
 export function AthleteEditDialogs({
   isOpen,
@@ -150,6 +198,30 @@ export function AthleteEditDialogs({
   const [profileImagePreview, setProfileImagePreview] = useState<string | null>(null);
   const [selectedProfileFile, setSelectedProfileFile] = useState<File | null>(null);
   const [isDirty, setIsDirty] = useState(false);
+
+  // Add state for camp/club experience editing
+  const [tempCampExperience, setTempCampExperience] = useState<Array<{
+    type: 'Camp' | 'Club',
+    name: string,
+    city: string,
+    stateCountry: string,
+    date: string,
+    sport: string,
+    description: string
+  }>>(profileData.campExperience || []);
+  const [campEditIndex, setCampEditIndex] = useState<number | null>(null);
+  const [campForm, setCampForm] = useState({
+    type: 'Camp' as 'Camp' | 'Club',
+    name: '',
+    city: '',
+    stateCountry: '',
+    date: '',
+    sport: '',
+    description: ''
+  });
+  const [campFormError, setCampFormError] = useState<string | null>(null);
+  // Ref for the add/edit form
+  const campFormRef = useRef<HTMLDivElement>(null);
 
   // Get admin role information for demo profile uploads
   const { isAdmin, viewingAs } = useRoleView();
@@ -294,6 +366,9 @@ export function AthleteEditDialogs({
         setEditData({});
         // Only reset image state when dialog first opens, not when profileData changes
         // This prevents resetting the form after successful image upload
+        break;
+      case 'camp-experience':
+        // Initialization now handled in separate useEffect
         break;
     }
   }, [dialogType, profileData, measurableToEdit, selectedSport]);
@@ -1793,6 +1868,176 @@ export function AthleteEditDialogs({
         );
       }
 
+      case 'camp-experience': {
+        // Limit to 3 experiences
+        const MAX_EXPERIENCES = 3;
+        const atMax = tempCampExperience.length >= MAX_EXPERIENCES;
+        return (
+          <>
+            <DialogHeader>
+              <DialogTitle>Edit Camp and Club Experience</DialogTitle>
+              <DialogDescription>
+                You can add up to 3 camp or club experiences. Edit, remove, or add new experiences below.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-6 max-h-[70vh] overflow-y-auto pr-2">
+              {/* List current experiences */}
+              <div className="space-y-2">
+                <h4 className="font-medium flex items-center gap-2">
+                  Current Experiences
+                  <span className="text-xs text-muted-foreground">({tempCampExperience.length} / {MAX_EXPERIENCES})</span>
+                </h4>
+                {tempCampExperience.length === 0 && (
+                  <div className="text-muted-foreground text-sm">No experiences added yet.</div>
+                )}
+                {tempCampExperience.map((exp, idx) => (
+                  <div key={idx} className="border rounded-lg p-3 flex flex-col gap-1 bg-muted/30">
+                    {campEditIndex === idx ? (
+                      <>
+                        <div className="flex flex-wrap gap-2 items-center mb-2">
+                          {/* Type dropdown */}
+                          <Select value={campForm.type} onValueChange={v => setCampForm(f => ({ ...f, type: v as 'Camp' | 'Club' }))}>
+                            <SelectTrigger className="w-24"><SelectValue /></SelectTrigger>
+                            <SelectContent className="z-[9999]">
+                              <SelectItem value="Camp">Camp</SelectItem>
+                              <SelectItem value="Club">Club</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          {/* Sport dropdown */}
+                          <Select value={campForm.sport} onValueChange={v => setCampForm(f => ({ ...f, sport: v }))}>
+                            <SelectTrigger className="w-32"><SelectValue placeholder="Sport" /></SelectTrigger>
+                            <SelectContent className="z-[9999]">
+                              {getSportsList().map(sport => (
+                                <SelectItem key={sport} value={sport}>{sport}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        {/* Editable title */}
+                        <Input
+                          className="font-semibold text-base mb-1"
+                          value={campForm.name}
+                          onChange={e => setCampForm(f => ({ ...f, name: e.target.value }))}
+                          maxLength={50}
+                          placeholder="Title"
+                        />
+                        {/* City, State/Country, Date on the same line */}
+                        <div className="flex flex-row gap-4 text-sm text-muted-foreground mb-1 flex-nowrap">
+                          <Input
+                            className="w-32"
+                            value={campForm.city}
+                            onChange={e => setCampForm(f => ({ ...f, city: e.target.value }))}
+                            maxLength={50}
+                            placeholder="City"
+                          />
+                          <Input
+                            className="w-40"
+                            value={campForm.stateCountry}
+                            onChange={e => setCampForm(f => ({ ...f, stateCountry: e.target.value }))}
+                            maxLength={50}
+                            placeholder="State/Country"
+                          />
+                          <Input
+                            className="w-40"
+                            value={campForm.date}
+                            onChange={e => setCampForm(f => ({ ...f, date: e.target.value }))}
+                            maxLength={30}
+                            placeholder="Date"
+                          />
+                        </div>
+                        {/* Editable description */}
+                        <Textarea
+                          className="text-sm text-foreground mt-1"
+                          value={campForm.description}
+                          onChange={e => setCampForm(f => ({ ...f, description: e.target.value }))}
+                          maxLength={200}
+                          rows={2}
+                          placeholder="Description"
+                        />
+                        {campFormError && <p className="text-red-500 text-sm mt-2">{campFormError}</p>}
+                        <div className="flex gap-2 mt-2">
+                          <Button size="sm" onClick={() => {
+                            // Validate
+                            if (!campForm.name.trim() || !campForm.city.trim() || !campForm.stateCountry.trim() || !campForm.date.trim() || !campForm.sport.trim() || !campForm.description.trim()) {
+                              setCampFormError('All fields are required.');
+                              return;
+                            }
+                            setCampFormError(null);
+                            // Save changes to this experience
+                            const updated = [...tempCampExperience];
+                            updated[idx] = { ...campForm };
+                            setTempCampExperience(updated);
+                            setCampEditIndex(null);
+                            setCampForm({ type: 'Camp', name: '', city: '', stateCountry: '', date: '', sport: '', description: '' });
+                            setIsDirty(true);
+                          }}>Save</Button>
+                          <Button size="sm" variant="outline" onClick={() => {
+                            setCampEditIndex(null);
+                            setCampForm({ type: 'Camp', name: '', city: '', stateCountry: '', date: '', sport: '', description: '' });
+                            setCampFormError(null);
+                          }}>Cancel</Button>
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <div className="flex flex-wrap gap-2 items-center">
+                          <Badge className={exp.type === 'Camp' ? 'bg-blue-600 text-white' : 'bg-cyan-700 text-white'}>{exp.type}</Badge>
+                          <Badge className="bg-gradient-to-r from-green-400 to-blue-500 text-white">{exp.sport}</Badge>
+                          <span className="font-semibold">{exp.name}</span>
+                        </div>
+                        <div className="flex flex-wrap gap-2 items-center text-xs text-muted-foreground mb- space-x-1">
+                          <span>{exp.city && exp.stateCountry ? `${exp.city}, ${exp.stateCountry}` : exp.city || exp.stateCountry}</span>
+                          <span>{exp.date}</span>
+                        </div>
+                        <div className="text-sm text-muted-foreground">{exp.description}</div>
+                        <div className="flex gap-2 mt-1">
+                          <Button size="sm" variant="outline" onClick={() => {
+                            setCampEditIndex(idx);
+                            setCampForm(exp);
+                            setCampFormError(null);
+                          }}>Edit</Button>
+                          <Button size="sm" variant="destructive" onClick={() => {
+                            setTempCampExperience(tempCampExperience.filter((_, i) => i !== idx));
+                            setIsDirty(true);
+                            if (campEditIndex === idx) {
+                              setCampEditIndex(null);
+                              setCampForm({ type: 'Camp', name: '', city: '', stateCountry: '', date: '', sport: '', description: '' });
+                            }
+                          }}>Remove</Button>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                ))}
+                {/* Add new experience button if less than 3 and not editing */}
+                {!atMax && campEditIndex === null && (
+                  <div className="pt-2">
+                    <Button size="sm" variant="outline" onClick={() => {
+                      setCampEditIndex(tempCampExperience.length);
+                      setCampForm({ type: 'Camp', name: '', city: '', stateCountry: '', date: '', sport: '', description: '' });
+                      setCampFormError(null);
+                      setTempCampExperience([...tempCampExperience, { type: 'Camp', name: '', city: '', stateCountry: '', date: '', sport: '', description: '' }]);
+                    }}>
+                      + Add New Experience
+                    </Button>
+                  </div>
+                )}
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={onClose}>Cancel</Button>
+              <Button onClick={() => {
+                // Remove any empty new experience that was never saved
+                const cleaned = tempCampExperience.filter(exp => exp.name.trim() && exp.city.trim() && exp.stateCountry.trim() && exp.date.trim() && exp.sport.trim() && exp.description.trim());
+                onSave({ campExperience: cleaned });
+                setIsDirty(false);
+                onClose();
+              }} disabled={!isDirty}>Save All Changes</Button>
+            </DialogFooter>
+          </>
+        );
+      }
+
       default:
         return (
           <>
@@ -1807,6 +2052,27 @@ export function AthleteEditDialogs({
         );
     }
   };
+
+  // Only initialize tempCampExperience when dialog is first opened for camp-experience
+  useEffect(() => {
+    if (isOpen && dialogType === 'camp-experience' && !campExperienceInitializedRef.current) {
+      setTempCampExperience(
+        Array.isArray(profileData.campExperience) && profileData.campExperience.length > 0
+          ? profileData.campExperience
+          : mockCampExperience
+      );
+      setCampEditIndex(null);
+      setCampForm({ type: 'Camp', name: '', city: '', stateCountry: '', date: '', sport: '', description: '' });
+      setCampFormError(null);
+      campExperienceInitializedRef.current = true;
+    }
+    if (!isOpen) {
+      campExperienceInitializedRef.current = false;
+    }
+  }, [isOpen, dialogType]);
+
+  // Add a ref to track if initialization has happened for this open session
+  const campExperienceInitializedRef = useRef(false);
 
   return (
     <>
@@ -1847,7 +2113,7 @@ export function AthleteEditDialogs({
                   Delete Metric
                 </Button>
               </DialogFooter>
-            ) : dialogType !== 'profile-image' ? (
+            ) : (dialogType !== 'profile-image' && dialogType !== 'camp-experience') ? (
               <DialogFooter>
                 <Button variant="outline" onClick={onClose}>Cancel</Button>
                 <Button 
