@@ -35,7 +35,8 @@ export interface AthleteProfileData {
     name: string;
     city: string;
     stateCountry: string;
-    date: string;
+    startDate: string;
+    endDate: string;
     sport: string;
     description: string;
   }>;

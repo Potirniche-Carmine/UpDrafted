@@ -313,7 +313,8 @@ const mockCampExperience = [
     name: "Nike Elite Football Camp",
     city: "Dallas",
     stateCountry: "TX",
-    date: "June 2023",
+    startDate: "June 2023",
+    endDate: "June 2023",
     sport: "Football",
     description: "Participated in advanced skills training and scrimmages with top high school athletes. Selected for All-Star team.",
   },
@@ -322,7 +323,8 @@ const mockCampExperience = [
     name: "Dallas Select 7v7",
     city: "Dallas",
     stateCountry: "TX",
-    date: "Spring 2022 - Summer 2023",
+    startDate: "June 2022",
+    endDate: "July 2023",
     sport: "Flag Football",
     description: "Starting Wide Receiver. Helped team reach state semifinals."
   },
@@ -331,7 +333,8 @@ const mockCampExperience = [
     name: "Adidas National Soccer Showcase",
     city: "Houston",
     stateCountry: "TX",
-    date: "July 2022",
+    startDate: "July 2022",
+    endDate: "July 2022",
     sport: "Soccer",
     description: "Trained with top coaches and played in showcase matches."
   }
@@ -378,17 +381,15 @@ function CampExperienceCard({ experiences, isOwnProfile, onEdit }: { experiences
             <div className="space-y-3">
               {experiences.map((exp, idx) => (
                 <div key={idx} className="bg-gradient-to-r from-blue-100/60 to-cyan-100/60 dark:from-blue-900/30 dark:to-cyan-900/30 rounded-lg p-4 border border-blue-100 dark:border-blue-900 shadow-sm">
-                  {/* Badges always in fixed place, stacked on mobile, row on sm+ */}
-                  <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 mb-1">
-                    <div className="flex gap-1">
-                      <Badge className={`text-white text-[10px] px-2 py-0.5 ${exp.type === 'Camp' ? 'bg-blue-600' : 'bg-cyan-700'}`}>{exp.type === 'Camp' ? 'Camp' : 'Club'}</Badge>
-                      <Badge className="bg-gradient-to-r from-green-400 to-blue-500 text-white text-[10px] px-2 py-0.5">{exp.sport}</Badge>
-                    </div>
+                  {/* Badges always at the top of the card */}
+                  <div className="flex gap-1 mb-2">
+                    <Badge className={`text-white text-[10px] px-2 py-0.5 ${exp.type === 'Camp' ? 'bg-blue-600' : 'bg-cyan-700'}`}>{exp.type === 'Camp' ? 'Camp' : 'Club'}</Badge>
+                    <Badge className="bg-gradient-to-r from-green-400 to-blue-500 text-white text-[10px] px-2 py-0.5">{exp.sport}</Badge>
                   </div>
                   <div className="font-semibold text-base mb-1">{exp.name}</div>
                   <div className="flex flex-wrap gap-4 text-sm text-muted-foreground mb-1">
                     <span className="flex items-center gap-1"><MapPin className="w-3 h-3" />{exp.city && exp.stateCountry ? `${exp.city}, ${exp.stateCountry}` : exp.city || exp.stateCountry}</span>
-                    <span>{exp.date}</span>
+                    <span>{exp.startDate} - {exp.endDate}</span>
                   </div>
                   <p className="text-sm text-foreground mt-1">{exp.description}</p>
                 </div>
