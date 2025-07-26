@@ -24,6 +24,7 @@ export interface AthleteProfileData {
   organizationName: string;
   city: string;
   state: string;
+  country: string; // Country of the athlete
   gpa?: number | string;
   satScore?: number;
   actScore?: number;

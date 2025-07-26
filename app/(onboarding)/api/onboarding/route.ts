@@ -164,7 +164,8 @@ export async function POST(request: NextRequest) {
             educationLevel: profileData.educationLevel!,
             organizationName: profileData.organizationName!,
             city: profileData.city,
-            state: profileData.state,
+            country: profileData.country, // Country is required, no fallback
+            state: profileData.state || null,
             division: profileData.division,
             conference: profileData.conference,
             height: profileData.height!,
@@ -193,7 +194,8 @@ export async function POST(request: NextRequest) {
             division: profileData.division!,
             conference: profileData.conference,
             city: profileData.city,
-            state: profileData.state,
+            country: profileData.country, // Country is required, no fallback
+            state: profileData.state || null,
             programWebsite: profileData.programWebsite,
             schoolWebsite: profileData.schoolWebsite,
             instagramHandle: profileData.orgInstagramHandle,
@@ -225,7 +227,8 @@ export async function POST(request: NextRequest) {
             division: profileData.division!,
             conference: profileData.conference,
             city: profileData.city,
-            state: profileData.state,
+            country: profileData.country, // Country is required, no fallback
+            state: profileData.state || null,
             programWebsite: profileData.programWebsite,
             schoolWebsite: profileData.schoolWebsite,
             instagramHandle: profileData.orgInstagramHandle,
@@ -262,7 +265,7 @@ export async function POST(request: NextRequest) {
           result = await onboardingOperations.createAthleteOnboarding(
             userId, 
             email, 
-            profileData, 
+            profileData,
             profileImageR3Key
           )
           profileId = result.athleteProfile.id
@@ -271,7 +274,7 @@ export async function POST(request: NextRequest) {
           result = await onboardingOperations.createCoachOnboarding(
             userId, 
             email, 
-            profileData, 
+            profileData,
             profileImageR3Key,
             organizationLogoR3Key
           )
@@ -281,7 +284,7 @@ export async function POST(request: NextRequest) {
           result = await onboardingOperations.createRecruiterOnboarding(
             userId, 
             email, 
-            profileData, 
+            profileData,
             profileImageR3Key,
             organizationLogoR3Key
           )

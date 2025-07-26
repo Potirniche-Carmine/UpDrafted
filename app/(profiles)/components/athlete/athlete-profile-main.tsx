@@ -1042,8 +1042,19 @@ export function AthleteProfile({
                     <div className="text-sm text-muted-foreground space-y-1">
                       <div className="flex items-center justify-center gap-1 min-w-0">
                         <MapPin className="w-3 h-3 flex-shrink-0" />
-                        <span className="text-center break-words whitespace-normal">{safeProfileData.city}, {safeProfileData.state}</span>
+                        <span className="text-center break-words whitespace-normal">
+                          {/* Only show comma if state exists and country is United States */}
+                          {safeProfileData.city}
+                          {safeProfileData.country === 'United States' && safeProfileData.state ? `, ${safeProfileData.state}` : ''}
+                        </span>
                       </div>
+                      {safeProfileData.country && (
+                        <div className="flex justify-center mt-1">
+                          <Badge className="bg-gradient-to-r from-blue-600 to-purple-600 text-white text-xs px-3 py-1 shadow-md font-semibold uppercase tracking-wide">
+                            {safeProfileData.country}
+                          </Badge>
+                        </div>
+                      )}
                       <p className="text-center break-words">{safeProfileData.organizationName}</p>
                       <p className="text-center">Class of {safeProfileData.graduationYear}</p>
                       

@@ -101,6 +101,10 @@ function transformProfileData(profileData: Record<string, any>, profileType: str
     if (!transformed.hudlEmbedUrl || transformed.hudlEmbedUrl.trim() === '') {
       transformed.hudlEmbedUrl = undefined;
     }
+    // Add country field
+    if (profileData.country) {
+      transformed.country = profileData.country;
+    }
   } else if (profileType === 'coach' || profileType === 'recruiter') {
     // Preserve userId for client-side API calls
     if (profileData.userId) {
@@ -115,6 +119,10 @@ function transformProfileData(profileData: Record<string, any>, profileType: str
     // Transform organization logo from R3 key to URL using proper R2 configuration
     if (profileData.organizationLogoR3Key) {
       transformed.organizationLogo = constructR2Url(R2_PUBLIC_URL, profileData.organizationLogoR3Key);
+    }
+    // Add country field
+    if (profileData.country) {
+      transformed.country = profileData.country;
     }
   }
 
@@ -902,6 +910,15 @@ export async function PUT(
 
     // Update profile based on type
     if (profileType === 'athlete') {
+      // If country is being changed from 'United States' to another country, set state to null only if not already null/undefined
+      if (
+        sanitizedData.country !== undefined &&
+        sanitizedData.country !== 'United States' &&
+        sanitizedData.state !== null &&
+        sanitizedData.state !== undefined
+      ) {
+        sanitizedData.state = null;
+      }
       // First, update the athlete profile data
       const profileUpdateData: Partial<NewAthleteProfile> = {};
       
@@ -924,6 +941,7 @@ export async function PUT(
       if (sanitizedData.actScore !== undefined) profileUpdateData.actScore = sanitizedData.actScore as number;
       if (sanitizedData.intendedMajor !== undefined) profileUpdateData.intendedMajor = sanitizedData.intendedMajor as string;
       if (sanitizedData.personalStatement !== undefined) profileUpdateData.personalStatement = sanitizedData.personalStatement as string;
+      if (sanitizedData.country !== undefined) profileUpdateData.country = sanitizedData.country as string;
       
       // Handle URL fields with correct field names
       if (sanitizedData.maxPrepsUrl !== undefined) profileUpdateData.maxprepsUrl = sanitizedData.maxPrepsUrl as string;
@@ -1001,6 +1019,15 @@ export async function PUT(
       }
       
     } else if (profileType === 'coach') {
+      // If country is being changed from 'United States' to another country, set state to null only if not already null/undefined
+      if (
+        sanitizedData.country !== undefined &&
+        sanitizedData.country !== 'United States' &&
+        sanitizedData.state !== null &&
+        sanitizedData.state !== undefined
+      ) {
+        sanitizedData.state = null;
+      }
       // Update coach profile
       const profileUpdateData: Partial<NewCoachProfile> = {};
       
@@ -1021,6 +1048,7 @@ export async function PUT(
       if (sanitizedData.showcaseVideoTitle !== undefined) profileUpdateData.showcaseVideoTitle = sanitizedData.showcaseVideoTitle as string;
       if (sanitizedData.showcaseVideoUrl !== undefined) profileUpdateData.showcaseVideoUrl = sanitizedData.showcaseVideoUrl as string;
       if (sanitizedData.showcaseVideoEmbedUrl !== undefined) profileUpdateData.showcaseVideoEmbedUrl = sanitizedData.showcaseVideoEmbedUrl as string;
+      if (sanitizedData.country !== undefined) profileUpdateData.country = sanitizedData.country as string;
 
       // Update the coach profile in the database
       updatedProfile = await coachOperations.updateCoachProfile(profileUserId, profileUpdateData);
@@ -1061,6 +1089,15 @@ export async function PUT(
       }
       
     } else if (profileType === 'recruiter') {
+      // If country is being changed from 'United States' to another country, set state to null only if not already null/undefined
+      if (
+        sanitizedData.country !== undefined &&
+        sanitizedData.country !== 'United States' &&
+        sanitizedData.state !== null &&
+        sanitizedData.state !== undefined
+      ) {
+        sanitizedData.state = null;
+      }
       // Update recruiting profile
       const profileUpdateData: Partial<NewRecruitingProfile> = {};
       
@@ -1082,6 +1119,7 @@ export async function PUT(
       if (sanitizedData.showcaseVideoTitle !== undefined) profileUpdateData.showcaseVideoTitle = sanitizedData.showcaseVideoTitle as string;
       if (sanitizedData.showcaseVideoUrl !== undefined) profileUpdateData.showcaseVideoUrl = sanitizedData.showcaseVideoUrl as string;
       if (sanitizedData.showcaseVideoEmbedUrl !== undefined) profileUpdateData.showcaseVideoEmbedUrl = sanitizedData.showcaseVideoEmbedUrl as string;
+      if (sanitizedData.country !== undefined) profileUpdateData.country = sanitizedData.country as string;
 
       // Update the recruiting profile in the database
       updatedProfile = await recruitingOperations.updateRecruitingProfile(profileUserId, profileUpdateData);
