@@ -11,6 +11,7 @@ export interface BaseProfileData {
   conference?: string;
   city: string;
   state: string;
+  country: string;
 
   // Verification
   isVerified: boolean;
