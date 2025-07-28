@@ -278,15 +278,29 @@
     {
       "idx": 39,
       "version": "7",
-      "when": 1753135563652,
-      "tag": "0039_modern_punisher",
+      "when": 1753201285344,
+      "tag": "0039_third_brother_voodoo",
       "breakpoints": true
     },
     {
       "idx": 40,
       "version": "7",
       "when": 1753136501773,
-      "tag": "0040_oval_kat_farrell",
+      "tag": "0040_modern_punisher",
+      "breakpoints": true
+    },
+    {
+      "idx": 41,
+      "version": "7",
+      "when": 1753292336701,
+      "tag": "0041_fast_titania",
+      "breakpoints": true
+    },
+    {
+      "idx": 42,
+      "version": "7",
+      "when": 1753292633754,
+      "tag": "0042_flashy_arclight",
       "breakpoints": true
     }
   ]

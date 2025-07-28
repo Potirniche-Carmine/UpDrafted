@@ -50,7 +50,8 @@ export const athleteProfiles = pgTable('athlete_profiles', {
   competitionLevel: text('competition_level'),
   organizationName: text('organization_name').notNull(),
   city: text('city').notNull(),
-  state: text('state').notNull(),
+  country: text('country').notNull().default('United States'), // Added country (required)
+  state: text('state'), // Made nullable
   height: text('height').notNull(),
   weight: text('weight').notNull(),
   positions: text('positions').array().notNull(),
@@ -137,7 +138,8 @@ export const coachProfiles = pgTable('coach_profiles', {
   division: text('division').notNull(),
   conference: text('conference'),
   city: text('city').notNull(),
-  state: text('state').notNull(),
+  country: text('country').notNull().default('United States'), // Added country (required)
+  state: text('state'), // Made nullable
   isVerified: boolean('is_verified').default(false),
   programWebsite: text('program_website'),
   schoolWebsite: text('school_website'),
@@ -169,7 +171,8 @@ export const recruitingProfiles = pgTable('recruiting_profiles', {
   division: text('division').notNull(),
   conference: text('conference'),
   city: text('city').notNull(),
-  state: text('state').notNull(),
+  country: text('country').notNull().default('United States'), // Added country (required)
+  state: text('state'), // Made nullable
   isVerified: boolean('is_verified').default(false),
   programWebsite: text('program_website'),
   schoolWebsite: text('school_website'),

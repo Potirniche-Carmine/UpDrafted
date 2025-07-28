@@ -18,6 +18,7 @@ export interface OnboardingFormData {
   organizationName: string;
   city: string;
   state: string;
+  country: string; // New: athlete country (default United States)
   heightFeet: string;
   heightInches: string;
   weight: string;
@@ -76,6 +77,7 @@ export interface OnboardingProfileData {
   organizationName?: string;
   city: string;
   state: string;
+  country: string;
   height?: string; // Combined from heightFeet and heightInches
   weight?: string;
   positions?: string[];
@@ -126,6 +128,7 @@ export function convertFormDataToProfileData(formData: OnboardingFormData): Onbo
     organizationName: formData.organizationName.trim(),
     city: formData.city.trim(),
     state: formData.state,
+    country: formData.country,
     height: formData.heightFeet && formData.heightInches 
       ? `${formData.heightFeet}'${formData.heightInches}"` 
       : undefined,

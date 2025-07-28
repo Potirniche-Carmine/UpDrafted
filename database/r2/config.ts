@@ -98,6 +98,11 @@ export async function generatePresignedUrl(
   // Choose bucket based on file type
   const bucketName = isPrivateFile ? R2_PRIVATE_BUCKET_NAME : R2_PUBLIC_BUCKET_NAME;
   
+  // Prevent DELETE operations on public files for security
+  if (operation === 'DELETE' && !isPrivateFile) {
+    throw new Error('DELETE operations are not allowed on public files for security reasons');
+  }
+  
   let command;
   
   switch (operation) {

@@ -11,6 +11,7 @@ export interface CoachProfileData {
   organizationLogoR3Key?: string;
   city: string;
   state: string;
+  country: string;
   
   // Division info (this contains the level information)
   division: string;

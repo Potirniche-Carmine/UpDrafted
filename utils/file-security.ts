@@ -294,32 +294,3 @@ export class FileUploadRateLimit {
     }
   }
 }
-
-/**
- * Virus scanning simulation (in production, integrate with actual antivirus)
- */
-export async function simulateVirusScan(buffer: Uint8Array): Promise<{ isClean: boolean; threat?: string }> {
-  // This is a placeholder for actual virus scanning
-  // In production, integrate with services like ClamAV, VirusTotal, etc.
-  
-  // Basic heuristic checks
-  const content = new TextDecoder('utf-8', { fatal: false }).decode(buffer);
-  
-  // Check for common malware signatures (simplified)
-  const malwareSignatures = [
-    'eval(',
-    'base64_decode(',
-    'shell_exec(',
-    'system(',
-    'exec(',
-    'passthru('
-  ];
-  
-  for (const signature of malwareSignatures) {
-    if (content.includes(signature)) {
-      return { isClean: false, threat: 'Potential malware detected' };
-    }
-  }
-  
-  return { isClean: true };
-} 

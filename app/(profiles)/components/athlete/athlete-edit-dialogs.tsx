@@ -88,6 +88,25 @@ const CAMP_END_DATE_OPTIONS = generateCampEndDateOptions();
 // Add constant for video limit
 const VIDEO_LIMIT = 2;
 
+// Add countries list for country select
+const COUNTRIES = [
+  "United States",
+  "Canada",
+  "United Kingdom",
+  "Australia",
+  "Germany",
+  "France",
+  "Spain",
+  "Italy",
+  "Brazil",
+  "Mexico",
+  "Japan",
+  "South Korea",
+  "Netherlands",
+  "Sweden",
+  "New Zealand"
+];
+
 export interface Measurable {
   id: string;
   sport: string;
@@ -110,6 +129,7 @@ export interface AthleteProfileData {
   organizationName: string;
   city: string;
   state: string;
+  country?: string;
   gpa?: number | string;
   satScore?: number;
   actScore?: number;
@@ -310,6 +330,8 @@ export function AthleteEditDialogs({
           conference: profileData.conference || '',
           city: profileData.city,
           state: profileData.state,
+          // Add country to editData initialization
+          country: profileData.country || '',
           organizationName: profileData.organizationName,
           graduationYear: profileData.graduationYear,
           heightFeet: heightParts ? heightParts[1] : '',
@@ -835,9 +857,16 @@ export function AthleteEditDialogs({
         updates.conference = editData.conference;
         updates.positions = editData.positions;
         updates.city = editData.city;
-        updates.state = editData.state;
+        // If country is not United States, clear state on the frontend as well
+        if (editData.country && editData.country !== 'United States') {
+          updates.state = '';
+        } else {
+          updates.state = editData.state;
+        }
         updates.organizationName = editData.organizationName;
         updates.graduationYear = editData.graduationYear;
+        // Add country to updates
+        updates.country = editData.country;
         // Construct height from feet and inches
         if (editData.heightFeet && editData.heightInches) {
           updates.height = `${editData.heightFeet}'${editData.heightInches}"`;
@@ -1152,6 +1181,23 @@ export function AthleteEditDialogs({
                 </div>
               )}
 
+              {/* Country select field */}
+              <div className="space-y-2">
+                <Label htmlFor="edit-country">Country *</Label>
+                <Select
+                  value={String(editData.country || '')}
+                  onValueChange={(value) => setEditData(prev => ({ ...prev, country: value }))}
+                >
+                  <SelectTrigger className="h-12" id="edit-country">
+                    <SelectValue placeholder="Select country" />
+                  </SelectTrigger>
+                  <SelectContent className="z-[70]">
+                    {COUNTRIES.map((country) => (
+                      <SelectItem key={country} value={country}>{country}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="edit-city">City *</Label>
@@ -1170,22 +1216,25 @@ export function AthleteEditDialogs({
                     <p className="text-sm text-red-500">{validationErrors.city}</p>
                   )}
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="edit-state">State *</Label>
-                  <Select
-                    value={String(editData.state || '')}
-                    onValueChange={(value) => setEditData(prev => ({ ...prev, state: value }))}
-                  >
-                    <SelectTrigger className="h-12" id="edit-state">
-                      <SelectValue placeholder="Select state" />
-                    </SelectTrigger>
-                    <SelectContent className="z-[70]">
-                      {US_STATES.map((state) => (
-                        <SelectItem key={state} value={state}>{state}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+                {/* Only show State * if country is United States or not selected */}
+                {(!editData.country || editData.country === 'United States') && (
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-state">State *</Label>
+                    <Select
+                      value={String(editData.state || '')}
+                      onValueChange={(value) => setEditData(prev => ({ ...prev, state: value }))}
+                    >
+                      <SelectTrigger className="h-12" id="edit-state">
+                        <SelectValue placeholder="Select state" />
+                      </SelectTrigger>
+                      <SelectContent className="z-[70]">
+                        {US_STATES.map((state) => (
+                          <SelectItem key={state} value={state}>{state}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
               </div>
 
               <div className="space-y-2">
