@@ -18,6 +18,17 @@ import { useRoleView } from '@/hooks/use-role-view';
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
 import { ConferenceSelector } from "@/components/ui/conference-selector";
 import { divisionHasConferences } from "@/lib/conference-data";
+import { 
+  generateCampDateOptions, 
+  generateCampEndDateOptions, 
+  formatCampDate, 
+  parseCampDate,
+  dateToISOString,
+  isoStringToDate,
+  formatDateRange,
+  sortCampExperiences,
+  type CampDateOption 
+} from '@/lib/date-utils';
 
 // Import field validation
 const FIELD_LIMITS = {
@@ -70,29 +81,9 @@ const YEAR_OPTIONS = Array.from({ length: 11 }, (_, i) => {
   return { value: year.toString(), label: year.toString() };
 });
 
-// Create date options for camp experience (current month to 10 years ago)
-const CAMP_DATE_OPTIONS = (() => {
-  const options = [];
-  const currentDate = new Date();
-  const currentMonth = currentDate.getMonth();
-  const currentYear = currentDate.getFullYear();
-  
-  for (let i = 0; i < 120; i++) { // 10 years * 12 months
-    const date = new Date(currentYear, currentMonth - i, 1);
-    const monthName = date.toLocaleDateString('en-US', { month: 'long' });
-    const year = date.getFullYear();
-    const value = `${monthName} ${year}`;
-    options.push({ value, label: value });
-  }
-  
-  return options;
-})();
-
-// Create end date options (same as start date but with "Present" at the top)
-const CAMP_END_DATE_OPTIONS = [
-  { value: 'Present', label: 'Present' },
-  ...CAMP_DATE_OPTIONS
-];
+// Use the new date utilities for camp experience options
+const CAMP_DATE_OPTIONS = generateCampDateOptions();
+const CAMP_END_DATE_OPTIONS = generateCampEndDateOptions();
 
 // Add constant for video limit
 const VIDEO_LIMIT = 2;
@@ -149,8 +140,8 @@ export interface AthleteProfileData {
     name: string,
     city: string;
     stateCountry: string;
-    startDate: string;
-    endDate: string;
+    startDate: Date;
+    endDate: Date; // Uses special date for "Present"
     sport: string,
     description: string
   }>;
@@ -234,8 +225,8 @@ export function AthleteEditDialogs({
     name: string,
     city: string,
     stateCountry: string,
-    startDate: string,
-    endDate: string,
+    startDate: Date,
+    endDate: Date, // Uses special date for "Present"
     sport: string,
     description: string
   }>>(profileData.campExperience || []);
@@ -245,8 +236,8 @@ export function AthleteEditDialogs({
     name: '',
     city: '',
     stateCountry: '',
-    startDate: '',
-    endDate: '',
+    startDate: '' as string, // This will be the ISO string value for the select
+    endDate: '' as string, // This will be the ISO string value for the select
     sport: '',
     description: ''
   });
@@ -2017,19 +2008,40 @@ export function AthleteEditDialogs({
                         <div className="flex gap-2 mt-2">
                           <Button size="sm" onClick={() => {
                             // Validate
-                            if (!campForm.name.trim() || !campForm.city.trim() || !campForm.stateCountry.trim() || !campForm.startDate.trim() || !campForm.endDate.trim() || !campForm.sport.trim() || !campForm.description.trim()) {
+                            if (!campForm.name.trim() || !campForm.city.trim() || !campForm.stateCountry.trim() || !campForm.startDate || !campForm.sport.trim() || !campForm.description.trim()) {
                               setCampFormError('All fields are required.');
                               return;
                             }
+                            
+                            // Convert string values to Date objects using the new date utilities
+                            const startDate = isoStringToDate(campForm.startDate);
+                            const endDate = isoStringToDate(campForm.endDate);
+                            
+                            if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+                              setCampFormError('Invalid date format.');
+                              return;
+                            }
+                            
                             setCampFormError(null);
                             // Save changes to this experience
                             const updated = [...tempCampExperience];
+                            const newExperience = {
+                              type: campForm.type,
+                              name: campForm.name,
+                              city: campForm.city,
+                              stateCountry: campForm.stateCountry,
+                              startDate,
+                              endDate,
+                              sport: campForm.sport,
+                              description: campForm.description
+                            };
+                            
                             if (campEditIndex < tempCampExperience.length) {
                               // Editing existing experience
-                              updated[campEditIndex] = { ...campForm };
+                              updated[campEditIndex] = newExperience;
                             } else {
                               // Adding new experience
-                              updated.push({ ...campForm });
+                              updated.push(newExperience);
                             }
                             setTempCampExperience(updated);
                             setCampEditIndex(null);
@@ -2054,13 +2066,23 @@ export function AthleteEditDialogs({
                         <div className="font-semibold text-base mb-1">{exp.name}</div>
                         <div className="flex flex-wrap gap-2 items-center text-xs text-muted-foreground mb- space-x-1">
                           <span>{exp.city && exp.stateCountry ? `${exp.city}, ${exp.stateCountry}` : exp.city || exp.stateCountry}</span>
-                          <span>{exp.startDate} - {exp.endDate}</span>
+                          <span>{formatDateRange(exp.startDate, exp.endDate)}</span>
                         </div>
                         <div className="text-sm text-muted-foreground">{exp.description}</div>
                         <div className="flex gap-2 mt-1">
                           <Button size="sm" variant="outline" onClick={() => {
                             setCampEditIndex(idx);
-                            setCampForm(exp);
+                            // Convert Date objects to ISO strings for the form
+                            setCampForm({
+                              type: exp.type,
+                              name: exp.name,
+                              city: exp.city,
+                              stateCountry: exp.stateCountry,
+                              startDate: exp.startDate.toISOString(),
+                              endDate: exp.endDate.toISOString(), // Always convert to ISO string
+                              sport: exp.sport,
+                              description: exp.description
+                            });
                             setCampFormError(null);
                           }}>Edit</Button>
                           <Button size="sm" variant="destructive" onClick={() => {
@@ -2171,14 +2193,34 @@ export function AthleteEditDialogs({
                     <div className="flex gap-2 mt-2">
                       <Button size="sm" onClick={() => {
                         // Validate
-                        if (!campForm.name.trim() || !campForm.city.trim() || !campForm.stateCountry.trim() || !campForm.startDate.trim() || !campForm.endDate.trim() || !campForm.sport.trim() || !campForm.description.trim()) {
+                        if (!campForm.name.trim() || !campForm.city.trim() || !campForm.stateCountry.trim() || !campForm.startDate || !campForm.sport.trim() || !campForm.description.trim()) {
                           setCampFormError('All fields are required.');
                           return;
                         }
+                        
+                        // Convert string values to Date objects using the new date utilities
+                        const startDate = isoStringToDate(campForm.startDate);
+                        const endDate = isoStringToDate(campForm.endDate);
+                        
+                        if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+                          setCampFormError('Invalid date format.');
+                          return;
+                        }
+                        
                         setCampFormError(null);
                         // Add new experience
                         const updated = [...tempCampExperience];
-                        updated.push({ ...campForm });
+                        const newExperience = {
+                          type: campForm.type,
+                          name: campForm.name,
+                          city: campForm.city,
+                          stateCountry: campForm.stateCountry,
+                          startDate,
+                          endDate,
+                          sport: campForm.sport,
+                          description: campForm.description
+                        };
+                        updated.push(newExperience);
                         setTempCampExperience(updated);
                         setCampEditIndex(null);
                         setCampForm({ type: 'Camp', name: '', city: '', stateCountry: '', startDate: '', endDate: '', sport: '', description: '' });
@@ -2210,7 +2252,7 @@ export function AthleteEditDialogs({
               <Button variant="outline" onClick={onClose}>Cancel</Button>
               <Button onClick={() => {
                 // Remove any empty new experience that was never saved
-                const cleaned = tempCampExperience.filter(exp => exp.name.trim() && exp.city.trim() && exp.stateCountry.trim() && exp.startDate.trim() && exp.endDate.trim() && exp.sport.trim() && exp.description.trim());
+                const cleaned = tempCampExperience.filter(exp => exp.name.trim() && exp.city.trim() && exp.stateCountry.trim() && exp.sport.trim() && exp.description.trim());
                 onSave({ campExperience: cleaned });
                 setIsDirty(false);
                 onClose();

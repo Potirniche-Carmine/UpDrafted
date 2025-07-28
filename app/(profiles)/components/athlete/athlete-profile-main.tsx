@@ -341,14 +341,16 @@ SocialMediaSection.displayName = "SocialMediaSection";
 // ];
 
 // Update CampExperienceCard prop types and usage
+import { formatDateRange, sortCampExperiences } from '@/lib/date-utils';
+
 function CampExperienceCard({ experiences, isOwnProfile, onEdit }: { 
   experiences: Array<{
     type: 'Camp' | 'Club';
     name: string;
     city: string;
     stateCountry: string;
-    startDate: string;
-    endDate: string;
+    startDate: Date;
+    endDate: Date; // Uses special date for "Present"
     sport: string;
     description: string;
   }>, 
@@ -409,8 +411,8 @@ function CampExperienceCard({ experiences, isOwnProfile, onEdit }: {
                 name: string;
                 city: string;
                 stateCountry: string;
-                startDate: string;
-                endDate: string;
+                startDate: Date;
+                endDate: Date;
                 sport: string;
                 description: string;
               }, idx: number) => (
@@ -423,7 +425,7 @@ function CampExperienceCard({ experiences, isOwnProfile, onEdit }: {
                   <div className="font-semibold text-base mb-1">{exp.name}</div>
                   <div className="flex flex-wrap gap-4 text-sm text-muted-foreground mb-1">
                     <span className="flex items-center gap-1"><MapPin className="w-3 h-3" />{exp.city && exp.stateCountry ? `${exp.city}, ${exp.stateCountry}` : exp.city || exp.stateCountry}</span>
-                    <span>{exp.startDate} - {exp.endDate}</span>
+                    <span>{formatDateRange(exp.startDate, exp.endDate)}</span>
                   </div>
                   <p className="text-sm text-foreground mt-1">{exp.description}</p>
                 </div>

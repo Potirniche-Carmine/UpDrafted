@@ -35,8 +35,8 @@ export interface AthleteProfileData {
     name: string;
     city: string;
     stateCountry: string;
-    startDate: string;
-    endDate: string;
+    startDate: Date; // Changed from string to Date
+    endDate: Date; // Changed from Date | null to Date (uses special date for "Present")
     sport: string;
     description: string;
   }>;
