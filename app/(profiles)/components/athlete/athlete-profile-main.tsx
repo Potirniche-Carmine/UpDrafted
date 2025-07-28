@@ -355,6 +355,11 @@ function CampExperienceCard({ experiences, isOwnProfile, onEdit }: {
   isOwnProfile: boolean, 
   onEdit?: () => void 
 }) {
+  // If there are no experiences and it's not the user's own profile (including preview mode), don't show the card
+  if (experiences.length === 0 && !isOwnProfile) {
+    return null;
+  }
+
   return (
     <Card className="bg-gradient-to-r from-blue-50/50 to-cyan-50/50 dark:from-blue-950/20 dark:to-cyan-950/20 mb-4 w-full max-w-xs mx-auto sm:max-w-full sm:mx-0 min-h-[260px]">
       <CardContent className="p-4">
