@@ -15,7 +15,16 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Build Docker Image
-        run: docker build --build-arg DATABASE_URL=${{ secrets.DATABASE_URL }} -t updraftedprod:latest .
+        # Pass all secrets as build arguments for a successful build
+        run: >
+          docker build
+          --build-arg DATABASE_URL=${{ secrets.DATABASE_URL }}
+          --build-arg NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=${{ secrets.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY }}
+          --build-arg CLERK_SECRET_KEY=${{ secrets.CLERK_SECRET_KEY }}
+          --build-arg NEXT_PUBLIC_CLERK_SIGN_IN_URL=${{ secrets.NEXT_PUBLIC_CLERK_SIGN_IN_URL }}
+          --build-arg NEXT_PUBLIC_CLERK_SIGN_UP_URL=${{ secrets.NEXT_PUBLIC_CLERK_SIGN_UP_URL }}
+          --build-arg NEXT_PUBLIC_APP_URL=${{ secrets.NEXT_PUBLIC_APP_URL }}
+          -t updraftedprod:latest .
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
