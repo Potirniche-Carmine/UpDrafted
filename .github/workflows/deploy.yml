@@ -25,14 +25,7 @@ jobs:
           --build-arg NEXT_PUBLIC_APP_URL=${{ secrets.NEXT_PUBLIC_APP_URL }}
           -t updraftedprod:latest .
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-
-      - name: Trigger Coolify Deployment
-        run: npx coolify-cli deployment trigger
-        env:
-          COOLIFY_URL: 'http://localhost:8000'
-          COOLIFY_TOKEN: ${{ secrets.COOLIFY_TOKEN }}
-          COOLIFY_PROD_APP_ID: ${{ secrets.COOLIFY_PROD_APP_ID }}
+      - name: Trigger Coolify Deployment via Webhook
+        run: >
+          curl -X POST "${{ secrets.COOLIFY_WEBHOOK_URL }}"
+          -H "Authorization: Bearer ${{ secrets.COOLIFY_TOKEN }}"
