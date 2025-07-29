@@ -31,7 +31,8 @@ jobs:
           node-version: '20'
 
       - name: Trigger Coolify Deployment
-        run: npx coolify-cli deployment trigger --app_id "$APP_ID" --token "$TOKEN" --url "http://localhost:8000"
-        env:
-          APP_ID: ${{ secrets.COOLIFY_PROD_APP_ID }}
-          TOKEN: ${{ secrets.COOLIFY_TOKEN }}
+        run: >
+          npx coolify-cli deployment trigger
+          --app_id "${{ secrets.COOLIFY_PROD_APP_ID }}"
+          --token "${{ secrets.COOLIFY_TOKEN }}"
+          --url "http://localhost:8000"
