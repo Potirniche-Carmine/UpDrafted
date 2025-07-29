@@ -15,7 +15,6 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Build Docker Image
-        # Pass all secrets as build arguments for a successful build
         run: >
           docker build
           --build-arg DATABASE_URL=${{ secrets.DATABASE_URL }}
@@ -25,16 +24,9 @@ jobs:
           --build-arg NEXT_PUBLIC_CLERK_SIGN_UP_URL=${{ secrets.NEXT_PUBLIC_CLERK_SIGN_UP_URL }}
           --build-arg NEXT_PUBLIC_APP_URL=${{ secrets.NEXT_PUBLIC_APP_URL }}
           -t updraftedprod:latest .
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-
-      - name: Install and Trigger Coolify CLI
-        run: |
-          npm i -g coolify-cli
-          coolify deployment trigger --app_id "$APP_ID" --token "$TOKEN" --url "http://localhost:8000"
+      
+      - name: Trigger Coolify Deployment
+        run: npx coolify-cli deployment trigger --app_id "$APP_ID" --token "$TOKEN" --url "http://localhost:8000"
         env:
           APP_ID: ${{ secrets.COOLIFY_PROD_APP_ID }}
           TOKEN: ${{ secrets.COOLIFY_TOKEN }}
