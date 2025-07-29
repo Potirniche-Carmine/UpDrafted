@@ -12,13 +12,31 @@
   "categories": ["sports", "education", "social"],
   "icons": [
     {
-      "src": "/updrafted-logo.png",
+      "src": "/icons/favicon-16x16.png",
+      "sizes": "16x16",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/favicon-32x32.png",
+      "sizes": "32x32",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-192x192.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "maskable any"
     },
     {
-      "src": "/updrafted-logo.png",
+      "src": "/icons/icon-384x384.png",
+      "sizes": "384x384",
+      "type": "image/png",
+      "purpose": "maskable any"
+    },
+    {
+      "src": "/icons/icon-512x512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable any"
@@ -26,8 +44,8 @@
   ],
   "screenshots": [
     {
-      "src": "/updrafted-logo.png",
-      "sizes": "540x720",
+      "src": "/icons/icon-512x512.png",
+      "sizes": "512x512",
       "type": "image/png",
       "form_factor": "narrow",
       "label": "UpDrafted Dashboard"
@@ -39,14 +57,14 @@
       "short_name": "Dashboard",
       "description": "Go to your dashboard",
       "url": "/dashboard",
-      "icons": [{ "src": "/updrafted-logo.png", "sizes": "192x192" }]
+      "icons": [{ "src": "/icons/icon-192x192.png", "sizes": "192x192" }]
     },
     {
       "name": "Messages",
       "short_name": "Messages",
       "description": "Check your messages",
       "url": "/messages",
-      "icons": [{ "src": "/updrafted-logo.png", "sizes": "192x192" }]
+      "icons": [{ "src": "/icons/icon-192x192.png", "sizes": "192x192" }]
     },
     {
       "name": "Discover",

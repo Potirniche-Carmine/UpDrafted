@@ -512,8 +512,8 @@ export function AthleteProfile({
         const shouldShowTransferPortalVerification = 
           savedProfile &&
           (savedProfile.educationLevel === 'undergraduate' || savedProfile.educationLevel === 'graduate') &&
-          savedProfile.competitionLevel &&
-          ['division_1', 'division_2', 'division_3'].includes(savedProfile.competitionLevel) &&
+          savedProfile.division &&
+          ['NCAA Division I', 'NCAA Division II', 'NCAA Division III'].includes(savedProfile.division) &&
           !savedProfile.isOnTransferPortal;
 
         // Remove beforeunload listener to prevent popup during reload
@@ -1017,8 +1017,8 @@ export function AthleteProfile({
                     {/* Unverified Transfer Badge - For D1/D2/D3 athletes who need transfer portal verification */}
                     {!safeProfileData.isVerified && 
                      (safeProfileData.educationLevel === 'undergraduate' || safeProfileData.educationLevel === 'graduate') &&
-                     safeProfileData.competitionLevel &&
-                     ['division_1', 'division_2', 'division_3'].includes(safeProfileData.competitionLevel) &&
+                     safeProfileData.division &&
+                     ['NCAA Division I', 'NCAA Division II', 'NCAA Division III'].includes(safeProfileData.division) &&
                      !safeProfileData.transferPortalVerifiedAt && (
                       <div className="flex justify-center">
                         <Badge variant="outline" className="border-orange-300 text-orange-600 text-xs">
@@ -1042,8 +1042,19 @@ export function AthleteProfile({
                     <div className="text-sm text-muted-foreground space-y-1">
                       <div className="flex items-center justify-center gap-1 min-w-0">
                         <MapPin className="w-3 h-3 flex-shrink-0" />
-                        <span className="text-center break-words whitespace-normal">{safeProfileData.city}, {safeProfileData.state}</span>
+                        <span className="text-center break-words whitespace-normal">
+                          {/* Only show comma if state exists and country is United States */}
+                          {safeProfileData.city}
+                          {safeProfileData.country === 'United States' && safeProfileData.state ? `, ${safeProfileData.state}` : ''}
+                        </span>
                       </div>
+                      {safeProfileData.country && (
+                        <div className="flex justify-center mt-1">
+                          <Badge className="bg-gradient-to-r from-blue-600 to-purple-600 text-white text-xs px-3 py-1 shadow-md font-semibold uppercase tracking-wide">
+                            {safeProfileData.country}
+                          </Badge>
+                        </div>
+                      )}
                       <p className="text-center break-words">{safeProfileData.organizationName}</p>
                       <p className="text-center">Class of {safeProfileData.graduationYear}</p>
                       
@@ -1060,35 +1071,51 @@ export function AthleteProfile({
                         </div>
                         
                         {/* Competition Level Badge - Only show for college athletes */}
-                        {safeProfileData.competitionLevel && (safeProfileData.educationLevel === 'undergraduate' || safeProfileData.educationLevel === 'graduate') && (
+                        {safeProfileData.division && (safeProfileData.educationLevel === 'undergraduate' || safeProfileData.educationLevel === 'graduate') && (
                           <div className={`flex items-center gap-2 px-3 py-2 text-white rounded-lg shadow-md text-sm font-medium ${
-                            safeProfileData.competitionLevel === 'division_1' 
+                            safeProfileData.division === 'NCAA Division I' 
                               ? 'bg-gradient-to-r from-red-600 to-red-700' 
-                              : safeProfileData.competitionLevel === 'division_2'
+                              : safeProfileData.division === 'NCAA Division II'
                               ? 'bg-gradient-to-r from-orange-600 to-orange-700'
-                              : safeProfileData.competitionLevel === 'division_3'
+                              : safeProfileData.division === 'NCAA Division III'
                               ? 'bg-gradient-to-r from-green-600 to-green-700'
+                              : safeProfileData.division === 'Club Sports'
+                              ? 'bg-gradient-to-r from-blue-600 to-blue-700'
+                              : safeProfileData.division === 'NAIA'
+                              ? 'bg-gradient-to-r from-purple-600 to-purple-700'
                               : 'bg-gradient-to-r from-gray-600 to-gray-700'
                           }`}>
                             <Trophy className="w-4 h-4" />
-                            <span>
-                              {safeProfileData.competitionLevel === 'division_1' && 'Division 1'}
-                              {safeProfileData.competitionLevel === 'division_2' && 'Division 2'}
-                              {safeProfileData.competitionLevel === 'division_3' && 'Division 3'}
-                              {safeProfileData.competitionLevel === 'club' && 'Club Sports'}
-                              {safeProfileData.competitionLevel === 'intramural' && 'Intramural'}
-                              {safeProfileData.competitionLevel === 'other' && 'Other Division'}
-                            </span>
+                            <span>{safeProfileData.division}</span>
+                          </div>
+                        )}
+                        
+                        {/* Conference Badge - Show for D1/D2/D3 athletes with a conference */}
+                        {safeProfileData.conference && 
+                         safeProfileData.division && 
+                         ['NCAA Division I', 'NCAA Division II', 'NCAA Division III'].includes(safeProfileData.division) && (
+                          <div className="flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-indigo-600 to-indigo-700 text-white rounded-lg shadow-md text-sm font-medium">
+                            <Trophy className="w-4 h-4" />
+                            <span>{safeProfileData.conference}</span>
+                          </div>
+                        )}
+                        
+                        {/* Conference Text - Show for JUCOs, Club Sports and other divisions with conferences */}
+                        {safeProfileData.conference && 
+                         safeProfileData.division && 
+                         !['NCAA Division I', 'NCAA Division II', 'NCAA Division III'].includes(safeProfileData.division) && (
+                          <div className="text-sm text-muted-foreground text-center">
+                            <span className="font-medium">Conference:</span> {safeProfileData.conference}
                           </div>
                         )}
                       </div>
                     </div>
 
-                    <div className="flex flex-wrap justify-center gap-1 text-xs text-muted-foreground">
+                    <div className="flex flex-wrap justify-center gap-2 text-sm">
                       {safeProfileData.positions.map(position => (
-                        <span key={position} className="px-2 py-1 bg-muted rounded text-center break-words max-w-full">
+                        <Badge key={position} variant="secondary" className="px-3 py-1 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-medium">
                           {position}
-                        </span>
+                        </Badge>
                       ))}
                     </div>
 
@@ -1216,8 +1243,8 @@ export function AthleteProfile({
               />
             )}
             
-            {/* Hudl Profile - High School Athletes */}
-            {safeProfileData.educationLevel === 'high_school' && (safeProfileData.hudlUrl || effectiveIsOwnProfile) && (
+            {/* Hudl Profile - All Athletes */}
+            {(safeProfileData.hudlUrl || effectiveIsOwnProfile) && (
               <Card>
                 <CardHeader>
                   <div className="flex items-center justify-between">
@@ -1236,13 +1263,22 @@ export function AthleteProfile({
                 </CardHeader>
                 <CardContent>
                   {safeProfileData.hudlUrl ? (
-                    <div className="bg-muted rounded-lg p-4 flex items-center justify-between">
-                      <div>
+                    <div className="bg-muted rounded-lg p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                      <div className="min-w-0 flex-1">
                         <p className="font-medium">Hudl Profile</p>
-                        <p className="text-sm text-muted-foreground">Game film, highlight reels, and athletic performance videos</p>
+                        <p className="text-sm text-muted-foreground">
+                          {safeProfileData.educationLevel === 'high_school' 
+                            ? 'Game film, highlight reels, and athletic performance videos' 
+                            : 'Athletic performance videos and highlight reels'}
+                        </p>
+                        {safeProfileData.educationLevel === 'high_school' && (
+                          <p className="text-xs text-muted-foreground mt-1">
+                            Can be used for profile verification
+                          </p>
+                        )}
                       </div>
-                      <Link href={safeProfileData.hudlUrl} target="_blank">
-                        <Button variant="outline" size="sm" className="bg-emerald-600 hover:bg-emerald-700 text-white border-emerald-600">
+                      <Link href={safeProfileData.hudlUrl} target="_blank" className="flex-shrink-0">
+                        <Button variant="outline" size="sm" className="bg-[#01ae79] hover:bg-[#01ae79]/90 text-white border-[#01ae79] dark:bg-[#01ae79] dark:hover:bg-[#01ae79]/70 w-full sm:w-auto">
                           <ExternalLink className="w-4 h-4 mr-1" />
                           View Film
                         </Button>
@@ -1254,6 +1290,11 @@ export function AthleteProfile({
                         <p className="font-medium text-muted-foreground mb-2">Hudl Profile Not Added</p>
                         <p className="text-sm text-muted-foreground mb-4">
                           Add your Hudl profile to showcase game film and highlight reels
+                          {safeProfileData.educationLevel === 'high_school' && (
+                            <span className="block mt-1 text-xs">
+                              High school athletes can use Hudl for profile verification
+                            </span>
+                          )}
                         </p>
                         <Button 
                           variant="outline"
@@ -1289,13 +1330,13 @@ export function AthleteProfile({
                 </CardHeader>
                 <CardContent>
                   {safeProfileData.maxPrepsUrl ? (
-                    <div className="bg-muted rounded-lg p-4 flex items-center justify-between">
-                      <div>
+                    <div className="bg-muted rounded-lg p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                      <div className="min-w-0 flex-1">
                         <p className="font-medium">MaxPreps Profile</p>
                         <p className="text-sm text-muted-foreground">Official high school stats and verification</p>
                       </div>
-                      <Link href={safeProfileData.maxPrepsUrl} target="_blank">
-                        <Button variant="outline" size="sm" className="bg-[#01ae79] hover:bg-[#01ae79]/90 text-white border-[#01ae79]">
+                      <Link href={safeProfileData.maxPrepsUrl} target="_blank" className="flex-shrink-0">
+                        <Button variant="outline" size="sm" className="bg-[#01ae79] hover:bg-[#01ae79]/90 text-white border-[#01ae79] dark:bg-[#01ae79] dark:hover:bg-[#01ae79]/70 w-full sm:w-auto">
                           <ExternalLink className="w-4 h-4 mr-1" />
                           View Stats
                         </Button>

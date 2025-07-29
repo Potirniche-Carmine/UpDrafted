@@ -12,6 +12,7 @@ export interface RecruiterProfileData {
   organizationLogoR3Key?: string;
   city: string;
   state: string;
+  country: string;
   
   // Division info (this contains the level information)
   division: string;

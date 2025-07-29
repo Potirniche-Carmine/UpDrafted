@@ -16,7 +16,7 @@ export const FIELD_LIMITS = {
   CITY: 50,
   INTENDED_MAJOR: 50,
   TITLE: 50,
-  CONFERENCE: 50,
+  CONFERENCE: 100,
   PERSONAL_STATEMENT: 400,
   RECRUITING_PHILOSOPHY: 400,
   WHAT_LOOKING_FOR: 400,
@@ -204,13 +204,16 @@ export class FormValidator {
       const currentYear = new Date().getFullYear();
       const currentMonth = new Date().getMonth();
       
-      // If we're in the first half of the year (Jan-June), we're in the spring of the school year
-      // If we're in the second half (July-Dec), we're in the fall of the new school year
-      const baseYear = currentMonth < 6 ? currentYear : currentYear + 1;
+      // Academic year starts in August (month 7) and ends in May/June
+      // Before August: we're in the spring semester of the current academic year
+      // August or later: we're in the fall semester of the new academic year
+      const isSpring = currentMonth < 7; // January-July is spring semester
+      const academicYear = isSpring ? currentYear : currentYear + 1;
       
-      // Current seniors graduate this year (baseYear)
-      // Current juniors graduate next year (baseYear + 1) 
-      const validYears = [baseYear, baseYear + 1];
+      // Current seniors graduate at the end of this academic year
+      // Current juniors graduate at the end of next academic year
+      // We allow registration for juniors and seniors only
+      const validYears = [academicYear, academicYear + 1];
       
       if (!validYears.includes(value)) {
         return { 
@@ -432,6 +435,11 @@ export class FormValidator {
       if (!twitterResult.isValid) errors.twitterHandle = twitterResult.error!;
     }
 
+    // Country validation (required)
+    if (!data.country || !data.country.trim()) {
+      errors.country = 'Country is required';
+    }
+
     // Personal statement validation
     const statementResult = this.validateText(data.personalStatement, 'Personal statement', FIELD_LIMITS.PERSONAL_STATEMENT, true);
     if (!statementResult.isValid) errors.personalStatement = statementResult.error!;
@@ -459,6 +467,13 @@ export class FormValidator {
     const cityResult = this.validateText(data.city, 'City', FIELD_LIMITS.CITY, true);
     if (!cityResult.isValid) errors.city = cityResult.error!;
 
+    // State validation (only required if country is United States)
+    if (data.country === 'United States') {
+      if (!data.state || !data.state.trim()) {
+        errors.state = 'State is required for United States';
+      }
+    }
+
     // Conference validation
     if (data.conference) {
       const confResult = this.validateText(data.conference, 'Conference', FIELD_LIMITS.CONFERENCE);
@@ -485,6 +500,11 @@ export class FormValidator {
     if (data.orgTwitterHandle) {
       const twitterResult = this.validateSocialHandle(data.orgTwitterHandle, 'twitter');
       if (!twitterResult.isValid) errors.orgTwitterHandle = twitterResult.error!;
+    }
+
+    // Country validation (required)
+    if (!data.country || !data.country.trim()) {
+      errors.country = 'Country is required';
     }
 
     // Check that at least one contact method is provided

@@ -19,9 +19,12 @@ export interface AthleteProfileData {
   graduationYear: number;
   educationLevel: EducationLevel;
   competitionLevel?: string; // 'division_1', 'division_2', 'division_3', 'naia', 'njcaa', 'club', 'intramural', 'recreational'
+  division?: string;
+  conference?: string;
   organizationName: string;
   city: string;
   state: string;
+  country: string; // Country of the athlete
   gpa?: number | string;
   satScore?: number;
   actScore?: number;

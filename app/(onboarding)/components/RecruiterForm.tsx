@@ -23,6 +23,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { cn } from "@/lib/utils";
 import { FileUpload } from '@/components/ui/file-upload';
+import { ConferenceSelector } from "@/components/ui/conference-selector";
 
 interface RecruiterFormProps {
   data: OnboardingData;
@@ -90,6 +91,92 @@ function SportCombobox({
                     )}
                   />
                   {sport}
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
+// Add country list for recruiting
+const COUNTRIES = [
+  "United States",
+  "Canada",
+  "United Kingdom",
+  "Australia",
+  "Germany",
+  "France",
+  "Spain",
+  "Italy",
+  "Brazil",
+  "Mexico",
+  "Japan",
+  "South Korea",
+  "Netherlands",
+  "Sweden",
+  "New Zealand"
+];
+
+// Searchable Combobox Component for Country (same UI as AthleteForm)
+function CountryCombobox({
+  value,
+  onValueChange,
+  placeholder
+}: {
+  value: string;
+  onValueChange: (value: string) => void;
+  placeholder: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const [searchValue, setSearchValue] = useState("");
+  const countries = COUNTRIES;
+  const filteredCountries = countries.filter(country =>
+    country.toLowerCase().includes(searchValue.toLowerCase())
+  );
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          variant="outline"
+          role="combobox"
+          aria-expanded={open}
+          className="h-11 w-full justify-between bg-background"
+        >
+          {value || placeholder}
+          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-full p-0" style={{ width: 'var(--radix-popover-trigger-width)' }}>
+        <Command>
+          <CommandInput
+            placeholder="Search country..."
+            value={searchValue}
+            onValueChange={setSearchValue}
+          />
+          <CommandList className="max-h-[200px]">
+            <CommandEmpty>No country found.</CommandEmpty>
+            <CommandGroup>
+              {filteredCountries.map((country) => (
+                <CommandItem
+                  key={country}
+                  value={country}
+                  onSelect={(currentValue) => {
+                    onValueChange(currentValue);
+                    setOpen(false);
+                    setSearchValue("");
+                  }}
+                >
+                  <Check
+                    className={cn(
+                      "mr-2 h-4 w-4",
+                      value === country ? "opacity-100" : "opacity-0"
+                    )}
+                  />
+                  {country}
                 </CommandItem>
               ))}
             </CommandGroup>
@@ -325,6 +412,14 @@ export default function RecruiterForm({ data, onInputChange }: RecruiterFormProp
 
   const allSelectedSports = [data.sportCoaching, ...data.secondarySportsRecruiting].filter(Boolean);
 
+  // Clear state if country is changed to something other than United States
+  const handleCountryChange = (value: string) => {
+    onInputChange('country', value);
+    if (value !== 'United States' && data.state) {
+      onInputChange('state', '');
+    }
+  };
+
   return (
     <>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -433,38 +528,45 @@ export default function RecruiterForm({ data, onInputChange }: RecruiterFormProp
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="space-y-3">
           <Label htmlFor="division" className="text-base font-medium">Division *</Label>
-          <Select
-            value={data.division}
-            onValueChange={(value) => onInputChange('division', value)}
-          >
-            <SelectTrigger className="h-11 bg-background" style={{ height: '2.75rem' }}>
-              <SelectValue placeholder="Select division" />
-            </SelectTrigger>
-            <SelectContent>
-              {DIVISIONS.map(division => (
-                <SelectItem key={division} value={division}>{division}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <div className="flex gap-1">
+            <Select
+              value={data.division}
+              onValueChange={(value) => onInputChange('division', value)}
+            >
+              <SelectTrigger className="h-11 bg-background flex-1">
+                <SelectValue placeholder="Select division" />
+              </SelectTrigger>
+              <SelectContent>
+                {DIVISIONS.map(division => (
+                  <SelectItem key={division} value={division}>{division}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <div className="w-9 h-11"></div>
+          </div>
         </div>
         <div className="space-y-3">
-          <Label htmlFor="conference" className="text-base font-medium">Conference</Label>
-          <Input
-            id="conference"
-            placeholder="e.g., Big 12, SEC"
+          <ConferenceSelector
+            division={data.division}
             value={data.conference}
-            onChange={(e) => validateAndUpdateField('conference', e.target.value)}
-            className={`h-11 bg-background ${validationErrors.conference ? 'border-red-500' : ''}`}
-            maxLength={FIELD_LIMITS.CONFERENCE}
+            onValueChange={(value) => onInputChange('conference', value)}
+            placeholder="Select conference"
+            label="Conference"
+            labelClassName="text-base font-medium"
+            height="h-11"
           />
-          {validationErrors.conference && (
-            <p className="text-sm text-red-500">{validationErrors.conference}</p>
-          )}
-          <p className="text-xs text-muted-foreground">{data.conference.length}/{FIELD_LIMITS.CONFERENCE} characters</p>
         </div>
       </div>
 
       {/* Location */}
+      <div className="space-y-3">
+        <Label htmlFor="country" className="text-base font-medium">Country *</Label>
+        <CountryCombobox
+          value={data.country || "United States"}
+          onValueChange={handleCountryChange}
+          placeholder="Select your country"
+        />
+      </div>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="space-y-3">
           <Label htmlFor="city" className="text-base font-medium">City *</Label>
@@ -481,22 +583,24 @@ export default function RecruiterForm({ data, onInputChange }: RecruiterFormProp
           )}
           <p className="text-xs text-muted-foreground">{data.city.length}/{FIELD_LIMITS.CITY} characters</p>
         </div>
-        <div className="space-y-3">
-          <Label htmlFor="state" className="text-base font-medium">State *</Label>
-          <Select
-            value={data.state}
-            onValueChange={(value) => onInputChange('state', value)}
-          >
-            <SelectTrigger className="h-11 bg-background" style={{ height: '2.75rem' }}>
-              <SelectValue placeholder="Select state" />
-            </SelectTrigger>
-            <SelectContent>
-              {US_STATES.map(state => (
-                <SelectItem key={state} value={state}>{state}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+        {data.country === 'United States' && (
+          <div className="space-y-3">
+            <Label htmlFor="state" className="text-base font-medium">State *</Label>
+            <Select
+              value={data.state}
+              onValueChange={(value) => onInputChange('state', value)}
+            >
+              <SelectTrigger className="h-11 bg-background" style={{ height: '2.75rem' }}>
+                <SelectValue placeholder="Select state" />
+              </SelectTrigger>
+              <SelectContent>
+                {US_STATES.map(state => (
+                  <SelectItem key={state} value={state}>{state}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
       </div>
 
       {/* Online Presence */}
