@@ -24,7 +24,12 @@ jobs:
           --build-arg NEXT_PUBLIC_CLERK_SIGN_UP_URL=${{ secrets.NEXT_PUBLIC_CLERK_SIGN_UP_URL }}
           --build-arg NEXT_PUBLIC_APP_URL=${{ secrets.NEXT_PUBLIC_APP_URL }}
           -t updraftedprod:latest .
-      
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
       - name: Trigger Coolify Deployment
         run: npx coolify-cli deployment trigger --app_id "$APP_ID" --token "$TOKEN" --url "http://localhost:8000"
         env:
