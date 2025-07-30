@@ -76,7 +76,18 @@ export default function RootLayout({
                 "name": "UpDrafted",
                 "description": "The premier platform connecting student-athletes with D1, D2, D3, and JUCO college programs.",
                 "url": "https://updrafted.us",
-                "logo": "https://updrafted.us/icons/icon-512x512.png"
+                "logo": "https://updrafted.us/icons/icon-512x512.png",
+                "contactPoint": {
+                  "@type": "ContactPoint",
+                  "contactType": "Customer Service",
+                  "url": "https://updrafted.us/contact",
+                  "availableLanguage": "English"
+                },
+                "offers": {
+                  "@type": "Offer",
+                  "category": "Sports Recruitment Services",
+                  "description": "College athletic recruitment platform services"
+                }
               },
               {
                 "@context": "https://schema.org",
@@ -85,7 +96,10 @@ export default function RootLayout({
                 "url": "https://updrafted.us",
                 "potentialAction": {
                   "@type": "SearchAction",
-                  "target": "https://updrafted.us/search?q={search_term_string}",
+                  "target": {
+                    "@type": "EntryPoint",
+                    "urlTemplate": "https://updrafted.us/search?q={search_term_string}"
+                  },
                   "query-input": "required name=search_term_string"
                 }
               }
