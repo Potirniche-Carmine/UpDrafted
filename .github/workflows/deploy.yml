@@ -27,10 +27,7 @@ jobs:
       - name: Build and Push Docker Image
         run: |
           IMAGE_ID=ghcr.io/${{ github.repository_owner }}/updraftedprod
-          
-          # Change all uppercase letters to lowercase
           IMAGE_ID=$(echo $IMAGE_ID | tr '[:upper:]' '[:lower:]')
-
           docker build \
             --build-arg DATABASE_URL=${{ secrets.DATABASE_URL }} \
             --build-arg NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=${{ secrets.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY }} \
@@ -39,9 +36,12 @@ jobs:
             --build-arg NEXT_PUBLIC_CLERK_SIGN_UP_URL=${{ secrets.NEXT_PUBLIC_CLERK_SIGN_UP_URL }} \
             --build-arg NEXT_PUBLIC_APP_URL=${{ secrets.NEXT_PUBLIC_APP_URL }} \
             -t $IMAGE_ID:latest .
-
-          # New Step: Push the image to GHCR
           docker push $IMAGE_ID:latest
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
 
       - name: Trigger Coolify Deployment
         run: npx coolify-cli deployment trigger
