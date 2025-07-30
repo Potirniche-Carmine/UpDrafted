@@ -43,14 +43,9 @@ jobs:
           # New Step: Push the image to GHCR
           docker push $IMAGE_ID:latest
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-
       - name: Trigger Coolify Deployment
         run: npx coolify-cli deployment trigger
         env:
           COOLIFY_URL: 'http://localhost:8000'
-          COOLIFY_TOKEN: ${{ secrets.COOLIFY_TOKEN }}
-          COOLIFY_PROD_APP_ID: ${{ secrets.COOLIFY_PROD_APP_ID }}
+          COOLIFY_API_TOKEN: ${{ secrets.COOLIFY_TOKEN }}
+          COOLIFY_APP_ID: ${{ secrets.COOLIFY_PROD_APP_ID }}
