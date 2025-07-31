@@ -1,7 +1,7 @@
 import { clerkMiddleware } from '@clerk/nextjs/server';
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
-import { SecurityEvents } from './utils/security-monitoring';
+import { SecurityEvents } from './utils/security';
 
 // Simple in-memory rate limiting for MVP (would use Redis in production)
 const rateLimit = new Map<string, { count: number; resetTime: number }>();

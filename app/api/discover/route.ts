@@ -4,7 +4,7 @@ import { db } from '@/database/db';
 import { users, athleteProfiles, coachProfiles, recruitingProfiles, connections } from '@/database/schema';
 import { and, eq, or, not, ilike, isNull, exists, ne } from 'drizzle-orm';
 import { sanitizeText, sanitizeNumber } from '@/utils/sanitization';
-import { withRateLimit } from '@/utils/rate-limiting';
+import { withRateLimit } from '@/utils/security';
 
 // Force Node.js runtime
 export const runtime = 'nodejs';

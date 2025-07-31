@@ -4,8 +4,8 @@ import { db } from '@/database/db';
 import { users, athleteProfiles, coachProfiles, recruitingProfiles } from '@/database/schema';
 import { or, eq, ilike, sql, and, ne, isNull } from 'drizzle-orm';
 import { R2_PUBLIC_URL, constructR2Url } from '@/database/r2';
-import { withRateLimit } from '@/utils/rate-limiting';
-import { getCachedWithType, setCachedWithType, createErrorResponse, createSuccessResponse } from '@/utils/security-cache';
+import { withRateLimit } from '@/utils/security';
+import { getCachedWithType, setCachedWithType, createErrorResponse, createSuccessResponse } from '@/utils/security';
 
 // Force Node.js runtime
 export const runtime = 'nodejs';

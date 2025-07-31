@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAnyRole } from '@/utils/roles';
 import { profileOperations } from '@/database/db-utils';
-import { withRateLimit } from '@/utils/rate-limiting';
-import { getCachedWithType, setCachedWithType, createErrorResponse, createSuccessResponse } from '@/utils/security-cache';
+import { withRateLimit } from '@/utils/security';
+import { getCachedWithType, setCachedWithType, createErrorResponse, createSuccessResponse } from '@/utils/security';
 
 // Force Node.js runtime for database operations
 export const runtime = 'nodejs';

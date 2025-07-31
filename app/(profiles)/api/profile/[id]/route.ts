@@ -7,7 +7,7 @@ import { db } from '@/database/db';
 import { eq, and } from 'drizzle-orm';
 import { sanitizeProfileData } from '@/utils/sanitization';
 import { EducationLevel } from '@/app/(onboarding)/lib/onboarding';
-import { withRateLimit } from '@/utils/rate-limiting';
+import { withRateLimit } from '@/utils/security';
 
 // Force Node.js runtime to avoid expensive edge function costs
 export const runtime = 'nodejs';

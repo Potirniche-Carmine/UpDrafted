@@ -5,8 +5,8 @@ import { validateClerkHeaders } from '@/utils/clerk-security';
 import { requireAnyRole } from '@/utils/roles';
 import { eq, desc, and } from 'drizzle-orm';
 import { profileOperations, notificationOperations } from '@/database/db-utils';
-import { withRateLimit } from '@/utils/rate-limiting';
-import { createErrorResponse } from '@/utils/security-cache';
+import { withRateLimit } from '@/utils/security';
+import { createErrorResponse } from '@/utils/security';
 // Removed unused imports - getCachedWithType, setCachedWithType, createErrorResponse, createSuccessResponse
 
 type Operation = 'getNotifications' | 'markAsRead' | 'markAllAsRead' | 'getUnreadCount' | 'dismissAllNotifications';

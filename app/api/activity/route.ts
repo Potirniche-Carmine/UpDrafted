@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAnyRole } from '@/utils/roles';
 import { activityOperations, profileOperations } from '@/database/db-utils';
-import { withRateLimit } from '@/utils/rate-limiting';
+import { withRateLimit } from '@/utils/security';
 
 export async function GET(request: NextRequest) {
   try {
