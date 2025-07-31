@@ -21,12 +21,8 @@ import { divisionHasConferences } from "@/lib/conference-data";
 import { 
   generateCampDateOptions, 
   generateCampEndDateOptions, 
-  formatCampDate, 
-  parseCampDate,
-  dateToISOString,
   isoStringToDate,
   formatDateRange,
-  sortCampExperiences,
   type CampDateOption 
 } from '@/lib/date-utils';
 
@@ -155,16 +151,17 @@ export interface AthleteProfileData {
   personalStatement?: string;
   achievements?: string[];
   measurables?: Measurable[];
-  campExperience?: Array<{
-    type: 'Camp' | 'Club',
-    name: string,
-    city: string;
-    stateCountry: string;
-    startDate: Date;
-    endDate: Date; // Uses special date for "Present"
-    sport: string,
-    description: string
-  }>;
+      campExperience?: Array<{
+      id?: number; // Database ID for existing experiences
+      type: 'Camp' | 'Club',
+      name: string,
+      city: string;
+      stateCountry: string;
+      startDate: Date | string;
+      endDate: Date | string; // Uses special date for "Present"
+      sport: string,
+      description: string
+    }>;
 }
 
 interface AthleteEditDialogsProps {
@@ -241,6 +238,7 @@ export function AthleteEditDialogs({
 
   // Add state for camp/club experience editing
   const [tempCampExperience, setTempCampExperience] = useState<Array<{
+    id?: number; // Database ID for existing experiences
     type: 'Camp' | 'Club',
     name: string,
     city: string,
@@ -249,7 +247,7 @@ export function AthleteEditDialogs({
     endDate: Date, // Uses special date for "Present"
     sport: string,
     description: string
-  }>>(profileData.campExperience || []);
+  }>>([]);
   const [campEditIndex, setCampEditIndex] = useState<number | null>(null);
   const [campForm, setCampForm] = useState({
     type: 'Camp' as 'Camp' | 'Club',
@@ -263,7 +261,7 @@ export function AthleteEditDialogs({
   });
   const [campFormError, setCampFormError] = useState<string | null>(null);
   // Ref for the add/edit form
-  const campFormRef = useRef<HTMLDivElement>(null);
+
 
   // Get admin role information for demo profile uploads
   const { isAdmin, viewingAs } = useRoleView();
@@ -2121,14 +2119,35 @@ export function AthleteEditDialogs({
                         <div className="flex gap-2 mt-1">
                           <Button size="sm" variant="outline" onClick={() => {
                             setCampEditIndex(idx);
-                            // Convert Date objects to ISO strings for the form
+                            // Convert dates to the exact format expected by Select components
+                            const findMatchingOption = (date: Date | string, options: CampDateOption[]): string => {
+                              let targetDate: Date;
+                              
+                              if (typeof date === 'string') {
+                                targetDate = new Date(date);
+                              } else {
+                                targetDate = date;
+                              }
+                              
+                              // Find the option that matches the year and month
+                              const targetYear = targetDate.getFullYear();
+                              const targetMonth = targetDate.getMonth();
+                              
+                              const matchingOption = options.find(option => {
+                                const optionDate = new Date(option.value);
+                                return optionDate.getFullYear() === targetYear && optionDate.getMonth() === targetMonth;
+                              });
+                              
+                              return matchingOption ? matchingOption.value : '';
+                            };
+                            
                             setCampForm({
                               type: exp.type,
                               name: exp.name,
                               city: exp.city,
                               stateCountry: exp.stateCountry,
-                              startDate: exp.startDate.toISOString(),
-                              endDate: exp.endDate.toISOString(), // Always convert to ISO string
+                              startDate: findMatchingOption(exp.startDate, CAMP_DATE_OPTIONS),
+                              endDate: findMatchingOption(exp.endDate, CAMP_END_DATE_OPTIONS),
                               sport: exp.sport,
                               description: exp.description
                             });
@@ -2331,7 +2350,11 @@ export function AthleteEditDialogs({
     if (isOpen && dialogType === 'camp-experience' && !campExperienceInitializedRef.current) {
       setTempCampExperience(
         Array.isArray(profileData.campExperience) && profileData.campExperience.length > 0
-          ? profileData.campExperience
+          ? profileData.campExperience.map(exp => ({
+              ...exp, // This preserves the id field if it exists
+              startDate: typeof exp.startDate === 'string' ? new Date(exp.startDate) : exp.startDate,
+              endDate: typeof exp.endDate === 'string' ? new Date(exp.endDate) : exp.endDate
+            }))
           : []
       );
       setCampEditIndex(null);
@@ -2342,7 +2365,7 @@ export function AthleteEditDialogs({
     if (!isOpen) {
       campExperienceInitializedRef.current = false;
     }
-  }, [isOpen, dialogType]);
+  }, [isOpen, dialogType, profileData.campExperience]);
 
   // Add a ref to track if initialization has happened for this open session
   const campExperienceInitializedRef = useRef(false);

@@ -16,8 +16,40 @@ export interface CampDateOption {
 /**
  * Format a Date object to "Month Year" format (e.g., "June 2025")
  */
-export function formatCampDate(date: Date): string {
-  return date.toLocaleDateString('en-US', {
+export function formatCampDate(date: Date | string): string {
+  // Debug: Log the date parameter to see what's being passed
+  console.log('DEBUG - formatCampDate called with:', {
+    date: date,
+    type: typeof date,
+    isDate: date instanceof Date,
+    dateValue: date?.toString()
+  });
+
+  // Handle string input (convert to Date object)
+  let dateObj: Date;
+  if (typeof date === 'string') {
+    try {
+      dateObj = new Date(date);
+    } catch {
+      console.error('DEBUG - Invalid date string passed to formatCampDate:', date);
+      return 'Invalid Date';
+    }
+  } else {
+    dateObj = date;
+  }
+
+  // Ensure we have a valid Date object
+  if (!dateObj || !(dateObj instanceof Date) || isNaN(dateObj.getTime())) {
+    console.error('DEBUG - Invalid date passed to formatCampDate:', dateObj);
+    return 'Invalid Date';
+  }
+
+  // Check if it's the special "Present" date
+  if (isPresentDate(dateObj)) {
+    return 'Present';
+  }
+
+  return dateObj.toLocaleDateString('en-US', {
     month: 'long',
     year: 'numeric'
   });
@@ -94,11 +126,28 @@ export function dateToISOString(date: Date): string {
  * Convert an ISO string from database to Date object
  */
 export function isoStringToDate(isoString: string): Date {
+  // DEBUG: Log the input
+  console.log('DEBUG - isoStringToDate called with:', {
+    isoString: isoString,
+    type: typeof isoString
+  });
+
   if (!isoString) return PRESENT_DATE;
   try {
     const date = new Date(isoString);
-    return isNaN(date.getTime()) ? PRESENT_DATE : date;
-  } catch {
+    const isValid = !isNaN(date.getTime());
+    
+    // DEBUG: Log the result
+    console.log('DEBUG - isoStringToDate result:', {
+      input: isoString,
+      date: date,
+      isValid: isValid,
+      isDate: date instanceof Date
+    });
+    
+    return isValid ? date : PRESENT_DATE;
+  } catch (error) {
+    console.error('DEBUG - isoStringToDate error:', error);
     return PRESENT_DATE;
   }
 }
@@ -106,14 +155,23 @@ export function isoStringToDate(isoString: string): Date {
 /**
  * Check if a date represents "Present"
  */
-export function isPresentDate(date: Date): boolean {
+export function isPresentDate(date: Date | string): boolean {
+  // Handle both Date objects and strings
+  if (typeof date === 'string') {
+    return date === '9999-12-31' || date === '9999-12-31T00:00:00.000Z';
+  }
+  
+  if (!date || !(date instanceof Date) || isNaN(date.getTime())) {
+    return false;
+  }
+  
   return date.getTime() === PRESENT_DATE.getTime();
 }
 
 /**
  * Format a date range for display
  */
-export function formatDateRange(startDate: Date, endDate: Date): string {
+export function formatDateRange(startDate: Date | string, endDate: Date | string): string {
   const startFormatted = formatCampDate(startDate);
   const endFormatted = isPresentDate(endDate) ? 'Present' : formatCampDate(endDate);
   return `${startFormatted} - ${endFormatted}`;
@@ -122,6 +180,10 @@ export function formatDateRange(startDate: Date, endDate: Date): string {
 /**
  * Sort camp experiences by start date (newest first)
  */
-export function sortCampExperiences<T extends { startDate: Date }>(experiences: T[]): T[] {
-  return [...experiences].sort((a, b) => b.startDate.getTime() - a.startDate.getTime());
+export function sortCampExperiences<T extends { startDate: Date | string }>(experiences: T[]): T[] {
+  return [...experiences].sort((a, b) => {
+    const aDate = typeof a.startDate === 'string' ? new Date(a.startDate) : a.startDate;
+    const bDate = typeof b.startDate === 'string' ? new Date(b.startDate) : b.startDate;
+    return bDate.getTime() - aDate.getTime();
+  });
 } 

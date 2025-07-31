@@ -4,6 +4,7 @@ import {
   users, 
   athleteProfiles, 
   athleteMeasurables,
+  athleteExperience,
   coachProfiles,
   recruitingProfiles,
   recruitingNeeds,
@@ -19,6 +20,7 @@ import {
   type NewAthleteProfile,
   type NewAthleteMeasurable,
   type NewAthleteVideo,
+  type NewAthleteExperience,
   type NewCoachProfile,
   type NewRecruitingProfile,
   type NewRecruitingNeeds,
@@ -99,7 +101,8 @@ export const athleteOperations = {
         measurables: true,
         videos: {
           orderBy: [asc(athleteVideos.sortOrder)],
-        }
+        },
+        experience: true
       }
     });
 
@@ -232,6 +235,49 @@ export const athleteOperations = {
     // Insert new videos if any
     if (videosData.length > 0) {
       return await db.insert(athleteVideos).values(videosData).returning();
+    }
+    return [];
+  }
+};
+
+// Athlete experience operations
+export const athleteExperienceOperations = {
+  // Create athlete experience
+  async createAthleteExperience(experienceData: NewAthleteExperience) {
+    const [experience] = await db.insert(athleteExperience).values(experienceData).returning();
+    return experience;
+  },
+
+  // Update athlete experience
+  async updateAthleteExperience(experienceId: number, experienceData: Partial<NewAthleteExperience>) {
+    const [experience] = await db
+      .update(athleteExperience)
+      .set({ ...experienceData })
+      .where(eq(athleteExperience.id, experienceId))
+      .returning();
+    return experience;
+  },
+
+  // Get athlete experience
+  async getAthleteExperience(experienceId: number) {
+    return await db.query.athleteExperience.findFirst({
+      where: eq(athleteExperience.id, experienceId)
+    });
+  },
+
+  // Delete athlete experience
+  async deleteAthleteExperience(experienceId: number) {
+    await db.delete(athleteExperience).where(eq(athleteExperience.id, experienceId));
+  },
+
+  // Replace all experiences for an athlete (useful for profile updates)
+  async replaceAthleteExperiences(athleteId: number, experiencesData: NewAthleteExperience[]) {
+    // Delete existing experiences for this athlete
+    await db.delete(athleteExperience).where(eq(athleteExperience.athleteId, athleteId));
+    
+    // Insert new experiences if any
+    if (experiencesData.length > 0) {
+      return await db.insert(athleteExperience).values(experiencesData).returning();
     }
     return [];
   }
@@ -1532,7 +1578,8 @@ export const adminOperations = {
         measurables: true,
         videos: {
           orderBy: [asc(athleteVideos.sortOrder)],
-        }
+        },
+        experience: true
       }
     });
 
@@ -1571,6 +1618,8 @@ export const adminOperations = {
     return profile;
   },
 
+
+
   // Create demo coach profile
   async createDemoCoachProfile(userId: string, profileData: Omit<NewCoachProfile, 'userId' | 'isDemoProfile'>) {
     const [profile] = await db.insert(coachProfiles).values({
@@ -1592,17 +1641,157 @@ export const adminOperations = {
   },
 
   // Update demo profiles
-  async updateDemoAthleteProfile(userId: string, profileData: Partial<NewAthleteProfile>) {
+  async updateDemoAthleteProfile(userId: string, profileData: Partial<NewAthleteProfile> & { campExperience?: Array<{
+    id?: number; // Database ID for existing experiences
+    type: 'Camp' | 'Club';
+    name: string;
+    city: string;
+    stateCountry: string;
+    startDate: Date | string;
+    endDate: Date | string;
+    sport: string;
+    description: string;
+  }> }) {
+    // Handle camp experiences separately since they're stored in a separate table
+    const { campExperience, ...otherProfileData } = profileData;
+    
+    // Update the main profile
     const [profile] = await db
       .update(athleteProfiles)
-      .set({ ...profileData, updatedAt: new Date() })
+      .set({ ...otherProfileData, updatedAt: new Date() })
       .where(and(
         eq(athleteProfiles.userId, userId),
         eq(athleteProfiles.isDemoProfile, true)
       ))
       .returning();
+    
+    // Handle camp experiences if provided
+    if (campExperience !== undefined && profile) {
+      // Get existing experiences from database
+      const existingExperiences = await db.query.athleteExperience.findMany({
+        where: eq(athleteExperience.athleteId, profile.id)
+      });
+
+      // Convert frontend camp experience format to database format
+      const experiencesData: (NewAthleteExperience & { id?: number })[] = campExperience.map((exp: {
+        id?: number; // Database ID for existing experiences
+        type: 'Camp' | 'Club';
+        name: string;
+        city: string;
+        stateCountry: string;
+        startDate: Date | string;
+        endDate: Date | string;
+        sport: string;
+        description: string;
+      }) => {
+        // Handle start date conversion - handle both Date objects and strings
+        let startDateString: string;
+        try {
+          const startDate = typeof exp.startDate === 'string' ? new Date(exp.startDate) : exp.startDate;
+          startDateString = startDate.toISOString().split('T')[0]; // Convert to YYYY-MM-DD format
+        } catch {
+          startDateString = new Date().toISOString().split('T')[0]; // Fallback to current date
+        }
+
+        // Handle end date conversion - handle both Date objects and strings, check if it's the special "Present" date
+        let endDateString: string;
+        try {
+          const endDate = typeof exp.endDate === 'string' ? new Date(exp.endDate) : exp.endDate;
+          if (endDate.getTime() === new Date('9999-12-31').getTime()) {
+            endDateString = '9999-12-31'; // Special date representing "Present"
+          } else {
+            endDateString = endDate.toISOString().split('T')[0]; // Convert to YYYY-MM-DD format
+          }
+        } catch {
+          endDateString = '9999-12-31'; // Fallback to "Present"
+        }
+
+        return {
+          athleteId: profile.id,
+          type: exp.type,
+          name: exp.name,
+          city: exp.city,
+          stateCountry: exp.stateCountry,
+          startDate: startDateString,
+          endDate: endDateString,
+          sport: exp.sport,
+          description: exp.description,
+        };
+      });
+
+      // Properly separate new and existing experiences by comparing with database
+      const newExperiences: NewAthleteExperience[] = [];
+      const existingExperiencesToUpdate: { id: number; data: Partial<NewAthleteExperience> }[] = [];
+      const experiencesToDelete: number[] = [];
+
+      // Create a map of existing experiences by their ID for quick lookup
+      const existingExperiencesMap = new Map(existingExperiences.map(exp => [exp.id, exp]));
+      
+      // Create a map of frontend experiences by their ID (if they have one)
+      const frontendExperiencesMap = new Map();
+      const frontendExperiencesWithoutId: NewAthleteExperience[] = [];
+
+      for (const exp of experiencesData) {
+        if (exp.id) {
+          frontendExperiencesMap.set(exp.id, exp);
+        } else {
+          frontendExperiencesWithoutId.push(exp);
+        }
+      }
+
+      // Find experiences to update (existing in both database and frontend)
+      for (const [id, frontendExp] of frontendExperiencesMap) {
+        if (existingExperiencesMap.has(id)) {
+          // This experience exists in both database and frontend - update it
+          const { id: expId, ...updateData } = frontendExp;
+          existingExperiencesToUpdate.push({ id: expId, data: updateData });
+        }
+      }
+
+      // Find experiences to delete (in database but not in frontend)
+      for (const [id] of existingExperiencesMap) {
+        if (!frontendExperiencesMap.has(id)) {
+          experiencesToDelete.push(id);
+        }
+      }
+
+      // All frontend experiences without IDs are new
+      newExperiences.push(...frontendExperiencesWithoutId);
+
+      console.log('Demo athlete profile update - camp experience debug:');
+      console.log('Existing experiences count:', existingExperiences.length);
+      console.log('Frontend experiences count:', experiencesData.length);
+      console.log('New experiences to create:', newExperiences.length);
+      console.log('Existing experiences to update:', existingExperiencesToUpdate.length);
+      console.log('Experiences to delete:', experiencesToDelete.length);
+      console.log('New experiences:', newExperiences);
+      console.log('Experiences to update:', existingExperiencesToUpdate);
+      console.log('Experiences to delete:', experiencesToDelete);
+
+      // Delete experiences that are no longer in the frontend
+      for (const id of experiencesToDelete) {
+        console.log('Deleting experience:', id);
+        await athleteExperienceOperations.deleteAthleteExperience(id);
+      }
+
+      // Update existing experiences
+      for (const { id, data } of existingExperiencesToUpdate) {
+        console.log('Updating existing experience:', id, data);
+        await athleteExperienceOperations.updateAthleteExperience(id, data);
+      }
+
+      // Create new experiences
+      for (const newExp of newExperiences) {
+        console.log('Creating new experience:', newExp);
+        const createdExp = await athleteExperienceOperations.createAthleteExperience(newExp);
+        console.log('Created experience:', createdExp);
+      }
+    }
+    
     return profile;
   },
+
+
 
   async updateDemoCoachProfile(userId: string, profileData: Partial<NewCoachProfile>) {
     const [profile] = await db

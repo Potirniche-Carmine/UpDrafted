@@ -341,16 +341,17 @@ SocialMediaSection.displayName = "SocialMediaSection";
 // ];
 
 // Update CampExperienceCard prop types and usage
-import { formatDateRange, sortCampExperiences } from '@/lib/date-utils';
+import { formatDateRange } from '@/lib/date-utils';
 
 function CampExperienceCard({ experiences, isOwnProfile, onEdit }: { 
   experiences: Array<{
+    id?: number; // Database ID for existing experiences
     type: 'Camp' | 'Club';
     name: string;
     city: string;
     stateCountry: string;
-    startDate: Date;
-    endDate: Date; // Uses special date for "Present"
+    startDate: Date | string; // Allow both Date and string for flexibility
+    endDate: Date | string; // Allow both Date and string for flexibility (uses special date for "Present")
     sport: string;
     description: string;
   }>, 
@@ -395,7 +396,7 @@ function CampExperienceCard({ experiences, isOwnProfile, onEdit }: {
               </div>
               <h4 className="font-semibold text-base mb-2 text-foreground">No Camp or Club Experience Added</h4>
               <p className="text-sm text-muted-foreground mb-4 leading-relaxed">
-                Showcase your athletic journey by adding camps, showcases, or clubs you've participated in. This helps coaches see your dedication and versatility beyond your main team.
+                Showcase your athletic journey by adding camps, showcases, or clubs you&apos;ve participated in. This helps coaches see your dedication and versatility beyond your main team.
               </p>
               {isOwnProfile && (
                 <Button size="sm" variant="default" onClick={onEdit} className="bg-blue-600 hover:bg-blue-700 text-white">
@@ -407,12 +408,13 @@ function CampExperienceCard({ experiences, isOwnProfile, onEdit }: {
           ) : (
             <div className="space-y-3">
               {experiences.map((exp: {
+                id?: number; // Database ID for existing experiences
                 type: 'Camp' | 'Club';
                 name: string;
                 city: string;
                 stateCountry: string;
-                startDate: Date;
-                endDate: Date;
+                startDate: Date | string; // Allow both Date and string for flexibility
+                endDate: Date | string; // Allow both Date and string for flexibility (uses special date for "Present")
                 sport: string;
                 description: string;
               }, idx: number) => (

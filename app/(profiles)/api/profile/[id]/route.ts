@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAnyRole, requireOwnershipOrAdmin } from '@/utils/roles';
-import { userOperations, athleteOperations, coachOperations, recruitingOperations, recruitingNeedsOperations, connectionOperations, activityOperations, notificationOperations, adminOperations } from '@/database/db-utils';
+import { userOperations, athleteOperations, athleteExperienceOperations, coachOperations, recruitingOperations, recruitingNeedsOperations, connectionOperations, activityOperations, notificationOperations, adminOperations } from '@/database/db-utils';
 import { R2_PUBLIC_URL, constructR2Url } from '@/database/r2';
-import { NewAthleteProfile, NewAthleteMeasurable, NewAthleteVideo, NewCoachProfile, NewRecruitingProfile, verificationRequests, AthleteProfile, CoachProfile, RecruitingProfile } from '@/database/schema';
+import { NewAthleteProfile, NewAthleteMeasurable, NewAthleteVideo, NewAthleteExperience, NewCoachProfile, NewRecruitingProfile, verificationRequests, AthleteProfile, CoachProfile, RecruitingProfile, athleteExperience } from '@/database/schema';
 import { db } from '@/database/db';
 import { eq, and } from 'drizzle-orm';
 import { sanitizeProfileData } from '@/utils/sanitization';
@@ -84,6 +84,52 @@ function transformProfileData(profileData: Record<string, any>, profileType: str
     // Ensure measurables is an array
     if (!Array.isArray(transformed.measurables)) {
       transformed.measurables = [];
+    }
+
+    // Transform camp experience data if present
+    if (profileData.experience) {
+      transformed.campExperience = profileData.experience.map((exp: { id: number; type: string; name: string; city: string; stateCountry: string; startDate: string; endDate: string; sport: string; description: string }) => {
+        // Handle start date - convert from database string to Date object
+        let startDate: Date;
+        try {
+          startDate = new Date(exp.startDate);
+          if (isNaN(startDate.getTime())) {
+            startDate = new Date(); // Fallback to current date if invalid
+          }
+        } catch {
+          startDate = new Date(); // Fallback to current date if error
+        }
+
+        // Handle end date - convert from database string to Date object
+        let endDate: Date;
+        try {
+          // Check if it's the special "Present" date (9999-12-31)
+          if (exp.endDate === '9999-12-31' || exp.endDate === '9999-12-31T00:00:00.000Z') {
+            endDate = new Date('9999-12-31'); // Special date representing "Present"
+          } else {
+            endDate = new Date(exp.endDate);
+            if (isNaN(endDate.getTime())) {
+              endDate = new Date('9999-12-31'); // Fallback to "Present" if invalid
+            }
+          }
+        } catch {
+          endDate = new Date('9999-12-31'); // Fallback to "Present" if error
+        }
+
+        return {
+          id: exp.id,
+          type: exp.type,
+          name: exp.name,
+          city: exp.city,
+          stateCountry: exp.stateCountry,
+          startDate: startDate,
+          endDate: endDate,
+          sport: exp.sport,
+          description: exp.description
+        };
+      });
+    } else {
+      transformed.campExperience = [];
     }
 
     // Ensure URLs are properly handled - set to undefined if null or empty
@@ -341,7 +387,7 @@ export async function GET(
                  let demoProfileData = null;
          const profileType = adminViewingRole;
 
-                 if (adminViewingRole === 'athlete' && demoProfiles.athlete) {
+          if (adminViewingRole === 'athlete' && demoProfiles.athlete) {
            // Use the demo athlete profile
            demoProfileData = demoProfiles.athlete;
          } else if (adminViewingRole === 'coach' && demoProfiles.coach) {
@@ -355,6 +401,8 @@ export async function GET(
         if (demoProfileData) {
           // Transform the demo profile data to match the component interface
           const transformedProfile = transformProfileData(demoProfileData, profileType);
+
+          console.log(transformedProfile);
 
           // Fetch REAL verification status for the current user (admin) when viewing demo profiles
           let realVerificationStatus = {};
@@ -885,20 +933,28 @@ export async function PUT(
     }
 
     let profileType = userWithProfile.role;
+    const isAdminUser = profileType === 'admin';
+    
+    console.log('User role:', profileType, 'Is admin user:', isAdminUser);
     
     // Special handling for admin users with demo profiles
-    if (profileType === 'admin') {
+    if (isAdminUser) {
+      console.log('Admin user detected, determining profile type from data structure');
       // For admin users, determine profile type from the data structure being sent
       if (sanitizedData.sport && sanitizedData.graduationYear) {
         profileType = 'athlete';
+        console.log('Admin user profile type determined as: athlete');
       } else if (sanitizedData.sportCoaching || sanitizedData.title) {
         // Check if it's a coach or recruiter based on additional fields
         if (sanitizedData.secondarySports !== undefined) {
           profileType = 'recruiter'; // Recruiters have secondarySports
+          console.log('Admin user profile type determined as: recruiter');
         } else {
           profileType = 'coach';
+          console.log('Admin user profile type determined as: coach');
         }
       } else {
+        console.log('Unable to determine profile type for admin user');
         return NextResponse.json(
           { error: 'Unable to determine profile type for admin user' },
           { status: 400 }
@@ -910,6 +966,7 @@ export async function PUT(
 
     // Update profile based on type
     if (profileType === 'athlete') {
+      console.log("Profile Type is athlete.");
       // If country is being changed from 'United States' to another country, set state to null only if not already null/undefined
       if (
         sanitizedData.country !== undefined &&
@@ -958,8 +1015,22 @@ export async function PUT(
         profileUpdateData.twitterHandle = socialMedia?.twitter || null;
       }
       
+      // For admin users, include camp experience data in the profile update
+      console.log("isAdminUser: ", isAdminUser);
+      console.log("Sanitized data camp experience: ", sanitizedData.campExperience);
+      if (isAdminUser && sanitizedData.campExperience !== undefined) {
+        console.log('Admin user - including camp experience in profile update:', sanitizedData.campExperience);
+        // @ts-expect-error - We know this is safe for admin operations
+        profileUpdateData.campExperience = sanitizedData.campExperience;
+      }
+      
       try {
-        updatedProfile = await athleteOperations.updateAthleteProfile(profileUserId, profileUpdateData);
+        // Use admin operations for admin users (demo profiles), regular operations for normal users
+        if (isAdminUser) {
+          updatedProfile = await adminOperations.updateDemoAthleteProfile(profileUserId, profileUpdateData);
+        } else {
+          updatedProfile = await athleteOperations.updateAthleteProfile(profileUserId, profileUpdateData);
+        }
       } catch (dbError) {
         console.error('Database error during athlete profile update:', dbError);
         throw dbError;
@@ -1011,9 +1082,126 @@ export async function PUT(
           await athleteOperations.replaceAthleteVideos(updatedProfile.id, videosData);
         }
       }
+
+      // Handle camp experience updates if provided (only for non-admin users)
+      if (!isAdminUser && sanitizedData.campExperience !== undefined && Array.isArray(sanitizedData.campExperience)) {
+        if (updatedProfile?.id) {
+          // Get existing experiences from database
+          const existingExperiences = await db.query.athleteExperience.findMany({
+            where: eq(athleteExperience.athleteId, updatedProfile.id)
+          });
+
+          // Transform client camp experience data to database format
+          const experiencesData: (NewAthleteExperience & { id?: number })[] = sanitizedData.campExperience.map((exp: {
+            id?: number; // Database ID for existing experiences
+            type: 'Camp' | 'Club';
+            name: string;
+            city: string;
+            stateCountry: string;
+            startDate: Date | string;
+            endDate: Date | string;
+            sport: string;
+            description: string;
+          }) => {
+            // Handle start date conversion - handle both Date objects and strings
+            let startDateString: string;
+            try {
+              const startDate = typeof exp.startDate === 'string' ? new Date(exp.startDate) : exp.startDate;
+              startDateString = startDate.toISOString().split('T')[0]; // Convert to YYYY-MM-DD format
+            } catch {
+              startDateString = new Date().toISOString().split('T')[0]; // Fallback to current date
+            }
+
+            // Handle end date conversion - handle both Date objects and strings, check if it's the special "Present" date
+            let endDateString: string;
+            try {
+              const endDate = typeof exp.endDate === 'string' ? new Date(exp.endDate) : exp.endDate;
+              if (endDate.getTime() === new Date('9999-12-31').getTime()) {
+                endDateString = '9999-12-31'; // Special date representing "Present"
+              } else {
+                endDateString = endDate.toISOString().split('T')[0]; // Convert to YYYY-MM-DD format
+              }
+            } catch {
+              endDateString = '9999-12-31'; // Fallback to "Present"
+            }
+
+            return {
+              athleteId: updatedProfile!.id,
+              type: exp.type,
+              name: exp.name,
+              city: exp.city,
+              stateCountry: exp.stateCountry,
+              startDate: startDateString,
+              endDate: endDateString,
+              sport: exp.sport,
+              description: exp.description
+            };
+          });
+
+          // Properly separate new and existing experiences by comparing with database
+          const newExperiences: NewAthleteExperience[] = [];
+          const existingExperiencesToUpdate: { id: number; data: Partial<NewAthleteExperience> }[] = [];
+          const experiencesToDelete: number[] = [];
+
+          // Create a map of existing experiences by their ID for quick lookup
+          const existingExperiencesMap = new Map(existingExperiences.map(exp => [exp.id, exp]));
+          
+          // Create a map of frontend experiences by their ID (if they have one)
+          const frontendExperiencesMap = new Map();
+          const frontendExperiencesWithoutId: NewAthleteExperience[] = [];
+
+          for (const exp of experiencesData) {
+            if (exp.id) {
+              frontendExperiencesMap.set(exp.id, exp);
+            } else {
+              frontendExperiencesWithoutId.push(exp);
+            }
+          }
+
+          // Find experiences to update (existing in both database and frontend)
+          for (const [id, frontendExp] of frontendExperiencesMap) {
+            if (existingExperiencesMap.has(id)) {
+              // This experience exists in both database and frontend - update it
+              const { id: expId, ...updateData } = frontendExp;
+              existingExperiencesToUpdate.push({ id: expId, data: updateData });
+            }
+          }
+
+          // Find experiences to delete (in database but not in frontend)
+          for (const [id] of existingExperiencesMap) {
+            if (!frontendExperiencesMap.has(id)) {
+              experiencesToDelete.push(id);
+            }
+          }
+
+          // All frontend experiences without IDs are new
+          newExperiences.push(...frontendExperiencesWithoutId);
+
+          // Delete experiences that are no longer in the frontend
+          for (const id of experiencesToDelete) {
+            await athleteExperienceOperations.deleteAthleteExperience(id);
+          }
+
+          // Update existing experiences
+          for (const { id, data } of existingExperiencesToUpdate) {
+            await athleteExperienceOperations.updateAthleteExperience(id, data);
+          }
+
+          // Create new experiences
+          for (const newExp of newExperiences) {
+            await athleteExperienceOperations.createAthleteExperience(newExp);
+          }
+        }
+      }
       
       // Re-fetch the complete profile with all related data to ensure consistency
-      const refetchedProfile = await athleteOperations.getAthleteProfile(profileUserId);
+      let refetchedProfile;
+      if (isAdminUser) {
+        const demoProfiles = await adminOperations.getDemoProfiles(profileUserId);
+        refetchedProfile = demoProfiles.athlete;
+      } else {
+        refetchedProfile = await athleteOperations.getAthleteProfile(profileUserId);
+      }
       if (refetchedProfile) {
         updatedProfile = refetchedProfile;
       }

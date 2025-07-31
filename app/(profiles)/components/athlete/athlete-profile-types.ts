@@ -32,12 +32,13 @@ export interface AthleteProfileData {
   weight: string;
   positions: string[];
   campExperience?: Array<{
+    id?: number; // Database ID for existing experiences
     type: 'Camp' | 'Club';
     name: string;
     city: string;
     stateCountry: string;
-    startDate: Date; // Changed from string to Date
-    endDate: Date; // Changed from Date | null to Date (uses special date for "Present")
+    startDate: Date | string; // Allow both Date and string for flexibility
+    endDate: Date | string; // Allow both Date and string for flexibility (uses special date for "Present")
     sport: string;
     description: string;
   }>;

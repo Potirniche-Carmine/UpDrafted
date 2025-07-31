@@ -256,7 +256,7 @@ export function sanitizeProfileData(data: Record<string, unknown>): Record<strin
         }
         break;
         
-      // Arrays of objects (videos, measurables)
+      // Arrays of objects (videos, measurables, camp experience)
       case 'youtubeVideos':
         if (Array.isArray(value)) {
           sanitized[key] = value.map(video => {
@@ -267,6 +267,27 @@ export function sanitizeProfileData(data: Record<string, unknown>): Record<strin
                 url: sanitizeUrl(videoObj.url as string),
                 embedUrl: sanitizeUrl(videoObj.embedUrl as string),
                 sortOrder: sanitizeNumber(videoObj.sortOrder, 0, 100)
+              };
+            }
+            return null;
+          }).filter(Boolean);
+        }
+        break;
+        
+      case 'campExperience':
+        if (Array.isArray(value)) {
+          sanitized[key] = value.map(experience => {
+            if (experience && typeof experience === 'object') {
+              const expObj = experience as Record<string, unknown>;
+              return {
+                type: sanitizeText(expObj.type as string),
+                name: sanitizeText(expObj.name as string),
+                city: sanitizeText(expObj.city as string),
+                stateCountry: sanitizeText(expObj.stateCountry as string),
+                startDate: expObj.startDate, // Keep as Date object or string
+                endDate: expObj.endDate, // Keep as Date object or string
+                sport: sanitizeText(expObj.sport as string),
+                description: sanitizeDescription(expObj.description as string)
               };
             }
             return null;
