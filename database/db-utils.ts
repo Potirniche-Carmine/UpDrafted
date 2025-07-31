@@ -1,4 +1,4 @@
-import { eq, and, desc, or, asc, sql, count } from 'drizzle-orm';
+import { eq, and, desc, or, asc, sql, count, lt } from 'drizzle-orm';
 import { db } from './db';
 import { 
   users, 
@@ -699,6 +699,23 @@ export const activityOperations = {
       orderBy: [desc(activityLog.createdAt)],
       limit
     });
+  },
+
+  // Clean up old activity logs
+  async cleanupOldActivityLogs(daysToKeep = 14) {
+    const cutoffDate = new Date();
+    cutoffDate.setDate(cutoffDate.getDate() - daysToKeep);
+    
+    const result = await db
+      .delete(activityLog)
+      .where(lt(activityLog.createdAt, cutoffDate))
+      .returning({ deletedId: activityLog.id });
+    
+    return {
+      deletedCount: result.length,
+      cutoffDate: cutoffDate.toISOString(),
+      daysKept: daysToKeep
+    };
   }
 };
 
