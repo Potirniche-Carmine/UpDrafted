@@ -86,6 +86,12 @@ export default function PrivacyPolicyPage() {
                                 >
                                     <p className="font-medium text-[#01ae79]">We take your privacy seriously with our encrypted messaging system:</p>
                                     <ul className="list-disc list-inside space-y-2 pl-4 mt-4">
+                                        <li><strong>End-to-End Encryption:</strong> All messages sent through our platform are encrypted using industry-standard AES-256 encryption protocols, ensuring that only intended recipients can read your communications.</li>
+                                        <li><strong>Limited Access Policy:</strong> Encrypted messages can only be accessed by our safety team in specific circumstances, including reported harassment, inappropriate behavior, or other safety concerns that threaten user wellbeing.</li>
+                                        <li><strong>Safety-First Approach:</strong> While we respect your privacy, we reserve the right to decrypt and review messages when investigating legitimate safety reports to protect all users, particularly minors on our platform.</li>
+                                        <li><strong>Transparent Process:</strong> Any access to encrypted messages follows a documented internal process and is limited to qualified safety personnel who have signed confidentiality agreements.</li>
+                                        <li><strong>Retention Policies:</strong> Encrypted messages are retained for safety monitoring purposes and may be preserved longer when involved in safety investigations or legal proceedings.</li>
+                                        <li><strong>User Reporting:</strong> Users can report concerning messages or behavior, which may trigger a safety review that includes accessing relevant encrypted communications.</li>
                                     </ul>
                                     <p className="mt-4 font-medium text-[#01ae79]">By using our messaging system, you consent to this safety-focused access model as necessary for maintaining a secure environment for all users.</p>
                                 </PrivacySection>

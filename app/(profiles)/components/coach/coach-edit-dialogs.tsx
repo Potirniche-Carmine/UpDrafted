@@ -674,7 +674,7 @@ export function CoachEditDialogs({
           <div className="space-y-6">
             <div className="space-y-3">
               <Label>Recruiting Graduation Years</Label>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2">
                 {GRADUATION_YEARS.map(year => (
                   <div key={year} className="flex items-center space-x-2">
                     <Checkbox
