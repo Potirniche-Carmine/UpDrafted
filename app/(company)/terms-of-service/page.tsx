@@ -65,14 +65,14 @@ export default function TermsOfServicePage() {
                             </CardContent>
                         </Card>
 
-                        <Card className="border border-blue-200 dark:border-blue-800 bg-blue-50/50 dark:bg-blue-950/30">
+                        <Card className="border border-[#01ae79]/20 dark:border-[#01ae79]/30 bg-[#01ae79]/5 dark:bg-[#01ae79]/10">
                             <CardContent className="p-6">
                                 <TermsSection
-                                    icon={<MessageCircle className="h-6 w-6 text-blue-600 dark:text-blue-400" />}
+                                    icon={<MessageCircle className="h-6 w-6 text-[#01ae79]" />}
                                     title="3. Messaging System and Privacy"
                                     isHighlighted={true}
                                 >
-                                    <p className="font-medium text-blue-800 dark:text-blue-200">
+                                    <p className="font-medium text-[#01ae79]">
                                         <strong>Encrypted Messaging:</strong> All messages on our platform are encrypted to protect your privacy.
                                     </p>
                                     <p>By using our messaging system, you acknowledge and agree that:</p>
@@ -87,14 +87,14 @@ export default function TermsOfServicePage() {
                             </CardContent>
                         </Card>
 
-                        <Card className="border border-purple-200 dark:border-purple-800 bg-purple-50/50 dark:bg-purple-950/30">
+                        <Card className="border border-[#01ae79]/20 dark:border-[#01ae79]/30 bg-[#01ae79]/5 dark:bg-[#01ae79]/10">
                             <CardContent className="p-6">
                                 <TermsSection
-                                    icon={<Crown className="h-6 w-6 text-purple-600 dark:text-purple-400" />}
+                                    icon={<Crown className="h-6 w-6 text-[#01ae79]" />}
                                     title="4. Data Tracking and Premium Features"
                                     isHighlighted={true}
                                 >
-                                    <p className="font-medium text-purple-800 dark:text-purple-200">
+                                    <p className="font-medium text-[#01ae79]">
                                         <strong>Universal Data Tracking:</strong> UpDrafted continuously collects and analyzes user activity data for all users to improve our platform and provide enhanced services.
                                     </p>
                                     <p><strong>By using our platform, you automatically consent to comprehensive data tracking including:</strong></p>
@@ -121,7 +121,7 @@ export default function TermsOfServicePage() {
                                         <li>Data collection occurs automatically and continuously while using our services</li>
                                         <li>We may use aggregated, anonymized data for business purposes and platform improvements</li>
                                     </ul>
-                                    <p className="mt-4 font-medium text-purple-800 dark:text-purple-200">
+                                    <p className="mt-4 font-medium text-[#01ae79]">
                                         <strong>Opt-Out Options:</strong> If you do not consent to this comprehensive data tracking, please contact us at <a href="mailto:support@updrafted.us" className="text-[#01ae79] hover:underline">support@updrafted.us</a> to discuss account limitations or termination. Continued use of the platform constitutes acceptance of all data collection practices.
                                     </p>
                                 </TermsSection>
@@ -187,9 +187,9 @@ export default function TermsOfServicePage() {
                             <p>If you have any questions about these Terms, please contact us at <a href="mailto:support@updrafted.us" className="text-[#01ae79] hover:underline font-medium">support@updrafted.us</a>.</p>
                         </TermsSection>
 
-                        <Card className="border border-amber-200 dark:border-amber-800 bg-amber-50/50 dark:bg-amber-950/30">
+                        <Card className="border border-[#01ae79]/20 dark:border-[#01ae79]/30 bg-[#01ae79]/5 dark:bg-[#01ae79]/10">
                             <CardContent className="p-6">
-                                <p className="text-sm text-amber-800 dark:text-amber-200">
+                                <p className="text-sm text-[#01ae79]">
                                     <strong>Legal Disclaimer:</strong> Please be aware that this Terms of Service is a provisional document and has not yet been reviewed or approved by legal counsel. It is provided for informational purposes only and is subject to revision. It does not constitute legal advice and should not be relied upon as such. We strongly recommend consulting with qualified legal counsel before relying on these terms for any legal purposes.
                                 </p>
                             </CardContent>

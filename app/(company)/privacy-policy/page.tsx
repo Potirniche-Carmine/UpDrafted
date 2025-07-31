@@ -77,35 +77,29 @@ export default function PrivacyPolicyPage() {
                             </CardContent>
                         </Card>
 
-                        <Card className="border border-blue-200 dark:border-blue-800 bg-blue-50/50 dark:bg-blue-950/30">
+                        <Card className="border border-[#01ae79]/20 dark:border-[#01ae79]/30 bg-[#01ae79]/5 dark:bg-[#01ae79]/10">
                             <CardContent className="p-6">
                                 <PrivacySection
-                                    icon={<MessageCircle className="h-6 w-6 text-blue-600 dark:text-blue-400" />}
+                                    icon={<MessageCircle className="h-6 w-6 text-[#01ae79]" />}
                                     title="3. Encrypted Messaging System"
                                     isHighlighted={true}
                                 >
-                                    <p className="font-medium text-blue-800 dark:text-blue-200">We take your privacy seriously with our encrypted messaging system:</p>
+                                    <p className="font-medium text-[#01ae79]">We take your privacy seriously with our encrypted messaging system:</p>
                                     <ul className="list-disc list-inside space-y-2 pl-4 mt-4">
-                                        <li><strong>End-to-End Encryption:</strong> All messages are encrypted to protect your communications from unauthorized access.</li>
-                                        <li><strong>Limited Access Policy:</strong> We do not routinely monitor, read, or access your encrypted messages for any commercial or general monitoring purposes.</li>
-                                        <li><strong>Safety-Only Access:</strong> Encrypted messages may only be accessed and reviewed when a safety report is submitted by users reporting harassment, threats, inappropriate behavior, or other safety concerns.</li>
-                                        <li><strong>Investigation Process:</strong> Message access occurs solely for the purpose of investigating reported safety violations and ensuring user protection.</li>
-                                        <li><strong>Authorized Personnel Only:</strong> Only designated safety and security personnel have the ability to access messages during investigations, under strict confidentiality protocols.</li>
-                                        <li><strong>Retention for Safety:</strong> Messages are retained for a reasonable period to ensure we can respond to safety reports and maintain platform security.</li>
                                     </ul>
-                                    <p className="mt-4 font-medium text-blue-800 dark:text-blue-200">By using our messaging system, you consent to this safety-focused access model as necessary for maintaining a secure environment for all users.</p>
+                                    <p className="mt-4 font-medium text-[#01ae79]">By using our messaging system, you consent to this safety-focused access model as necessary for maintaining a secure environment for all users.</p>
                                 </PrivacySection>
                             </CardContent>
                         </Card>
 
-                        <Card className="border border-purple-200 dark:border-purple-800 bg-purple-50/50 dark:bg-purple-950/30">
+                        <Card className="border border-[#01ae79]/20 dark:border-[#01ae79]/30 bg-[#01ae79]/5 dark:bg-[#01ae79]/10">
                             <CardContent className="p-6">
                                 <PrivacySection
-                                    icon={<Crown className="h-6 w-6 text-purple-600 dark:text-purple-400" />}
+                                    icon={<Crown className="h-6 w-6 text-[#01ae79]" />}
                                     title="4. Universal Data Collection and Premium Access"
                                     isHighlighted={true}
                                 >
-                                    <p className="font-medium text-purple-800 dark:text-purple-200">UpDrafted collects comprehensive data from all users continuously, but only premium subscribers can access detailed analytics about their activity and others&apos; interactions with their profile.</p>
+                                    <p className="font-medium text-[#01ae79]">UpDrafted collects comprehensive data from all users continuously, but only premium subscribers can access detailed analytics about their activity and others&apos; interactions with their profile.</p>
                                     <p className="mt-4"><strong>Universal Data Collection:</strong> We collect detailed activity data from all users including:</p>
                                     <ul className="list-disc list-inside space-y-2 pl-4 mt-4">
                                         <li><strong>Comprehensive Activity Logs:</strong> All website activity, page visits, time spent on profiles, click patterns, scroll behavior, and feature usage for every user.</li>
@@ -124,7 +118,7 @@ export default function PrivacyPolicyPage() {
                                         <li>View comprehensive interaction and engagement reports</li>
                                     </ul>
                                     <p className="mt-4"><strong>Liability and Consent:</strong> By using our platform, you consent to all data collection practices. UpDrafted is not liable for any consequences resulting from data collection, analysis, or use. Data collection occurs automatically for all users as a core platform function.</p>
-                                    <p className="mt-4 font-medium text-purple-800 dark:text-purple-200">
+                                    <p className="mt-4 font-medium text-[#01ae79]">
                                         <strong>Opt-Out:</strong> If you do not consent to comprehensive data tracking, please contact <a href="mailto:support@updrafted.us" className="text-[#01ae79] hover:underline">support@updrafted.us</a> to discuss account limitations or termination.
                                     </p>
                                 </PrivacySection>
@@ -167,14 +161,14 @@ export default function PrivacyPolicyPage() {
                             </ul>
                         </PrivacySection>
 
-                        <Card className="border border-emerald-200 dark:border-emerald-800 bg-emerald-50/50 dark:bg-emerald-950/30">
+                        <Card className="border border-[#01ae79]/20 dark:border-[#01ae79]/30 bg-[#01ae79]/5 dark:bg-[#01ae79]/10">
                             <CardContent className="p-6">
                                 <PrivacySection
-                                    icon={<Activity className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />}
+                                    icon={<Activity className="h-6 w-6 text-[#01ae79]" />}
                                     title="7. Data Security and Safety Measures"
                                     isHighlighted={true}
                                 >
-                                    <p className="font-medium text-emerald-800 dark:text-emerald-200">We implement comprehensive security measures to protect your data:</p>
+                                    <p className="font-medium text-[#01ae79]">We implement comprehensive security measures to protect your data:</p>
                                     <ul className="list-disc list-inside space-y-2 pl-4 mt-4">
                                         <li><strong>Encryption:</strong> All messages are encrypted using industry-standard encryption protocols to protect your communications.</li>
                                         <li><strong>Access Controls:</strong> Strict access controls ensure only authorized personnel can access user data, and only for legitimate safety or support purposes.</li>
@@ -234,9 +228,9 @@ export default function PrivacyPolicyPage() {
                             <p className="mt-4">For privacy-related inquiries, please include &quot;Privacy Policy&quot; in the subject line to ensure prompt attention to your request.</p>
                         </PrivacySection>
 
-                        <Card className="border border-amber-200 dark:border-amber-800 bg-amber-50/50 dark:bg-amber-950/30">
+                        <Card className="border border-[#01ae79]/20 dark:border-[#01ae79]/30 bg-[#01ae79]/5 dark:bg-[#01ae79]/10">
                             <CardContent className="p-6">
-                                <p className="text-sm text-amber-800 dark:text-amber-200">
+                                <p className="text-sm text-[#01ae79]">
                                     <strong>Legal Disclaimer:</strong> Please be aware that this Privacy Policy is a provisional document and has not yet been reviewed or approved by legal counsel. It is provided for informational purposes only and is subject to revision. It does not constitute legal advice and should not be relied upon as such. We strongly recommend consulting with qualified legal counsel for any privacy-related legal questions or concerns.
                                 </p>
                             </CardContent>
@@ -285,7 +279,7 @@ interface PrivacySectionProps {
 
 const PrivacySection: React.FC<PrivacySectionProps> = ({ icon, title, children, isHighlighted = false }) => (
     <div className="space-y-4">
-        <h2 className={`text-2xl font-semibold flex items-start gap-3 ${isHighlighted ? 'text-emerald-800 dark:text-emerald-200' : 'text-foreground'}`}>
+        <h2 className={`text-2xl font-semibold flex items-start gap-3 ${isHighlighted ? 'text-[#01ae79]' : 'text-foreground'}`}>
             {icon}
             {title}
         </h2>

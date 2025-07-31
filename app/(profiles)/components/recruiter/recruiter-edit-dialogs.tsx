@@ -742,9 +742,15 @@ export function RecruiterEditDialogs({
         
         return (
           <div className="space-y-6">
+            <div className="bg-muted/50 p-3 rounded-lg">
+              <p className="text-sm font-medium text-muted-foreground">
+                Sport: <span className="text-foreground">{currentSport}</span>
+              </p>
+            </div>
+            
             <div>
               <Label>Graduation Years</Label>
-              <div className="grid grid-cols-4 gap-2 mt-2">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-2">
                 {GRADUATION_YEARS.map((year) => (
                   <div key={year} className="flex items-center space-x-2">
                     <Checkbox
@@ -1148,8 +1154,7 @@ export function RecruiterEditDialogs({
       case 'personal-statement':
         return 'Edit Personal Statement';
       case 'recruiting-needs':
-        const sportName = selectedSport || profileData.sportRecruiting;
-        return `Edit ${sportName} Recruiting Needs`;
+        return 'Edit Recruiting Needs';
       case 'social-media':
         return 'Edit Social Media';
       case 'program-links':
@@ -1172,7 +1177,7 @@ export function RecruiterEditDialogs({
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent 
-        className="max-w-2xl max-h-[80vh] overflow-y-auto"
+        className="max-w-2xl max-h-[90vh] sm:max-h-[80vh] overflow-y-auto w-[95vw] sm:w-full"
         onOpenAutoFocus={e => e.preventDefault()}
       >
         <DialogHeader>

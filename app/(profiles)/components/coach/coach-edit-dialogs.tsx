@@ -674,7 +674,7 @@ export function CoachEditDialogs({
           <div className="space-y-6">
             <div className="space-y-3">
               <Label>Recruiting Graduation Years</Label>
-              <div className="grid grid-cols-4 gap-2">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                 {GRADUATION_YEARS.map(year => (
                   <div key={year} className="flex items-center space-x-2">
                     <Checkbox
@@ -928,7 +928,7 @@ export function CoachEditDialogs({
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent 
-        className="max-w-2xl max-h-[80vh] overflow-y-auto"
+        className="max-w-2xl max-h-[90vh] sm:max-h-[80vh] overflow-y-auto w-[95vw] sm:w-full"
         onOpenAutoFocus={e => e.preventDefault()}
       >
         <DialogHeader>
