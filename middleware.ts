@@ -129,8 +129,9 @@ const securityMiddleware = async (request: NextRequest) => {
 
 // Combine Clerk middleware with security middleware
 export default clerkMiddleware(async (auth, req) => {
-  // Skip all processing for webhook routes
-  if (req.nextUrl.pathname.startsWith('/api/webhooks/')) {
+  // Skip all processing for webhook routes and cleanup routes
+  if (req.nextUrl.pathname.startsWith('/api/webhooks/') || 
+      req.nextUrl.pathname.startsWith('/api/activity/cleanup')) {
     return NextResponse.next();
   }
 
