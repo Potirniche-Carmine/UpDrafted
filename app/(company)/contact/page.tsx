@@ -134,15 +134,15 @@ Timestamp: ${new Date().toISOString()}
                 </div>
 
                 {isSubmitted ? (
-                  <Card className="border border-green-200 dark:border-green-800 bg-green-50/50 dark:bg-green-950/30">
+                  <Card className="border border-[#01ae79]/20 dark:border-[#01ae79]/30 bg-[#01ae79]/5 dark:bg-[#01ae79]/10">
                     <CardContent className="p-8 text-center">
-                      <CheckCircle className="h-12 w-12 text-green-600 dark:text-green-400 mx-auto mb-4" />
-                      <h3 className="text-xl font-semibold text-green-800 dark:text-green-200 mb-2">
+                      <CheckCircle className="h-12 w-12 text-[#01ae79] mx-auto mb-4" />
+                      <h3 className="text-xl font-semibold text-[#01ae79] mb-2">
                         Message Sent!
                       </h3>
-                      <p className="text-green-700 dark:text-green-300">
+                      <p className="text-muted-foreground">
                         Your message has been sent successfully! We&apos;ll get back to you at {formData.email} within our standard response times. If you need immediate assistance, you can also email us directly at{" "}
-                        <a href="mailto:support@updrafted.us" className="font-medium underline">
+                        <a href="mailto:support@updrafted.us" className="font-medium underline text-[#01ae79]">
                           support@updrafted.us
                         </a>
                       </p>
@@ -287,37 +287,37 @@ Timestamp: ${new Date().toISOString()}
 
                   {/* Support Categories */}
                   <div className="grid grid-cols-1 gap-4">
-                    <Card className="border border-red-200 dark:border-red-800 bg-red-50/50 dark:bg-red-950/30">
+                    <Card className="border border-[#01ae79]/20 dark:border-[#01ae79]/30 bg-[#01ae79]/5 dark:bg-[#01ae79]/10">
                       <CardContent className="p-4">
                         <div className="flex items-center gap-3">
-                          <Bug className="h-5 w-5 text-red-600 dark:text-red-400" />
+                          <Bug className="h-5 w-5 text-[#01ae79]" />
                           <div>
-                            <p className="font-medium text-red-800 dark:text-red-200">Bug Reports</p>
-                            <p className="text-sm text-red-700 dark:text-red-300">Priority response</p>
+                            <p className="font-medium text-[#01ae79]">Bug Reports</p>
+                            <p className="text-sm text-muted-foreground">Priority response</p>
                           </div>
                         </div>
                       </CardContent>
                     </Card>
 
-                    <Card className="border border-blue-200 dark:border-blue-800 bg-blue-50/50 dark:bg-blue-950/30">
+                    <Card className="border border-[#01ae79]/20 dark:border-[#01ae79]/30 bg-[#01ae79]/5 dark:bg-[#01ae79]/10">
                       <CardContent className="p-4">
                         <div className="flex items-center gap-3">
-                          <Lightbulb className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                          <Lightbulb className="h-5 w-5 text-[#01ae79]" />
                           <div>
-                            <p className="font-medium text-blue-800 dark:text-blue-200">Feature Requests</p>
-                            <p className="text-sm text-blue-700 dark:text-blue-300">We&apos;d love to hear your ideas</p>
+                            <p className="font-medium text-[#01ae79]">Feature Requests</p>
+                            <p className="text-sm text-muted-foreground">We&apos;d love to hear your ideas</p>
                           </div>
                         </div>
                       </CardContent>
                     </Card>
 
-                    <Card className="border border-green-200 dark:border-green-800 bg-green-50/50 dark:bg-green-950/30">
+                    <Card className="border border-[#01ae79]/20 dark:border-[#01ae79]/30 bg-[#01ae79]/5 dark:bg-[#01ae79]/10">
                       <CardContent className="p-4">
                         <div className="flex items-center gap-3">
-                          <MessageSquare className="h-5 w-5 text-green-600 dark:text-green-400" />
+                          <MessageSquare className="h-5 w-5 text-[#01ae79]" />
                           <div>
-                            <p className="font-medium text-green-800 dark:text-green-200">General Support</p>
-                            <p className="text-sm text-green-700 dark:text-green-300">Questions and assistance</p>
+                            <p className="font-medium text-[#01ae79]">General Support</p>
+                            <p className="text-sm text-muted-foreground">Questions and assistance</p>
                           </div>
                         </div>
                       </CardContent>

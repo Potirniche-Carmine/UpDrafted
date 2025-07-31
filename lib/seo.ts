@@ -121,9 +121,13 @@ export function generateMetadata({
       creator: siteConfig.twitterCreator, 
     },
     icons: {
-      icon: '/favicon.ico',
-      shortcut: '/favicon-16x16.png',
-      apple: '/apple-touch-icon.png',
+      icon: [
+        { url: '/favicon.ico' },
+        { url: '/icon.png', type: 'image/png' },
+      ],
+      apple: [
+        { url: '/apple-icon.png', type: 'image/png' },
+      ],
     },
     manifest: '/site.webmanifest',
     robots: {
