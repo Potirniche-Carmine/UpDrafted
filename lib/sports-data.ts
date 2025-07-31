@@ -237,19 +237,43 @@ export function getValidHighSchoolGraduationYears(): number[] {
   const currentYear = new Date().getFullYear();
   const currentMonth = new Date().getMonth();
   
-  // If we're in the first half of the year (Jan-June), we're in the spring of the school year
-  // If we're in the second half (July-Dec), we're in the fall of the new school year
-  const baseYear = currentMonth < 6 ? currentYear : currentYear + 1;
+  // Academic year starts in August (month 7) and ends in May/June
+  // High school students graduate in spring (May/June), not fall
+  // For recruiting purposes, we show students who are currently juniors and sophomores
+  // (who will be seniors and juniors in the upcoming school year)
   
-  // Current seniors graduate this year (baseYear)
-  // Current juniors graduate next year (baseYear + 1)
-  return [baseYear, baseYear + 1];
+  const isBeforeNewSchoolYear = currentMonth < 7; // January-July is before new school year starts
+  
+  if (isBeforeNewSchoolYear) {
+    // Before new school year (Jan-July): 
+    // - Current seniors have graduated or will graduate this spring
+    // - Show current juniors (graduate next year) and current sophomores (graduate year after)
+    // - But if we're past graduation season (June-July), current seniors have already graduated
+    const isAfterGraduation = currentMonth >= 5; // June-July, after typical graduation
+    
+    if (isAfterGraduation) {
+      // Post-graduation season: Show rising seniors and rising juniors
+      return [currentYear + 1, currentYear + 2];
+    } else {
+      // Pre-graduation season: Show current seniors and juniors
+      return [currentYear, currentYear + 1];
+    }
+  } else {
+    // Fall semester (Aug-Dec): Show current seniors and juniors
+    return [currentYear + 1, currentYear + 2];
+  }
 }
 
 // Check if a graduation year is valid for high school athletes
 export function isValidHighSchoolGraduationYear(year: number): boolean {
   const validYears = getValidHighSchoolGraduationYears();
   return validYears.includes(year);
+}
+
+// Get error message for invalid high school graduation years
+export function getHighSchoolGraduationYearErrorMessage(): string {
+  const validYears = getValidHighSchoolGraduationYears();
+  return `High school athletes must be juniors or above (Class of ${validYears.join(', ')})`;
 }
 
 // Get filtered graduation years for high school athletes

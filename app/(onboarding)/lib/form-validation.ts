@@ -1,4 +1,5 @@
 import { OnboardingFormData } from '@/app/(onboarding)/lib/onboarding';
+import { isValidHighSchoolGraduationYear, getHighSchoolGraduationYearErrorMessage } from '@/lib/sports-data';
 
 export interface ValidationResult {
   isValid: boolean;
@@ -201,24 +202,10 @@ export class FormValidator {
 
     // Special validation for high school athletes - only juniors and above
     if (educationLevel === 'high_school') {
-      const currentYear = new Date().getFullYear();
-      const currentMonth = new Date().getMonth();
-      
-      // Academic year starts in August (month 7) and ends in May/June
-      // Before August: we're in the spring semester of the current academic year
-      // August or later: we're in the fall semester of the new academic year
-      const isSpring = currentMonth < 7; // January-July is spring semester
-      const academicYear = isSpring ? currentYear : currentYear + 1;
-      
-      // Current seniors graduate at the end of this academic year
-      // Current juniors graduate at the end of next academic year
-      // We allow registration for juniors and seniors only
-      const validYears = [academicYear, academicYear + 1];
-      
-      if (!validYears.includes(value)) {
+      if (!isValidHighSchoolGraduationYear(value)) {
         return { 
           isValid: false, 
-          error: `High school athletes must be juniors or above (Class of ${validYears.join(', ')})` 
+          error: getHighSchoolGraduationYearErrorMessage()
         };
       }
     }
@@ -383,6 +370,16 @@ export class FormValidator {
     const nameResult = this.validateName(data.fullName, true);
     if (!nameResult.isValid) errors.fullName = nameResult.error!;
 
+    // Sport validation (required)
+    if (!data.sport || !data.sport.trim()) {
+      errors.sport = 'Sport is required';
+    }
+
+    // Education level validation (required)
+    if (!data.educationLevel || !data.educationLevel.trim()) {
+      errors.educationLevel = 'Education level is required';
+    }
+
     // Organization validation
     const orgResult = this.validateText(data.organizationName, 'Organization name', FIELD_LIMITS.ORGANIZATION_NAME, true);
     if (!orgResult.isValid) errors.organizationName = orgResult.error!;
@@ -391,11 +388,62 @@ export class FormValidator {
     const cityResult = this.validateText(data.city, 'City', FIELD_LIMITS.CITY, true);
     if (!cityResult.isValid) errors.city = cityResult.error!;
 
+    // Country validation (required)
+    if (!data.country || !data.country.trim()) {
+      errors.country = 'Country is required';
+    }
+
+    // State validation (required if country is United States)
+    if (data.country === 'United States') {
+      if (!data.state || !data.state.trim()) {
+        errors.state = 'State is required for United States';
+      }
+    }
+
+    // Height validation (required)
+    if (!data.heightFeet || !data.heightFeet.toString().trim()) {
+      errors.heightFeet = 'Height (feet) is required';
+    } else {
+      const feet = parseInt(data.heightFeet.toString());
+      if (isNaN(feet) || feet < NUMERIC_LIMITS.HEIGHT_FEET.min || feet > NUMERIC_LIMITS.HEIGHT_FEET.max) {
+        errors.heightFeet = `Height (feet) must be between ${NUMERIC_LIMITS.HEIGHT_FEET.min} and ${NUMERIC_LIMITS.HEIGHT_FEET.max}`;
+      }
+    }
+
+    if (!data.heightInches || !data.heightInches.toString().trim()) {
+      errors.heightInches = 'Height (inches) is required';
+    } else {
+      const inches = parseInt(data.heightInches.toString());
+      if (isNaN(inches) || inches < NUMERIC_LIMITS.HEIGHT_INCHES.min || inches > NUMERIC_LIMITS.HEIGHT_INCHES.max) {
+        errors.heightInches = `Height (inches) must be between ${NUMERIC_LIMITS.HEIGHT_INCHES.min} and ${NUMERIC_LIMITS.HEIGHT_INCHES.max}`;
+      }
+    }
+
     // Weight validation
     const weightResult = this.validateWeight(data.weight, true);
     if (!weightResult.isValid) errors.weight = weightResult.error!;
 
-    // Academic scores validation
+    // Positions validation (required, must have at least one)
+    if (!data.positions || !Array.isArray(data.positions) || data.positions.length === 0) {
+      errors.positions = 'At least one position is required';
+    }
+
+    // Competition level validation (required for undergraduate and graduate students)
+    if (data.educationLevel === 'undergraduate' || data.educationLevel === 'graduate') {
+      if (!data.competitionLevel || !data.competitionLevel.trim()) {
+        errors.competitionLevel = 'Competition level is required for college students';
+      }
+    }
+
+    // Academic requirements depend on education level
+    if (data.educationLevel === 'high_school') {
+      // High school students need at least one: GPA, SAT, or ACT
+      if (!data.gpa && !data.satScore && !data.actScore) {
+        errors.academicInfo = 'High school students must provide at least one: GPA, SAT score, or ACT score';
+      }
+    }
+
+    // Academic scores validation (validate format if provided)
     const gpaResult = this.validateGPA(data.gpa);
     if (!gpaResult.isValid) errors.gpa = gpaResult.error!;
 
@@ -413,18 +461,32 @@ export class FormValidator {
     const graduationResult = this.validateGraduationYear(data.graduationYear, data.educationLevel);
     if (!graduationResult.isValid) errors.graduationYear = graduationResult.error!;
 
-    // URLs validation
+    // Terms and conditions validation
+    if (!data.agreeToTerms) {
+      errors.agreeToTerms = 'You must agree to the Terms of Service and Privacy Policy';
+    }
+
+    // Age confirmation validation (required for athletes)
+    if (!data.ageConfirmation) {
+      errors.ageConfirmation = 'You must confirm that you are at least 13 years old';
+    }
+
+    // Personal statement validation
+    const statementResult = this.validateText(data.personalStatement, 'Personal statement', FIELD_LIMITS.PERSONAL_STATEMENT, true);
+    if (!statementResult.isValid) errors.personalStatement = statementResult.error!;
+
+    // URLs validation (optional fields)
     if (data.maxprepsUrl) {
       const maxprepsResult = this.validateMaxPrepsURL(data.maxprepsUrl, data.fullName);
       if (!maxprepsResult.isValid) errors.maxprepsUrl = maxprepsResult.error!;
     }
-    // HUDL URL 
+    
     if (data.hudlUrl) {
       const hudlResult = this.validateHudlURL(data.hudlUrl, data.fullName);
       if (!hudlResult.isValid) errors.hudlUrl = hudlResult.error!;
     }
 
-    // Social media validation
+    // Social media validation (optional fields)
     if (data.instagramHandle) {
       const igResult = this.validateSocialHandle(data.instagramHandle, 'instagram');
       if (!igResult.isValid) errors.instagramHandle = igResult.error!;
@@ -434,15 +496,6 @@ export class FormValidator {
       const twitterResult = this.validateSocialHandle(data.twitterHandle, 'twitter');
       if (!twitterResult.isValid) errors.twitterHandle = twitterResult.error!;
     }
-
-    // Country validation (required)
-    if (!data.country || !data.country.trim()) {
-      errors.country = 'Country is required';
-    }
-
-    // Personal statement validation
-    const statementResult = this.validateText(data.personalStatement, 'Personal statement', FIELD_LIMITS.PERSONAL_STATEMENT, true);
-    if (!statementResult.isValid) errors.personalStatement = statementResult.error!;
 
     return errors;
   }
@@ -463,48 +516,30 @@ export class FormValidator {
     const orgResult = this.validateText(data.organizationName, 'Organization name', FIELD_LIMITS.ORGANIZATION_NAME, true);
     if (!orgResult.isValid) errors.organizationName = orgResult.error!;
 
+    // Sport coaching validation (required)
+    if (!data.sportCoaching || !data.sportCoaching.trim()) {
+      errors.sportCoaching = 'Primary sport is required';
+    }
+
+    // Division validation (required)
+    if (!data.division || !data.division.trim()) {
+      errors.division = 'Division is required';
+    }
+
     // City validation
     const cityResult = this.validateText(data.city, 'City', FIELD_LIMITS.CITY, true);
     if (!cityResult.isValid) errors.city = cityResult.error!;
+
+    // Country validation (required)
+    if (!data.country || !data.country.trim()) {
+      errors.country = 'Country is required';
+    }
 
     // State validation (only required if country is United States)
     if (data.country === 'United States') {
       if (!data.state || !data.state.trim()) {
         errors.state = 'State is required for United States';
       }
-    }
-
-    // Conference validation
-    if (data.conference) {
-      const confResult = this.validateText(data.conference, 'Conference', FIELD_LIMITS.CONFERENCE);
-      if (!confResult.isValid) errors.conference = confResult.error!;
-    }
-
-    // URLs validation
-    if (data.programWebsite) {
-      const programWebResult = this.validateURL(data.programWebsite);
-      if (!programWebResult.isValid) errors.programWebsite = programWebResult.error!;
-    }
-
-    if (data.schoolWebsite) {
-      const schoolWebResult = this.validateURL(data.schoolWebsite);
-      if (!schoolWebResult.isValid) errors.schoolWebsite = schoolWebResult.error!;
-    }
-
-    // Social media validation
-    if (data.orgInstagramHandle) {
-      const igResult = this.validateSocialHandle(data.orgInstagramHandle, 'instagram');
-      if (!igResult.isValid) errors.orgInstagramHandle = igResult.error!;
-    }
-
-    if (data.orgTwitterHandle) {
-      const twitterResult = this.validateSocialHandle(data.orgTwitterHandle, 'twitter');
-      if (!twitterResult.isValid) errors.orgTwitterHandle = twitterResult.error!;
-    }
-
-    // Country validation (required)
-    if (!data.country || !data.country.trim()) {
-      errors.country = 'Country is required';
     }
 
     // Check that at least one contact method is provided
@@ -516,6 +551,39 @@ export class FormValidator {
     // Personal statement validation
     const personalResult = this.validateText(data.personalStatement, 'About yourself', FIELD_LIMITS.PERSONAL_STATEMENT, true);
     if (!personalResult.isValid) errors.personalStatement = personalResult.error!;
+
+    // Terms and conditions validation
+    if (!data.agreeToTerms) {
+      errors.agreeToTerms = 'You must agree to the Terms of Service and Privacy Policy';
+    }
+
+    // Conference validation (optional)
+    if (data.conference) {
+      const confResult = this.validateText(data.conference, 'Conference', FIELD_LIMITS.CONFERENCE);
+      if (!confResult.isValid) errors.conference = confResult.error!;
+    }
+
+    // URLs validation (optional fields)
+    if (data.programWebsite) {
+      const programWebResult = this.validateURL(data.programWebsite);
+      if (!programWebResult.isValid) errors.programWebsite = programWebResult.error!;
+    }
+
+    if (data.schoolWebsite) {
+      const schoolWebResult = this.validateURL(data.schoolWebsite);
+      if (!schoolWebResult.isValid) errors.schoolWebsite = schoolWebResult.error!;
+    }
+
+    // Social media validation (optional fields)
+    if (data.orgInstagramHandle) {
+      const igResult = this.validateSocialHandle(data.orgInstagramHandle, 'instagram');
+      if (!igResult.isValid) errors.orgInstagramHandle = igResult.error!;
+    }
+
+    if (data.orgTwitterHandle) {
+      const twitterResult = this.validateSocialHandle(data.orgTwitterHandle, 'twitter');
+      if (!twitterResult.isValid) errors.orgTwitterHandle = twitterResult.error!;
+    }
 
     // Determine if this is a recruiter (has secondary sports or sport-specific needs) or coach
     const isRecruiter = data.secondarySportsRecruiting && data.secondarySportsRecruiting.length > 0 || 
