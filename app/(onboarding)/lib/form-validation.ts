@@ -405,8 +405,11 @@ export class FormValidator {
       errors.heightFeet = 'Height (feet) is required';
     } else {
       const feet = parseInt(data.heightFeet.toString());
-      if (isNaN(feet) || feet < NUMERIC_LIMITS.HEIGHT_FEET.min || feet > NUMERIC_LIMITS.HEIGHT_FEET.max) {
-        errors.heightFeet = `Height (feet) must be between ${NUMERIC_LIMITS.HEIGHT_FEET.min} and ${NUMERIC_LIMITS.HEIGHT_FEET.max}`;
+      const feetLimits = NUMERIC_LIMITS.HEIGHT_FEET;
+      if (isNaN(feet)) {
+        errors.heightFeet = 'Height (feet) must be a valid number';
+      } else if (feetLimits && (feet < feetLimits.min || feet > feetLimits.max)) {
+        errors.heightFeet = `Height (feet) must be between ${feetLimits.min} and ${feetLimits.max}`;
       }
     }
 
@@ -414,8 +417,11 @@ export class FormValidator {
       errors.heightInches = 'Height (inches) is required';
     } else {
       const inches = parseInt(data.heightInches.toString());
-      if (isNaN(inches) || inches < NUMERIC_LIMITS.HEIGHT_INCHES.min || inches > NUMERIC_LIMITS.HEIGHT_INCHES.max) {
-        errors.heightInches = `Height (inches) must be between ${NUMERIC_LIMITS.HEIGHT_INCHES.min} and ${NUMERIC_LIMITS.HEIGHT_INCHES.max}`;
+      const inchesLimits = NUMERIC_LIMITS.HEIGHT_INCHES;
+      if (isNaN(inches)) {
+        errors.heightInches = 'Height (inches) must be a valid number';
+      } else if (inchesLimits && (inches < inchesLimits.min || inches > inchesLimits.max)) {
+        errors.heightInches = `Height (inches) must be between ${inchesLimits.min} and ${inchesLimits.max}`;
       }
     }
 

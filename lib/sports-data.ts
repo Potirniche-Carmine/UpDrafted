@@ -234,33 +234,22 @@ export const GRADUATION_YEARS = Array.from(
 
 // Get graduation years that are valid for high school athletes (juniors and above)
 export function getValidHighSchoolGraduationYears(): number[] {
-  const currentYear = new Date().getFullYear();
-  const currentMonth = new Date().getMonth();
+  const now = new Date();
+  const currentYear = now.getFullYear();
+  const currentMonth = now.getMonth();
+  const currentDay = now.getDate();
   
-  // Academic year starts in August (month 7) and ends in May/June
-  // High school students graduate in spring (May/June), not fall
-  // For recruiting purposes, we show students who are currently juniors and sophomores
-  // (who will be seniors and juniors in the upcoming school year)
+  // Use June 15th as the cutoff date when coaches can start talking to players
+  // This simplifies the logic and aligns with NCAA recruiting calendar
+  const isAfterJune15 = currentMonth > 5 || (currentMonth === 5 && currentDay >= 15); // June 15th and after
   
-  const isBeforeNewSchoolYear = currentMonth < 7; // January-July is before new school year starts
-  
-  if (isBeforeNewSchoolYear) {
-    // Before new school year (Jan-July): 
-    // - Current seniors have graduated or will graduate this spring
-    // - Show current juniors (graduate next year) and current sophomores (graduate year after)
-    // - But if we're past graduation season (June-July), current seniors have already graduated
-    const isAfterGraduation = currentMonth >= 5; // June-July, after typical graduation
-    
-    if (isAfterGraduation) {
-      // Post-graduation season: Show rising seniors and rising juniors
-      return [currentYear + 1, currentYear + 2];
-    } else {
-      // Pre-graduation season: Show current seniors and juniors
-      return [currentYear, currentYear + 1];
-    }
-  } else {
-    // Fall semester (Aug-Dec): Show current seniors and juniors
+  if (isAfterJune15) {
+    // After June 15th: Show rising seniors and rising juniors
+    // Remove current year graduates, add next cohort
     return [currentYear + 1, currentYear + 2];
+  } else {
+    // Before June 15th: Show current seniors and juniors  
+    return [currentYear, currentYear + 1];
   }
 }
 
