@@ -50,46 +50,26 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('Error during activity log cleanup:', error);
     
-    return NextResponse.json({
-      success: false,
-      error: 'Failed to cleanup activity logs'
-    }, { status: 500 });
-  }
-}
-
-// Optional: Allow GET requests for manual testing (with same auth)
-export async function GET(request: NextRequest) {
-  try {
-    const authHeader = request.headers.get('authorization');
-    const expectedToken = process.env.CRON_SECRET_TOKEN;
+    // Provide more detailed error information for debugging
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+    const isDevelopment = process.env.NODE_ENV === 'development';
     
-    if (!expectedToken || !authHeader || authHeader !== `Bearer ${expectedToken}`) {
-      return NextResponse.json({
-        success: false,
-        error: 'Unauthorized'
-      }, { status: 401 });
+    const response: {
+      success: false;
+      error: string;
+      details: string;
+      debug?: unknown;
+    } = {
+      success: false,
+      error: 'Failed to cleanup activity logs',
+      details: errorMessage
+    };
+    
+    // Include debug info only in development
+    if (isDevelopment && error) {
+      response.debug = error;
     }
-
-    // Just return info without actually cleaning up
-    const cutoffDate = new Date();
-    cutoffDate.setDate(cutoffDate.getDate() - 14);
     
-    return NextResponse.json({
-      success: true,
-      message: 'Cleanup endpoint is ready',
-      info: {
-        defaultDaysToKeep: 14,
-        exampleCutoffDate: cutoffDate.toISOString(),
-        usage: 'POST to this endpoint to perform cleanup'
-      }
-    });
-
-  } catch (error) {
-    console.error('Error in cleanup info endpoint:', error);
-    
-    return NextResponse.json({
-      success: false,
-      error: 'Failed to get cleanup info'
-    }, { status: 500 });
+    return NextResponse.json(response, { status: 500 });
   }
 }
