@@ -764,6 +764,7 @@ export function RecruiterProfile({
                         fill
                         className="rounded-full object-cover"
                         sizes="(max-width: 768px) 80px, (max-width: 1024px) 112px, 128px"
+                        unoptimized
                       />
                     ) : (
                       <div className="w-full h-full bg-muted rounded-full flex items-center justify-center">

@@ -953,6 +953,7 @@ export function AthleteProfile({
                         fill
                         className="rounded-full object-cover"
                         sizes="(max-width: 768px) 96px, 128px"
+                        unoptimized
                       />
                     ) : (
                       <div className="w-full h-full bg-muted rounded-full flex items-center justify-center">

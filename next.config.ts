@@ -13,6 +13,8 @@ const nextConfig: NextConfig = {
   
   images: {
     dangerouslyAllowSVG: true,
+    // Add domains array for backward compatibility
+    domains: ['bucket.updrafted.us', 'img.clerk.com'],
     // Add local patterns for static assets
     localPatterns: [
       {
@@ -38,12 +40,6 @@ const nextConfig: NextConfig = {
       {
         protocol: 'https',
         hostname: 'bucket.updrafted.us',
-        port: '',
-        pathname: '/**',
-      },
-      {
-        protocol: 'https',
-        hostname: 'pub-19c0754937db426497ca014f0e2a297c.r2.dev',
         port: '',
         pathname: '/**',
       }
