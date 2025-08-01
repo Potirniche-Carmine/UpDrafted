@@ -20,7 +20,6 @@ import { ConferenceSelector } from "@/components/ui/conference-selector";
 import { divisionHasConferences } from "@/lib/conference-data";
 import { 
   generateCampDateOptions, 
-  generateCampEndDateOptions, 
   generateFilteredEndDateOptions,
   isoStringToDate,
   formatDateRange,
@@ -81,7 +80,6 @@ const YEAR_OPTIONS = Array.from({ length: 11 }, (_, i) => {
 
 // Use the new date utilities for camp experience options
 const CAMP_DATE_OPTIONS = generateCampDateOptions();
-const CAMP_END_DATE_OPTIONS = generateCampEndDateOptions();
 
 // Add constant for video limit
 const VIDEO_LIMIT = 2;
@@ -2163,7 +2161,14 @@ export function AthleteEditDialogs({
                             };
                             
                             const startDateValue = findMatchingOption(exp.startDate, CAMP_DATE_OPTIONS);
-                            const endDateValue = findMatchingOption(exp.endDate, CAMP_END_DATE_OPTIONS);
+                            
+                            // Generate filtered end date options for the existing start date first
+                            let filteredOptions: CampDateOption[] = [];
+                            if (startDateValue) {
+                              filteredOptions = generateFilteredEndDateOptions(startDateValue);
+                            }
+                            
+                            const endDateValue = findMatchingOption(exp.endDate, filteredOptions);
                             
                             setCampForm({
                               type: exp.type,
@@ -2176,11 +2181,8 @@ export function AthleteEditDialogs({
                               description: exp.description
                             });
                             
-                            // Generate filtered end date options for the existing start date
-                            if (startDateValue) {
-                              const filteredOptions = generateFilteredEndDateOptions(startDateValue);
-                              setFilteredEndDateOptions(filteredOptions);
-                            }
+                            // Set the filtered end date options we already generated
+                            setFilteredEndDateOptions(filteredOptions);
                             
                             setCampFormError(null);
                           }}>Edit</Button>
@@ -2419,7 +2421,7 @@ export function AthleteEditDialogs({
       // Clear end date when start date is cleared
       setCampForm(prev => ({ ...prev, endDate: '' }));
     }
-  }, [campForm.startDate]);
+  }, [campForm.startDate, campForm.endDate]);
 
   return (
     <>

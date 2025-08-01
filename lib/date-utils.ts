@@ -135,7 +135,7 @@ export function generateFilteredEndDateOptions(startDateValue: string): CampDate
   options.push({ value: PRESENT_DATE.toISOString(), label: 'Present', date: PRESENT_DATE });
 
   // Generate options from start date onwards
-  let currentOptionDate = new Date(startDate.getFullYear(), startDate.getMonth(), 1);
+  const currentOptionDate = new Date(startDate.getFullYear(), startDate.getMonth(), 1);
   
   // Add options up to current date + 2 years into the future
   const maxDate = new Date(currentYear + 2, currentMonth, 1);
