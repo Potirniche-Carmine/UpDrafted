@@ -21,8 +21,10 @@ import { divisionHasConferences } from "@/lib/conference-data";
 import { 
   generateCampDateOptions, 
   generateCampEndDateOptions, 
+  generateFilteredEndDateOptions,
   isoStringToDate,
   formatDateRange,
+  toTitleCase,
   type CampDateOption 
 } from '@/lib/date-utils';
 
@@ -260,6 +262,7 @@ export function AthleteEditDialogs({
     description: ''
   });
   const [campFormError, setCampFormError] = useState<string | null>(null);
+  const [filteredEndDateOptions, setFilteredEndDateOptions] = useState<CampDateOption[]>([]);
   // Ref for the add/edit form
 
 
@@ -553,7 +556,14 @@ export function AthleteEditDialogs({
   // Modify handleFieldChange to track dirty state
   const handleFieldChange = (field: string, value: string | number) => {
     setIsDirty(true);
-    setEditData(prev => ({ ...prev, [field]: value }));
+    
+    // Apply title case to city and state fields
+    let processedValue = value;
+    if (typeof value === 'string' && (field === 'city' || field === 'state')) {
+      processedValue = toTitleCase(value);
+    }
+    
+    setEditData(prev => ({ ...prev, [field]: processedValue }));
     
     // Clear existing validation error for this field
     if (validationErrors[field]) {
@@ -565,7 +575,7 @@ export function AthleteEditDialogs({
     }
 
     // Validate the field
-    const error = validateField(field, value);
+    const error = validateField(field, processedValue);
     if (error) {
       setValidationErrors(prev => ({ ...prev, [field]: error }));
     }
@@ -1995,14 +2005,14 @@ export function AthleteEditDialogs({
                           <Input
                             className="w-32"
                             value={campForm.city}
-                            onChange={e => setCampForm(f => ({ ...f, city: e.target.value }))}
+                            onChange={e => setCampForm(f => ({ ...f, city: toTitleCase(e.target.value) }))}
                             maxLength={50}
                             placeholder="City"
                           />
                           <Input
                             className="w-40"
                             value={campForm.stateCountry}
-                            onChange={e => setCampForm(f => ({ ...f, stateCountry: e.target.value }))}
+                            onChange={e => setCampForm(f => ({ ...f, stateCountry: toTitleCase(e.target.value) }))}
                             maxLength={50}
                             placeholder="State/Country"
                           />
@@ -2030,12 +2040,13 @@ export function AthleteEditDialogs({
                             <Select
                               value={campForm.endDate}
                               onValueChange={value => setCampForm(f => ({ ...f, endDate: value }))}
+                              disabled={!campForm.startDate}
                             >
-                              <SelectTrigger className="h-8">
-                                <SelectValue placeholder="Select end date" />
+                              <SelectTrigger className={`h-8 ${!campForm.startDate ? 'opacity-50 cursor-not-allowed' : ''}`}>
+                                <SelectValue placeholder={campForm.startDate ? "Select end date" : "Select start date first"} />
                               </SelectTrigger>
                               <SelectContent className="z-[9999]">
-                                {CAMP_END_DATE_OPTIONS.map(option => (
+                                {filteredEndDateOptions.map(option => (
                                   <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
                                 ))}
                               </SelectContent>
@@ -2151,16 +2162,26 @@ export function AthleteEditDialogs({
                               return matchingOption ? matchingOption.value : '';
                             };
                             
+                            const startDateValue = findMatchingOption(exp.startDate, CAMP_DATE_OPTIONS);
+                            const endDateValue = findMatchingOption(exp.endDate, CAMP_END_DATE_OPTIONS);
+                            
                             setCampForm({
                               type: exp.type,
                               name: exp.name,
                               city: exp.city,
                               stateCountry: exp.stateCountry,
-                              startDate: findMatchingOption(exp.startDate, CAMP_DATE_OPTIONS),
-                              endDate: findMatchingOption(exp.endDate, CAMP_END_DATE_OPTIONS),
+                              startDate: startDateValue,
+                              endDate: endDateValue,
                               sport: exp.sport,
                               description: exp.description
                             });
+                            
+                            // Generate filtered end date options for the existing start date
+                            if (startDateValue) {
+                              const filteredOptions = generateFilteredEndDateOptions(startDateValue);
+                              setFilteredEndDateOptions(filteredOptions);
+                            }
+                            
                             setCampFormError(null);
                           }}>Edit</Button>
                           <Button size="sm" variant="destructive" onClick={() => {
@@ -2211,14 +2232,14 @@ export function AthleteEditDialogs({
                       <Input
                         className="w-32"
                         value={campForm.city}
-                        onChange={e => setCampForm(f => ({ ...f, city: e.target.value }))}
+                        onChange={e => setCampForm(f => ({ ...f, city: toTitleCase(e.target.value) }))}
                         maxLength={50}
                         placeholder="City"
                       />
                       <Input
                         className="w-40"
                         value={campForm.stateCountry}
-                        onChange={e => setCampForm(f => ({ ...f, stateCountry: e.target.value }))}
+                        onChange={e => setCampForm(f => ({ ...f, stateCountry: toTitleCase(e.target.value) }))}
                         maxLength={50}
                         placeholder="State/Country"
                       />
@@ -2246,12 +2267,13 @@ export function AthleteEditDialogs({
                         <Select
                           value={campForm.endDate}
                           onValueChange={value => setCampForm(f => ({ ...f, endDate: value }))}
+                          disabled={!campForm.startDate}
                         >
-                          <SelectTrigger className="h-8">
-                            <SelectValue placeholder="Select end date" />
+                          <SelectTrigger className={`h-8 ${!campForm.startDate ? 'opacity-50 cursor-not-allowed' : ''}`}>
+                            <SelectValue placeholder={campForm.startDate ? "Select end date" : "Select start date first"} />
                           </SelectTrigger>
                           <SelectContent className="z-[9999]">
-                            {CAMP_END_DATE_OPTIONS.map(option => (
+                            {filteredEndDateOptions.map(option => (
                               <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
                             ))}
                           </SelectContent>
@@ -2370,15 +2392,34 @@ export function AthleteEditDialogs({
       setCampEditIndex(null);
       setCampForm({ type: 'Camp', name: '', city: '', stateCountry: '', startDate: '', endDate: '', sport: '', description: '' });
       setCampFormError(null);
+      setFilteredEndDateOptions([]);
       campExperienceInitializedRef.current = true;
     }
     if (!isOpen) {
       campExperienceInitializedRef.current = false;
+      setFilteredEndDateOptions([]);
     }
   }, [isOpen, dialogType, profileData.campExperience]);
 
   // Add a ref to track if initialization has happened for this open session
   const campExperienceInitializedRef = useRef(false);
+
+  // Update filtered end date options when start date changes
+  useEffect(() => {
+    if (campForm.startDate) {
+      const filteredOptions = generateFilteredEndDateOptions(campForm.startDate);
+      setFilteredEndDateOptions(filteredOptions);
+      
+      // If current end date is no longer valid, clear it
+      if (campForm.endDate && !filteredOptions.some(option => option.value === campForm.endDate)) {
+        setCampForm(prev => ({ ...prev, endDate: '' }));
+      }
+    } else {
+      setFilteredEndDateOptions([]);
+      // Clear end date when start date is cleared
+      setCampForm(prev => ({ ...prev, endDate: '' }));
+    }
+  }, [campForm.startDate]);
 
   return (
     <>

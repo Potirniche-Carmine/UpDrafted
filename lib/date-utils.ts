@@ -109,6 +109,53 @@ export function generateCampEndDateOptions(): CampDateOption[] {
 }
 
 /**
+ * Generate filtered end date options based on a selected start date
+ * Only returns dates that come after the start date (including the start date itself)
+ */
+export function generateFilteredEndDateOptions(startDateValue: string): CampDateOption[] {
+  if (!startDateValue) {
+    // If no start date selected, return empty array
+    return [];
+  }
+
+  // Convert start date value to Date object
+  const startDate = isoStringToDate(startDateValue);
+  
+  // If start date is invalid, return empty array
+  if (isNaN(startDate.getTime())) {
+    return [];
+  }
+
+  const options: CampDateOption[] = [];
+  const currentDate = new Date();
+  const currentMonth = currentDate.getMonth();
+  const currentYear = currentDate.getFullYear();
+
+  // Always include "Present" as an option
+  options.push({ value: PRESENT_DATE.toISOString(), label: 'Present', date: PRESENT_DATE });
+
+  // Generate options from start date onwards
+  let currentOptionDate = new Date(startDate.getFullYear(), startDate.getMonth(), 1);
+  
+  // Add options up to current date + 2 years into the future
+  const maxDate = new Date(currentYear + 2, currentMonth, 1);
+  
+  while (currentOptionDate <= maxDate) {
+    const monthName = currentOptionDate.toLocaleDateString('en-US', { month: 'long' });
+    const year = currentOptionDate.getFullYear();
+    const label = `${monthName} ${year}`;
+    const value = `${year}-${String(currentOptionDate.getMonth() + 1).padStart(2, '0')}-01`;
+
+    options.push({ value, label, date: new Date(currentOptionDate) });
+    
+    // Move to next month
+    currentOptionDate.setMonth(currentOptionDate.getMonth() + 1);
+  }
+
+  return options;
+}
+
+/**
  * Convert a Date object to ISO string for database storage
  */
 export function dateToISOString(date: Date): string {
@@ -174,4 +221,42 @@ export function sortCampExperiences<T extends { startDate: Date | string }>(expe
     const bDate = typeof b.startDate === 'string' ? new Date(b.startDate) : b.startDate;
     return bDate.getTime() - aDate.getTime();
   });
+}
+
+/**
+ * Convert text to title case (capitalize first letter of each word)
+ * Handles common cases like "los angeles" -> "Los Angeles"
+ * Preserves existing capitalization if already properly formatted
+ */
+export function toTitleCase(text: string): string {
+  if (!text || typeof text !== 'string') {
+    return text;
+  }
+
+  // Split by spaces and handle each word
+  return text
+    .split(' ')
+    .map(word => {
+      // Skip empty words
+      if (!word.trim()) return word;
+      
+      // Handle special cases for state abbreviations and common words
+      const lowerWord = word.toLowerCase();
+      
+      // Keep state abbreviations in uppercase
+      if (['ca', 'tx', 'ny', 'fl', 'il', 'pa', 'oh', 'ga', 'nc', 'mi', 'nj', 'va', 'wa', 'az', 'ma', 'tn', 'in', 'mo', 'md', 'co', 'or', 'wi', 'mn', 'sc', 'al', 'la', 'ky', 'ct', 'ia', 'ar', 'ut', 'nv', 'ms', 'ks', 'ne', 'id', 'hi', 'nh', 'me', 'ri', 'mt', 'de', 'sd', 'nd', 'ak', 'vt', 'wy', 'wv'].includes(lowerWord)) {
+        return word.toUpperCase();
+      }
+      
+      // Handle common words that should be lowercase in titles (except first word)
+      const lowercaseWords = ['of', 'the', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for', 'with', 'by', 'from', 'up', 'about', 'into', 'through', 'during', 'before', 'after', 'above', 'below', 'between', 'among', 'within', 'without', 'against', 'toward', 'towards', 'upon', 'across', 'behind', 'beneath', 'beside', 'beyond', 'inside', 'outside', 'under', 'over'];
+      
+      if (lowercaseWords.includes(lowerWord)) {
+        return word.toLowerCase();
+      }
+      
+      // Capitalize first letter of each word
+      return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
+    })
+    .join(' ');
 } 
