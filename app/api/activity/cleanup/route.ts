@@ -3,24 +3,13 @@ import { activityOperations } from '@/database/db-utils';
 
 export async function POST(request: NextRequest) {
   try {
-    // Verify this is a cron job request by checking for a secret token
-    const authHeader = request.headers.get('authorization');
-    const expectedToken = process.env.CRON_SECRET_TOKEN;
+    const authHeader = request.headers.get('x-cron-secret');
     
-    if (!expectedToken) {
-      console.error('CRON_SECRET_TOKEN environment variable not set');
-      return NextResponse.json({
-        success: false,
-        error: 'Server configuration error'
-      }, { status: 500 });
-    }
-    
-    if (!authHeader || authHeader !== `Bearer ${expectedToken}`) {
-      console.error('Unauthorized cleanup attempt');
-      return NextResponse.json({
-        success: false,
-        error: 'Unauthorized'
-      }, { status: 401 });
+    if (authHeader !== process.env.CRON_SECRET_TOKEN) {
+      return NextResponse.json(
+        { error: 'Unauthorized' }, 
+        { status: 401 }
+      );
     }
 
     // Get the days to keep from query params (default: 14 days)
@@ -34,12 +23,8 @@ export async function POST(request: NextRequest) {
       }, { status: 400 });
     }
 
-    console.log(`Starting activity log cleanup - keeping last ${daysToKeep} days`);
-    
     // Perform the cleanup
     const result = await activityOperations.cleanupOldActivityLogs(daysToKeep);
-    
-    console.log(`Activity log cleanup completed:`, result);
     
     return NextResponse.json({
       success: true,
@@ -48,9 +33,6 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Error during activity log cleanup:', error);
-    
-    // Provide more detailed error information for debugging
     const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
     const isDevelopment = process.env.NODE_ENV === 'development';
     
