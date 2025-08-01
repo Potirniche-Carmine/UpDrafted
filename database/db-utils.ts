@@ -32,7 +32,96 @@ import {
 import { OnboardingProfileData } from '@/app/(onboarding)/lib/onboarding';
 import { sanitizeAndEncryptMessage } from '@/utils/encryption';
 import { R2_PUBLIC_URL, constructR2Url } from './r2/config';
-import { isoStringToDate } from '@/lib/date-utils';
+import { isoStringToDate, PRESENT_DATE } from '@/lib/date-utils';
+
+/**
+ * Robust date parsing with detailed error logging
+ * Returns a tuple of [parsedDate, errorMessage]
+ */
+function parseDateWithErrorHandling(
+  dateString: string, 
+  context: string, 
+  fallbackDate: Date = new Date()
+): [Date, string | null] {
+  if (!dateString || typeof dateString !== 'string') {
+    const error = `Invalid date string in ${context}: ${JSON.stringify(dateString)}`;
+    console.warn(error);
+    return [fallbackDate, error];
+  }
+
+  try {
+    // Check if it's the special "Present" date
+    if (dateString === '9999-12-31' || dateString === '9999-12-31T00:00:00.000Z') {
+      return [PRESENT_DATE, null];
+    }
+
+    // Use the isoStringToDate function to handle timezone issues properly
+    const parsedDate = isoStringToDate(dateString);
+    
+    if (isNaN(parsedDate.getTime())) {
+      const error = `Invalid date value in ${context}: "${dateString}" parsed to NaN`;
+      console.warn(error);
+      return [fallbackDate, error];
+    }
+
+    return [parsedDate, null];
+  } catch (error) {
+    const errorMessage = `Date parsing error in ${context}: "${dateString}" - ${error instanceof Error ? error.message : 'Unknown error'}`;
+    console.error(errorMessage);
+    return [fallbackDate, errorMessage];
+  }
+}
+
+/**
+ * Convert date to YYYY-MM-DD string format with error handling
+ * Returns a tuple of [dateString, errorMessage]
+ */
+function dateToStringWithErrorHandling(
+  date: Date | string,
+  context: string,
+  fallbackString: string = new Date().toISOString().split('T')[0]
+): [string, string | null] {
+  try {
+    // If it's already a string in YYYY-MM-DD format, use it directly
+    if (typeof date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(date)) {
+      return [date, null];
+    }
+
+    // If it's a string representing the special "Present" date, return it
+    if (typeof date === 'string' && (date === '9999-12-31' || date === '9999-12-31T00:00:00.000Z')) {
+      return ['9999-12-31', null];
+    }
+
+    // Convert to Date object if it's a string
+    let dateObj: Date;
+    if (typeof date === 'string') {
+      const [parsedDate, parseError] = parseDateWithErrorHandling(date, context);
+      if (parseError) {
+        return [fallbackString, parseError];
+      }
+      dateObj = parsedDate;
+    } else {
+      dateObj = date;
+    }
+
+    // Check if it's the special "Present" date
+    if (dateObj.getTime() === PRESENT_DATE.getTime()) {
+      return ['9999-12-31', null];
+    }
+
+    // Convert Date object to YYYY-MM-DD format using UTC methods to avoid timezone issues
+    const year = dateObj.getUTCFullYear();
+    const month = String(dateObj.getUTCMonth() + 1).padStart(2, '0');
+    const day = String(dateObj.getUTCDate()).padStart(2, '0');
+    const dateString = `${year}-${month}-${day}`;
+
+    return [dateString, null];
+  } catch (error) {
+    const errorMessage = `Date to string conversion error in ${context}: ${error instanceof Error ? error.message : 'Unknown error'}`;
+    console.error(errorMessage);
+    return [fallbackString, errorMessage];
+  }
+}
 
 // User operations
 export const userOperations = {
@@ -1703,48 +1792,29 @@ export const adminOperations = {
         description: string;
       }) => {
         // Handle start date conversion - handle both Date objects and strings
-        let startDateString: string;
-        try {
-          // If it's already in YYYY-MM-DD format, use it directly
-          if (typeof exp.startDate === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(exp.startDate)) {
-            startDateString = exp.startDate;
-          } else {
-            // Convert Date object to YYYY-MM-DD format using UTC methods to avoid timezone issues
-            const startDate = typeof exp.startDate === 'string' ? isoStringToDate(exp.startDate) : exp.startDate;
-            const year = startDate.getUTCFullYear();
-            const month = String(startDate.getUTCMonth() + 1).padStart(2, '0');
-            const day = String(startDate.getUTCDate()).padStart(2, '0');
-            startDateString = `${year}-${month}-${day}`;
-          }
-        } catch {
-          startDateString = new Date().toISOString().split('T')[0]; // Fallback to current date
-        }
+        const [startDateString, startDateError] = dateToStringWithErrorHandling(
+          exp.startDate,
+          `demo camp experience start date for "${exp.name}" (ID: ${exp.id})`,
+          new Date().toISOString().split('T')[0]
+        );
 
         // Handle end date conversion - handle both Date objects and strings, check if it's the special "Present" date
-        let endDateString: string;
-        try {
-          // Check if it's the special "Present" date first
-          if (typeof exp.endDate === 'string' && (exp.endDate === '9999-12-31' || exp.endDate === '9999-12-31T00:00:00.000Z')) {
-            endDateString = '9999-12-31'; // Special date representing "Present"
-          } else {
-            // If it's already in YYYY-MM-DD format, use it directly
-            if (typeof exp.endDate === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(exp.endDate)) {
-              endDateString = exp.endDate;
-            } else {
-              // Convert Date object to YYYY-MM-DD format using UTC methods to avoid timezone issues
-              const endDate = typeof exp.endDate === 'string' ? isoStringToDate(exp.endDate) : exp.endDate;
-              if (endDate.getTime() === new Date('9999-12-31').getTime()) {
-                endDateString = '9999-12-31'; // Special date representing "Present"
-              } else {
-                const year = endDate.getUTCFullYear();
-                const month = String(endDate.getUTCMonth() + 1).padStart(2, '0');
-                const day = String(endDate.getUTCDate()).padStart(2, '0');
-                endDateString = `${year}-${month}-${day}`;
-              }
-            }
-          }
-        } catch {
-          endDateString = '9999-12-31'; // Fallback to "Present"
+        const [endDateString, endDateError] = dateToStringWithErrorHandling(
+          exp.endDate,
+          `demo camp experience end date for "${exp.name}" (ID: ${exp.id})`,
+          '9999-12-31'
+        );
+
+        // Log any date conversion errors for debugging
+        if (startDateError || endDateError) {
+          console.warn('Date conversion issues in demo camp experience update:', {
+            experienceId: exp.id,
+            experienceName: exp.name,
+            startDateError,
+            endDateError,
+            originalStartDate: exp.startDate,
+            originalEndDate: exp.endDate
+          });
         }
 
         return {
