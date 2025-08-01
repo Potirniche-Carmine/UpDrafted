@@ -32,6 +32,7 @@ import {
 import { OnboardingProfileData } from '@/app/(onboarding)/lib/onboarding';
 import { sanitizeAndEncryptMessage } from '@/utils/encryption';
 import { R2_PUBLIC_URL, constructR2Url } from './r2/config';
+import { isoStringToDate } from '@/lib/date-utils';
 
 // User operations
 export const userOperations = {
@@ -1687,8 +1688,17 @@ export const adminOperations = {
         // Handle start date conversion - handle both Date objects and strings
         let startDateString: string;
         try {
-          const startDate = typeof exp.startDate === 'string' ? new Date(exp.startDate) : exp.startDate;
-          startDateString = startDate.toISOString().split('T')[0]; // Convert to YYYY-MM-DD format
+          // If it's already in YYYY-MM-DD format, use it directly
+          if (typeof exp.startDate === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(exp.startDate)) {
+            startDateString = exp.startDate;
+          } else {
+            // Convert Date object to YYYY-MM-DD format using UTC methods to avoid timezone issues
+            const startDate = typeof exp.startDate === 'string' ? isoStringToDate(exp.startDate) : exp.startDate;
+            const year = startDate.getUTCFullYear();
+            const month = String(startDate.getUTCMonth() + 1).padStart(2, '0');
+            const day = String(startDate.getUTCDate()).padStart(2, '0');
+            startDateString = `${year}-${month}-${day}`;
+          }
         } catch {
           startDateString = new Date().toISOString().split('T')[0]; // Fallback to current date
         }
@@ -1696,11 +1706,25 @@ export const adminOperations = {
         // Handle end date conversion - handle both Date objects and strings, check if it's the special "Present" date
         let endDateString: string;
         try {
-          const endDate = typeof exp.endDate === 'string' ? new Date(exp.endDate) : exp.endDate;
-          if (endDate.getTime() === new Date('9999-12-31').getTime()) {
+          // Check if it's the special "Present" date first
+          if (typeof exp.endDate === 'string' && (exp.endDate === '9999-12-31' || exp.endDate === '9999-12-31T00:00:00.000Z')) {
             endDateString = '9999-12-31'; // Special date representing "Present"
           } else {
-            endDateString = endDate.toISOString().split('T')[0]; // Convert to YYYY-MM-DD format
+            // If it's already in YYYY-MM-DD format, use it directly
+            if (typeof exp.endDate === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(exp.endDate)) {
+              endDateString = exp.endDate;
+            } else {
+              // Convert Date object to YYYY-MM-DD format using UTC methods to avoid timezone issues
+              const endDate = typeof exp.endDate === 'string' ? isoStringToDate(exp.endDate) : exp.endDate;
+              if (endDate.getTime() === new Date('9999-12-31').getTime()) {
+                endDateString = '9999-12-31'; // Special date representing "Present"
+              } else {
+                const year = endDate.getUTCFullYear();
+                const month = String(endDate.getUTCMonth() + 1).padStart(2, '0');
+                const day = String(endDate.getUTCDate()).padStart(2, '0');
+                endDateString = `${year}-${month}-${day}`;
+              }
+            }
           }
         } catch {
           endDateString = '9999-12-31'; // Fallback to "Present"
@@ -1758,34 +1782,28 @@ export const adminOperations = {
       // All frontend experiences without IDs are new
       newExperiences.push(...frontendExperiencesWithoutId);
 
-      console.log('Demo athlete profile update - camp experience debug:');
-      console.log('Existing experiences count:', existingExperiences.length);
-      console.log('Frontend experiences count:', experiencesData.length);
-      console.log('New experiences to create:', newExperiences.length);
-      console.log('Existing experiences to update:', existingExperiencesToUpdate.length);
-      console.log('Experiences to delete:', experiencesToDelete.length);
-      console.log('New experiences:', newExperiences);
-      console.log('Experiences to update:', existingExperiencesToUpdate);
-      console.log('Experiences to delete:', experiencesToDelete);
+      // Wrap all operations in a transaction to ensure consistency
+      await db.transaction(async (tx) => {
+        // First, update existing experiences (before any deletions)
+        for (const { id, data } of existingExperiencesToUpdate) {
+          await tx
+            .update(athleteExperience)
+            .set(data)
+            .where(eq(athleteExperience.id, id));
+        }
 
-      // Delete experiences that are no longer in the frontend
-      for (const id of experiencesToDelete) {
-        console.log('Deleting experience:', id);
-        await athleteExperienceOperations.deleteAthleteExperience(id);
-      }
+        // Then, create new experiences
+        for (const newExp of newExperiences) {
+          await tx.insert(athleteExperience).values(newExp);
+        }
 
-      // Update existing experiences
-      for (const { id, data } of existingExperiencesToUpdate) {
-        console.log('Updating existing experience:', id, data);
-        await athleteExperienceOperations.updateAthleteExperience(id, data);
-      }
-
-      // Create new experiences
-      for (const newExp of newExperiences) {
-        console.log('Creating new experience:', newExp);
-        const createdExp = await athleteExperienceOperations.createAthleteExperience(newExp);
-        console.log('Created experience:', createdExp);
-      }
+        // Finally, delete experiences that are no longer in the frontend
+        for (const id of experiencesToDelete) {
+          await tx
+            .delete(athleteExperience)
+            .where(eq(athleteExperience.id, id));
+        }
+       });
     }
     
     return profile;

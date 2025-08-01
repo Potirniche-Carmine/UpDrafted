@@ -112,7 +112,6 @@ export class PWACacheManager {
           const cache = await caches.open(this.CACHE_NAMES.API);
           const cachedResponse = await cache.match(url);
           if (cachedResponse) {
-            console.log('Serving stale data from cache due to network error');
             return cachedResponse;
           }
         } catch (cacheError) {
@@ -199,7 +198,6 @@ export class PWACacheManager {
         };
       }
       
-      console.log('All caches cleared successfully');
       return { success: true, data: { deleted: successes, failed: 0 } };
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';

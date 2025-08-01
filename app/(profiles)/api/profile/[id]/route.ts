@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAnyRole, requireOwnershipOrAdmin } from '@/utils/roles';
-import { userOperations, athleteOperations, athleteExperienceOperations, coachOperations, recruitingOperations, recruitingNeedsOperations, connectionOperations, activityOperations, notificationOperations, adminOperations } from '@/database/db-utils';
+import { userOperations, athleteOperations, coachOperations, recruitingOperations, recruitingNeedsOperations, connectionOperations, activityOperations, notificationOperations, adminOperations } from '@/database/db-utils';
 import { R2_PUBLIC_URL, constructR2Url } from '@/database/r2';
 import { NewAthleteProfile, NewAthleteMeasurable, NewAthleteVideo, NewAthleteExperience, NewCoachProfile, NewRecruitingProfile, verificationRequests, AthleteProfile, CoachProfile, RecruitingProfile, athleteExperience } from '@/database/schema';
 import { db } from '@/database/db';
@@ -8,6 +8,7 @@ import { eq, and } from 'drizzle-orm';
 import { sanitizeProfileData } from '@/utils/sanitization';
 import { EducationLevel } from '@/app/(onboarding)/lib/onboarding';
 import { withRateLimit } from '@/utils/rate-limiting';
+import { isoStringToDate } from '@/lib/date-utils';
 
 // Force Node.js runtime to avoid expensive edge function costs
 export const runtime = 'nodejs';
@@ -89,10 +90,11 @@ function transformProfileData(profileData: Record<string, any>, profileType: str
     // Transform camp experience data if present
     if (profileData.experience) {
       transformed.campExperience = profileData.experience.map((exp: { id: number; type: string; name: string; city: string; stateCountry: string; startDate: string; endDate: string; sport: string; description: string }) => {
-        // Handle start date - convert from database string to Date object
+        // Handle start date - convert from database string to Date object using proper timezone handling
         let startDate: Date;
         try {
-          startDate = new Date(exp.startDate);
+          // Use the isoStringToDate function to handle timezone issues properly
+          startDate = isoStringToDate(exp.startDate);
           if (isNaN(startDate.getTime())) {
             startDate = new Date(); // Fallback to current date if invalid
           }
@@ -100,14 +102,15 @@ function transformProfileData(profileData: Record<string, any>, profileType: str
           startDate = new Date(); // Fallback to current date if error
         }
 
-        // Handle end date - convert from database string to Date object
+        // Handle end date - convert from database string to Date object using proper timezone handling
         let endDate: Date;
         try {
           // Check if it's the special "Present" date (9999-12-31)
           if (exp.endDate === '9999-12-31' || exp.endDate === '9999-12-31T00:00:00.000Z') {
             endDate = new Date('9999-12-31'); // Special date representing "Present"
           } else {
-            endDate = new Date(exp.endDate);
+            // Use the isoStringToDate function to handle timezone issues properly
+            endDate = isoStringToDate(exp.endDate);
             if (isNaN(endDate.getTime())) {
               endDate = new Date('9999-12-31'); // Fallback to "Present" if invalid
             }
@@ -401,8 +404,6 @@ export async function GET(
         if (demoProfileData) {
           // Transform the demo profile data to match the component interface
           const transformedProfile = transformProfileData(demoProfileData, profileType);
-
-          console.log(transformedProfile);
 
           // Fetch REAL verification status for the current user (admin) when viewing demo profiles
           let realVerificationStatus = {};
@@ -935,26 +936,19 @@ export async function PUT(
     let profileType = userWithProfile.role;
     const isAdminUser = profileType === 'admin';
     
-    console.log('User role:', profileType, 'Is admin user:', isAdminUser);
-    
     // Special handling for admin users with demo profiles
     if (isAdminUser) {
-      console.log('Admin user detected, determining profile type from data structure');
       // For admin users, determine profile type from the data structure being sent
       if (sanitizedData.sport && sanitizedData.graduationYear) {
         profileType = 'athlete';
-        console.log('Admin user profile type determined as: athlete');
       } else if (sanitizedData.sportCoaching || sanitizedData.title) {
         // Check if it's a coach or recruiter based on additional fields
         if (sanitizedData.secondarySports !== undefined) {
           profileType = 'recruiter'; // Recruiters have secondarySports
-          console.log('Admin user profile type determined as: recruiter');
         } else {
           profileType = 'coach';
-          console.log('Admin user profile type determined as: coach');
         }
       } else {
-        console.log('Unable to determine profile type for admin user');
         return NextResponse.json(
           { error: 'Unable to determine profile type for admin user' },
           { status: 400 }
@@ -966,7 +960,6 @@ export async function PUT(
 
     // Update profile based on type
     if (profileType === 'athlete') {
-      console.log("Profile Type is athlete.");
       // If country is being changed from 'United States' to another country, set state to null only if not already null/undefined
       if (
         sanitizedData.country !== undefined &&
@@ -1016,10 +1009,7 @@ export async function PUT(
       }
       
       // For admin users, include camp experience data in the profile update
-      console.log("isAdminUser: ", isAdminUser);
-      console.log("Sanitized data camp experience: ", sanitizedData.campExperience);
       if (isAdminUser && sanitizedData.campExperience !== undefined) {
-        console.log('Admin user - including camp experience in profile update:', sanitizedData.campExperience);
         // @ts-expect-error - We know this is safe for admin operations
         profileUpdateData.campExperience = sanitizedData.campExperience;
       }
@@ -1106,8 +1096,17 @@ export async function PUT(
             // Handle start date conversion - handle both Date objects and strings
             let startDateString: string;
             try {
-              const startDate = typeof exp.startDate === 'string' ? new Date(exp.startDate) : exp.startDate;
-              startDateString = startDate.toISOString().split('T')[0]; // Convert to YYYY-MM-DD format
+              // If it's already in YYYY-MM-DD format, use it directly
+              if (typeof exp.startDate === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(exp.startDate)) {
+                startDateString = exp.startDate;
+              } else {
+                // Convert Date object to YYYY-MM-DD format using UTC methods to avoid timezone issues
+                const startDate = typeof exp.startDate === 'string' ? isoStringToDate(exp.startDate) : exp.startDate;
+                const year = startDate.getUTCFullYear();
+                const month = String(startDate.getUTCMonth() + 1).padStart(2, '0');
+                const day = String(startDate.getUTCDate()).padStart(2, '0');
+                startDateString = `${year}-${month}-${day}`;
+              }
             } catch {
               startDateString = new Date().toISOString().split('T')[0]; // Fallback to current date
             }
@@ -1115,11 +1114,25 @@ export async function PUT(
             // Handle end date conversion - handle both Date objects and strings, check if it's the special "Present" date
             let endDateString: string;
             try {
-              const endDate = typeof exp.endDate === 'string' ? new Date(exp.endDate) : exp.endDate;
-              if (endDate.getTime() === new Date('9999-12-31').getTime()) {
+              // Check if it's the special "Present" date first
+              if (typeof exp.endDate === 'string' && (exp.endDate === '9999-12-31' || exp.endDate === '9999-12-31T00:00:00.000Z')) {
                 endDateString = '9999-12-31'; // Special date representing "Present"
               } else {
-                endDateString = endDate.toISOString().split('T')[0]; // Convert to YYYY-MM-DD format
+                // If it's already in YYYY-MM-DD format, use it directly
+                if (typeof exp.endDate === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(exp.endDate)) {
+                  endDateString = exp.endDate;
+                } else {
+                  // Convert Date object to YYYY-MM-DD format using UTC methods to avoid timezone issues
+                  const endDate = typeof exp.endDate === 'string' ? isoStringToDate(exp.endDate) : exp.endDate;
+                  if (endDate.getTime() === new Date('9999-12-31').getTime()) {
+                    endDateString = '9999-12-31'; // Special date representing "Present"
+                  } else {
+                    const year = endDate.getUTCFullYear();
+                    const month = String(endDate.getUTCMonth() + 1).padStart(2, '0');
+                    const day = String(endDate.getUTCDate()).padStart(2, '0');
+                    endDateString = `${year}-${month}-${day}`;
+                  }
+                }
               }
             } catch {
               endDateString = '9999-12-31'; // Fallback to "Present"
@@ -1177,20 +1190,28 @@ export async function PUT(
           // All frontend experiences without IDs are new
           newExperiences.push(...frontendExperiencesWithoutId);
 
-          // Delete experiences that are no longer in the frontend
-          for (const id of experiencesToDelete) {
-            await athleteExperienceOperations.deleteAthleteExperience(id);
-          }
+          // Wrap all operations in a transaction to ensure consistency
+          await db.transaction(async (tx) => {
+            // First, update existing experiences (before any deletions)
+            for (const { id, data } of existingExperiencesToUpdate) {
+              await tx
+                .update(athleteExperience)
+                .set(data)
+                .where(eq(athleteExperience.id, id));
+            }
 
-          // Update existing experiences
-          for (const { id, data } of existingExperiencesToUpdate) {
-            await athleteExperienceOperations.updateAthleteExperience(id, data);
-          }
+            // Then, create new experiences
+            for (const newExp of newExperiences) {
+              await tx.insert(athleteExperience).values(newExp);
+            }
 
-          // Create new experiences
-          for (const newExp of newExperiences) {
-            await athleteExperienceOperations.createAthleteExperience(newExp);
-          }
+            // Finally, delete experiences that are no longer in the frontend
+            for (const id of experiencesToDelete) {
+              await tx
+                .delete(athleteExperience)
+                .where(eq(athleteExperience.id, id));
+            }
+           });
         }
       }
       

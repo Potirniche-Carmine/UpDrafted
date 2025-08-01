@@ -2124,18 +2124,28 @@ export function AthleteEditDialogs({
                               let targetDate: Date;
                               
                               if (typeof date === 'string') {
-                                targetDate = new Date(date);
+                                // Use the isoStringToDate function to handle timezone issues properly
+                                targetDate = isoStringToDate(date);
                               } else {
                                 targetDate = date;
                               }
                               
-                              // Find the option that matches the year and month
-                              const targetYear = targetDate.getFullYear();
-                              const targetMonth = targetDate.getMonth();
+                              // Find the option that matches the year and month using UTC methods
+                              const targetYear = targetDate.getUTCFullYear();
+                              const targetMonth = targetDate.getUTCMonth();
                               
                               const matchingOption = options.find(option => {
-                                const optionDate = new Date(option.value);
-                                return optionDate.getFullYear() === targetYear && optionDate.getMonth() === targetMonth;
+                                // Handle both YYYY-MM-DD format and ISO string format
+                                let optionDate: Date;
+                                if (/^\d{4}-\d{2}-\d{2}$/.test(option.value)) {
+                                  // YYYY-MM-DD format - use UTC constructor
+                                  const [year, month] = option.value.split('-').map(Number);
+                                  optionDate = new Date(Date.UTC(year, month - 1, 1));
+                                } else {
+                                  // ISO string format
+                                  optionDate = new Date(option.value);
+                                }
+                                return optionDate.getUTCFullYear() === targetYear && optionDate.getUTCMonth() === targetMonth;
                               });
                               
                               return matchingOption ? matchingOption.value : '';
@@ -2352,8 +2362,8 @@ export function AthleteEditDialogs({
         Array.isArray(profileData.campExperience) && profileData.campExperience.length > 0
           ? profileData.campExperience.map(exp => ({
               ...exp, // This preserves the id field if it exists
-              startDate: typeof exp.startDate === 'string' ? new Date(exp.startDate) : exp.startDate,
-              endDate: typeof exp.endDate === 'string' ? new Date(exp.endDate) : exp.endDate
+              startDate: typeof exp.startDate === 'string' ? isoStringToDate(exp.startDate) : exp.startDate,
+              endDate: typeof exp.endDate === 'string' ? isoStringToDate(exp.endDate) : exp.endDate
             }))
           : []
       );

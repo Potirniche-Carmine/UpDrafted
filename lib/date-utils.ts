@@ -17,14 +17,6 @@ export interface CampDateOption {
  * Format a Date object to "Month Year" format (e.g., "June 2025")
  */
 export function formatCampDate(date: Date | string): string {
-  // Debug: Log the date parameter to see what's being passed
-  console.log('DEBUG - formatCampDate called with:', {
-    date: date,
-    type: typeof date,
-    isDate: date instanceof Date,
-    dateValue: date?.toString()
-  });
-
   // Handle string input (convert to Date object)
   let dateObj: Date;
   if (typeof date === 'string') {
@@ -95,7 +87,8 @@ export function generateCampDateOptions(): CampDateOption[] {
     const monthName = date.toLocaleDateString('en-US', { month: 'long' });
     const year = date.getFullYear();
     const label = `${monthName} ${year}`;
-    const value = date.toISOString(); // Store as ISO string for database
+    // Use YYYY-MM-DD format to avoid timezone issues
+    const value = `${year}-${String(date.getMonth() + 1).padStart(2, '0')}-01`;
 
     options.push({ value, label, date });
   }
@@ -123,27 +116,22 @@ export function dateToISOString(date: Date): string {
 }
 
 /**
- * Convert an ISO string from database to Date object
+ * Convert a date string to Date object
  */
-export function isoStringToDate(isoString: string): Date {
-  // DEBUG: Log the input
-  console.log('DEBUG - isoStringToDate called with:', {
-    isoString: isoString,
-    type: typeof isoString
-  });
-
-  if (!isoString) return PRESENT_DATE;
+export function isoStringToDate(dateString: string): Date {
+  if (!dateString) return PRESENT_DATE;
+  
   try {
-    const date = new Date(isoString);
-    const isValid = !isNaN(date.getTime());
+    // Handle YYYY-MM-DD format (from frontend dropdowns)
+    if (/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
+      const [year, month, day] = dateString.split('-').map(Number);
+      const date = new Date(year, month - 1, day); // month is 0-indexed
+      return date;
+    }
     
-    // DEBUG: Log the result
-    console.log('DEBUG - isoStringToDate result:', {
-      input: isoString,
-      date: date,
-      isValid: isValid,
-      isDate: date instanceof Date
-    });
+    // Handle ISO string format (from database)
+    const date = new Date(dateString);
+    const isValid = !isNaN(date.getTime());
     
     return isValid ? date : PRESENT_DATE;
   } catch (error) {
