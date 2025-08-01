@@ -22,6 +22,9 @@ const envSchema = z.object({
   // Optional Redis for production
   REDIS_URL: z.string().url('REDIS_URL must be a valid URL').optional(),
   
+  // Cron job authentication
+  CRON_SECRET_TOKEN: z.string().min(32, 'CRON_SECRET_TOKEN must be at least 32 characters').optional(),
+  
   // Node Environment
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
   

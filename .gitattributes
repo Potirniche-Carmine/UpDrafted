@@ -1,0 +1,2 @@
+dockerfile merge=ours
+.github/workflows/deploy.yml merge=ours

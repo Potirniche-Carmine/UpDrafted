@@ -248,7 +248,7 @@ const SportSpecificNeedsSection = ({
             <div className="p-4 bg-gradient-to-r from-blue-50 to-orange-50 dark:from-blue-950 dark:to-orange-950 rounded-lg">
               <div className="flex items-center gap-2 mb-2">
                 <Users className="w-5 h-5 text-blue-600" />
-                <h4 className="font-medium">What We&apos;re Looking For in {selectedSport}</h4>
+                <h4 className="font-medium">What We&apos;re Looking For</h4>
                 {isOwnProfile && (
                   <Button
                     size="sm"
@@ -267,7 +267,7 @@ const SportSpecificNeedsSection = ({
               ) : isOwnProfile ? (
                 <div className="text-center py-2">
                   <p className="text-sm text-muted-foreground mb-2">
-                    Add what you&apos;re looking for in {selectedSport} student-athletes
+                    Add what you&apos;re looking for in student-athletes
                   </p>
                   <Button 
                     variant="outline" 
@@ -280,7 +280,7 @@ const SportSpecificNeedsSection = ({
                 </div>
               ) : (
                 <p className="text-sm text-muted-foreground">
-                  We seek {selectedSport} student-athletes who demonstrate exceptional athletic ability, 
+                  We seek student-athletes who demonstrate exceptional athletic ability, 
                   strong academic performance, and character that aligns with our program&apos;s values and culture.
                 </p>
               )}
@@ -296,7 +296,8 @@ const SportSpecificNeedsSection = ({
               
               {isOwnProfile ? (
                 <>
-                  <h3 className="font-semibold text-lg mb-2">Set Your {selectedSport} Recruiting Needs</h3>
+                  <h3 className="font-semibold text-lg mb-2 text-center">Set Your Recruiting Needs</h3>
+                  <p className="text-sm text-muted-foreground mb-2 text-center">For {selectedSport}</p>
                   <p className="text-muted-foreground mb-6 max-w-md mx-auto">
                     Help student-athletes understand what you&apos;re looking for in {selectedSport} recruits.
                   </p>
@@ -307,13 +308,14 @@ const SportSpecificNeedsSection = ({
                       onClick={() => onEditSection('recruiting-needs', selectedSport)}
                     >
                       <Plus className="w-4 h-4 mr-2" />
-                      Add {selectedSport} Recruiting Needs
+                      Add Recruiting Needs
                     </Button>
                   </div>
                 </>
               ) : (
                 <>
-                  <h3 className="font-semibold text-lg mb-2">{selectedSport} Recruiting Needs</h3>
+                  <h3 className="font-semibold text-lg mb-2 text-center">Recruiting Needs</h3>
+                  <p className="text-sm text-muted-foreground mb-2 text-center">For {selectedSport}</p>
                   <p className="text-muted-foreground">
                     {selectedSport} recruiting information will be displayed here when available.
                   </p>
@@ -764,6 +766,7 @@ export function RecruiterProfile({
                         fill
                         className="rounded-full object-cover"
                         sizes="(max-width: 768px) 80px, (max-width: 1024px) 112px, 128px"
+                        unoptimized
                       />
                     ) : (
                       <div className="w-full h-full bg-muted rounded-full flex items-center justify-center">

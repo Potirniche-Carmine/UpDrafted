@@ -3,8 +3,8 @@ import { requireRole } from '@/utils/roles';
 import { db } from '@/database/db';
 import { verificationRequests, verificationFiles } from '@/database/schema';
 import { eq, and } from 'drizzle-orm';
-import { withRateLimit } from '@/utils/rate-limiting';
-import { createErrorResponse, createSuccessResponse, invalidateCache } from '@/utils/security-cache';
+import { withRateLimit } from '@/utils/security';
+import { createErrorResponse, createSuccessResponse, invalidateCache } from '@/utils/security';
 
 export async function handleVerificationSubmit(request: NextRequest): Promise<NextResponse> {
   try {

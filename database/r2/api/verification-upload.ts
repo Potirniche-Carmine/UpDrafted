@@ -4,8 +4,8 @@ import { uploadVerificationFile } from '../uploads';
 import { db } from '@/database/db';
 import { verificationFiles, verificationRequests } from '@/database/schema';
 import { eq } from 'drizzle-orm';
-import { withRateLimit } from '@/utils/rate-limiting';
-import { createErrorResponse, createSuccessResponse, validateFile, scanContent } from '@/utils/security-cache';
+import { withRateLimit } from '@/utils/security';
+import { createErrorResponse, createSuccessResponse, validateFile, scanContent } from '@/utils/security';
 
 export async function handleVerificationUpload(request: NextRequest): Promise<NextResponse> {
   try {

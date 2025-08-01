@@ -234,22 +234,35 @@ export const GRADUATION_YEARS = Array.from(
 
 // Get graduation years that are valid for high school athletes (juniors and above)
 export function getValidHighSchoolGraduationYears(): number[] {
-  const currentYear = new Date().getFullYear();
-  const currentMonth = new Date().getMonth();
+  const now = new Date();
+  const currentYear = now.getFullYear();
+  const currentMonth = now.getMonth();
+  const currentDay = now.getDate();
   
-  // If we're in the first half of the year (Jan-June), we're in the spring of the school year
-  // If we're in the second half (July-Dec), we're in the fall of the new school year
-  const baseYear = currentMonth < 6 ? currentYear : currentYear + 1;
+  // Use June 15th as the cutoff date when coaches can start talking to players
+  // This simplifies the logic and aligns with NCAA recruiting calendar
+  const isAfterJune15 = currentMonth > 5 || (currentMonth === 5 && currentDay >= 15); // June 15th and after
   
-  // Current seniors graduate this year (baseYear)
-  // Current juniors graduate next year (baseYear + 1)
-  return [baseYear, baseYear + 1];
+  if (isAfterJune15) {
+    // After June 15th: Show rising seniors and rising juniors
+    // Remove current year graduates, add next cohort
+    return [currentYear + 1, currentYear + 2];
+  } else {
+    // Before June 15th: Show current seniors and juniors  
+    return [currentYear, currentYear + 1];
+  }
 }
 
 // Check if a graduation year is valid for high school athletes
 export function isValidHighSchoolGraduationYear(year: number): boolean {
   const validYears = getValidHighSchoolGraduationYears();
   return validYears.includes(year);
+}
+
+// Get error message for invalid high school graduation years
+export function getHighSchoolGraduationYearErrorMessage(): string {
+  const validYears = getValidHighSchoolGraduationYears();
+  return `High school athletes must be juniors or above (Class of ${validYears.join(', ')})`;
 }
 
 // Get filtered graduation years for high school athletes

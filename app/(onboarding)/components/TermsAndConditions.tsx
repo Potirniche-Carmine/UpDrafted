@@ -29,11 +29,11 @@ export default function TermsAndConditions({
           <div className="text-sm">
             <label htmlFor="agreeToTerms" className="cursor-pointer">
               I agree to the{' '}
-              <Link href="/terms-of-service" className="text-blue-600 hover:underline" target="_blank">
+              <Link href="/terms-of-service" className="text-[#01ae79] hover:underline" target="_blank">
                 Terms of Service
               </Link>{' '}
               and{' '}
-              <Link href="/privacy-policy" className="text-blue-600 hover:underline" target="_blank">
+              <Link href="/privacy-policy" className="text-[#01ae79] hover:underline" target="_blank">
                 Privacy Policy
               </Link>{' '}
               *

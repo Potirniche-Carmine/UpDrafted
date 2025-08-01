@@ -6,7 +6,7 @@ import { decryptMessage } from '@/utils/encryption';
 import { sanitizeText } from '@/utils/sanitization';
 import { User } from '@/database/schema';
 import { MessageValidation, validateSchema, ValidationError } from '@/utils/validation';
-import { withRateLimit } from '@/utils/rate-limiting';
+import { withRateLimit } from '@/utils/security';
 
 interface ConversationData {
   id: number;

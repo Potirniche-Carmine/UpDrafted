@@ -6,6 +6,7 @@ export const siteConfig = {
   url: process.env.NEXT_PUBLIC_APP_URL || 'https://updrafted.us',
   ogImage: '/og-image.png',
   creator: 'UpDrafted Team',
+  twitterCreator: '@updraftedapp',
   keywords: [
     'college recruitment',
     'student athletes',
@@ -21,7 +22,11 @@ export const siteConfig = {
     'college athletic programs',
     'sports recruitment',
     'college athletics',
-    'recruiting database'
+    'recruiting database',
+    'NCAA recruiting',
+    'college recruiting platform',
+    'athletic recruiting',
+    'sports scholarships'
   ],
 }
 
@@ -31,10 +36,10 @@ export const organizationStructuredData = {
   name: siteConfig.name,
   description: siteConfig.description,
   url: siteConfig.url,
-  logo: `${siteConfig.url}/logo.png`,
+  logo: `${siteConfig.url}/icons/icon-512x512.png`,
   sameAs: [
     // Add your social media URLs here when available
-    // 'https://twitter.com/updrafted',
+    // 'https://twitter.com/updraftedapp',
     // 'https://linkedin.com/company/updrafted',
     // 'https://instagram.com/updrafted'
   ],
@@ -86,6 +91,7 @@ export function generateMetadata({
   const url = `${siteConfig.url}${path}`
 
   return {
+    metadataBase: new URL(siteConfig.url),
     title: metaTitle,
     description: metaDescription,
     keywords: siteConfig.keywords,
@@ -112,12 +118,16 @@ export function generateMetadata({
       title: metaTitle,
       description: metaDescription,
       images: [metaImage],
-      creator: '@updraftedapp', 
+      creator: siteConfig.twitterCreator, 
     },
     icons: {
-      icon: '/favicon.ico',
-      shortcut: '/favicon-16x16.png',
-      apple: '/apple-touch-icon.png',
+      icon: [
+        { url: '/favicon.ico' },
+        { url: '/icon.png', type: 'image/png' },
+      ],
+      apple: [
+        { url: '/apple-icon.png', type: 'image/png' },
+      ],
     },
     manifest: '/site.webmanifest',
     robots: {
@@ -152,4 +162,55 @@ export const privatePageMetadata: Metadata = {
       follow: false,
     },
   },
+}
+
+// Helper for generating page-specific metadata
+export const pageMetadata = {
+  home: () => generateMetadata({
+    title: 'Connect Student-Athletes with College Programs',
+    description: 'The premier platform for college athletic recruitment. Connect with D1, D2, D3, and JUCO programs. Build your profile, get discovered, and accelerate your college sports career.',
+  }),
+  
+  search: () => generateMetadata({
+    title: 'Search Athletes & Programs',
+    description: 'Search and discover student-athletes and college programs. Advanced filters for sports, positions, academics, and more.',
+    path: '/search',
+  }),
+  
+  profile: (name?: string) => generateMetadata({
+    title: name ? `${name}'s Profile` : 'Athlete Profile',
+    description: 'View athlete profile, stats, achievements, and recruitment information on UpDrafted.',
+    path: '/profile',
+  }),
+  
+  dashboard: () => generateMetadata({
+    title: 'Dashboard',
+    description: 'Manage your recruitment profile, view connections, and track your college recruitment progress.',
+    path: '/dashboard',
+    noIndex: true,
+  }),
+  
+  pricing: () => generateMetadata({
+    title: 'Pricing Plans',
+    description: 'Choose the perfect plan for your college recruitment journey. Premium features for serious athletes and coaches.',
+    path: '/pricing',
+  }),
+  
+  forAthletes: () => generateMetadata({
+    title: 'For Student-Athletes',
+    description: 'Get recruited by college programs. Build your profile, showcase your talents, and connect with coaches.',
+    path: '/for-athletes',
+  }),
+  
+  forCoaches: () => generateMetadata({
+    title: 'For College Coaches',
+    description: 'Discover and recruit talented student-athletes. Advanced search tools and verified profiles.',
+    path: '/for-coaches',
+  }),
+  
+  forRecruiters: () => generateMetadata({
+    title: 'For Recruiters',
+    description: 'Professional recruiting tools for finding and connecting with top student-athletes.',
+    path: '/for-recruiters',
+  }),
 } 

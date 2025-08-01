@@ -4,6 +4,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ArrowRight, CheckCircle, Search, Shield, Target, MessageCircle, Link2, Ruler, MessageSquare } from "lucide-react";
 import { AuthWrapper } from "../../components/auth-wrapper";
+import { pageMetadata } from "@/lib/seo";
+
+export const metadata = pageMetadata.home();
 
 function HomePageContent() {
   return (

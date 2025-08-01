@@ -1,7 +1,7 @@
 import { clerkMiddleware } from '@clerk/nextjs/server';
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
-import { SecurityEvents } from './utils/security-monitoring';
+import { SecurityEvents } from './utils/security';
 
 // Simple in-memory rate limiting for MVP (would use Redis in production)
 const rateLimit = new Map<string, { count: number; resetTime: number }>();
@@ -129,8 +129,9 @@ const securityMiddleware = async (request: NextRequest) => {
 
 // Combine Clerk middleware with security middleware
 export default clerkMiddleware(async (auth, req) => {
-  // Skip all processing for webhook routes
-  if (req.nextUrl.pathname.startsWith('/api/webhooks/')) {
+  // Skip all processing for webhook routes and cleanup routes
+  if (req.nextUrl.pathname.startsWith('/api/webhooks/') || 
+      req.nextUrl.pathname.startsWith('/api/activity/cleanup')) {
     return NextResponse.next();
   }
 

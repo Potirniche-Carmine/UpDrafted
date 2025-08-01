@@ -2,8 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireAnyRole } from '@/utils/roles';
 import { connectionOperations, userOperations, messageOperations, notificationOperations } from '@/database/db-utils';
 import { sanitizeText } from '@/utils/sanitization';
-import { withRateLimit } from '@/utils/rate-limiting';
-import { getCachedWithType, setCachedWithType, invalidateCachePattern, createErrorResponse, createSuccessResponse } from '@/utils/security-cache';
+import { withRateLimit } from '@/utils/security';
+import { getCachedWithType, setCachedWithType, invalidateCachePattern, createErrorResponse, createSuccessResponse } from '@/utils/security';
 
 export const runtime = 'nodejs';
 

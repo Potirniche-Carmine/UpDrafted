@@ -2,8 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireAnyRole } from '@/utils/roles';
 import { reportOperations, userOperations } from '@/database/db-utils';
 import { clerkClient } from '@clerk/nextjs/server';
-import { withRateLimit } from '@/utils/rate-limiting';
-import { getCachedWithType, setCachedWithType, createErrorResponse, createSuccessResponse } from '@/utils/security-cache';
+import { withRateLimit } from '@/utils/security';
+import { getCachedWithType, setCachedWithType, createErrorResponse, createSuccessResponse } from '@/utils/security';
 
 interface ReportData {
   id: number;

@@ -3,8 +3,8 @@ import { requireOwnershipOrAdmin } from '@/utils/roles';
 import { uploadProfilePicture, uploadOrganizationLogo } from '@/database/r2/uploads';
 import { deleteFromR2, getR2KeyFromUrl } from '@/database/r2/config';
 import { coachOperations, athleteOperations, recruitingOperations, userOperations, adminOperations } from '@/database/db-utils';
-import { withRateLimit } from '@/utils/rate-limiting';
-import { validateFile, scanContent, createErrorResponse, createSuccessResponse, invalidateCache } from '@/utils/security-cache';
+import { withRateLimit } from '@/utils/security';
+import { validateFile, scanContent, createErrorResponse, createSuccessResponse, invalidateCache } from '@/utils/security';
 
 export const runtime = 'nodejs';
 
