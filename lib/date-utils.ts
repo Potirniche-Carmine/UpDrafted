@@ -16,14 +16,26 @@ export interface CampDateOption {
 /**
  * Robust date parsing with detailed error logging
  * Returns a tuple of [parsedDate, errorMessage]
+ * 
+ * @param dateString - The date string to parse
+ * @param context - Context for error messages (e.g., "camp experience start date")
+ * @param fallbackDate - Date to return if parsing fails (default: current date)
+ * @param strictMode - If true, throws error for invalid dates instead of using fallback (default: false)
+ * @returns Tuple of [parsedDate, errorMessage] where errorMessage is null if successful
  */
 export function parseDateWithErrorHandling(
   dateString: string, 
   context: string, 
-  fallbackDate: Date = new Date()
+  fallbackDate: Date = new Date(),
+  strictMode: boolean = false
 ): [Date, string | null] {
   if (!dateString || typeof dateString !== 'string') {
     const error = `Invalid date string in ${context}: ${JSON.stringify(dateString)}`;
+    
+    if (strictMode) {
+      throw new Error(error);
+    }
+    
     console.warn(error);
     return [fallbackDate, error];
   }
@@ -39,6 +51,11 @@ export function parseDateWithErrorHandling(
     
     if (isNaN(parsedDate.getTime())) {
       const error = `Invalid date value in ${context}: "${dateString}" parsed to NaN`;
+      
+      if (strictMode) {
+        throw new Error(error);
+      }
+      
       console.warn(error);
       return [fallbackDate, error];
     }
@@ -46,6 +63,11 @@ export function parseDateWithErrorHandling(
     return [parsedDate, null];
   } catch (error) {
     const errorMessage = `Date parsing error in ${context}: "${dateString}" - ${error instanceof Error ? error.message : 'Unknown error'}`;
+    
+    if (strictMode) {
+      throw new Error(errorMessage);
+    }
+    
     console.error(errorMessage);
     return [fallbackDate, errorMessage];
   }
@@ -54,11 +76,18 @@ export function parseDateWithErrorHandling(
 /**
  * Convert date to YYYY-MM-DD string format with error handling
  * Returns a tuple of [dateString, errorMessage]
+ * 
+ * @param date - Date object or string to convert
+ * @param context - Context for error messages (e.g., "camp experience end date")
+ * @param fallbackString - String to return if conversion fails (default: current date in YYYY-MM-DD format)
+ * @param strictMode - If true, throws error for invalid dates instead of using fallback (default: false)
+ * @returns Tuple of [dateString, errorMessage] where errorMessage is null if successful
  */
 export function dateToStringWithErrorHandling(
   date: Date | string,
   context: string,
-  fallbackString: string = new Date().toISOString().split('T')[0]
+  fallbackString: string = new Date().toISOString().split('T')[0],
+  strictMode: boolean = false
 ): [string, string | null] {
   try {
     // If it's already a string in YYYY-MM-DD format, use it directly
@@ -74,13 +103,28 @@ export function dateToStringWithErrorHandling(
     // Convert to Date object if it's a string
     let dateObj: Date;
     if (typeof date === 'string') {
-      const [parsedDate, parseError] = parseDateWithErrorHandling(date, context);
+      const [parsedDate, parseError] = parseDateWithErrorHandling(date, context, new Date(), strictMode);
       if (parseError) {
+        if (strictMode) {
+          throw new Error(parseError);
+        }
         return [fallbackString, parseError];
       }
       dateObj = parsedDate;
     } else {
       dateObj = date;
+    }
+
+    // Validate the Date object
+    if (!dateObj || !(dateObj instanceof Date) || isNaN(dateObj.getTime())) {
+      const error = `Invalid date object in ${context}: ${JSON.stringify(dateObj)}`;
+      
+      if (strictMode) {
+        throw new Error(error);
+      }
+      
+      console.warn(error);
+      return [fallbackString, error];
     }
 
     // Check if it's the special "Present" date
@@ -97,6 +141,11 @@ export function dateToStringWithErrorHandling(
     return [dateString, null];
   } catch (error) {
     const errorMessage = `Date to string conversion error in ${context}: ${error instanceof Error ? error.message : 'Unknown error'}`;
+    
+    if (strictMode) {
+      throw new Error(errorMessage);
+    }
+    
     console.error(errorMessage);
     return [fallbackString, errorMessage];
   }
@@ -349,6 +398,155 @@ export function sortCampExperiences<T extends { startDate: Date | string }>(expe
     const bDate = typeof b.startDate === 'string' ? new Date(b.startDate) : b.startDate;
     return bDate.getTime() - aDate.getTime();
   });
+}
+
+/**
+ * Validate date integrity without affecting application flow
+ * Returns detailed validation results for debugging and monitoring
+ * 
+ * @param dateString - The date string to validate
+ * @param context - Context for validation messages
+ * @returns Object containing validation results and recommendations
+ * 
+ * @example
+ * // Basic validation
+ * const result = validateDateIntegrity('2025-06-15', 'camp start date');
+ * if (!result.isValid) {
+ *   console.warn('Date validation failed:', result.issues);
+ * }
+ * 
+ * // Validation with recommendations
+ * const result = validateDateIntegrity('1899-01-01', 'birth date');
+ * if (result.issues.length > 0) {
+ *   console.warn('Suspicious date detected:', {
+ *     issues: result.issues,
+ *     recommendations: result.recommendations
+ *   });
+ * }
+ */
+export function validateDateIntegrity(
+  dateString: string,
+  context: string
+): {
+  isValid: boolean;
+  issues: string[];
+  recommendations: string[];
+  parsedValue?: Date;
+} {
+  const issues: string[] = [];
+  const recommendations: string[] = [];
+
+  // Check if input is valid
+  if (!dateString || typeof dateString !== 'string') {
+    issues.push(`Invalid input type: expected string, got ${typeof dateString}`);
+    recommendations.push('Ensure date input is a non-empty string');
+    return { isValid: false, issues, recommendations };
+  }
+
+  // Check if it's the special "Present" date
+  if (isPresentDate(dateString)) {
+    return { isValid: true, issues, recommendations, parsedValue: PRESENT_DATE };
+  }
+
+  try {
+    const parsedDate = isoStringToDate(dateString);
+    
+    if (isNaN(parsedDate.getTime())) {
+      issues.push(`Date string "${dateString}" could not be parsed to a valid date`);
+      recommendations.push('Check date format and ensure it follows ISO 8601 or YYYY-MM-DD format');
+      return { isValid: false, issues, recommendations };
+    }
+
+    // Additional validation checks
+    const currentYear = new Date().getFullYear();
+    const dateYear = parsedDate.getFullYear();
+    
+    if (dateYear < 1900) {
+      issues.push(`Date year ${dateYear} is before 1900, which may indicate an error`);
+      recommendations.push('Verify the date is correct and not a placeholder or error value');
+    }
+    
+    if (dateYear > currentYear + 10) {
+      issues.push(`Date year ${dateYear} is more than 10 years in the future, which may indicate an error`);
+      recommendations.push('Verify the date is correct and not a placeholder or error value');
+    }
+
+    return { 
+      isValid: issues.length === 0, 
+      issues, 
+      recommendations, 
+      parsedValue: parsedDate 
+    };
+  } catch (error) {
+    issues.push(`Exception during date parsing: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    recommendations.push('Check date format and ensure it follows expected patterns');
+    return { isValid: false, issues, recommendations };
+  }
+}
+
+/**
+ * Collect and report date validation issues for a dataset
+ * Useful for bulk validation and monitoring
+ * 
+ * @param dateEntries - Array of date entries to validate
+ * @param context - Context for the validation session
+ * @returns Summary of validation results
+ * 
+ * @example
+ * // Validate a batch of camp experience dates
+ * const dateEntries = [
+ *   { id: 1, dateString: '2025-06-15', context: 'camp start date' },
+ *   { id: 1, dateString: '2025-08-20', context: 'camp end date' },
+ *   { id: 2, dateString: 'invalid-date', context: 'camp start date' }
+ * ];
+ * 
+ * const results = validateDateDataset(dateEntries, 'camp experiences');
+ * console.log(results.summary); // "Date validation for camp experiences: 2/3 valid entries, 1 issues found"
+ * 
+ * if (results.invalidEntries > 0) {
+ *   console.warn('Date validation issues:', results.issues);
+ * }
+ */
+export function validateDateDataset(
+  dateEntries: Array<{ id: string | number; dateString: string; context?: string }>,
+  context: string
+): {
+  totalEntries: number;
+  validEntries: number;
+  invalidEntries: number;
+  issues: Array<{ id: string | number; context: string; issues: string[]; recommendations: string[] }>;
+  summary: string;
+} {
+  const issues: Array<{ id: string | number; context: string; issues: string[]; recommendations: string[] }> = [];
+  let validEntries = 0;
+  let invalidEntries = 0;
+
+  for (const entry of dateEntries) {
+    const validation = validateDateIntegrity(entry.dateString, entry.context || context);
+    
+    if (validation.isValid) {
+      validEntries++;
+    } else {
+      invalidEntries++;
+      issues.push({
+        id: entry.id,
+        context: entry.context || context,
+        issues: validation.issues,
+        recommendations: validation.recommendations
+      });
+    }
+  }
+
+  const totalEntries = dateEntries.length;
+  const summary = `Date validation for ${context}: ${validEntries}/${totalEntries} valid entries, ${invalidEntries} issues found`;
+
+  return {
+    totalEntries,
+    validEntries,
+    invalidEntries,
+    issues,
+    summary
+  };
 }
 
 /**

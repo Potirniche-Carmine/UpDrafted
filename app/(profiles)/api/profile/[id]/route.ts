@@ -8,7 +8,8 @@ import { eq, and } from 'drizzle-orm';
 import { sanitizeProfileData } from '@/utils/sanitization';
 import { EducationLevel } from '@/app/(onboarding)/lib/onboarding';
 import { withRateLimit } from '@/utils/security';
-import { PRESENT_DATE, parseDateWithErrorHandling, dateToStringWithErrorHandling } from '@/lib/date-utils';
+import { PRESENT_DATE, parseDateWithErrorHandling, dateToStringWithErrorHandling, validateDateIntegrity, validateDateDataset } from '@/lib/date-utils';
+import { handleTransactionError, createClientErrorResponse, logErrorWithContext, sanitizeErrorForClient } from '@/utils/error-sanitization';
 
 // Force Node.js runtime to avoid expensive edge function costs
 export const runtime = 'nodejs';
@@ -89,6 +90,32 @@ function transformProfileData(profileData: Record<string, any>, profileType: str
 
     // Transform camp experience data if present
     if (profileData.experience) {
+      // Validate all dates in the dataset for integrity monitoring
+      const dateValidationResults = validateDateDataset(
+        profileData.experience.map((exp: any) => ({
+          id: exp.id,
+          dateString: exp.startDate,
+          context: `start date for "${exp.name}"`
+        })).concat(
+          profileData.experience.map((exp: any) => ({
+            id: exp.id,
+            dateString: exp.endDate,
+            context: `end date for "${exp.name}"`
+          }))
+        ),
+        'camp experience dates'
+      );
+
+      // Log validation summary if there are issues
+      if (dateValidationResults.invalidEntries > 0) {
+        console.warn('Date integrity issues detected in camp experiences:', {
+          summary: dateValidationResults.summary,
+          issues: dateValidationResults.issues,
+          totalEntries: dateValidationResults.totalEntries,
+          invalidEntries: dateValidationResults.invalidEntries
+        });
+      }
+
       transformed.campExperience = profileData.experience.map((exp: { id: number; type: string; name: string; city: string; stateCountry: string; startDate: string; endDate: string; sport: string; description: string }) => {
         // Handle start date - convert from database string to Date object using proper timezone handling
         const [startDate, startDateError] = parseDateWithErrorHandling(
@@ -217,19 +244,10 @@ const validateBasicFields = (data: Record<string, unknown>) => {
 };
 
 // Sanitize error messages
+// Legacy sanitizeError function - now uses the new utility for consistency
 const sanitizeError = (error: Error | unknown): string => {
-  const message = error instanceof Error ? error.message : 'Unknown error';
-  
-  // Don't expose internal details
-  if (message.includes('database') || message.includes('SQL') || message.includes('connection')) {
-    return 'A database error occurred. Please try again.';
-  }
-  
-  if (message.includes('permission') || message.includes('unauthorized')) {
-    return 'You do not have permission to perform this action.';
-  }
-  
-  return 'An error occurred while updating your profile.';
+  const sanitized = sanitizeErrorForClient(error);
+  return sanitized.message;
 };
 
 // Helper function to sanitize profile data based on viewing permissions
@@ -1192,26 +1210,15 @@ export async function PUT(
               }
             });
           } catch (transactionError) {
-            console.error('Database transaction failed for camp experience updates:', {
-              userId: profileUserId,
-              error: transactionError,
-              stack: transactionError instanceof Error ? transactionError.stack : 'No stack trace',
-              operationSummary: {
-                experiencesToUpdate: existingExperiencesToUpdate.length,
-                experiencesToCreate: newExperiences.length,
-                experiencesToDelete: experiencesToDelete.length
-              }
-            });
-
-            // Return a specific error response for transaction failures
-            return NextResponse.json(
-              { 
-                error: 'Failed to update camp experiences due to a database error. Please try again, and if the problem persists, contact support.',
-                details: 'Database transaction failed during camp experience update',
-                debug: transactionError instanceof Error ? transactionError.message : 'Unknown transaction error'
-              },
-              { status: 500 }
+            // Use the new error sanitization utility for secure error handling
+            const errorResponse = handleTransactionError(
+              transactionError,
+              'camp experience updates',
+              profileUserId
             );
+
+            // Return sanitized error response without exposing sensitive details
+            return NextResponse.json(errorResponse, { status: 500 });
           }
         }
       }
@@ -1405,11 +1412,14 @@ export async function PUT(
     });
 
   } catch (error) {
-    console.error('Error updating profile:', error);
-    console.error('Error stack:', error instanceof Error ? error.stack : 'No stack trace');
-    return NextResponse.json(
-      { error: sanitizeError(error), debug: error instanceof Error ? error.message : 'Unknown error' },
-      { status: 500 }
-    );
+    // Use the new error sanitization utility for secure error handling
+    const errorResponse = createClientErrorResponse(error, 'profile update');
+    
+    // Log the full error details for debugging
+    logErrorWithContext(error, 'Profile update operation', {
+      requestMethod: 'PUT'
+    });
+    
+    return NextResponse.json(errorResponse, { status: 500 });
   }
 } 
