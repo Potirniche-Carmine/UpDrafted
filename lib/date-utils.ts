@@ -14,6 +14,95 @@ export interface CampDateOption {
 }
 
 /**
+ * Robust date parsing with detailed error logging
+ * Returns a tuple of [parsedDate, errorMessage]
+ */
+export function parseDateWithErrorHandling(
+  dateString: string, 
+  context: string, 
+  fallbackDate: Date = new Date()
+): [Date, string | null] {
+  if (!dateString || typeof dateString !== 'string') {
+    const error = `Invalid date string in ${context}: ${JSON.stringify(dateString)}`;
+    console.warn(error);
+    return [fallbackDate, error];
+  }
+
+  try {
+    // Check if it's the special "Present" date using the robust isPresentDate function
+    if (isPresentDate(dateString)) {
+      return [PRESENT_DATE, null];
+    }
+
+    // Use the isoStringToDate function to handle timezone issues properly
+    const parsedDate = isoStringToDate(dateString);
+    
+    if (isNaN(parsedDate.getTime())) {
+      const error = `Invalid date value in ${context}: "${dateString}" parsed to NaN`;
+      console.warn(error);
+      return [fallbackDate, error];
+    }
+
+    return [parsedDate, null];
+  } catch (error) {
+    const errorMessage = `Date parsing error in ${context}: "${dateString}" - ${error instanceof Error ? error.message : 'Unknown error'}`;
+    console.error(errorMessage);
+    return [fallbackDate, errorMessage];
+  }
+}
+
+/**
+ * Convert date to YYYY-MM-DD string format with error handling
+ * Returns a tuple of [dateString, errorMessage]
+ */
+export function dateToStringWithErrorHandling(
+  date: Date | string,
+  context: string,
+  fallbackString: string = new Date().toISOString().split('T')[0]
+): [string, string | null] {
+  try {
+    // If it's already a string in YYYY-MM-DD format, use it directly
+    if (typeof date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(date)) {
+      return [date, null];
+    }
+
+    // If it's a string representing the special "Present" date, return it
+    if (typeof date === 'string' && isPresentDate(date)) {
+      return ['9999-12-31', null];
+    }
+
+    // Convert to Date object if it's a string
+    let dateObj: Date;
+    if (typeof date === 'string') {
+      const [parsedDate, parseError] = parseDateWithErrorHandling(date, context);
+      if (parseError) {
+        return [fallbackString, parseError];
+      }
+      dateObj = parsedDate;
+    } else {
+      dateObj = date;
+    }
+
+    // Check if it's the special "Present" date
+    if (dateObj.getTime() === PRESENT_DATE.getTime()) {
+      return ['9999-12-31', null];
+    }
+
+    // Convert Date object to YYYY-MM-DD format using UTC methods to avoid timezone issues
+    const year = dateObj.getUTCFullYear();
+    const month = String(dateObj.getUTCMonth() + 1).padStart(2, '0');
+    const day = String(dateObj.getUTCDate()).padStart(2, '0');
+    const dateString = `${year}-${month}-${day}`;
+
+    return [dateString, null];
+  } catch (error) {
+    const errorMessage = `Date to string conversion error in ${context}: ${error instanceof Error ? error.message : 'Unknown error'}`;
+    console.error(errorMessage);
+    return [fallbackString, errorMessage];
+  }
+}
+
+/**
  * Format a Date object to "Month Year" format (e.g., "June 2025")
  */
 export function formatCampDate(date: Date | string): string {
@@ -189,17 +278,56 @@ export function isoStringToDate(dateString: string): Date {
 
 /**
  * Check if a date represents "Present"
+ * Validates edge cases to prevent false positives
+ * 
+ * @param date - Date object or string to check
+ * @returns true if the date represents the special "Present" date, false otherwise
+ * 
+ * @example
+ * // Valid "Present" dates:
+ * isPresentDate('9999-12-31') // true
+ * isPresentDate('9999-12-31T00:00:00.000Z') // true
+ * isPresentDate(new Date('9999-12-31')) // true
+ * 
+ * // Invalid/edge cases that return false:
+ * isPresentDate('9999-12-30') // false (different date)
+ * isPresentDate('9999-12-31T12:00:00.000Z') // false (different time)
+ * isPresentDate('9999-12-31T00:00:00.001Z') // false (different milliseconds)
+ * isPresentDate('invalid-date-string') // false (invalid format)
+ * isPresentDate('') // false (empty string)
+ * isPresentDate(null) // false (null value)
+ * isPresentDate(undefined) // false (undefined value)
  */
 export function isPresentDate(date: Date | string): boolean {
-  // Handle both Date objects and strings
+  // Handle string input with strict validation
   if (typeof date === 'string') {
-    return date === '9999-12-31' || date === '9999-12-31T00:00:00.000Z';
+    // Only accept exact matches for the special "Present" date strings
+    // This prevents false positives from similar-looking strings
+    if (date === '9999-12-31' || date === '9999-12-31T00:00:00.000Z') {
+      return true;
+    }
+    
+    // For any other string, try to parse it as a date and compare
+    // This handles cases where the string might be a valid date that happens to be 9999-12-31
+    try {
+      const parsedDate = new Date(date);
+      if (!isNaN(parsedDate.getTime())) {
+        return parsedDate.getTime() === PRESENT_DATE.getTime();
+      }
+    } catch {
+      // If parsing fails, it's definitely not a "Present" date
+      return false;
+    }
+    
+    return false;
   }
   
+  // Handle Date object input
   if (!date || !(date instanceof Date) || isNaN(date.getTime())) {
     return false;
   }
   
+  // Compare the time value to ensure exact match
   return date.getTime() === PRESENT_DATE.getTime();
 }
 

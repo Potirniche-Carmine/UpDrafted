@@ -8,7 +8,7 @@ import { eq, and } from 'drizzle-orm';
 import { sanitizeProfileData } from '@/utils/sanitization';
 import { EducationLevel } from '@/app/(onboarding)/lib/onboarding';
 import { withRateLimit } from '@/utils/security';
-import { isoStringToDate, PRESENT_DATE } from '@/lib/date-utils';
+import { PRESENT_DATE, parseDateWithErrorHandling, dateToStringWithErrorHandling } from '@/lib/date-utils';
 
 // Force Node.js runtime to avoid expensive edge function costs
 export const runtime = 'nodejs';
@@ -17,95 +17,6 @@ interface ProfilePageParams {
   params: Promise<{
     id: string;
   }>;
-}
-
-/**
- * Robust date parsing with detailed error logging
- * Returns a tuple of [parsedDate, errorMessage]
- */
-function parseDateWithErrorHandling(
-  dateString: string, 
-  context: string, 
-  fallbackDate: Date = new Date()
-): [Date, string | null] {
-  if (!dateString || typeof dateString !== 'string') {
-    const error = `Invalid date string in ${context}: ${JSON.stringify(dateString)}`;
-    console.warn(error);
-    return [fallbackDate, error];
-  }
-
-  try {
-    // Check if it's the special "Present" date
-    if (dateString === '9999-12-31' || dateString === '9999-12-31T00:00:00.000Z') {
-      return [PRESENT_DATE, null];
-    }
-
-    // Use the isoStringToDate function to handle timezone issues properly
-    const parsedDate = isoStringToDate(dateString);
-    
-    if (isNaN(parsedDate.getTime())) {
-      const error = `Invalid date value in ${context}: "${dateString}" parsed to NaN`;
-      console.warn(error);
-      return [fallbackDate, error];
-    }
-
-    return [parsedDate, null];
-  } catch (error) {
-    const errorMessage = `Date parsing error in ${context}: "${dateString}" - ${error instanceof Error ? error.message : 'Unknown error'}`;
-    console.error(errorMessage);
-    return [fallbackDate, errorMessage];
-  }
-}
-
-/**
- * Convert date to YYYY-MM-DD string format with error handling
- * Returns a tuple of [dateString, errorMessage]
- */
-function dateToStringWithErrorHandling(
-  date: Date | string,
-  context: string,
-  fallbackString: string = new Date().toISOString().split('T')[0]
-): [string, string | null] {
-  try {
-    // If it's already a string in YYYY-MM-DD format, use it directly
-    if (typeof date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(date)) {
-      return [date, null];
-    }
-
-    // If it's a string representing the special "Present" date, return it
-    if (typeof date === 'string' && (date === '9999-12-31' || date === '9999-12-31T00:00:00.000Z')) {
-      return ['9999-12-31', null];
-    }
-
-    // Convert to Date object if it's a string
-    let dateObj: Date;
-    if (typeof date === 'string') {
-      const [parsedDate, parseError] = parseDateWithErrorHandling(date, context);
-      if (parseError) {
-        return [fallbackString, parseError];
-      }
-      dateObj = parsedDate;
-    } else {
-      dateObj = date;
-    }
-
-    // Check if it's the special "Present" date
-    if (dateObj.getTime() === PRESENT_DATE.getTime()) {
-      return ['9999-12-31', null];
-    }
-
-    // Convert Date object to YYYY-MM-DD format using UTC methods to avoid timezone issues
-    const year = dateObj.getUTCFullYear();
-    const month = String(dateObj.getUTCMonth() + 1).padStart(2, '0');
-    const day = String(dateObj.getUTCDate()).padStart(2, '0');
-    const dateString = `${year}-${month}-${day}`;
-
-    return [dateString, null];
-  } catch (error) {
-    const errorMessage = `Date to string conversion error in ${context}: ${error instanceof Error ? error.message : 'Unknown error'}`;
-    console.error(errorMessage);
-    return [fallbackString, errorMessage];
-  }
 }
 
 // Helper function to transform database profile data to match component interface
@@ -1258,27 +1169,50 @@ export async function PUT(
           newExperiences.push(...frontendExperiencesWithoutId);
 
           // Wrap all operations in a transaction to ensure consistency
-          await db.transaction(async (tx) => {
-            // First, update existing experiences (before any deletions)
-            for (const { id, data } of existingExperiencesToUpdate) {
-              await tx
-                .update(athleteExperience)
-                .set(data)
-                .where(eq(athleteExperience.id, id));
-            }
+          try {
+            await db.transaction(async (tx) => {
+              // First, update existing experiences (before any deletions)
+              for (const { id, data } of existingExperiencesToUpdate) {
+                await tx
+                  .update(athleteExperience)
+                  .set(data)
+                  .where(eq(athleteExperience.id, id));
+              }
 
-            // Then, create new experiences
-            for (const newExp of newExperiences) {
-              await tx.insert(athleteExperience).values(newExp);
-            }
+              // Then, create new experiences
+              for (const newExp of newExperiences) {
+                await tx.insert(athleteExperience).values(newExp);
+              }
 
-            // Finally, delete experiences that are no longer in the frontend
-            for (const id of experiencesToDelete) {
-              await tx
-                .delete(athleteExperience)
-                .where(eq(athleteExperience.id, id));
-            }
-           });
+              // Finally, delete experiences that are no longer in the frontend
+              for (const id of experiencesToDelete) {
+                await tx
+                  .delete(athleteExperience)
+                  .where(eq(athleteExperience.id, id));
+              }
+            });
+          } catch (transactionError) {
+            console.error('Database transaction failed for camp experience updates:', {
+              userId: profileUserId,
+              error: transactionError,
+              stack: transactionError instanceof Error ? transactionError.stack : 'No stack trace',
+              operationSummary: {
+                experiencesToUpdate: existingExperiencesToUpdate.length,
+                experiencesToCreate: newExperiences.length,
+                experiencesToDelete: experiencesToDelete.length
+              }
+            });
+
+            // Return a specific error response for transaction failures
+            return NextResponse.json(
+              { 
+                error: 'Failed to update camp experiences due to a database error. Please try again, and if the problem persists, contact support.',
+                details: 'Database transaction failed during camp experience update',
+                debug: transactionError instanceof Error ? transactionError.message : 'Unknown transaction error'
+              },
+              { status: 500 }
+            );
+          }
         }
       }
       
