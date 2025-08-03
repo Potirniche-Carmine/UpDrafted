@@ -550,9 +550,53 @@ export function validateDateDataset(
 }
 
 /**
+ * Format state abbreviation to uppercase
+ * This function should only be used when you are certain the input is a state abbreviation
+ * and not arbitrary user input that might contain state-like codes
+ * 
+ * @param stateCode - The state code to format (e.g., "ca", "TX", "ny")
+ * @returns The state code in uppercase format
+ */
+export function formatStateAbbreviation(stateCode: string): string {
+  if (!stateCode || typeof stateCode !== 'string') {
+    return stateCode;
+  }
+  
+  // Only format if it's a valid US state abbreviation
+  const validStateAbbreviations = [
+    'al', 'ak', 'az', 'ar', 'ca', 'co', 'ct', 'de', 'fl', 'ga',
+    'hi', 'id', 'il', 'in', 'ia', 'ks', 'ky', 'la', 'me', 'md',
+    'ma', 'mi', 'mn', 'ms', 'mo', 'mt', 'ne', 'nv', 'nh', 'nj',
+    'nm', 'ny', 'nc', 'nd', 'oh', 'ok', 'or', 'pa', 'ri', 'sc',
+    'sd', 'tn', 'tx', 'ut', 'vt', 'va', 'wa', 'wv', 'wi', 'wy'
+  ];
+  
+  const normalizedCode = stateCode.toLowerCase().trim();
+  
+  if (validStateAbbreviations.includes(normalizedCode)) {
+    return normalizedCode.toUpperCase();
+  }
+  
+  // If not a valid state abbreviation, return as-is
+  return stateCode;
+}
+
+/**
  * Convert text to title case (capitalize first letter of each word)
  * Handles common cases like "los angeles" -> "Los Angeles"
  * Preserves existing capitalization if already properly formatted
+ * 
+ * SECURITY: This function no longer contains hardcoded state abbreviations
+ * to prevent potential injection vulnerabilities from user input containing
+ * specific two-letter combinations that could be misinterpreted as state codes.
+ * 
+ * Examples:
+ * - "los angeles ca" -> "Los Angeles Ca" (not "Los Angeles CA")
+ * - "new york ny" -> "New York Ny" (not "New York NY")
+ * - "san francisco" -> "San Francisco"
+ * - "of the world" -> "of the world" (articles remain lowercase)
+ * 
+ * For state abbreviation formatting, use formatStateAbbreviation() instead.
  */
 export function toTitleCase(text: string): string {
   if (!text || typeof text !== 'string') {
@@ -566,17 +610,11 @@ export function toTitleCase(text: string): string {
       // Skip empty words
       if (!word.trim()) return word;
       
-      // Handle special cases for state abbreviations and common words
       const lowerWord = word.toLowerCase();
-      
-      // Keep state abbreviations in uppercase
-      if (['ca', 'tx', 'ny', 'fl', 'il', 'pa', 'oh', 'ga', 'nc', 'mi', 'nj', 'va', 'wa', 'az', 'ma', 'tn', 'in', 'mo', 'md', 'co', 'or', 'wi', 'mn', 'sc', 'al', 'la', 'ky', 'ct', 'ia', 'ar', 'ut', 'nv', 'ms', 'ks', 'ne', 'id', 'hi', 'nh', 'me', 'ri', 'mt', 'de', 'sd', 'nd', 'ak', 'vt', 'wy', 'wv'].includes(lowerWord)) {
-        return word.toUpperCase();
-      }
       
       // Handle common words that should be lowercase in titles (except first word)
       const lowercaseWords = ['of', 'the', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for', 'with', 'by', 'from', 'up', 'about', 'into', 'through', 'during', 'before', 'after', 'above', 'below', 'between', 'among', 'within', 'without', 'against', 'toward', 'towards', 'upon', 'across', 'behind', 'beneath', 'beside', 'beyond', 'inside', 'outside', 'under', 'over'];
-      
+
       if (lowercaseWords.includes(lowerWord)) {
         return word.toLowerCase();
       }

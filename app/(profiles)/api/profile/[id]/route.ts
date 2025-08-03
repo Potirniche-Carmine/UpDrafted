@@ -1091,158 +1091,123 @@ export async function PUT(
       // Handle camp experience updates if provided (only for non-admin users)
       if (!isAdminUser && sanitizedData.campExperience !== undefined && Array.isArray(sanitizedData.campExperience)) {
         if (updatedProfile?.id) {
-          try {
-            // Get existing experiences from database
-            const existingExperiences = await db.query.athleteExperience.findMany({
-              where: eq(athleteExperience.athleteId, updatedProfile.id)
-            });
+          // Get existing experiences from database
+          const existingExperiences = await db.query.athleteExperience.findMany({
+            where: eq(athleteExperience.athleteId, updatedProfile.id)
+          });
 
-            // Transform client camp experience data to database format
-            const experiencesData: (NewAthleteExperience & { id?: number })[] = sanitizedData.campExperience.map((exp: {
-              id?: number; // Database ID for existing experiences
-              type: 'Camp' | 'Club';
-              name: string;
-              city: string;
-              stateCountry: string;
-              startDate: Date | string;
-              endDate: Date | string;
-              sport: string;
-              description: string;
-            }) => {
-              // Handle start date conversion - handle both Date objects and strings
-              const [startDateString, startDateError] = dateToStringWithErrorHandling(
-                exp.startDate,
-                `camp experience start date for "${exp.name}" (ID: ${exp.id})`,
-                new Date().toISOString().split('T')[0]
-              );
+          // Transform client camp experience data to database format
+          const experiencesData: (NewAthleteExperience & { id?: number })[] = sanitizedData.campExperience.map((exp: {
+            id?: number; // Database ID for existing experiences
+            type: 'Camp' | 'Club';
+            name: string;
+            city: string;
+            stateCountry: string;
+            startDate: Date | string;
+            endDate: Date | string;
+            sport: string;
+            description: string;
+          }) => {
+            // Handle start date conversion - handle both Date objects and strings
+            const [startDateString, startDateError] = dateToStringWithErrorHandling(
+              exp.startDate,
+              `camp experience start date for "${exp.name}" (ID: ${exp.id})`,
+              new Date().toISOString().split('T')[0]
+            );
 
-              // Handle end date conversion - handle both Date objects and strings, check if it's the special "Present" date
-              const [endDateString, endDateError] = dateToStringWithErrorHandling(
-                exp.endDate,
-                `camp experience end date for "${exp.name}" (ID: ${exp.id})`,
-                '9999-12-31'
-              );
+            // Handle end date conversion - handle both Date objects and strings, check if it's the special "Present" date
+            const [endDateString, endDateError] = dateToStringWithErrorHandling(
+              exp.endDate,
+              `camp experience end date for "${exp.name}" (ID: ${exp.id})`,
+              '9999-12-31'
+            );
 
-              // Log any date conversion errors for debugging
-              if (startDateError || endDateError) {
-                console.warn('Date conversion issues in camp experience update:', {
-                  experienceId: exp.id,
-                  experienceName: exp.name,
-                  startDateError,
-                  endDateError,
-                  originalStartDate: exp.startDate,
-                  originalEndDate: exp.endDate
-                });
-              }
-
-              return {
-                athleteId: updatedProfile!.id,
-                type: exp.type,
-                name: exp.name,
-                city: exp.city,
-                stateCountry: exp.stateCountry,
-                startDate: startDateString,
-                endDate: endDateString,
-                sport: exp.sport,
-                description: exp.description
-              };
-            });
-
-            // Properly separate new and existing experiences by comparing with database
-            const newExperiences: NewAthleteExperience[] = [];
-            const existingExperiencesToUpdate: { id: number; data: Partial<NewAthleteExperience> }[] = [];
-            const experiencesToDelete: number[] = [];
-
-            // Create a map of existing experiences by their ID for quick lookup
-            const existingExperiencesMap = new Map(existingExperiences.map(exp => [exp.id, exp]));
-            
-            // Create a map of frontend experiences by their ID (if they have one)
-            const frontendExperiencesMap = new Map();
-            const frontendExperiencesWithoutId: NewAthleteExperience[] = [];
-
-            for (const exp of experiencesData) {
-              if (exp.id) {
-                frontendExperiencesMap.set(exp.id, exp);
-              } else {
-                frontendExperiencesWithoutId.push(exp);
-              }
-            }
-
-            // Find experiences to update (existing in both database and frontend)
-            for (const [id, frontendExp] of frontendExperiencesMap) {
-              if (existingExperiencesMap.has(id)) {
-                // This experience exists in both database and frontend - update it
-                const { id: expId, ...updateData } = frontendExp;
-                existingExperiencesToUpdate.push({ id: expId, data: updateData });
-              }
-            }
-
-            // Find experiences to delete (in database but not in frontend)
-            for (const [id] of existingExperiencesMap) {
-              if (!frontendExperiencesMap.has(id)) {
-                experiencesToDelete.push(id);
-              }
-            }
-
-            // All frontend experiences without IDs are new
-            newExperiences.push(...frontendExperiencesWithoutId);
-
-            // Wrap all operations in a transaction to ensure consistency
-            try {
-              await db.transaction(async (tx) => {
-                // First, update existing experiences (before any deletions)
-                for (const { id, data } of existingExperiencesToUpdate) {
-                  await tx
-                    .update(athleteExperience)
-                    .set(data)
-                    .where(eq(athleteExperience.id, id));
-                }
-
-                // Then, create new experiences
-                for (const newExp of newExperiences) {
-                  await tx.insert(athleteExperience).values(newExp);
-                }
-
-                // Finally, delete experiences that are no longer in the frontend
-                for (const id of experiencesToDelete) {
-                  await tx
-                    .delete(athleteExperience)
-                    .where(eq(athleteExperience.id, id));
-                }
+            // Log any date conversion errors for debugging
+            if (startDateError || endDateError) {
+              console.warn('Date conversion issues in camp experience update:', {
+                experienceId: exp.id,
+                experienceName: exp.name,
+                startDateError,
+                endDateError,
+                originalStartDate: exp.startDate,
+                originalEndDate: exp.endDate
               });
-            } catch (transactionError) {
-              // Log the transaction error with detailed context for debugging
-              logErrorWithContext(transactionError, 'Camp experience transaction failed', {
-                userId: profileUserId,
-                operation: 'camp experience updates',
-                existingExperiencesCount: existingExperiencesToUpdate.length,
-                newExperiencesCount: newExperiences.length,
-                experiencesToDeleteCount: experiencesToDelete.length,
-                profileId: updatedProfile?.id
-              });
-
-              // Use the new error sanitization utility for secure error handling
-              const errorResponse = handleTransactionError(
-                transactionError,
-                'camp experience updates',
-                profileUserId
-              );
-
-              // Return sanitized error response without exposing sensitive details
-              // This return statement prevents further execution and ensures consistent error handling
-              return NextResponse.json(errorResponse, { status: 500 });
             }
-          } catch (campExperienceError) {
-            // Handle any errors that occur during camp experience processing (before transaction)
-            logErrorWithContext(campExperienceError, 'Camp experience processing failed', {
-              userId: profileUserId,
-              operation: 'camp experience processing',
-              profileId: updatedProfile?.id
-            });
 
-            const errorResponse = createClientErrorResponse(campExperienceError, 'camp experience processing');
-            return NextResponse.json(errorResponse, { status: 500 });
+            return {
+              athleteId: updatedProfile!.id,
+              type: exp.type,
+              name: exp.name,
+              city: exp.city,
+              stateCountry: exp.stateCountry,
+              startDate: startDateString,
+              endDate: endDateString,
+              sport: exp.sport,
+              description: exp.description
+            };
+          });
+
+          // Properly separate new and existing experiences by comparing with database
+          const newExperiences: NewAthleteExperience[] = [];
+          const existingExperiencesToUpdate: { id: number; data: Partial<NewAthleteExperience> }[] = [];
+          const experiencesToDelete: number[] = [];
+
+          // Create a map of existing experiences by their ID for quick lookup
+          const existingExperiencesMap = new Map(existingExperiences.map(exp => [exp.id, exp]));
+          
+          // Create a map of frontend experiences by their ID (if they have one)
+          const frontendExperiencesMap = new Map();
+          const frontendExperiencesWithoutId: NewAthleteExperience[] = [];
+
+          for (const exp of experiencesData) {
+            if (exp.id) {
+              frontendExperiencesMap.set(exp.id, exp);
+            } else {
+              frontendExperiencesWithoutId.push(exp);
+            }
           }
+
+          // Find experiences to update (existing in both database and frontend)
+          for (const [id, frontendExp] of frontendExperiencesMap) {
+            if (existingExperiencesMap.has(id)) {
+              // This experience exists in both database and frontend - update it
+              const { id: expId, ...updateData } = frontendExp;
+              existingExperiencesToUpdate.push({ id: expId, data: updateData });
+            }
+          }
+
+          // Find experiences to delete (in database but not in frontend)
+          for (const [id] of existingExperiencesMap) {
+            if (!frontendExperiencesMap.has(id)) {
+              experiencesToDelete.push(id);
+            }
+          }
+
+          // All frontend experiences without IDs are new
+          newExperiences.push(...frontendExperiencesWithoutId);
+
+          // Wrap all operations in a transaction to ensure consistency
+          await db.transaction(async (tx) => {
+            // First, update existing experiences (before any deletions)
+            for (const { id, data } of existingExperiencesToUpdate) {
+              await tx
+                .update(athleteExperience)
+                .set(data)
+                .where(eq(athleteExperience.id, id));
+            }
+
+            // Then, create new experiences
+            for (const newExp of newExperiences) {
+              await tx.insert(athleteExperience).values(newExp);
+            }
+
+            // Finally, delete experiences that are no longer in the frontend
+            for (const id of experiencesToDelete) {
+              await tx
+                .delete(athleteExperience)
+                .where(eq(athleteExperience.id, id));
+            }
+          });
         }
       }
       
