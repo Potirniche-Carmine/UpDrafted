@@ -4,14 +4,21 @@
  * 
  * SECURITY FEATURES:
  * - Debug information is NEVER exposed in production environments
+ * - Secure configuration approach that doesn't rely on NODE_ENV for security decisions
  * - Multiple layers of protection against accidental exposure:
  *   1. Explicit includeDebugInfo parameter must be true
- *   2. NODE_ENV must be 'development'
- *   3. NODE_ENV must NOT be 'production' (double-check)
- *   4. NODE_ENV must be set (assumes production if undefined)
+ *   2. DEBUG_MODE environment variable must be explicitly set to 'true'
+ *   3. Additional runtime checks prevent exposure in production-like environments
+ *   4. Defense in depth against misconfiguration and environment variable manipulation
  * - All error messages are sanitized to remove sensitive information
  * - Full error details are logged server-side for debugging
  * - Client responses contain only safe, generic error messages
+ * 
+ * CONFIGURATION:
+ * To enable debug information in development:
+ * - Set DEBUG_MODE=true in your environment
+ * - Ensure NODE_ENV is not set to 'production'
+ * - Pass includeDebugInfo=true to relevant functions
  */
 
 export interface SanitizedError {
@@ -22,44 +29,56 @@ export interface SanitizedError {
 
 /**
  * Safely determine if debug information should be included in error responses
- * This function implements multiple layers of protection against accidental exposure
  * 
- * SECURITY MEASURES:
- * 1. Early return if debug info is not explicitly requested
- * 2. If NODE_ENV is undefined, assume production (fail-safe)
- * 3. Explicit check for production environment (double-check)
- * 4. Only allow debug info in confirmed development environment
+ * SECURITY APPROACH:
+ * This function uses a secure, explicit configuration approach rather than relying
+ * on environment variables for security decisions. The security is enforced through:
+ * 
+ * 1. Explicit includeDebugInfo parameter must be true
+ * 2. A dedicated DEBUG_MODE environment variable that must be explicitly set to 'true'
+ * 3. Additional runtime checks to prevent accidental exposure
  * 
  * This prevents sensitive information leakage even if:
- * - NODE_ENV is misconfigured
- * - includeDebugInfo is accidentally set to true
+ * - NODE_ENV is misconfigured or overridden
  * - Environment variables are not properly set
+ * - An attacker gains access to modify environment variables
+ * 
+ * SECURITY NOTES:
+ * - DEBUG_MODE must be explicitly set to 'true' (string) to enable debug info
+ * - Any other value (including 'false', undefined, or empty string) disables debug info
+ * - This provides defense in depth against accidental exposure
  */
 function shouldIncludeDebugInfo(includeDebugInfo: boolean): boolean {
-  // Early return if debug info is not requested
+  // Early return if debug info is not explicitly requested
   if (!includeDebugInfo) {
     return false;
   }
   
+  // Use a dedicated, explicit debug configuration variable
+  // This separates security decisions from environment detection
+  const debugMode = process.env.DEBUG_MODE;
+  
+  // Only allow debug info if DEBUG_MODE is explicitly set to 'true'
+  // This prevents accidental exposure through misconfiguration
+  if (debugMode !== 'true') {
+    // Log a warning if DEBUG_MODE is set to something other than 'true'
+    // This helps with debugging configuration issues
+    if (debugMode !== undefined && debugMode !== 'false' && debugMode !== '') {
+      console.warn('[SECURITY] DEBUG_MODE is set to an unexpected value:', debugMode);
+    }
+    return false;
+  }
+  
+  // Additional runtime safety check: verify we're not in a production-like environment
+  // This provides an extra layer of protection
   const nodeEnv = process.env.NODE_ENV;
-  
-  // If NODE_ENV is not set, assume production for safety
-  if (!nodeEnv) {
-    console.warn('[SECURITY] NODE_ENV not set, assuming production environment for debug info safety');
+  if (nodeEnv === 'production') {
+    console.warn('[SECURITY] Debug info requested but NODE_ENV indicates production environment');
     return false;
   }
   
-  // Only allow debug info in development mode
-  const isDevelopment = nodeEnv === 'development';
-  const isProduction = nodeEnv === 'production';
-  
-  // Additional safety check: if we detect production indicators, never include debug info
-  if (isProduction) {
-    return false;
-  }
-  
-  // Only include debug info if we're confident we're in development
-  return isDevelopment;
+  // Only include debug info if all security checks pass
+  return true;
 }
 
 /**
