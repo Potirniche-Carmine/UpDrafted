@@ -181,9 +181,7 @@ async function cleanupUserFiles(userId: string) {
     const deleteResults = await Promise.allSettled(
       filesToDelete.map(async ({ key, isPrivate }) => {
         try {
-          console.log(`Deleting file: ${key} (private: ${isPrivate})`);
           await deleteFromR2(key, isPrivate);
-          console.log(`Successfully deleted file: ${key}`);
           return { success: true, key };
         } catch (error) {
           console.error(`Failed to delete file ${key}:`, error);
@@ -193,15 +191,17 @@ async function cleanupUserFiles(userId: string) {
     );
 
     // Log results for debugging
-    const successful = deleteResults.filter(result => 
+    const successfulCount = deleteResults.filter(result => 
       result.status === 'fulfilled' && result.value.success
     ).length;
-    const failed = deleteResults.filter(result => 
+    const failedCount = deleteResults.filter(result => 
       result.status === 'rejected' || 
       (result.status === 'fulfilled' && !result.value.success)
     ).length;
 
-    console.log(`File cleanup for user ${userId}: ${successful} successful, ${failed} failed`);
+    console.log(`File cleanup for user ${userId}: ${successfulCount} successful, ${failedCount} failed`);
+
+    // File cleanup completed
 
   } catch (error) {
     console.error(`Error during file cleanup for user ${userId}:`, error);

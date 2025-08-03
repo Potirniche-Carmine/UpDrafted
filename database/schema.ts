@@ -104,6 +104,28 @@ export const athleteVideos = pgTable('athlete_videos', {
   index('idx_athlete_videos_sort_order').on(table.sortOrder),
 ]);
 
+export const athleteExperience = pgTable('athlete_experience', {
+  id: serial('id').primaryKey(),
+  athleteId: integer('athlete_id').notNull().references(() => athleteProfiles.id, { onDelete: 'cascade' }),
+  type: text('type').notNull(), // 'Camp' or 'Club'
+  name: text('name').notNull(),
+  city: text('city').notNull(),
+  stateCountry: text('state_country').notNull(),
+  startDate: date('start_date').notNull(), // Store as proper date for querying/sorting
+  endDate: date('end_date').notNull(), // Store as proper date for querying/sorting. Use '9999-12-31' to represent "Present"
+  sport: text('sport').notNull(),
+  description: text('description').notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+}, (table) => [
+  index('idx_athlete_experience_athlete_id').on(table.athleteId),
+  index('idx_athlete_experience_type').on(table.type),
+  index('idx_athlete_experience_sport').on(table.sport),
+  index('idx_athlete_experience_start_date').on(table.startDate),
+  index('idx_athlete_experience_end_date').on(table.endDate),
+  index('idx_athlete_experience_dates').on(table.startDate, table.endDate),
+]);
+
 export const coachProfiles = pgTable('coach_profiles', {
   id: serial('id').primaryKey(),
   userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
@@ -387,6 +409,7 @@ export const athleteProfilesRelations = relations(athleteProfiles, ({ one, many 
   }),
   measurables: many(athleteMeasurables),
   videos: many(athleteVideos),
+  experience: many(athleteExperience),
   conversations: many(conversations),
 }));
 
@@ -409,6 +432,13 @@ export const athleteMeasurablesRelations = relations(athleteMeasurables, ({ one 
 export const athleteVideosRelations = relations(athleteVideos, ({ one }) => ({
   athlete: one(athleteProfiles, {
     fields: [athleteVideos.athleteId],
+    references: [athleteProfiles.id],
+  }),
+}));
+
+export const athleteExperienceRelations = relations(athleteExperience, ({ one }) => ({
+  athlete: one(athleteProfiles, {
+    fields: [athleteExperience.athleteId],
     references: [athleteProfiles.id],
   }),
 }));
@@ -511,6 +541,8 @@ export type AthleteMeasurable = typeof athleteMeasurables.$inferSelect;
 export type NewAthleteMeasurable = typeof athleteMeasurables.$inferInsert;
 export type AthleteVideo = typeof athleteVideos.$inferSelect;
 export type NewAthleteVideo = typeof athleteVideos.$inferInsert;
+export type AthleteExperience = typeof athleteExperience.$inferSelect;
+export type NewAthleteExperience = typeof athleteExperience.$inferInsert;
 export type CoachProfile = typeof coachProfiles.$inferSelect;
 export type NewCoachProfile = typeof coachProfiles.$inferInsert;
 export type RecruitingProfile = typeof recruitingProfiles.$inferSelect;

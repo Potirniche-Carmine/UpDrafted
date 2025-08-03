@@ -31,6 +31,17 @@ export interface AthleteProfileData {
   height: string;
   weight: string;
   positions: string[];
+  campExperience?: Array<{
+    id?: number; // Database ID for existing experiences
+    type: 'Camp' | 'Club';
+    name: string;
+    city: string;
+    stateCountry: string;
+    startDate: Date | string; // Allow both Date and string for flexibility
+    endDate: Date | string; // Allow both Date and string for flexibility (uses special date for "Present")
+    sport: string;
+    description: string;
+  }>;
 
   // Verification
   maxPrepsUrl?: string;

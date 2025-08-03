@@ -302,6 +302,13 @@
       "when": 1753292633754,
       "tag": "0042_flashy_arclight",
       "breakpoints": true
+    },
+    {
+      "idx": 43,
+      "version": "7",
+      "when": 1753740145018,
+      "tag": "0043_illegal_clea",
+      "breakpoints": true
     }
   ]
 }

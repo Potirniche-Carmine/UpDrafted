@@ -2,12 +2,14 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireAnyRole, requireOwnershipOrAdmin } from '@/utils/roles';
 import { userOperations, athleteOperations, coachOperations, recruitingOperations, recruitingNeedsOperations, connectionOperations, activityOperations, notificationOperations, adminOperations } from '@/database/db-utils';
 import { R2_PUBLIC_URL, constructR2Url } from '@/database/r2';
-import { NewAthleteProfile, NewAthleteMeasurable, NewAthleteVideo, NewCoachProfile, NewRecruitingProfile, verificationRequests, AthleteProfile, CoachProfile, RecruitingProfile } from '@/database/schema';
+import { NewAthleteProfile, NewAthleteMeasurable, NewAthleteVideo, NewAthleteExperience, NewCoachProfile, NewRecruitingProfile, verificationRequests, AthleteProfile, CoachProfile, RecruitingProfile, athleteExperience } from '@/database/schema';
 import { db } from '@/database/db';
 import { eq, and } from 'drizzle-orm';
 import { sanitizeProfileData } from '@/utils/sanitization';
 import { EducationLevel } from '@/app/(onboarding)/lib/onboarding';
 import { withRateLimit } from '@/utils/security';
+import { PRESENT_DATE, parseDateWithErrorHandling, dateToStringWithErrorHandling, validateDateDataset } from '@/lib/date-utils';
+import { createClientErrorResponse, logErrorWithContext} from '@/utils/error-sanitization';
 
 // Force Node.js runtime to avoid expensive edge function costs
 export const runtime = 'nodejs';
@@ -84,6 +86,77 @@ function transformProfileData(profileData: Record<string, any>, profileType: str
     // Ensure measurables is an array
     if (!Array.isArray(transformed.measurables)) {
       transformed.measurables = [];
+    }
+
+    // Transform camp experience data if present
+    if (profileData.experience) {
+      // Validate all dates in the dataset for integrity monitoring
+      const dateValidationResults = validateDateDataset(
+        profileData.experience.map((exp: { id: number; name: string; startDate: string; endDate: string }) => ({
+          id: exp.id,
+          dateString: exp.startDate,
+          context: `start date for "${exp.name}"`
+        })).concat(
+          profileData.experience.map((exp: { id: number; name: string; startDate: string; endDate: string }) => ({
+            id: exp.id,
+            dateString: exp.endDate,
+            context: `end date for "${exp.name}"`
+          }))
+        ),
+        'camp experience dates'
+      );
+
+      // Log validation summary if there are issues
+      if (dateValidationResults.invalidEntries > 0) {
+        console.warn('Date integrity issues detected in camp experiences:', {
+          summary: dateValidationResults.summary,
+          issues: dateValidationResults.issues,
+          totalEntries: dateValidationResults.totalEntries,
+          invalidEntries: dateValidationResults.invalidEntries
+        });
+      }
+
+      transformed.campExperience = profileData.experience.map((exp: { id: number; type: string; name: string; city: string; stateCountry: string; startDate: string; endDate: string; sport: string; description: string }) => {
+        // Handle start date - convert from database string to Date object using proper timezone handling
+        const [startDate, startDateError] = parseDateWithErrorHandling(
+          exp.startDate, 
+          `camp experience start date for "${exp.name}" (ID: ${exp.id})`,
+          new Date()
+        );
+
+        // Handle end date - convert from database string to Date object using proper timezone handling
+        const [endDate, endDateError] = parseDateWithErrorHandling(
+          exp.endDate, 
+          `camp experience end date for "${exp.name}" (ID: ${exp.id})`,
+          PRESENT_DATE
+        );
+
+        // Log any date parsing errors for debugging
+        if (startDateError || endDateError) {
+          console.warn('Date parsing issues in camp experience:', {
+            experienceId: exp.id,
+            experienceName: exp.name,
+            startDateError,
+            endDateError,
+            originalStartDate: exp.startDate,
+            originalEndDate: exp.endDate
+          });
+        }
+
+        return {
+          id: exp.id,
+          type: exp.type,
+          name: exp.name,
+          city: exp.city,
+          stateCountry: exp.stateCountry,
+          startDate: startDate,
+          endDate: endDate,
+          sport: exp.sport,
+          description: exp.description
+        };
+      });
+    } else {
+      transformed.campExperience = [];
     }
 
     // Ensure URLs are properly handled - set to undefined if null or empty
@@ -170,21 +243,7 @@ const validateBasicFields = (data: Record<string, unknown>) => {
   return errors;
 };
 
-// Sanitize error messages
-const sanitizeError = (error: Error | unknown): string => {
-  const message = error instanceof Error ? error.message : 'Unknown error';
-  
-  // Don't expose internal details
-  if (message.includes('database') || message.includes('SQL') || message.includes('connection')) {
-    return 'A database error occurred. Please try again.';
-  }
-  
-  if (message.includes('permission') || message.includes('unauthorized')) {
-    return 'You do not have permission to perform this action.';
-  }
-  
-  return 'An error occurred while updating your profile.';
-};
+// Note: Legacy sanitizeError function removed - using sanitizeErrorForClient directly for consistency
 
 // Helper function to sanitize profile data based on viewing permissions
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -341,7 +400,7 @@ export async function GET(
                  let demoProfileData = null;
          const profileType = adminViewingRole;
 
-                 if (adminViewingRole === 'athlete' && demoProfiles.athlete) {
+          if (adminViewingRole === 'athlete' && demoProfiles.athlete) {
            // Use the demo athlete profile
            demoProfileData = demoProfiles.athlete;
          } else if (adminViewingRole === 'coach' && demoProfiles.coach) {
@@ -885,9 +944,10 @@ export async function PUT(
     }
 
     let profileType = userWithProfile.role;
+    const isAdminUser = profileType === 'admin';
     
     // Special handling for admin users with demo profiles
-    if (profileType === 'admin') {
+    if (isAdminUser) {
       // For admin users, determine profile type from the data structure being sent
       if (sanitizedData.sport && sanitizedData.graduationYear) {
         profileType = 'athlete';
@@ -958,8 +1018,19 @@ export async function PUT(
         profileUpdateData.twitterHandle = socialMedia?.twitter || null;
       }
       
+      // For admin users, include camp experience data in the profile update
+      if (isAdminUser && sanitizedData.campExperience !== undefined) {
+        // @ts-expect-error - We know this is safe for admin operations
+        profileUpdateData.campExperience = sanitizedData.campExperience;
+      }
+      
       try {
-        updatedProfile = await athleteOperations.updateAthleteProfile(profileUserId, profileUpdateData);
+        // Use admin operations for admin users (demo profiles), regular operations for normal users
+        if (isAdminUser) {
+          updatedProfile = await adminOperations.updateDemoAthleteProfile(profileUserId, profileUpdateData);
+        } else {
+          updatedProfile = await athleteOperations.updateAthleteProfile(profileUserId, profileUpdateData);
+        }
       } catch (dbError) {
         console.error('Database error during athlete profile update:', dbError);
         throw dbError;
@@ -1011,9 +1082,138 @@ export async function PUT(
           await athleteOperations.replaceAthleteVideos(updatedProfile.id, videosData);
         }
       }
+
+      // Handle camp experience updates if provided (only for non-admin users)
+      if (!isAdminUser && sanitizedData.campExperience !== undefined && Array.isArray(sanitizedData.campExperience)) {
+        if (updatedProfile?.id) {
+          // Get existing experiences from database
+          const existingExperiences = await db.query.athleteExperience.findMany({
+            where: eq(athleteExperience.athleteId, updatedProfile.id)
+          });
+
+          // Transform client camp experience data to database format
+          const experiencesData: (NewAthleteExperience & { id?: number })[] = sanitizedData.campExperience.map((exp: {
+            id?: number; // Database ID for existing experiences
+            type: 'Camp' | 'Club';
+            name: string;
+            city: string;
+            stateCountry: string;
+            startDate: Date | string;
+            endDate: Date | string;
+            sport: string;
+            description: string;
+          }) => {
+            // Handle start date conversion - handle both Date objects and strings
+            const [startDateString, startDateError] = dateToStringWithErrorHandling(
+              exp.startDate,
+              `camp experience start date for "${exp.name}" (ID: ${exp.id})`,
+              new Date().toISOString().split('T')[0]
+            );
+
+            // Handle end date conversion - handle both Date objects and strings, check if it's the special "Present" date
+            const [endDateString, endDateError] = dateToStringWithErrorHandling(
+              exp.endDate,
+              `camp experience end date for "${exp.name}" (ID: ${exp.id})`,
+              '9999-12-31'
+            );
+
+            // Log any date conversion errors for debugging
+            if (startDateError || endDateError) {
+              console.warn('Date conversion issues in camp experience update:', {
+                experienceId: exp.id,
+                experienceName: exp.name,
+                startDateError,
+                endDateError,
+                originalStartDate: exp.startDate,
+                originalEndDate: exp.endDate
+              });
+            }
+
+            return {
+              athleteId: updatedProfile!.id,
+              type: exp.type,
+              name: exp.name,
+              city: exp.city,
+              stateCountry: exp.stateCountry,
+              startDate: startDateString,
+              endDate: endDateString,
+              sport: exp.sport,
+              description: exp.description
+            };
+          });
+
+          // Properly separate new and existing experiences by comparing with database
+          const newExperiences: NewAthleteExperience[] = [];
+          const existingExperiencesToUpdate: { id: number; data: Partial<NewAthleteExperience> }[] = [];
+          const experiencesToDelete: number[] = [];
+
+          // Create a map of existing experiences by their ID for quick lookup
+          const existingExperiencesMap = new Map(existingExperiences.map(exp => [exp.id, exp]));
+          
+          // Create a map of frontend experiences by their ID (if they have one)
+          const frontendExperiencesMap = new Map();
+          const frontendExperiencesWithoutId: NewAthleteExperience[] = [];
+
+          for (const exp of experiencesData) {
+            if (exp.id) {
+              frontendExperiencesMap.set(exp.id, exp);
+            } else {
+              frontendExperiencesWithoutId.push(exp);
+            }
+          }
+
+          // Find experiences to update (existing in both database and frontend)
+          for (const [id, frontendExp] of frontendExperiencesMap) {
+            if (existingExperiencesMap.has(id)) {
+              // This experience exists in both database and frontend - update it
+              const { id: expId, ...updateData } = frontendExp;
+              existingExperiencesToUpdate.push({ id: expId, data: updateData });
+            }
+          }
+
+          // Find experiences to delete (in database but not in frontend)
+          for (const [id] of existingExperiencesMap) {
+            if (!frontendExperiencesMap.has(id)) {
+              experiencesToDelete.push(id);
+            }
+          }
+
+          // All frontend experiences without IDs are new
+          newExperiences.push(...frontendExperiencesWithoutId);
+
+          // Wrap all operations in a transaction to ensure consistency
+          await db.transaction(async (tx) => {
+            // First, update existing experiences (before any deletions)
+            for (const { id, data } of existingExperiencesToUpdate) {
+              await tx
+                .update(athleteExperience)
+                .set(data)
+                .where(eq(athleteExperience.id, id));
+            }
+
+            // Then, create new experiences
+            for (const newExp of newExperiences) {
+              await tx.insert(athleteExperience).values(newExp);
+            }
+
+            // Finally, delete experiences that are no longer in the frontend
+            for (const id of experiencesToDelete) {
+              await tx
+                .delete(athleteExperience)
+                .where(eq(athleteExperience.id, id));
+            }
+          });
+        }
+      }
       
       // Re-fetch the complete profile with all related data to ensure consistency
-      const refetchedProfile = await athleteOperations.getAthleteProfile(profileUserId);
+      let refetchedProfile;
+      if (isAdminUser) {
+        const demoProfiles = await adminOperations.getDemoProfiles(profileUserId);
+        refetchedProfile = demoProfiles.athlete;
+      } else {
+        refetchedProfile = await athleteOperations.getAthleteProfile(profileUserId);
+      }
       if (refetchedProfile) {
         updatedProfile = refetchedProfile;
       }
@@ -1195,11 +1395,14 @@ export async function PUT(
     });
 
   } catch (error) {
-    console.error('Error updating profile:', error);
-    console.error('Error stack:', error instanceof Error ? error.stack : 'No stack trace');
-    return NextResponse.json(
-      { error: sanitizeError(error), debug: error instanceof Error ? error.message : 'Unknown error' },
-      { status: 500 }
-    );
+    // Use the new error sanitization utility for secure error handling
+    const errorResponse = createClientErrorResponse(error, 'profile update');
+    
+    // Log the full error details for debugging
+    logErrorWithContext(error, 'Profile update operation', {
+      requestMethod: 'PUT'
+    });
+    
+    return NextResponse.json(errorResponse, { status: 500 });
   }
 } 
