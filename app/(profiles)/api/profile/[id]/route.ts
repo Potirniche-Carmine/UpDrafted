@@ -8,8 +8,8 @@ import { eq, and } from 'drizzle-orm';
 import { sanitizeProfileData } from '@/utils/sanitization';
 import { EducationLevel } from '@/app/(onboarding)/lib/onboarding';
 import { withRateLimit } from '@/utils/security';
-import { PRESENT_DATE, parseDateWithErrorHandling, dateToStringWithErrorHandling, validateDateIntegrity, validateDateDataset } from '@/lib/date-utils';
-import { handleTransactionError, createClientErrorResponse, logErrorWithContext, sanitizeErrorForClient } from '@/utils/error-sanitization';
+import { PRESENT_DATE, parseDateWithErrorHandling, dateToStringWithErrorHandling, validateDateDataset } from '@/lib/date-utils';
+import { createClientErrorResponse, logErrorWithContext} from '@/utils/error-sanitization';
 
 // Force Node.js runtime to avoid expensive edge function costs
 export const runtime = 'nodejs';
@@ -92,12 +92,12 @@ function transformProfileData(profileData: Record<string, any>, profileType: str
     if (profileData.experience) {
       // Validate all dates in the dataset for integrity monitoring
       const dateValidationResults = validateDateDataset(
-        profileData.experience.map((exp: any) => ({
+        profileData.experience.map((exp: { id: number; name: string; startDate: string; endDate: string }) => ({
           id: exp.id,
           dateString: exp.startDate,
           context: `start date for "${exp.name}"`
         })).concat(
-          profileData.experience.map((exp: any) => ({
+          profileData.experience.map((exp: { id: number; name: string; startDate: string; endDate: string }) => ({
             id: exp.id,
             dateString: exp.endDate,
             context: `end date for "${exp.name}"`
@@ -243,12 +243,7 @@ const validateBasicFields = (data: Record<string, unknown>) => {
   return errors;
 };
 
-// Sanitize error messages
-// Legacy sanitizeError function - now uses the new utility for consistency
-const sanitizeError = (error: Error | unknown): string => {
-  const sanitized = sanitizeErrorForClient(error);
-  return sanitized.message;
-};
+// Note: Legacy sanitizeError function removed - using sanitizeErrorForClient directly for consistency
 
 // Helper function to sanitize profile data based on viewing permissions
 // eslint-disable-next-line @typescript-eslint/no-explicit-any

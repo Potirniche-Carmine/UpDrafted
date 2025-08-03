@@ -438,7 +438,7 @@ export function validateDateIntegrity(
 
   // Check if input is valid
   if (!dateString || typeof dateString !== 'string') {
-    issues.push(`Invalid input type: expected string, got ${typeof dateString}`);
+    issues.push(`Invalid input type in ${context}: expected string, got ${typeof dateString}`);
     recommendations.push('Ensure date input is a non-empty string');
     return { isValid: false, issues, recommendations };
   }
@@ -452,7 +452,7 @@ export function validateDateIntegrity(
     const parsedDate = isoStringToDate(dateString);
     
     if (isNaN(parsedDate.getTime())) {
-      issues.push(`Date string "${dateString}" could not be parsed to a valid date`);
+      issues.push(`Date string "${dateString}" in ${context} could not be parsed to a valid date`);
       recommendations.push('Check date format and ensure it follows ISO 8601 or YYYY-MM-DD format');
       return { isValid: false, issues, recommendations };
     }
@@ -462,12 +462,12 @@ export function validateDateIntegrity(
     const dateYear = parsedDate.getFullYear();
     
     if (dateYear < 1900) {
-      issues.push(`Date year ${dateYear} is before 1900, which may indicate an error`);
+      issues.push(`Date year ${dateYear} in ${context} is before 1900, which may indicate an error`);
       recommendations.push('Verify the date is correct and not a placeholder or error value');
     }
     
     if (dateYear > currentYear + 10) {
-      issues.push(`Date year ${dateYear} is more than 10 years in the future, which may indicate an error`);
+      issues.push(`Date year ${dateYear} in ${context} is more than 10 years in the future, which may indicate an error`);
       recommendations.push('Verify the date is correct and not a placeholder or error value');
     }
 
@@ -478,7 +478,7 @@ export function validateDateIntegrity(
       parsedValue: parsedDate 
     };
   } catch (error) {
-    issues.push(`Exception during date parsing: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    issues.push(`Exception during date parsing in ${context}: ${error instanceof Error ? error.message : 'Unknown error'}`);
     recommendations.push('Check date format and ensure it follows expected patterns');
     return { isValid: false, issues, recommendations };
   }
