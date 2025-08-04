@@ -458,6 +458,10 @@ export function RecruiterEditDialogs({
       if (!editData.positions || editData.positions.length === 0) {
         errors.positions = 'At least one position is required';
       }
+      // Validate scholarshipsAvailable is a valid number if provided
+      if (editData.scholarshipsAvailable !== '' && editData.scholarshipsAvailable !== undefined && isNaN(Number(editData.scholarshipsAvailable))) {
+        errors.scholarshipsAvailable = 'Must be a valid number';
+      }
     }
 
     // Additional validation for add-sport
@@ -467,6 +471,10 @@ export function RecruiterEditDialogs({
       }
       if (!editData.positions || editData.positions.length === 0) {
         errors.positions = 'At least one position is required';
+      }
+      // Validate scholarshipsAvailable is a valid number if provided
+      if (editData.scholarshipsAvailable !== '' && editData.scholarshipsAvailable !== undefined && isNaN(Number(editData.scholarshipsAvailable))) {
+        errors.scholarshipsAvailable = 'Must be a valid number';
       }
     }
 
@@ -511,6 +519,7 @@ export function RecruiterEditDialogs({
         break;
       case 'recruiting-needs':
         const currentSportToUpdate = selectedSport || profileData.sportRecruiting;
+        const scholarshipsValue = editData.scholarshipsAvailable && editData.scholarshipsAvailable !== '' ? Number(editData.scholarshipsAvailable) : undefined;
         
         updates = {
           sportSpecificNeeds: {
@@ -518,7 +527,7 @@ export function RecruiterEditDialogs({
             [currentSportToUpdate]: {
               studentClassifications: editData.studentClassifications,
               positions: editData.positions,
-              scholarshipsAvailable: editData.scholarshipsAvailable === '' ? undefined : Number(editData.scholarshipsAvailable),
+              scholarshipsAvailable: scholarshipsValue,
               recruitingPhilosophy: editData.recruitingPhilosophy
             }
           }
@@ -562,6 +571,8 @@ export function RecruiterEditDialogs({
           return;
         }
         
+        const addSportScholarshipsValue = editData.scholarshipsAvailable && editData.scholarshipsAvailable !== '' ? Number(editData.scholarshipsAvailable) : undefined;
+        
         updates = {
           secondarySports: [...(profileData.secondarySports || []), editData.newSport],
           sportSpecificNeeds: {
@@ -569,7 +580,7 @@ export function RecruiterEditDialogs({
             [editData.newSport]: {
               studentClassifications: editData.studentClassifications,
               positions: editData.positions,
-              scholarshipsAvailable: editData.scholarshipsAvailable === '' ? undefined : Number(editData.scholarshipsAvailable),
+              scholarshipsAvailable: addSportScholarshipsValue,
               recruitingPhilosophy: editData.recruitingPhilosophy
             }
           }

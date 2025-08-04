@@ -434,10 +434,10 @@ export class FormValidator {
       errors.positions = 'At least one position is required';
     }
 
-    // Competition level validation (required for undergraduate and graduate students)
+    // Division validation (required for undergraduate and graduate students)
     if (data.educationLevel === 'undergraduate' || data.educationLevel === 'graduate') {
-      if (!data.competitionLevel || !data.competitionLevel.trim()) {
-        errors.competitionLevel = 'Competition level is required for college students';
+      if (!data.division || !data.division.trim()) {
+        errors.division = 'Division is required for college students';
       }
     }
 

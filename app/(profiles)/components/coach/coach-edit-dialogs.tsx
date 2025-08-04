@@ -436,6 +436,10 @@ export function CoachEditDialogs({
         if (!editData.positions || editData.positions.length === 0) {
           errors.positions = 'At least one position is required';
         }
+        // Validate scholarshipsAvailable is a valid number if provided
+        if (editData.scholarshipsAvailable !== '' && editData.scholarshipsAvailable !== undefined && isNaN(Number(editData.scholarshipsAvailable))) {
+          errors.scholarshipsAvailable = 'Must be a valid number';
+        }
       }
 
       if (Object.keys(errors).length > 0) {
@@ -477,12 +481,13 @@ export function CoachEditDialogs({
           };
           break;
         case 'recruiting-needs':
+          const scholarshipsValue = editData.scholarshipsAvailable && editData.scholarshipsAvailable !== '' ? Number(editData.scholarshipsAvailable) : undefined;
           updates = {
             recruitingNeeds: {
               ...(profileData.recruitingNeeds || {}),
               studentClassifications: editData.studentClassifications,
               positions: editData.positions,
-              scholarshipsAvailable: editData.scholarshipsAvailable ? Number(editData.scholarshipsAvailable) : undefined,
+              scholarshipsAvailable: scholarshipsValue,
               recruitingPhilosophy: editData.recruitingPhilosophy
             }
           };

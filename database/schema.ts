@@ -48,7 +48,6 @@ export const athleteProfiles = pgTable('athlete_profiles', {
   division: text('division'),
   conference: text('conference'),
   educationLevel: educationLevelEnum('education_level').notNull().default('high_school'),
-  competitionLevel: text('competition_level'),
   organizationName: text('organization_name').notNull(),
   city: text('city').notNull(),
   country: text('country').notNull().default('United States'), // Added country (required)

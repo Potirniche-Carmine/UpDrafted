@@ -7,8 +7,8 @@ if (process.env.NODE_ENV !== 'production') {
   config(); // Use default .env file or system environment variables
 }
 
-import { Pool } from '@neondatabase/serverless';
-import { drizzle } from 'drizzle-orm/neon-serverless';
+import { Pool } from 'pg';
+import { drizzle } from 'drizzle-orm/node-postgres';
 import * as schema from './schema';
 
 const connectionString = process.env.DATABASE_URL;
