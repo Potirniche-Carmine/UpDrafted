@@ -197,7 +197,8 @@ function transformProfileData(profileData: Record<string, any>, profileType: str
     // For recruiter profiles, preserve sportSpecificNeeds
     if (profileType === 'recruiter' && profileData.sportSpecificNeeds) {
       transformed.sportSpecificNeeds = profileData.sportSpecificNeeds;
-      transformed.sportSpecificNeedsKeys = Object.keys(profileData.sportSpecificNeeds);
+      transformed.sportSpecificNeedsKeys = typeof profileData.sportSpecificNeeds === 'object' ? 
+        Object.keys(profileData.sportSpecificNeeds) : [];
     }
     
     // Add country field
