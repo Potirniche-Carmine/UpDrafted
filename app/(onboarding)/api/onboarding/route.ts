@@ -207,10 +207,10 @@ export async function POST(request: NextRequest) {
           profileId = result.id
           
           // Create recruiting needs for demo coach if provided
-          if (profileData.recruitingGraduationYears && profileData.recruitingPositions) {
+          if (profileData.recruitingPositions) {
             await recruitingNeedsOperations.createRecruitingNeeds({
               coachId: profileId,
-              graduationYears: profileData.recruitingGraduationYears,
+              studentClassifications: (profileData.recruitingStudentClassifications || []) as ('high_school' | 'university_transfers' | 'juco_students' | 'graduate_transfers' | 'international_students')[],
               positions: profileData.recruitingPositions,
               scholarshipsAvailable: profileData.scholarshipsAvailable ?? undefined,
               recruitingPhilosophy: profileData.recruitingPhilosophy || undefined
@@ -242,11 +242,11 @@ export async function POST(request: NextRequest) {
           // Create sport-specific recruiting needs for demo recruiter if provided
           if (profileData.sportSpecificNeeds) {
             for (const [sport, needs] of Object.entries(profileData.sportSpecificNeeds)) {
-              if (needs.graduationYears && needs.positions) {
+              if (needs.positions) {
                 await recruitingNeedsOperations.createRecruitingProfileNeeds({
                   recruitingProfileId: profileId,
                   sport: sport,
-                  graduationYears: needs.graduationYears,
+                  studentClassifications: (needs.studentClassifications || []) as ('high_school' | 'university_transfers' | 'juco_students' | 'graduate_transfers' | 'international_students')[],
                   positions: needs.positions,
                   scholarshipsAvailable: needs.scholarshipsAvailable ?? undefined,
                   recruitingPhilosophy: needs.recruitingPhilosophy || undefined

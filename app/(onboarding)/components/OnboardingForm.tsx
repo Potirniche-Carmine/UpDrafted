@@ -26,7 +26,6 @@ const initialData: OnboardingData = {
   secondarySports: [],
   graduationYear: null,
   educationLevel: "high_school",
-  competitionLevel: "",
   organizationName: "",
   city: "",
   state: "",
@@ -57,7 +56,7 @@ const initialData: OnboardingData = {
   orgInstagramHandle: "",
   orgTwitterHandle: "",
   recruitingPhilosophy: "",
-  recruitingGraduationYears: [],
+  recruitingStudentClassifications: [],
   recruitingPositions: [],
   scholarshipsAvailable: null,
   sportSpecificNeeds: {},
@@ -177,9 +176,9 @@ export default function OnboardingForm({ role, onBack }: OnboardingFormProps) {
         data.personalStatement
       );
 
-      // Competition level is required for undergraduate and graduate students
-      const competitionLevelRequirement = (data.educationLevel === 'undergraduate' || data.educationLevel === 'graduate') 
-        ? !!data.competitionLevel 
+      // For college students, division is required instead of competitionLevel
+      const divisionRequirement = (data.educationLevel === 'undergraduate' || data.educationLevel === 'graduate') 
+        ? !!data.division 
         : true;
 
       // Academic requirements depend on education level
@@ -192,7 +191,7 @@ export default function OnboardingForm({ role, onBack }: OnboardingFormProps) {
         academicRequirements = true;
       }
 
-      return baseRequirements && competitionLevelRequirement && academicRequirements;
+      return baseRequirements && divisionRequirement && academicRequirements;
     } else if (data.role === 'coach') {
       // Base requirements for coaches
       const baseRequirements = !!(
@@ -208,7 +207,7 @@ export default function OnboardingForm({ role, onBack }: OnboardingFormProps) {
 
       // Only require recruiting needs for non-high school coaches
       const recruitingRequirements = data.division === 'High School' || !!(
-        data.recruitingGraduationYears.length > 0 &&
+        data.recruitingStudentClassifications.length > 0 &&
         data.recruitingPositions.length > 0 &&
         data.recruitingPhilosophy
       );
@@ -236,12 +235,91 @@ export default function OnboardingForm({ role, onBack }: OnboardingFormProps) {
       // Secondary sports and their needs can be added later on the profile
       const mainSportNeeds = data.sportSpecificNeeds[data.sportCoaching];
       const mainSportRequirements = mainSportNeeds && 
-             mainSportNeeds.graduationYears.length > 0 && 
+             mainSportNeeds.studentClassifications.length > 0 && 
              mainSportNeeds.positions.length > 0 && 
              mainSportNeeds.recruitingPhilosophy.trim().length > 0;
 
       return baseRequirements && mainSportRequirements;
     }
+  };
+
+  const getMissingFields = (): string[] => {
+    const missing: string[] = [];
+    
+    if (!data.fullName) missing.push("Full name");
+    if (!data.agreeToTerms) missing.push("Agreement to Terms of Service and Privacy Policy");
+    
+    if (data.role === 'athlete') {
+      if (!data.ageConfirmation) missing.push("Age confirmation (13 years or older)");
+      if (!data.sport) missing.push("Primary sport");
+      if (!data.graduationYear) missing.push("Graduation year");
+      if (!data.educationLevel) missing.push("Education level");
+      if (!data.organizationName) missing.push("School/organization name");
+      if (!data.city) missing.push("City");
+      if (!data.country) missing.push("Country");
+      if (data.country === 'United States' && !data.state) missing.push("State");
+      if (!data.heightFeet) missing.push("Height (feet)");
+      if (!data.heightInches) missing.push("Height (inches)");
+      if (!data.weight) missing.push("Weight");
+      if (!data.positions.length) missing.push("At least one position");
+      if (!data.intendedMajor) missing.push("Intended/current major");
+      if (!data.personalStatement) missing.push("Personal statement");
+      
+      // Division for college students
+      if ((data.educationLevel === 'undergraduate' || data.educationLevel === 'graduate') && !data.division) {
+        missing.push("Division");
+      }
+      
+      // Academic requirements for high school
+      if (data.educationLevel === 'high_school' && !data.gpa && !data.satScore && !data.actScore) {
+        missing.push("At least one academic score (GPA, SAT, or ACT)");
+      }
+    } else if (data.role === 'coach') {
+      if (!data.title) missing.push("Title/position");
+      if (!data.organizationName) missing.push("Organization name");
+      if (!data.sportCoaching) missing.push("Primary sport");
+      if (!data.division) missing.push("Division");
+      if (!data.city) missing.push("City");
+      if (data.country === 'United States' && !data.state) missing.push("State");
+      if (!data.orgInstagramHandle && !data.orgTwitterHandle && !data.programWebsite && !data.schoolWebsite) {
+        missing.push("At least one contact method (social media or website)");
+      }
+      if (!data.personalStatement) missing.push("Personal statement");
+      
+      // Recruiting requirements for non-high school
+      if (data.division !== 'High School') {
+        if (!data.recruitingStudentClassifications.length) missing.push("Student classifications you recruit");
+        if (!data.recruitingPositions.length) missing.push("Positions you recruit");
+        if (!data.recruitingPhilosophy) missing.push("Recruiting philosophy");
+      }
+    } else if (data.role === 'recruiter') {
+      if (!data.title) missing.push("Title/position");
+      if (!data.organizationName) missing.push("Organization name");
+      if (!data.sportCoaching) missing.push("Primary sport");
+      if (!data.division) missing.push("Division");
+      if (!data.city) missing.push("City");
+      if (data.country === 'United States' && !data.state) missing.push("State");
+      if (!data.orgInstagramHandle && !data.orgTwitterHandle && !data.programWebsite && !data.schoolWebsite) {
+        missing.push("At least one contact method (social media or website)");
+      }
+      if (!data.personalStatement) missing.push("Personal statement");
+      
+      // Recruiting requirements for non-high school
+      if (data.division !== 'High School') {
+        const mainSportNeeds = data.sportSpecificNeeds[data.sportCoaching];
+        if (!mainSportNeeds || !mainSportNeeds.studentClassifications.length) {
+          missing.push("Student classifications for your primary sport");
+        }
+        if (!mainSportNeeds || !mainSportNeeds.positions.length) {
+          missing.push("Positions for your primary sport");
+        }
+        if (!mainSportNeeds || !mainSportNeeds.recruitingPhilosophy.trim()) {
+          missing.push("Recruiting philosophy for your primary sport");
+        }
+      }
+    }
+    
+    return missing;
   };
 
   // Show loading screen when submitting
@@ -297,6 +375,18 @@ export default function OnboardingForm({ role, onBack }: OnboardingFormProps) {
               role={data.role}
               onInputChange={(field, value) => handleInputChange(field as keyof OnboardingData, value)}
             />
+
+            {/* Show missing fields if form cannot be submitted */}
+            {!canSubmit() && (
+              <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
+                <h4 className="font-medium text-red-800 mb-2">Please complete the following required fields:</h4>
+                <ul className="list-disc list-inside text-sm text-red-700 space-y-1">
+                  {getMissingFields().map((field, index) => (
+                    <li key={index}>{field}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
 
             <div className="flex gap-4 pt-6 border-t">
               <Button

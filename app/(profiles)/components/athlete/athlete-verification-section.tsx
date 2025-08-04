@@ -51,8 +51,8 @@ export function VerificationSection({
   // This prevents showing verification requirements for unsaved changes
   const requiresTransferPortalVerification = 
     (profileData.educationLevel === 'undergraduate' || profileData.educationLevel === 'graduate') &&
-    profileData.competitionLevel &&
-    ['division_1', 'division_2', 'division_3'].includes(profileData.competitionLevel);
+    profileData.division &&
+    ['division_1', 'division_2', 'division_3'].includes(profileData.division);
 
   // Check if this is a high school athlete (only they should see Hudl)
   const isHighSchoolAthlete = currentData.educationLevel === 'high_school';
@@ -237,7 +237,7 @@ export function VerificationSection({
               <div className="space-y-3">
                 <h3 className="font-semibold text-base sm:text-lg text-blue-900 dark:text-blue-100">Transfer Portal Verification Required</h3>
                 <p className="text-sm text-blue-700 dark:text-blue-200 px-2 sm:px-4">
-                  As a {currentData.competitionLevel === 'division_1' ? 'D1' : currentData.competitionLevel === 'division_2' ? 'D2' : 'D3'} athlete, 
+                  As a {currentData.division === 'division_1' ? 'D1' : currentData.division === 'division_2' ? 'D2' : 'D3'} athlete, 
                   you must verify your NCAA Transfer Portal status before coaches and recruiters can connect with you.
                 </p>
               </div>

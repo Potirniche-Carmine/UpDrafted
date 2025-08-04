@@ -75,7 +75,7 @@ export function VerificationDialog({
   };
 
   // Check if transfer portal verification should be available
-  // Note: This component doesn't have access to competitionLevel, so we show the option for all college athletes
+  // Note: This component doesn't have access to division field, so we show the option for all college athletes
   // The verification logic on the backend should handle the actual requirements
   const isTransferPortalEligible = role === "athlete" && 
     (educationLevel === "undergraduate" || educationLevel === "graduate");

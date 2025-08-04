@@ -13,9 +13,9 @@ import { Badge } from "@/components/ui/badge";
 import { 
   DIVISIONS,
   US_STATES, 
-  GRADUATION_YEARS, 
   getPositionsForSport, 
-  getSportsList 
+  getSportsList,
+  getStudentClassificationOptions
 } from "@/lib/sports-data";
 import { FormValidator, FIELD_LIMITS } from "@/app/(onboarding)/lib/form-validation";
 import { OnboardingData } from "../lib/types";
@@ -200,7 +200,7 @@ export default function RecruiterForm({ data, onInputChange }: RecruiterFormProp
     allSports.forEach(sport => {
       if (!newSportSpecificNeeds[sport]) {
         newSportSpecificNeeds[sport] = {
-          graduationYears: [],
+          studentClassifications: [],
           positions: [],
           scholarshipsAvailable: null,
           recruitingPhilosophy: ""
@@ -215,7 +215,8 @@ export default function RecruiterForm({ data, onInputChange }: RecruiterFormProp
       }
     });
     
-    onInputChange('sportSpecificNeeds', newSportSpecificNeeds);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (onInputChange as any)('sportSpecificNeeds', newSportSpecificNeeds);
     
     // Set active sport for needs if not set or if current active sport is no longer in the list
     if (allSports.length > 0) {
@@ -236,7 +237,7 @@ export default function RecruiterForm({ data, onInputChange }: RecruiterFormProp
     onInputChange('secondarySportsRecruiting', sports);
   };
 
-  const updateSportSpecificNeeds = (sport: string, field: 'graduationYears' | 'positions' | 'scholarshipsAvailable' | 'recruitingPhilosophy', value: number[] | string[] | number | null | string) => {
+  const updateSportSpecificNeeds = (sport: string, field: 'studentClassifications' | 'positions' | 'scholarshipsAvailable' | 'recruitingPhilosophy', value: string[] | number | null | string) => {
     const newNeeds = {
       ...data.sportSpecificNeeds,
       [sport]: {
@@ -244,16 +245,11 @@ export default function RecruiterForm({ data, onInputChange }: RecruiterFormProp
         [field]: value
       }
     };
-    onInputChange('sportSpecificNeeds', newNeeds);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (onInputChange as any)('sportSpecificNeeds', newNeeds);
   };
 
-  const toggleNeedsYear = (sport: string, year: number) => {
-    const currentYears = data.sportSpecificNeeds[sport]?.graduationYears || [];
-    const newYears = currentYears.includes(year)
-      ? currentYears.filter(y => y !== year)
-      : [...currentYears, year];
-    updateSportSpecificNeeds(sport, 'graduationYears', newYears);
-  };
+
 
   const toggleNeedsPosition = (sport: string, position: string) => {
     const currentPositions = data.sportSpecificNeeds[sport]?.positions || [];
@@ -261,6 +257,14 @@ export default function RecruiterForm({ data, onInputChange }: RecruiterFormProp
       ? currentPositions.filter(p => p !== position)
       : [...currentPositions, position];
     updateSportSpecificNeeds(sport, 'positions', newPositions);
+  };
+
+  const toggleStudentClassification = (sport: string, classification: string) => {
+    const currentClassifications = data.sportSpecificNeeds[sport]?.studentClassifications || [];
+    const newClassifications = currentClassifications.includes(classification)
+      ? currentClassifications.filter(c => c !== classification)
+      : [...currentClassifications, classification];
+    updateSportSpecificNeeds(sport, 'studentClassifications', newClassifications);
   };
 
   // Validate field and update errors
@@ -718,19 +722,22 @@ export default function RecruiterForm({ data, onInputChange }: RecruiterFormProp
                 <CardTitle className="text-lg">Recruiting Needs for {activeSportForNeeds}</CardTitle>
               </CardHeader>
               <CardContent className="space-y-6">
-                {/* Graduation Years */}
+                {/* Student Classifications */}
                 <div className="space-y-3">
-                  <Label className="text-base font-medium">Graduation Years Currently Recruiting *</Label>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                    {GRADUATION_YEARS.map(year => (
-                      <div key={year} className="flex items-center space-x-2">
+                  <Label className="text-base font-medium">Student Classifications Currently Recruiting *</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Select the types of students you are actively recruiting for this sport.
+                  </p>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {getStudentClassificationOptions().map(({ value, label }) => (
+                      <div key={value} className="flex items-center space-x-2">
                         <Checkbox
-                          id={`${activeSportForNeeds}-year-${year}`}
-                          checked={data.sportSpecificNeeds[activeSportForNeeds]?.graduationYears?.includes(year) || false}
-                          onCheckedChange={() => toggleNeedsYear(activeSportForNeeds, year)}
+                          id={`${activeSportForNeeds}-classification-${value}`}
+                          checked={data.sportSpecificNeeds[activeSportForNeeds]?.studentClassifications?.includes(value) || false}
+                          onCheckedChange={() => toggleStudentClassification(activeSportForNeeds, value)}
                         />
-                        <Label htmlFor={`${activeSportForNeeds}-year-${year}`} className="text-sm cursor-pointer">
-                          {year}
+                        <Label htmlFor={`${activeSportForNeeds}-classification-${value}`} className="text-sm cursor-pointer">
+                          {label}
                         </Label>
                       </div>
                     ))}

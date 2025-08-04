@@ -193,6 +193,14 @@ function transformProfileData(profileData: Record<string, any>, profileType: str
     if (profileData.organizationLogoR3Key) {
       transformed.organizationLogo = constructR2Url(R2_PUBLIC_URL, profileData.organizationLogoR3Key);
     }
+    
+    // For recruiter profiles, preserve sportSpecificNeeds
+    if (profileType === 'recruiter' && profileData.sportSpecificNeeds) {
+      transformed.sportSpecificNeeds = profileData.sportSpecificNeeds;
+      transformed.sportSpecificNeedsKeys = typeof profileData.sportSpecificNeeds === 'object' ? 
+        Object.keys(profileData.sportSpecificNeeds) : [];
+    }
+    
     // Add country field
     if (profileData.country) {
       transformed.country = profileData.country;
@@ -988,7 +996,6 @@ export async function PUT(
       if (sanitizedData.secondarySports !== undefined) profileUpdateData.secondarySports = sanitizedData.secondarySports as string[];
       if (sanitizedData.graduationYear !== undefined) profileUpdateData.graduationYear = sanitizedData.graduationYear as number;
       if (sanitizedData.educationLevel !== undefined) profileUpdateData.educationLevel = sanitizedData.educationLevel as EducationLevel;
-      if (sanitizedData.competitionLevel !== undefined) profileUpdateData.competitionLevel = sanitizedData.competitionLevel as string;
       if (sanitizedData.organizationName !== undefined) profileUpdateData.organizationName = sanitizedData.organizationName as string;
       if (sanitizedData.city !== undefined) profileUpdateData.city = sanitizedData.city as string;
       if (sanitizedData.state !== undefined) profileUpdateData.state = sanitizedData.state as string;
@@ -1256,14 +1263,14 @@ export async function PUT(
       // Handle recruiting needs updates if provided
       if (sanitizedData.recruitingNeeds !== undefined && updatedProfile?.id) {
         const recruitingNeeds = sanitizedData.recruitingNeeds as {
-          graduationYears?: number[];
+          studentClassifications?: string[];
           positions?: string[];
           scholarshipsAvailable?: number;
           recruitingPhilosophy?: string;
         };
         
         const recruitingNeedsData = {
-          graduationYears: recruitingNeeds.graduationYears || [],
+          studentClassifications: (recruitingNeeds.studentClassifications || []) as ('high_school' | 'university_transfers' | 'juco_students' | 'graduate_transfers' | 'international_students')[],
           positions: recruitingNeeds.positions || [],
           scholarshipsAvailable: recruitingNeeds.scholarshipsAvailable ?? null,
           recruitingPhilosophy: recruitingNeeds.recruitingPhilosophy || null
@@ -1327,7 +1334,7 @@ export async function PUT(
       // Handle sport-specific recruiting needs updates if provided
       if (sanitizedData.sportSpecificNeeds !== undefined && updatedProfile?.id) {
         const sportSpecificNeeds = sanitizedData.sportSpecificNeeds as { [sport: string]: {
-          graduationYears: number[];
+          studentClassifications?: string[];
           positions: string[];
           scholarshipsAvailable?: number;
           recruitingPhilosophy?: string;
@@ -1335,6 +1342,7 @@ export async function PUT(
         
         // Get existing recruiting needs for this profile
         const existingNeeds = await recruitingNeedsOperations.getAllRecruitingProfileNeeds(updatedProfile.id);
+        
         const existingSports = new Set(existingNeeds.map(need => need.sport));
         const newSports = new Set(Object.keys(sportSpecificNeeds));
         
@@ -1350,7 +1358,7 @@ export async function PUT(
           const needsData = {
             recruitingProfileId: updatedProfile.id,
             sport: sport,
-            graduationYears: needs.graduationYears || [],
+            studentClassifications: (needs.studentClassifications || []) as ('high_school' | 'university_transfers' | 'juco_students' | 'graduate_transfers' | 'international_students')[],
             positions: needs.positions || [],
             scholarshipsAvailable: needs.scholarshipsAvailable ?? null,
             recruitingPhilosophy: needs.recruitingPhilosophy || null

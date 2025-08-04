@@ -190,18 +190,10 @@ export function sanitizeProfileData(data: Record<string, unknown>): Record<strin
       // Arrays
       case 'positions':
       case 'secondarySports':
+      case 'studentClassifications':
         sanitized[key] = sanitizeArray(value);
         break;
-      case 'graduationYears':
-        // Handle numeric arrays specially
-        if (Array.isArray(value)) {
-          sanitized[key] = value
-            .map(year => sanitizeNumber(year, 2000, 2050))
-            .filter(year => year !== null);
-        } else {
-          sanitized[key] = [];
-        }
-        break;
+
         
       // Social media object
       case 'socialMedia':
@@ -219,11 +211,7 @@ export function sanitizeProfileData(data: Record<string, unknown>): Record<strin
         if (value && typeof value === 'object') {
           const needs = value as Record<string, unknown>;
           sanitized[key] = {
-            graduationYears: Array.isArray(needs.graduationYears) 
-              ? needs.graduationYears
-                  .map(year => sanitizeNumber(year, 2000, 2050))
-                  .filter(year => year !== null)
-              : [],
+            studentClassifications: sanitizeArray(needs.studentClassifications),
             positions: sanitizeArray(needs.positions),
             scholarshipsAvailable: sanitizeNumber(needs.scholarshipsAvailable, 0, 50),
             recruitingPhilosophy: sanitizeDescription(needs.recruitingPhilosophy as string)
@@ -240,11 +228,7 @@ export function sanitizeProfileData(data: Record<string, unknown>): Record<strin
           Object.entries(sportNeeds).forEach(([sport, needs]) => {
             if (needs && typeof needs === 'object') {
               sanitizedSportNeeds[sanitizeText(sport)] = {
-                graduationYears: Array.isArray(needs.graduationYears) 
-                  ? needs.graduationYears
-                      .map(year => sanitizeNumber(year, 2000, 2050))
-                      .filter(year => year !== null)
-                  : [],
+                studentClassifications: sanitizeArray(needs.studentClassifications),
                 positions: sanitizeArray(needs.positions),
                 scholarshipsAvailable: sanitizeNumber(needs.scholarshipsAvailable, 0, 50),
                 recruitingPhilosophy: sanitizeDescription(needs.recruitingPhilosophy as string)
