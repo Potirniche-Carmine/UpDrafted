@@ -606,10 +606,6 @@ export class FormValidator {
           errors.sportSpecificNeeds = `Recruiting needs are required for your main sport (${mainSport})`;
         } else {
           // Validate main sport recruiting needs
-          if (!mainSportNeeds.graduationYears || mainSportNeeds.graduationYears.length === 0) {
-            errors[`sportSpecificNeeds_${mainSport}_graduationYears`] = `Graduation years for ${mainSport} are required`;
-          }
-          
           if (!mainSportNeeds.positions || mainSportNeeds.positions.length === 0) {
             errors[`sportSpecificNeeds_${mainSport}_positions`] = `Positions for ${mainSport} are required`;
           }
@@ -631,10 +627,6 @@ export class FormValidator {
         if (!philosophyResult.isValid) errors.recruitingPhilosophy = philosophyResult.error!;
         
         // Validate recruiting needs for coaches
-        if (!data.recruitingGraduationYears || data.recruitingGraduationYears.length === 0) {
-          errors.recruitingGraduationYears = 'Graduation years are required';
-        }
-        
         if (!data.recruitingPositions || data.recruitingPositions.length === 0) {
           errors.recruitingPositions = 'Positions are required';
         }

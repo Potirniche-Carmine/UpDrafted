@@ -57,7 +57,7 @@ const initialData: OnboardingData = {
   orgInstagramHandle: "",
   orgTwitterHandle: "",
   recruitingPhilosophy: "",
-  recruitingGraduationYears: [],
+  recruitingStudentClassifications: [],
   recruitingPositions: [],
   scholarshipsAvailable: null,
   sportSpecificNeeds: {},
@@ -208,7 +208,7 @@ export default function OnboardingForm({ role, onBack }: OnboardingFormProps) {
 
       // Only require recruiting needs for non-high school coaches
       const recruitingRequirements = data.division === 'High School' || !!(
-        data.recruitingGraduationYears.length > 0 &&
+        data.recruitingStudentClassifications.length > 0 &&
         data.recruitingPositions.length > 0 &&
         data.recruitingPhilosophy
       );
@@ -236,7 +236,7 @@ export default function OnboardingForm({ role, onBack }: OnboardingFormProps) {
       // Secondary sports and their needs can be added later on the profile
       const mainSportNeeds = data.sportSpecificNeeds[data.sportCoaching];
       const mainSportRequirements = mainSportNeeds && 
-             mainSportNeeds.graduationYears.length > 0 && 
+             mainSportNeeds.studentClassifications.length > 0 && 
              mainSportNeeds.positions.length > 0 && 
              mainSportNeeds.recruitingPhilosophy.trim().length > 0;
 

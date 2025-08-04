@@ -227,6 +227,7 @@ export const US_STATES = [
   'American Samoa', 'Guam', 'Northern Mariana Islands', 'Puerto Rico', 'U.S. Virgin Islands'
 ];
 
+// Graduation years for athlete profiles (not recruiting needs)
 export const GRADUATION_YEARS = Array.from(
   { length: 8 }, 
   (_, i) => new Date().getFullYear() + i
@@ -271,6 +272,38 @@ export function getGraduationYearsForEducationLevel(educationLevel: string): num
     return getValidHighSchoolGraduationYears();
   }
   return GRADUATION_YEARS;
+}
+
+// Student Classification Options
+export const STUDENT_CLASSIFICATIONS = [
+  'high_school',
+  'university_transfers', 
+  'juco_students',
+  'graduate_transfers',
+  'international_students'
+] as const;
+
+export type StudentClassification = typeof STUDENT_CLASSIFICATIONS[number];
+
+// Get display names for student classifications
+export function getStudentClassificationDisplayName(classification: StudentClassification): string {
+  const displayNames: Record<StudentClassification, string> = {
+    'high_school': 'High School',
+    'university_transfers': 'University Transfers',
+    'juco_students': 'JUCO Students',
+    'graduate_transfers': 'Graduate Transfers',
+    'international_students': 'International Students'
+  };
+  
+  return displayNames[classification];
+}
+
+// Get all student classification display options
+export function getStudentClassificationOptions(): Array<{ value: StudentClassification; label: string }> {
+  return STUDENT_CLASSIFICATIONS.map(classification => ({
+    value: classification,
+    label: getStudentClassificationDisplayName(classification)
+  }));
 }
 
 export function getPositionsForSport(sport: string): string[] {

@@ -50,12 +50,12 @@ export interface OnboardingFormData {
   recruitingPhilosophy: string;
   
   // Recruiting needs (now sport-specific for recruiters)
-  recruitingGraduationYears: number[];
+  recruitingStudentClassifications: string[];
   recruitingPositions: string[];
   scholarshipsAvailable: number | null;
   
   // Sport-specific recruiting needs for recruiters
-  sportSpecificNeeds: { [sport: string]: { graduationYears: number[]; positions: string[]; scholarshipsAvailable: number | null; recruitingPhilosophy: string; } };
+  sportSpecificNeeds: { [sport: string]: { studentClassifications: string[]; positions: string[]; scholarshipsAvailable: number | null; recruitingPhilosophy: string; } };
   
   whatLookingFor: string;
   
@@ -106,12 +106,12 @@ export interface OnboardingProfileData {
   recruitingPhilosophy?: string;
   
   // Recruiting needs (for coaches - single sport)
-  recruitingGraduationYears?: number[];
+  recruitingStudentClassifications?: string[];
   recruitingPositions?: string[];
   scholarshipsAvailable?: number | null;
   
   // Sport-specific recruiting needs (for recruiters - multi-sport)
-  sportSpecificNeeds?: { [sport: string]: { graduationYears: number[]; positions: string[]; scholarshipsAvailable: number | null; recruitingPhilosophy: string; } };
+  sportSpecificNeeds?: { [sport: string]: { studentClassifications: string[]; positions: string[]; scholarshipsAvailable: number | null; recruitingPhilosophy: string; } };
   
   whatLookingFor?: string;
 }
@@ -155,7 +155,7 @@ export function convertFormDataToProfileData(formData: OnboardingFormData): Onbo
     orgInstagramHandle: formData.orgInstagramHandle.trim(),
     orgTwitterHandle: formData.orgTwitterHandle.trim(),
     recruitingPhilosophy: formData.recruitingPhilosophy.trim(),
-    recruitingGraduationYears: formData.recruitingGraduationYears,
+    recruitingStudentClassifications: formData.recruitingStudentClassifications,
     recruitingPositions: formData.recruitingPositions,
     scholarshipsAvailable: formData.scholarshipsAvailable ?? undefined,
     sportSpecificNeeds: formData.sportSpecificNeeds,

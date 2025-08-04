@@ -39,7 +39,7 @@ export interface RecruiterProfileData {
 
   // Sport-specific recruiting information (matches database structure)
   sportSpecificNeeds?: { [sport: string]: {
-    graduationYears: number[];
+    studentClassifications: string[];
     positions: string[];
     scholarshipsAvailable?: number;
     recruitingPhilosophy?: string;

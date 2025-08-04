@@ -32,7 +32,7 @@ import {
 import { OnboardingProfileData } from '@/app/(onboarding)/lib/onboarding';
 import { sanitizeAndEncryptMessage } from '@/utils/encryption';
 import { R2_PUBLIC_URL, constructR2Url } from './r2/config';
-import { isoStringToDate, PRESENT_DATE, parseDateWithErrorHandling, dateToStringWithErrorHandling } from '@/lib/date-utils';
+import { dateToStringWithErrorHandling } from '@/lib/date-utils';
 
 // User operations
 export const userOperations = {
@@ -362,7 +362,9 @@ export const recruitingOperations = {
       }
     });
 
-    if (!profile) return null;
+    if (!profile) {
+      return null;
+    }
 
     // Get all recruiting needs for this profile
     const recruitingNeeds = await db.query.recruitingProfileNeeds.findMany({
@@ -370,11 +372,11 @@ export const recruitingOperations = {
     });
 
     // Transform recruiting needs into sportSpecificNeeds object
-    const sportSpecificNeeds: { [sport: string]: { graduationYears: number[]; positions: string[]; scholarshipsAvailable?: number; recruitingPhilosophy?: string; } } = {};
+    const sportSpecificNeeds: { [sport: string]: { studentClassifications: string[]; positions: string[]; scholarshipsAvailable?: number; recruitingPhilosophy?: string; } } = {};
     
     recruitingNeeds.forEach(need => {
       sportSpecificNeeds[need.sport] = {
-        graduationYears: need.graduationYears,
+        studentClassifications: need.studentClassifications,
         positions: need.positions,
         scholarshipsAvailable: need.scholarshipsAvailable ?? undefined,
         recruitingPhilosophy: need.recruitingPhilosophy || undefined
@@ -859,11 +861,10 @@ export const onboardingOperations = {
 
     // Create recruiting needs if provided
     let recruitingNeeds = null;
-    if (profileData.recruitingGraduationYears && profileData.recruitingGraduationYears.length > 0 && 
-        profileData.recruitingPositions && profileData.recruitingPositions.length > 0) {
+    if (profileData.recruitingPositions && profileData.recruitingPositions.length > 0) {
       recruitingNeeds = await recruitingNeedsOperations.createRecruitingNeeds({
         coachId: coachProfile.id,
-        graduationYears: profileData.recruitingGraduationYears,
+        studentClassifications: (profileData.recruitingStudentClassifications as ('high_school' | 'university_transfers' | 'juco_students' | 'graduate_transfers' | 'international_students')[]) || [],
         positions: profileData.recruitingPositions,
         scholarshipsAvailable: profileData.scholarshipsAvailable ?? undefined,
         recruitingPhilosophy: profileData.recruitingPhilosophy || undefined
@@ -908,12 +909,11 @@ export const onboardingOperations = {
     const recruitingProfileNeeds = [];
     if (profileData.sportSpecificNeeds) {
       for (const [sport, needs] of Object.entries(profileData.sportSpecificNeeds)) {
-        if (needs.graduationYears && needs.graduationYears.length > 0 && 
-            needs.positions && needs.positions.length > 0) {
+        if (needs.positions && needs.positions.length > 0) {
           const profileNeeds = await recruitingNeedsOperations.createRecruitingProfileNeeds({
             recruitingProfileId: recruiterProfile.id,
             sport: sport,
-            graduationYears: needs.graduationYears,
+            studentClassifications: (needs.studentClassifications as ('high_school' | 'university_transfers' | 'juco_students' | 'graduate_transfers' | 'international_students')[]) || [],
             positions: needs.positions,
             scholarshipsAvailable: needs.scholarshipsAvailable ?? undefined,
             recruitingPhilosophy: needs.recruitingPhilosophy || undefined
@@ -1619,11 +1619,37 @@ export const adminOperations = {
       ),
       with: {
         user: true,
-        recruitingNeeds: true,
       }
     });
 
-    return { athlete, coach, recruiter };
+    // If we have a demo recruiting profile, fetch and transform the recruiting needs
+    let recruiterWithNeeds = recruiter;
+    if (recruiter) {
+      // Get all recruiting needs for this demo profile
+      const recruitingNeeds = await db.query.recruitingProfileNeeds.findMany({
+        where: eq(recruitingProfileNeeds.recruitingProfileId, recruiter.id)
+      });
+
+      // Transform recruiting needs into sportSpecificNeeds object
+      const sportSpecificNeeds: { [sport: string]: { studentClassifications: string[]; positions: string[]; scholarshipsAvailable?: number; recruitingPhilosophy?: string; } } = {};
+      
+      recruitingNeeds.forEach(need => {
+        sportSpecificNeeds[need.sport] = {
+          studentClassifications: need.studentClassifications,
+          positions: need.positions,
+          scholarshipsAvailable: need.scholarshipsAvailable ?? undefined,
+          recruitingPhilosophy: need.recruitingPhilosophy || undefined
+        };
+      });
+
+      // Add the sportSpecificNeeds to the recruiter profile
+      recruiterWithNeeds = {
+        ...recruiter,
+        sportSpecificNeeds
+      } as typeof recruiter & { sportSpecificNeeds: typeof sportSpecificNeeds };
+    }
+
+    return { athlete, coach, recruiter: recruiterWithNeeds };
   },
 
   // Create demo athlete profile

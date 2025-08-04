@@ -24,6 +24,7 @@ export const verificationRequestStatusEnum = pgEnum('verification_request_status
 export const verificationTypeEnum = pgEnum('verification_type', ['general', 'transfer_portal']);
 export const educationLevelEnum = pgEnum('education_level', ['high_school', 'undergraduate', 'graduate', 'associate']);
 export const notificationTypeEnum = pgEnum('notification_type', ['profileView', 'newConnection', 'newMessage', 'systemUpdate', 'premiumFeature', 'connectionAccepted']);
+export const studentClassificationEnum = pgEnum('student_classification', ['high_school', 'university_transfers', 'juco_students', 'graduate_transfers', 'international_students']);
 
 export const users = pgTable('users', {
   id: text('id').primaryKey(),
@@ -194,7 +195,7 @@ export const recruitingProfiles = pgTable('recruiting_profiles', {
 export const recruitingNeeds = pgTable('recruiting_needs', {
   id: serial('id').primaryKey(),
   coachId: integer('coach_id').notNull().references(() => coachProfiles.id, { onDelete: 'cascade' }),
-  graduationYears: integer('graduation_years').array().notNull(),
+  studentClassifications: studentClassificationEnum('student_classifications').array().notNull(),
   positions: text('positions').array().notNull(),
   scholarshipsAvailable: integer('scholarships_available'),
   recruitingPhilosophy: text('recruiting_philosophy'),
@@ -209,7 +210,7 @@ export const recruitingProfileNeeds = pgTable('recruiting_profile_needs', {
   id: serial('id').primaryKey(),
   recruitingProfileId: integer('recruiting_profile_id').notNull().references(() => recruitingProfiles.id, { onDelete: 'cascade' }),
   sport: text('sport').notNull(), 
-  graduationYears: integer('graduation_years').array().notNull(),
+  studentClassifications: studentClassificationEnum('student_classifications').array().notNull(),
   positions: text('positions').array().notNull(),
   scholarshipsAvailable: integer('scholarships_available'),
   recruitingPhilosophy: text('recruiting_philosophy'),
@@ -443,12 +444,12 @@ export const athleteExperienceRelations = relations(athleteExperience, ({ one })
   }),
 }));
 
-export const recruitingProfilesRelations = relations(recruitingProfiles, ({ one }) => ({
+export const recruitingProfilesRelations = relations(recruitingProfiles, ({ one, many }) => ({
   user: one(users, {
     fields: [recruitingProfiles.userId],
     references: [users.id],
   }),
-  recruitingNeeds: one(recruitingProfileNeeds),
+  recruitingNeeds: many(recruitingProfileNeeds),
 }));
 
 export const recruitingNeedsRelations = relations(recruitingNeeds, ({ one }) => ({

@@ -38,7 +38,7 @@ export interface CoachProfileData {
 
   // Recruiting Information
   recruitingNeeds?: {
-    graduationYears: number[];
+    studentClassifications: string[];
     positions: string[];
     scholarshipsAvailable?: number;
     recruitingPhilosophy?: string;
