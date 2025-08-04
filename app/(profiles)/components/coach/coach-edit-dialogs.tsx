@@ -698,11 +698,13 @@ export function CoachEditDialogs({
         return (
           <div className="space-y-6">
             <div className="space-y-3">
-              <Label>Student Classifications Currently Recruiting *</Label>
+              <Label className={`${(!editData.studentClassifications || editData.studentClassifications.length === 0) && validationErrors.studentClassifications ? 'text-red-600' : ''}`}>
+                Student Classifications Currently Recruiting *
+              </Label>
               <p className="text-sm text-muted-foreground">
                 Select the types of students you are actively recruiting.
               </p>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div className={`grid grid-cols-1 md:grid-cols-2 gap-3 ${(!editData.studentClassifications || editData.studentClassifications.length === 0) && validationErrors.studentClassifications ? 'border border-red-300 rounded-md p-2' : ''}`}>
                 {getStudentClassificationOptions().map(({ value, label }) => (
                   <div key={value} className="flex items-center space-x-2">
                     <Checkbox
@@ -722,7 +724,9 @@ export function CoachEditDialogs({
             </div>
 
             <div className="space-y-3">
-              <Label>Positions Looking For *</Label>
+              <Label className={`${(!editData.positions || editData.positions.length === 0) && validationErrors.positions ? 'text-red-600' : ''}`}>
+                Positions Looking For *
+              </Label>
               <div className="space-y-2">
                 <div className="flex flex-wrap gap-2">
                   {(editData.positions || []).map((position: string) => (
@@ -732,7 +736,7 @@ export function CoachEditDialogs({
                   ))}
                 </div>
                 <Select onValueChange={(value) => addPosition(value)}>
-                  <SelectTrigger>
+                  <SelectTrigger className={`${(!editData.positions || editData.positions.length === 0) && validationErrors.positions ? 'border-red-300' : ''}`}>
                     <SelectValue placeholder="Select a position to add" />
                   </SelectTrigger>
                   <SelectContent className="z-[70]">

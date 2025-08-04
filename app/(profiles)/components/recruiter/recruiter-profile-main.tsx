@@ -139,15 +139,6 @@ const SportSpecificNeedsSection = ({
 }) => {
   const currentNeeds = sportSpecificNeeds[selectedSport];
   
-  // Debug log to understand what data is available
-  console.log('SportSpecificNeedsSection debug:', {
-    selectedSport,
-    sportSpecificNeeds,
-    currentNeeds,
-    hasCurrentNeeds: !!currentNeeds,
-    allSports
-  });
-  
   const hasAnyNeeds = currentNeeds && (
     (currentNeeds.studentClassifications && currentNeeds.studentClassifications.length > 0) ||
     (currentNeeds.positions && currentNeeds.positions.length > 0) ||
@@ -361,14 +352,6 @@ export function RecruiterProfile({
   connectionStatus = "none",
   connectionDirection
 }: RecruiterProfileProps) {
-  // Debug log to see what sportSpecificNeeds data is being received
-  console.log('RecruiterProfile received data:', {
-    sportSpecificNeeds: data.sportSpecificNeeds,
-    sportSpecificNeedsKeys: data.sportSpecificNeeds ? Object.keys(data.sportSpecificNeeds) : [],
-    sportRecruiting: data.sportRecruiting,
-    secondarySports: data.secondarySports
-  });
-
   const [profileData, setProfileData] = useState<RecruiterProfileData>(data);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -426,8 +409,6 @@ export function RecruiterProfile({
   // Update profile data and track changes
   const updateProfileData = (updates: Partial<RecruiterProfileData>) => {
     try {
-      console.log('updateProfileData called with:', updates);
-      
       // Handle nested object updates properly
       const newData = { ...profileData };
       
@@ -440,7 +421,6 @@ export function RecruiterProfile({
             ...profileData.sportSpecificNeeds,
             ...updates[typedKey]
           };
-          console.log('Updated sportSpecificNeeds:', newData.sportSpecificNeeds);
         } else {
           // @ts-expect-error - TypeScript can't infer the correct type here but it's safe
           newData[typedKey] = updates[typedKey];
@@ -451,6 +431,16 @@ export function RecruiterProfile({
       checkForChanges(newData);
     } catch (error) {
       console.error('Error updating profile data:', error);
+      // Show user-friendly error notification
+      const notification = document.createElement('div');
+      notification.className = 'fixed top-4 right-4 bg-red-500 text-white px-4 py-2 rounded-lg shadow-lg z-50';
+      notification.textContent = 'Error updating profile. Please try again.';
+      document.body.appendChild(notification);
+      setTimeout(() => {
+        if (notification.parentNode) {
+          notification.parentNode.removeChild(notification);
+        }
+      }, 5000);
     }
   };
 
@@ -1242,6 +1232,16 @@ export function RecruiterProfile({
             }, 0);
           } catch (error) {
             console.error('Error updating profile data:', error);
+            // Show user-friendly error notification
+            const notification = document.createElement('div');
+            notification.className = 'fixed top-4 right-4 bg-red-500 text-white px-4 py-2 rounded-lg shadow-lg z-50';
+            notification.textContent = 'Error saving changes. Please try again.';
+            document.body.appendChild(notification);
+            setTimeout(() => {
+              if (notification.parentNode) {
+                notification.parentNode.removeChild(notification);
+              }
+            }, 5000);
             // Keep dialog open if there's an error
           }
         }}

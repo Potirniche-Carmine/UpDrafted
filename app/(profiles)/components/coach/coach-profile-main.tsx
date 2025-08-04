@@ -621,6 +621,16 @@ export function CoachProfile({
             }, 0);
           } catch (error) {
             console.error('Error updating profile data:', error);
+            // Show user-friendly error notification
+            const notification = document.createElement('div');
+            notification.className = 'fixed top-4 right-4 bg-red-500 text-white px-4 py-2 rounded-lg shadow-lg z-50';
+            notification.textContent = 'Error saving changes. Please try again.';
+            document.body.appendChild(notification);
+            setTimeout(() => {
+              if (notification.parentNode) {
+                notification.parentNode.removeChild(notification);
+              }
+            }, 5000);
             // Keep dialog open if there's an error
           }
         }}

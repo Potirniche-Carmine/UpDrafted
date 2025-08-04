@@ -133,15 +133,6 @@ export function RecruiterEditDialogs({
         const currentSport = selectedSport || profileData.sportRecruiting;
         const currentNeeds = profileData.sportSpecificNeeds?.[currentSport];
         
-        console.log('Initializing recruiting-needs dialog:', {
-          selectedSport,
-          currentSport,
-          profileDataSportRecruiting: profileData.sportRecruiting,
-          profileDataSportSpecificNeeds: profileData.sportSpecificNeeds,
-          currentNeeds,
-          hasCurrentNeeds: !!currentNeeds
-        });
-        
         setEditData({
           studentClassifications: currentNeeds?.studentClassifications || [],
           positions: currentNeeds?.positions || [],
@@ -532,15 +523,6 @@ export function RecruiterEditDialogs({
             }
           }
         };
-        
-        // Debug log to see what's being saved
-        console.log('Saving recruiting needs:', {
-          dialogType,
-          currentSportToUpdate,
-          editData,
-          updates,
-          existingSportSpecificNeeds: profileData.sportSpecificNeeds
-        });
         break;
       case 'social-media':
         updates = {
@@ -803,11 +785,13 @@ export function RecruiterEditDialogs({
             </div>
             
             <div className="space-y-3">
-              <Label>Student Classifications Currently Recruiting *</Label>
+              <Label className={`${(!editData.studentClassifications || editData.studentClassifications.length === 0) && validationErrors.studentClassifications ? 'text-red-600' : ''}`}>
+                Student Classifications Currently Recruiting *
+              </Label>
               <p className="text-sm text-muted-foreground">
                 Select the types of students you are actively recruiting for this sport.
               </p>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div className={`grid grid-cols-1 md:grid-cols-2 gap-3 ${(!editData.studentClassifications || editData.studentClassifications.length === 0) && validationErrors.studentClassifications ? 'border border-red-300 rounded-md p-2' : ''}`}>
                 {getStudentClassificationOptions().map(({ value, label }) => (
                   <div key={value} className="flex items-center space-x-2">
                     <Checkbox
@@ -827,10 +811,12 @@ export function RecruiterEditDialogs({
             </div>
 
             <div>
-              <Label>Positions Needed *</Label>
+              <Label className={`${(!editData.positions || editData.positions.length === 0) && validationErrors.positions ? 'text-red-600' : ''}`}>
+                Positions Needed *
+              </Label>
               <div className="mt-2">
                 <Select onValueChange={addPosition}>
-                  <SelectTrigger>
+                  <SelectTrigger className={`${(!editData.positions || editData.positions.length === 0) && validationErrors.positions ? 'border-red-300' : ''}`}>
                     <SelectValue placeholder="Add position" />
                   </SelectTrigger>
                   <SelectContent className="z-[70]">

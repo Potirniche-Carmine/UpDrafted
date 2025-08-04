@@ -292,10 +292,6 @@ export async function GET(
   { params }: ProfilePageParams
 ) {
   try {
-    console.log('=== API GET ROUTE CALLED ===');
-    console.log('URL:', request.url);
-    console.log('Params received:', params);
-    
     // SECURITY: Validate request size and URL length to prevent DoS attacks
     const url = new URL(request.url);
     
@@ -360,8 +356,6 @@ export async function GET(
 
     const { userId: currentUserId, role: currentUserRole } = auth;
 
-    console.log('Auth successful - currentUserId:', currentUserId, 'currentUserRole:', currentUserRole);
-
     // Rate limiting
     const rateLimitResult = await withRateLimit(request, 'general', currentUserId, currentUserRole);
     if (!rateLimitResult.success) {
@@ -369,11 +363,8 @@ export async function GET(
     }
     const { id: profileUserId } = await params;
 
-    console.log('Profile userId from params:', profileUserId);
-
     // Validate the profile user ID format
     if (!profileUserId || typeof profileUserId !== 'string' || profileUserId.trim() === '') {
-      console.log('Invalid user ID validation failed');
       return NextResponse.json(
         { error: 'Invalid user ID' },
         { status: 400 }
@@ -382,7 +373,6 @@ export async function GET(
 
     // Prevent potential injection attacks by validating the ID format
     if (!/^[a-zA-Z0-9_-]+$/.test(profileUserId)) {
-      console.log('User ID format validation failed');
       return NextResponse.json(
         { error: 'Invalid user ID format' },
         { status: 400 }
@@ -392,8 +382,6 @@ export async function GET(
     // Check if the current user is viewing their own profile
     const isOwnProfile = currentUserId === profileUserId;
     const isAdmin = currentUserRole === 'admin';
-
-    console.log('Profile access check - isOwnProfile:', isOwnProfile, 'isAdmin:', isAdmin);
 
     // ADMIN DEMO PROFILE HANDLING
     // If admin is viewing their own profile, check if they're viewing as a different role
@@ -597,23 +585,6 @@ export async function GET(
     // Get the user with their profile data
     const userWithProfile = await userOperations.getUserWithProfile(profileUserId);
 
-    // Debug logging for recruiter profiles
-    console.log('Profile API Debug:', {
-      profileUserId,
-      userWithProfile: userWithProfile ? {
-        role: userWithProfile.role,
-        hasAthleteProfile: !!userWithProfile.athleteProfile,
-        hasCoachProfile: !!userWithProfile.coachProfile,
-        hasRecruitingProfile: !!userWithProfile.recruitingProfile,
-        recruitingProfileId: userWithProfile.recruitingProfile?.id
-      } : null
-    });
-
-    // EXPLICIT DEBUG: Log user role
-    console.log('USER ROLE DEBUG:', userWithProfile?.role);
-    console.log('IS RECRUITER?', userWithProfile?.role === 'recruiter');
-    console.log('HAS RECRUITING PROFILE?', !!userWithProfile?.recruitingProfile);
-
     if (!userWithProfile) {
       return NextResponse.json(
         { error: 'User not found' },
@@ -753,13 +724,7 @@ export async function GET(
       } else if (userWithProfile.role === 'recruiter' && userWithProfile.recruitingProfile) {
         profileType = 'recruiter';
         // Get full recruiting profile with related data
-        console.log('Fetching recruiting profile for user:', profileUserId);
         const recruitingProfile = await recruitingOperations.getRecruitingProfile(profileUserId);
-        console.log('Recruiting profile result:', recruitingProfile ? {
-          id: recruitingProfile.id,
-          sportSpecificNeeds: recruitingProfile.sportSpecificNeeds,
-          sportSpecificNeedsKeys: Object.keys(recruitingProfile.sportSpecificNeeds || {})
-        } : null);
         profileData = recruitingProfile;
 
         // Check for verification request status if it's the user's own profile
@@ -822,18 +787,7 @@ export async function GET(
     }
 
     // Transform the profile data to match the component interface
-    console.log('BEFORE TRANSFORM DEBUG:', {
-      profileType,
-      hasSportSpecificNeeds: !!(sanitizedProfile as Record<string, unknown>)?.sportSpecificNeeds,
-      sportSpecificNeeds: (sanitizedProfile as Record<string, unknown>)?.sportSpecificNeeds,
-      sportSpecificNeedsKeys: (sanitizedProfile as Record<string, unknown>)?.sportSpecificNeeds ? Object.keys((sanitizedProfile as Record<string, unknown>).sportSpecificNeeds as object) : []
-    });
     const transformedProfile = transformProfileData(sanitizedProfile, profileType);
-    console.log('AFTER TRANSFORM DEBUG:', {
-      hasSportSpecificNeeds: !!(transformedProfile as Record<string, unknown>)?.sportSpecificNeeds,
-      sportSpecificNeeds: (transformedProfile as Record<string, unknown>)?.sportSpecificNeeds,
-      sportSpecificNeedsKeys: (transformedProfile as Record<string, unknown>)?.sportSpecificNeedsKeys
-    });
 
     // Check connection status if viewing another user's profile
     let connectionStatus = "none";
@@ -1379,9 +1333,6 @@ export async function PUT(
       
       // Handle sport-specific recruiting needs updates if provided
       if (sanitizedData.sportSpecificNeeds !== undefined && updatedProfile?.id) {
-        console.log('Handling sportSpecificNeeds update for profile:', updatedProfile.id);
-        console.log('sportSpecificNeeds data:', sanitizedData.sportSpecificNeeds);
-        
         const sportSpecificNeeds = sanitizedData.sportSpecificNeeds as { [sport: string]: {
           studentClassifications?: string[];
           positions: string[];
@@ -1391,26 +1342,19 @@ export async function PUT(
         
         // Get existing recruiting needs for this profile
         const existingNeeds = await recruitingNeedsOperations.getAllRecruitingProfileNeeds(updatedProfile.id);
-        console.log('Existing recruiting needs:', existingNeeds);
         
         const existingSports = new Set(existingNeeds.map(need => need.sport));
         const newSports = new Set(Object.keys(sportSpecificNeeds));
         
-        console.log('Existing sports:', Array.from(existingSports));
-        console.log('New sports:', Array.from(newSports));
-        
         // Delete recruiting needs for sports that are no longer included
         for (const sport of existingSports) {
           if (!newSports.has(sport)) {
-            console.log('Deleting recruiting needs for sport:', sport);
             await recruitingNeedsOperations.deleteRecruitingProfileNeedsBySport(updatedProfile.id, sport);
           }
         }
         
         // Create or update recruiting needs for each sport
         for (const [sport, needs] of Object.entries(sportSpecificNeeds)) {
-          console.log('Processing recruiting needs for sport:', sport, needs);
-          
           const needsData = {
             recruitingProfileId: updatedProfile.id,
             sport: sport,
@@ -1420,14 +1364,10 @@ export async function PUT(
             recruitingPhilosophy: needs.recruitingPhilosophy || null
           };
           
-          console.log('Prepared needsData:', needsData);
-          
           if (existingSports.has(sport)) {
-            console.log('Updating existing recruiting needs for sport:', sport);
             // Update existing recruiting needs
             await recruitingNeedsOperations.updateRecruitingProfileNeeds(updatedProfile.id, sport, needsData);
           } else {
-            console.log('Creating new recruiting needs for sport:', sport);
             // Create new recruiting needs
             await recruitingNeedsOperations.createRecruitingProfileNeeds(needsData);
           }
