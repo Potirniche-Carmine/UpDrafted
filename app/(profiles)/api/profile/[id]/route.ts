@@ -1000,6 +1000,7 @@ export async function PUT(
       if (sanitizedData.city !== undefined) profileUpdateData.city = sanitizedData.city as string;
       if (sanitizedData.state !== undefined) profileUpdateData.state = sanitizedData.state as string;
       if (sanitizedData.division !== undefined) profileUpdateData.division = (sanitizedData.division as string) || null;
+      if (sanitizedData.conference !== undefined) profileUpdateData.conference = (sanitizedData.conference as string) || null;
       if (sanitizedData.height !== undefined) profileUpdateData.height = sanitizedData.height as string;
       if (sanitizedData.weight !== undefined) profileUpdateData.weight = sanitizedData.weight as string;
       if (sanitizedData.positions !== undefined) profileUpdateData.positions = sanitizedData.positions as string[];
