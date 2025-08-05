@@ -128,7 +128,8 @@ const SportSpecificNeedsSection = ({
   selectedSport, 
   onSportChange, 
   isOwnProfile, 
-  onEditSection 
+  onEditSection,
+  onRemoveSport
 }: { 
   sportSpecificNeeds: { [sport: string]: { studentClassifications: string[]; positions: string[]; scholarshipsAvailable?: number; recruitingPhilosophy?: string; } };
   allSports: string[];
@@ -136,6 +137,7 @@ const SportSpecificNeedsSection = ({
   onSportChange: (sport: string) => void;
   isOwnProfile?: boolean;
   onEditSection: (section: string, sport?: string) => void;
+  onRemoveSport?: (sport: string) => void;
 }) => {
   const currentNeeds = sportSpecificNeeds[selectedSport];
   
@@ -187,16 +189,31 @@ const SportSpecificNeedsSection = ({
               <p className="text-sm font-medium text-muted-foreground">View recruiting needs for:</p>
               <div className="flex flex-wrap gap-2">
                 {allSports.map(sport => (
-                  <Button
-                    key={sport}
-                    size="sm"
-                    variant={selectedSport === sport ? "default" : "outline"}
-                    className="text-xs h-8"
-                    onClick={() => onSportChange(sport)}
-                  >
-                    {sport}
-                    {sport === allSports[0] && <Badge variant="secondary" className="ml-2 text-xs">Primary</Badge>}
-                  </Button>
+                  <div key={sport} className="relative group">
+                    <Button
+                      size="sm"
+                      variant={selectedSport === sport ? "default" : "outline"}
+                      className="text-xs h-8 pr-8"
+                      onClick={() => onSportChange(sport)}
+                    >
+                      {sport}
+                      {sport === allSports[0] && <Badge variant="secondary" className="ml-2 text-xs">Primary</Badge>}
+                    </Button>
+                    {/* Red X button - only show for non-primary sports and when user owns profile */}
+                    {isOwnProfile && sport !== allSports[0] && onRemoveSport && (
+                      <Button
+                        size="sm"
+                        variant="destructive"
+                        className="absolute -top-1 -right-1 h-5 w-5 p-0 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onRemoveSport(sport);
+                        }}
+                      >
+                        <X className="w-3 h-3" />
+                      </Button>
+                    )}
+                  </div>
                 ))}
               </div>
             </div>
@@ -371,14 +388,14 @@ export function RecruiterProfile({
 
   // Update selectedSport when sportSpecificNeeds changes to ensure it always points to a sport with data
   useEffect(() => {
-    if (profileData.sportSpecificNeeds && Object.keys(profileData.sportSpecificNeeds).length > 0) {
+    if (profileData?.sportSpecificNeeds && Object.keys(profileData.sportSpecificNeeds).length > 0) {
       const availableSports = Object.keys(profileData.sportSpecificNeeds);
       // If current selectedSport doesn't have data, switch to the first sport that does
       if (!availableSports.includes(selectedSport)) {
         setSelectedSport(availableSports[0]);
       }
     }
-  }, [profileData.sportSpecificNeeds, selectedSport]);
+  }, [profileData?.sportSpecificNeeds, selectedSport]);
   const { user } = useUser();
   const effectiveRole = user?.publicMetadata?.role as string;
   
@@ -415,12 +432,10 @@ export function RecruiterProfile({
       // For each update, handle nested objects specially
       Object.keys(updates).forEach(key => {
         const typedKey = key as keyof RecruiterProfileData;
-        if (typedKey === 'sportSpecificNeeds' && updates[typedKey]) {
-          // Ensure sportSpecificNeeds is properly merged
-          newData.sportSpecificNeeds = {
-            ...profileData.sportSpecificNeeds,
-            ...updates[typedKey]
-          };
+        if (typedKey === 'sportSpecificNeeds' && updates[typedKey] !== undefined) {
+          // For sportSpecificNeeds, we want to replace the entire object, not merge
+          // This allows us to properly handle deletions
+          newData.sportSpecificNeeds = updates[typedKey] as RecruiterProfileData['sportSpecificNeeds'];
         } else {
           // @ts-expect-error - TypeScript can't infer the correct type here but it's safe
           newData[typedKey] = updates[typedKey];
@@ -482,6 +497,28 @@ export function RecruiterProfile({
     }
     
     setEditDialogOpen(section);
+  };
+
+  const handleRemoveSport = (sportToRemove: string) => {
+    // Create a copy of the current sportSpecificNeeds, handling undefined case
+    const updatedSportSpecificNeeds = { ...(profileData.sportSpecificNeeds || {}) };
+    
+    // Remove the sport from sportSpecificNeeds
+    delete updatedSportSpecificNeeds[sportToRemove];
+    
+    // Also remove the sport from secondarySports if it exists there
+    const updatedSecondarySports = profileData.secondarySports?.filter(sport => sport !== sportToRemove) || [];
+    
+    // Update the profile data
+    updateProfileData({
+      sportSpecificNeeds: updatedSportSpecificNeeds,
+      secondarySports: updatedSecondarySports
+    });
+    
+    // If the removed sport was the currently selected sport, switch to the primary sport
+    if (selectedSport === sportToRemove) {
+      setSelectedSport(profileData.sportRecruiting);
+    }
   };
 
   const saveProfile = async () => {
@@ -1137,6 +1174,7 @@ export function RecruiterProfile({
               onSportChange={setSelectedSport}
               isOwnProfile={effectiveIsOwnProfile}
               onEditSection={handleEditSection}
+              onRemoveSport={handleRemoveSport}
             />
 
             {/* Showcase Video */}

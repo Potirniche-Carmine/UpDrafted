@@ -1191,19 +1191,7 @@ export function AthleteProfile({
                         
                         {/* Competition Level Badge - Only show for college athletes */}
                         {safeProfileData.division && (safeProfileData.educationLevel === 'undergraduate' || safeProfileData.educationLevel === 'graduate') && (
-                          <div className={`flex items-center gap-2 px-3 py-2 text-white rounded-lg shadow-md text-sm font-medium ${
-                            safeProfileData.division === 'NCAA Division I' 
-                              ? 'bg-gradient-to-r from-red-600 to-red-700' 
-                              : safeProfileData.division === 'NCAA Division II'
-                              ? 'bg-gradient-to-r from-orange-600 to-orange-700'
-                              : safeProfileData.division === 'NCAA Division III'
-                              ? 'bg-gradient-to-r from-green-600 to-green-700'
-                              : safeProfileData.division === 'Club Sports'
-                              ? 'bg-gradient-to-r from-blue-600 to-blue-700'
-                              : safeProfileData.division === 'NAIA'
-                              ? 'bg-gradient-to-r from-purple-600 to-purple-700'
-                              : 'bg-gradient-to-r from-gray-600 to-gray-700'
-                          }`}>
+                          <div className="flex items-center gap-2 px-3 py-2 text-foreground rounded-lg border border-border text-sm font-medium">
                             <Trophy className="w-4 h-4" />
                             <span>{safeProfileData.division}</span>
                           </div>
@@ -1213,7 +1201,7 @@ export function AthleteProfile({
                         {safeProfileData.conference && 
                          safeProfileData.division && 
                          ['NCAA Division I', 'NCAA Division II', 'NCAA Division III'].includes(safeProfileData.division) && (
-                          <div className="flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-indigo-600 to-indigo-700 text-white rounded-lg shadow-md text-sm font-medium">
+                          <div className="flex items-center gap-2 px-3 py-2 text-foreground rounded-lg border border-border text-sm font-medium">
                             <Trophy className="w-4 h-4" />
                             <span>{safeProfileData.conference}</span>
                           </div>
