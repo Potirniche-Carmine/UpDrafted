@@ -2116,7 +2116,7 @@ export function AthleteEditDialogs({
                         {/* Badges always at the top of the card */}
                         <div className="flex gap-1 mb-2">
                           <Badge className={exp.type === 'Camp' ? 'bg-blue-600 text-white' : 'bg-cyan-700 text-white'}>{exp.type}</Badge>
-                          <Badge className="bg-gradient-to-r from-green-400 to-blue-500 text-white">{exp.sport}</Badge>
+                          <Badge className="bg-muted text-foreground border border-border">{exp.sport}</Badge>
                         </div>
                         {/* Title underneath badges */}
                         <div className="font-semibold text-base mb-1">{exp.name}</div>
