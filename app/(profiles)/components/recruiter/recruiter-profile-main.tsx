@@ -914,9 +914,9 @@ export function RecruiterProfile({
                     </div>
                     {profileData.country && (
                       <div className="flex justify-center mt-1">
-                        <Badge className="bg-gradient-to-r from-blue-600 to-purple-600 text-white text-xs px-3 py-1 shadow-md font-semibold uppercase tracking-wide">
+                        <span className="text-sm text-muted-foreground">
                           {profileData.country}
-                        </Badge>
+                        </span>
                       </div>
                     )}
                   </div>

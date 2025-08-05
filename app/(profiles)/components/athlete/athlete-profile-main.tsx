@@ -306,39 +306,7 @@ const SocialMediaSection = memo(({ socialMedia, isOwnProfile, onEdit }: {
 
 SocialMediaSection.displayName = "SocialMediaSection";
 
-// Demo mock data for camp and club experience - COMMENTED OUT FOR TESTING EMPTY STATE
-// const mockCampExperience = [
-//   {
-//     type: "Camp" as 'Camp',
-//     name: "Nike Elite Football Camp",
-//     city: "Dallas",
-//     stateCountry: "TX",
-//     startDate: "June 2023",
-//     endDate: "June 2023",
-//     sport: "Football",
-//     description: "Participated in advanced skills training and scrimmages with top high school athletes. Selected for All-Star team.",
-//   },
-//   {
-//     type: "Club" as 'Club',
-//     name: "Dallas Select 7v7",
-//     city: "Dallas",
-//     stateCountry: "TX",
-//     startDate: "June 2022",
-//     endDate: "July 2023",
-//     sport: "Flag Football",
-//     description: "Starting Wide Receiver. Helped team reach state semifinals."
-//   },
-//   {
-//     type: "Camp" as 'Camp',
-//     name: "Adidas National Soccer Showcase",
-//     city: "Houston",
-//     stateCountry: "TX",
-//     startDate: "July 2022",
-//     endDate: "July 2022",
-//     sport: "Soccer",
-//     description: "Trained with top coaches and played in showcase matches."
-//   }
-// ];
+
 
 // Update CampExperienceCard prop types and usage
 import { formatDateRange } from '@/lib/date-utils';
@@ -363,17 +331,17 @@ function CampExperienceCard({ experiences, isOwnProfile, onEdit }: {
     return null;
   }
 
-  return (
-    <Card className="bg-gradient-to-r from-blue-50/50 to-cyan-50/50 dark:from-blue-950/20 dark:to-cyan-950/20 mb-4 w-full max-w-xs mx-auto sm:max-w-full sm:mx-0 min-h-[260px]">
+    return (
+    <Card className="mb-4 w-full max-w-xs mx-auto sm:max-w-full sm:mx-0 min-h-[260px]">
       <CardContent className="p-4">
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-blue-100 dark:bg-blue-900 rounded-full">
-              <Trophy className="w-5 h-5 text-blue-600" />
+            <div className="p-2 bg-muted rounded-full">
+              <Trophy className="w-5 h-5 text-muted-foreground" />
             </div>
             <div>
               <h3 className="font-semibold text-lg">Camp and Club Experience</h3>
-              <p className="text-sm text-muted-foreground">
+                  <p className="text-sm text-muted-foreground">
                 {experiences.length === 0 
                   ? "Start building your athletic resume" 
                   : "Showcase your athletic journey outside your main team"
@@ -390,16 +358,16 @@ function CampExperienceCard({ experiences, isOwnProfile, onEdit }: {
         </div>
         <div className="space-y-4">
           {experiences.length === 0 ? (
-            <div className="bg-gradient-to-br from-blue-50/80 to-cyan-50/80 dark:from-blue-950/30 dark:to-cyan-950/30 rounded-lg p-6 text-center border border-blue-100/50 dark:border-blue-900/50">
-              <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/50 rounded-full flex items-center justify-center mx-auto mb-3">
-                <Trophy className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+            <div className="bg-muted/50 rounded-lg p-6 text-center border border-border">
+              <div className="w-12 h-12 bg-muted rounded-full flex items-center justify-center mx-auto mb-3">
+                <Trophy className="w-6 h-6 text-muted-foreground" />
               </div>
               <h4 className="font-semibold text-base mb-2 text-foreground">No Camp or Club Experience Added</h4>
               <p className="text-sm text-muted-foreground mb-4 leading-relaxed">
                 Showcase your athletic journey by adding camps, showcases, or clubs you&apos;ve participated in. This helps coaches see your dedication and versatility beyond your main team.
               </p>
               {isOwnProfile && (
-                <Button size="sm" variant="default" onClick={onEdit} className="bg-blue-600 hover:bg-blue-700 text-white">
+                <Button size="sm" variant="default" onClick={onEdit}>
                   <Plus className="w-4 h-4 mr-2" />
                   Add Your First Experience
                 </Button>
@@ -418,11 +386,11 @@ function CampExperienceCard({ experiences, isOwnProfile, onEdit }: {
                 sport: string;
                 description: string;
               }, idx: number) => (
-                <div key={idx} className="bg-gradient-to-r from-blue-100/60 to-cyan-100/60 dark:from-blue-900/30 dark:to-cyan-900/30 rounded-lg p-4 border border-blue-100 dark:border-blue-900 shadow-sm">
+                <div key={idx} className="bg-muted/30 rounded-lg p-4 border border-border shadow-sm">
                   {/* Badges always at the top of the card */}
                   <div className="flex gap-1 mb-2">
-                    <Badge className={`text-white text-[10px] px-2 py-0.5 ${exp.type === 'Camp' ? 'bg-blue-600' : 'bg-cyan-700'}`}>{exp.type === 'Camp' ? 'Camp' : 'Club'}</Badge>
-                    <Badge className="bg-gradient-to-r from-green-400 to-blue-500 text-white text-[10px] px-2 py-0.5">{exp.sport}</Badge>
+                                                <Badge className={`text-white text-[10px] px-2 py-0.5 ${exp.type === 'Camp' ? 'bg-blue-600' : 'bg-cyan-700'}`}>{exp.type === 'Camp' ? 'Camp' : 'Club'}</Badge>
+                            <Badge className="bg-muted text-foreground text-[10px] px-2 py-0.5 border border-border">{exp.sport}</Badge>
                   </div>
                   <div className="font-semibold text-base mb-1">{exp.name}</div>
                   <div className="flex flex-wrap gap-4 text-sm text-muted-foreground mb-1">
@@ -1201,9 +1169,9 @@ export function AthleteProfile({
                       </div>
                       {safeProfileData.country && (
                         <div className="flex justify-center mt-1">
-                          <Badge className="bg-gradient-to-r from-blue-600 to-purple-600 text-white text-xs px-3 py-1 shadow-md font-semibold uppercase tracking-wide">
+                          <span className="text-sm text-muted-foreground">
                             {safeProfileData.country}
-                          </Badge>
+                          </span>
                         </div>
                       )}
                       <p className="text-center break-words">{safeProfileData.organizationName}</p>
@@ -1211,7 +1179,7 @@ export function AthleteProfile({
                       
                       {/* Education Level and Competition Level Badges */}
                       <div className="flex flex-col items-center gap-2 pt-2">
-                        <div className="flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-lg shadow-md">
+                        <div className="flex items-center gap-2 px-3 py-2 text-foreground rounded-lg border border-border">
                           <GraduationCap className="w-4 h-4" />
                           <span className="text-sm font-medium">
                             {safeProfileData.educationLevel === 'high_school' && 'High School Student'}
