@@ -863,7 +863,7 @@ export function CoachProfile({
             </Card>
 
             {/* Verification Section - Show for own profile or admin viewing */}
-            {(effectiveIsOwnProfile || (effectiveRole && hasPendingVerification !== undefined)) && (
+            {(effectiveIsOwnProfile || (effectiveRole && hasPendingVerification !== undefined)) && !isPreviewMode && (
               <CoachVerificationSection
                 profileData={profileData}
                 isOwnProfile={effectiveIsOwnProfile}

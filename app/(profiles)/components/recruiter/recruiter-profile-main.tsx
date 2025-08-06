@@ -1090,7 +1090,7 @@ export function RecruiterProfile({
             </Card>
 
             {/* Verification Section - Show for own profile or admin viewing */}
-            {(effectiveIsOwnProfile || (effectiveRole && (hasPendingVerification !== undefined || hasRejectedVerification !== undefined))) && (
+            {(effectiveIsOwnProfile || (effectiveRole && (hasPendingVerification !== undefined || hasRejectedVerification !== undefined))) && !isPreviewMode && (
               <RecruiterVerificationSection
                 profileData={profileData}
                 isOwnProfile={effectiveIsOwnProfile}
