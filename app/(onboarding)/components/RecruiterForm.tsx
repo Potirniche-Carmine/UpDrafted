@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
+import { Input, SocialInput } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -647,12 +647,13 @@ export default function RecruiterForm({ data, onInputChange }: RecruiterFormProp
           </div>
           <div className="space-y-3">
             <Label htmlFor="orgInstagramHandle" className="text-sm font-medium">Program Instagram</Label>
-            <Input
+            <SocialInput
               id="orgInstagramHandle"
-              placeholder="@universityfootball"
+              placeholder="universityfootball"
               value={data.orgInstagramHandle}
               onChange={(e) => validateAndUpdateField('orgInstagramHandle', e.target.value)}
               className={`h-11 bg-background ${validationErrors.orgInstagramHandle ? 'border-red-500' : ''}`}
+              maxLength={30}
             />
             {validationErrors.orgInstagramHandle && (
               <p className="text-sm text-red-500">{validationErrors.orgInstagramHandle}</p>
@@ -660,12 +661,13 @@ export default function RecruiterForm({ data, onInputChange }: RecruiterFormProp
           </div>
           <div className="space-y-3">
             <Label htmlFor="orgTwitterHandle" className="text-sm font-medium">Program Twitter</Label>
-            <Input
+            <SocialInput
               id="orgTwitterHandle"
-              placeholder="@UniversityFB"
+              placeholder="UniversityFB"
               value={data.orgTwitterHandle}
               onChange={(e) => validateAndUpdateField('orgTwitterHandle', e.target.value)}
               className={`h-11 bg-background ${validationErrors.orgTwitterHandle ? 'border-red-500' : ''}`}
+              maxLength={15}
             />
             {validationErrors.orgTwitterHandle && (
               <p className="text-sm text-red-500">{validationErrors.orgTwitterHandle}</p>

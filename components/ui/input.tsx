@@ -19,4 +19,30 @@ function Input({ className, type, ...props }: React.ComponentProps<"input">) {
   )
 }
 
-export { Input }
+// SocialInput: Input with @ prefix, user cannot remove or type @
+function SocialInput({ value, onChange, className, ...props }: React.ComponentProps<"input">) {
+  // Always strip @ from value for the input, but display @ as prefix
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    // Remove any @ from the input value
+    const newValue = e.target.value.replace(/@/g, "");
+    if (onChange) {
+      onChange({ ...e, target: { ...e.target, value: newValue } });
+    }
+  };
+
+  return (
+    <div className={cn("relative flex items-center", className)} style={{ background: "none" }}>
+      <span className="absolute left-3 text-muted-foreground pointer-events-none select-none">@</span>
+      <Input
+        {...props}
+        value={typeof value === "string" ? value.replace(/@/g, "") : value}
+        onChange={handleChange}
+        className={cn("pl-7", className)}
+        inputMode="text"
+        autoComplete="off"
+      />
+    </div>
+  );
+}
+
+export { Input, SocialInput };

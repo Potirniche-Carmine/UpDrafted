@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
+import { Input, SocialInput } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -829,13 +829,13 @@ export default function AthleteForm({ data, onInputChange }: AthleteFormProps) {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="space-y-3">
           <Label htmlFor="instagramHandle" className="text-base font-medium">Instagram Handle</Label>
-          <Input
+          <SocialInput
             id="instagramHandle"
-            placeholder="@yourusername"
+            placeholder="yourusername"
             value={data.instagramHandle}
             onChange={(e) => validateAndUpdateField('instagramHandle', e.target.value)}
             className={`h-11 bg-background ${validationErrors.instagramHandle ? 'border-red-500' : ''}`}
-            maxLength={31} // 30 chars + @ symbol
+            maxLength={30} // 30 chars (username only)
           />
           {validationErrors.instagramHandle && (
             <p className="text-sm text-red-500">{validationErrors.instagramHandle}</p>
@@ -843,13 +843,13 @@ export default function AthleteForm({ data, onInputChange }: AthleteFormProps) {
         </div>
         <div className="space-y-3">
           <Label htmlFor="twitterHandle" className="text-base font-medium">Twitter Handle</Label>
-          <Input
+          <SocialInput
             id="twitterHandle"
-            placeholder="@yourusername"
+            placeholder="yourusername"
             value={data.twitterHandle}
             onChange={(e) => validateAndUpdateField('twitterHandle', e.target.value)}
             className={`h-11 bg-background ${validationErrors.twitterHandle ? 'border-red-500' : ''}`}
-            maxLength={16} // 15 chars + @ symbol
+            maxLength={15} // 15 chars (username only)
           />
           {validationErrors.twitterHandle && (
             <p className="text-sm text-red-500">{validationErrors.twitterHandle}</p>
