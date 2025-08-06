@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
+import { Input, SocialInput } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -423,13 +423,13 @@ export default function CoachRecruiterForm({ data, onInputChange }: CoachRecruit
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="space-y-3">
           <Label htmlFor="orgInstagramHandle" className="text-base font-medium">Program Instagram</Label>
-          <Input
+          <SocialInput
             id="orgInstagramHandle"
-            placeholder="@programname"
+            placeholder="programname"
             value={data.orgInstagramHandle}
             onChange={(e) => validateAndUpdateField('orgInstagramHandle', e.target.value)}
             className={`h-11 bg-background ${validationErrors.orgInstagramHandle ? 'border-red-500' : ''}`}
-            maxLength={31} // 30 chars + @ symbol
+            maxLength={30}
           />
           {validationErrors.orgInstagramHandle && (
             <p className="text-sm text-red-500">{validationErrors.orgInstagramHandle}</p>
@@ -437,13 +437,13 @@ export default function CoachRecruiterForm({ data, onInputChange }: CoachRecruit
         </div>
         <div className="space-y-3">
           <Label htmlFor="orgTwitterHandle" className="text-base font-medium">Program Twitter</Label>
-          <Input
+          <SocialInput
             id="orgTwitterHandle"
-            placeholder="@programname"
+            placeholder="programname"
             value={data.orgTwitterHandle}
             onChange={(e) => validateAndUpdateField('orgTwitterHandle', e.target.value)}
             className={`h-11 bg-background ${validationErrors.orgTwitterHandle ? 'border-red-500' : ''}`}
-            maxLength={16} // 15 chars + @ symbol
+            maxLength={15}
           />
           {validationErrors.orgTwitterHandle && (
             <p className="text-sm text-red-500">{validationErrors.orgTwitterHandle}</p>
