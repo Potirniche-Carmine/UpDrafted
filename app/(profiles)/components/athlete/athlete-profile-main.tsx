@@ -1337,7 +1337,7 @@ export function AthleteProfile({
             />
 
             {/* Verification Section */}
-            {effectiveIsOwnProfile && (
+            {effectiveIsOwnProfile && !isPreviewMode && (
               <VerificationSection
                 profileData={data}
                 displayData={safeProfileData}
