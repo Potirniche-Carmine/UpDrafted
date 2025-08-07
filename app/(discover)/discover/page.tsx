@@ -314,34 +314,83 @@ function SearchPageContent() {
       };
       const token = await windowWithClerk.Clerk?.session?.getToken();
 
-      const params = new URLSearchParams({
+      // Prepare the search parameters
+      const searchParams = {
         page: pageNum.toString(),
-        pageSize: '10' // Show 10 profiles per load
+        pageSize: '10', // Show 10 profiles per load
+        sports: selectedSports.map(sport => sanitizeText(sport.value)),
+        divisions: selectedDivisions.map(div => sanitizeText(div.value)),
+        states: selectedStates.map(state => sanitizeText(state.value))
+      };
+
+      // Calculate approximate URL length if we were to use GET
+      const params = new URLSearchParams({
+        page: searchParams.page,
+        pageSize: searchParams.pageSize
       });
+      
+      searchParams.sports.forEach(sport => params.append('sports', sport));
+      searchParams.divisions.forEach(div => params.append('divisions', div));
+      searchParams.states.forEach(state => params.append('states', state));
+      
+      const baseUrl = '/api/discover';
+      const estimatedUrlLength = baseUrl.length + params.toString().length + 1; // +1 for '?'
+      
+      // Use POST if URL would be too long (> 3000 chars to be safe)
+      const usePost = estimatedUrlLength > 3000;
 
-      // Don't filter by role in API call - we'll filter client-side
-      // This allows users to switch between tabs without losing results
+      let response: Response;
 
-      // Add filters
-      selectedSports.forEach(sport => 
-        params.append('sports', sanitizeText(sport.value))
-      );
-      selectedDivisions.forEach(div => 
-        params.append('divisions', sanitizeText(div.value))
-      );
-      selectedStates.forEach(state => 
-        params.append('states', sanitizeText(state.value))
-      );
-
-      const response = await fetch(`/api/discover?${params.toString()}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      });
+      if (usePost) {
+        // Use POST request for large filter sets
+        response = await fetch('/api/discover', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            page: pageNum,
+            pageSize: 10,
+            sports: selectedSports.map(sport => sanitizeText(sport.value)),
+            divisions: selectedDivisions.map(div => sanitizeText(div.value)),
+            states: selectedStates.map(state => sanitizeText(state.value))
+          })
+        });
+      } else {
+        // Use GET request for smaller filter sets
+        response = await fetch(`${baseUrl}?${params.toString()}`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+        });
+      }
 
       if (!response.ok) {
-        throw new Error('Failed to load users');
+        // Check if it's a URL too long error and retry with POST
+        if (response.status === 414 && !usePost) {
+          response = await fetch('/api/discover', {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              page: pageNum,
+              pageSize: 10,
+              sports: selectedSports.map(sport => sanitizeText(sport.value)),
+              divisions: selectedDivisions.map(div => sanitizeText(div.value)),
+              states: selectedStates.map(state => sanitizeText(state.value))
+            })
+          });
+          
+          if (!response.ok) {
+            throw new Error('Failed to load users');
+          }
+        } else {
+          throw new Error('Failed to load users');
+        }
       }
 
       const data: DiscoverResponse = await response.json();
