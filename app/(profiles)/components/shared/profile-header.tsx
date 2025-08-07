@@ -74,7 +74,7 @@ export function ProfileHeader({
   const [showWithdrawDialog, setShowWithdrawDialog] = useState(false);
 
   const handleBackClick = () => {
-    router.push('/dashboard');
+    router.push('/discover');
   };
 
   const handleReportProfile = () => {
@@ -222,7 +222,7 @@ export function ProfileHeader({
           <div className="hidden sm:flex items-center justify-between">
             <Button variant="ghost" size="sm" onClick={handleBackClick}>
               <ChevronLeft className="w-4 h-4 mr-1" />
-              Back to Dashboard
+              Back to Discover
             </Button>
             
             {/* Right side actions */}
@@ -316,7 +316,7 @@ export function ProfileHeader({
             <div className="flex items-center justify-between">
               <Button variant="ghost" size="sm" onClick={handleBackClick}>
                 <ChevronLeft className="w-4 h-4 mr-1" />
-                Back to Search
+                Back to Discover
               </Button>
               
               {/* Preview/Edit Profile toggle for own profile without unsaved changes on mobile */}

@@ -79,8 +79,10 @@ export async function GET(request: NextRequest) {
     // 3. Users they've sent requests to
     // 4. Athletes can't discover other athletes
     // 5. Demo profiles should never appear in discover
+    // 6. Admin profiles should never appear in discover
     const baseExcludeConditions = [
       ne(users.id, userId), // Exclude self
+      ne(users.role, 'admin'), // Exclude admin profiles
       not(exists(
         db.select()
           .from(connections)
@@ -97,25 +99,30 @@ export async function GET(request: NextRequest) {
       ))
     ];
 
-    // Add role-based filtering
+    // Add role-based filtering - only include users with the requested role's profile
     if (requestedRole === 'athlete') {
       baseExcludeConditions.push(
-        not(isNull(athleteProfiles.userId))
+        isNull(athleteProfiles.userId)
       );
     } else if (requestedRole === 'coach') {
       baseExcludeConditions.push(
-        not(isNull(coachProfiles.userId))
+        isNull(coachProfiles.userId)
       );
     } else if (requestedRole === 'recruiter') {
       baseExcludeConditions.push(
-        not(isNull(recruitingProfiles.userId))
+        isNull(recruitingProfiles.userId)
       );
     }
 
-    // If user is an athlete, they can't discover other athletes
-    if (role === 'athlete') {
-      baseExcludeConditions.push(
-        isNull(athleteProfiles.userId)
+    // Role-based discovery restrictions:
+    // - Coaches and recruiters can only discover athletes
+    // - Athletes can discover coaches, recruiters, and other athletes
+    const roleFilterConditions = [];
+    if (role === 'coach' || role === 'recruiter') {
+      // Only show athletes to coaches and recruiters
+      // Add positive condition to show only athletes
+      roleFilterConditions.push(
+        eq(users.role, 'athlete')
       );
     }
 
@@ -229,7 +236,7 @@ export async function GET(request: NextRequest) {
           eq(recruitingProfiles.isDemoProfile, false)
         )
       ))
-      .where(and(...baseExcludeConditions, ...searchConditions, ...filterConditions))
+      .where(and(...baseExcludeConditions, ...searchConditions, ...filterConditions, ...roleFilterConditions))
       .limit(pageSize)
       .offset(offset);
 
@@ -243,12 +250,16 @@ export async function GET(request: NextRequest) {
         profileImage: string | null;
         city: string | null;
         state: string | null;
+        country?: string | null;
         isVerified: boolean | null;
         sport: string | null;
         title?: string | null;
         division?: string | null;
         educationLevel?: string | null;
         graduationYear?: number | null;
+        height?: string | null;
+        weight?: string | null;
+        positions?: string[] | null;
       } = {
         fullName: null,
         organizationName: null,
@@ -267,10 +278,14 @@ export async function GET(request: NextRequest) {
           profileImage: user.athleteProfile.profileImageR3Key,
           city: user.athleteProfile.city,
           state: user.athleteProfile.state,
+          country: user.athleteProfile.country,
           isVerified: user.athleteProfile.isVerified || false,
           sport: user.athleteProfile.sport,
           educationLevel: user.athleteProfile.educationLevel,
           graduationYear: user.athleteProfile.graduationYear,
+          height: user.athleteProfile.height,
+          weight: user.athleteProfile.weight,
+          positions: user.athleteProfile.positions,
         };
       } else if (userRole === 'coach' && user.coachProfile) {
         userProfileData = {
@@ -279,6 +294,7 @@ export async function GET(request: NextRequest) {
           profileImage: user.coachProfile.profileImageR3Key,
           city: user.coachProfile.city,
           state: user.coachProfile.state,
+          country: user.coachProfile.country,
           isVerified: user.coachProfile.isVerified || false,
           sport: user.coachProfile.sportCoaching,
           title: user.coachProfile.title,
@@ -291,6 +307,7 @@ export async function GET(request: NextRequest) {
           profileImage: user.recruitingProfile.profileImageR3Key,
           city: user.recruitingProfile.city,
           state: user.recruitingProfile.state,
+          country: user.recruitingProfile.country,
           isVerified: user.recruitingProfile.isVerified || false,
           sport: user.recruitingProfile.sportRecruiting,
           title: user.recruitingProfile.title,
@@ -306,6 +323,7 @@ export async function GET(request: NextRequest) {
         profileImage: userProfileData.profileImage || null,
         city: userProfileData.city ? sanitizeText(userProfileData.city) : null,
         state: userProfileData.state ? sanitizeText(userProfileData.state) : null,
+        country: userProfileData.country ? sanitizeText(userProfileData.country) : null,
         isVerified: userProfileData.isVerified || false,
         role: userRole,
         sport: userProfileData.sport ? sanitizeText(userProfileData.sport) : null,
@@ -313,6 +331,9 @@ export async function GET(request: NextRequest) {
         division: userProfileData.division ? sanitizeText(userProfileData.division) : null,
         educationLevel: userProfileData.educationLevel ? sanitizeText(userProfileData.educationLevel) : null,
         graduationYear: userProfileData.graduationYear,
+        height: userProfileData.height ? sanitizeText(userProfileData.height) : null,
+        weight: userProfileData.weight ? sanitizeText(userProfileData.weight) : null,
+        positions: userProfileData.positions || null,
         hasPendingRequest: user.hasPendingRequest,
       };
     });
