@@ -178,7 +178,7 @@ const UserCard: React.FC<UserCardProps> = ({ connection }) => {
     }
     
     // Construct the full R2 URL using environment variable or fallback to known R2 domain
-    const baseUrl = process.env.NEXT_PUBLIC_R2_PUBLIC_URL || 'bucket.updrafted.us';
+    const baseUrl = process.env.NEXT_PUBLIC_R2_PUBLIC_URL || 'https://bucket.updrafted.us';
     return `${baseUrl}/${profileImage}`;
   };
 

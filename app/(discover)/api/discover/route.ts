@@ -102,15 +102,15 @@ export async function GET(request: NextRequest) {
     // Add role-based filtering - only include users with the requested role's profile
     if (requestedRole === 'athlete') {
       baseExcludeConditions.push(
-        isNull(athleteProfiles.userId)
+        not(isNull(athleteProfiles.userId))
       );
     } else if (requestedRole === 'coach') {
       baseExcludeConditions.push(
-        isNull(coachProfiles.userId)
+        not(isNull(coachProfiles.userId))
       );
     } else if (requestedRole === 'recruiter') {
       baseExcludeConditions.push(
-        isNull(recruitingProfiles.userId)
+        not(isNull(recruitingProfiles.userId))
       );
     }
 

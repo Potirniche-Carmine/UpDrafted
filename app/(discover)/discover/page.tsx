@@ -375,16 +375,38 @@ function SearchPageContent() {
       selectedSports,
       selectedDivisions, 
       selectedStates,
-      allUsers,
+      allUsers: allUsers.slice(0, 50), // Limit cached users to prevent storage overflow
       activeTab,
       page,
       hasSearched,
       timestamp: Date.now()
     };
     try {
-      localStorage.setItem(CACHE_KEY, JSON.stringify(searchState));
+      const stateString = JSON.stringify(searchState);
+      // Check if the data is too large for localStorage (typical limit is 5-10MB)
+      const sizeMB = new Blob([stateString]).size / (1024 * 1024);
+      if (sizeMB > 2) { // Limit to 2MB to be safe
+        console.warn('Search state too large for localStorage, skipping cache');
+        return;
+      }
+      localStorage.setItem(CACHE_KEY, stateString);
     } catch (error) {
       console.warn('Failed to save search state to cache:', error);
+      // Try to clear old cache and retry with reduced data
+      try {
+        localStorage.removeItem(CACHE_KEY);
+        const reducedState = {
+          ...searchState,
+          allUsers: allUsers.slice(0, 20) // Further reduce cached users
+        };
+        const reducedStateString = JSON.stringify(reducedState);
+        const reducedSizeMB = new Blob([reducedStateString]).size / (1024 * 1024);
+        if (reducedSizeMB <= 1) {
+          localStorage.setItem(CACHE_KEY, reducedStateString);
+        }
+      } catch (retryError) {
+        console.warn('Failed to save reduced search state to cache:', retryError);
+      }
     }
   }, [selectedSports, selectedDivisions, selectedStates, allUsers, activeTab, page, hasSearched]);
 
