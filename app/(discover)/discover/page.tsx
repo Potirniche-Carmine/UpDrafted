@@ -475,10 +475,18 @@ function SearchPageContent() {
     if (!hasSearched || allUsers.length === 0) return [];
     
     const tabRole = getTabRole(activeTab);
-    if (!tabRole) return allUsers; // 'all' tab shows all users
+    if (!tabRole) {
+      // 'all' tab logic depends on user role
+      if (effectiveRole === 'athlete') {
+        // Athletes see only coaches and recruiters in 'all' tab
+        return allUsers.filter(user => user.role === 'coach' || user.role === 'recruiter');
+      }
+      // For other roles, show all users
+      return allUsers;
+    }
     
     return allUsers.filter(user => user.role === tabRole);
-  }, [allUsers, activeTab, hasSearched]);
+  }, [allUsers, activeTab, hasSearched, effectiveRole]);
 
   // Discover/Search function
   const handleDiscover = () => {
@@ -621,13 +629,16 @@ function SearchPageContent() {
 
   // User card component
   const renderUserCard = (user: DiscoverUser) => (
-    <Card key={user.id} className="group hover:shadow-2xl transition-all duration-300 border border-border shadow-xl bg-card hover:bg-card/90 hover:scale-[1.01] hover:border-[#01ae79]/50">
+    <Card key={user.id} className="group hover:shadow-2xl transition-all duration-300 border border-border shadow-xl bg-card hover:bg-card/90 hover:border-[#01ae79]/50">
       <CardContent className="p-6">
         <div className="space-y-5">
           {/* Header with Avatar, Name, and Badge */}
           <div className="flex items-start gap-4">
-            {/* Avatar */}
-            <div className="relative flex-shrink-0">
+            {/* Avatar - Clickable */}
+            <div 
+              className="relative flex-shrink-0 cursor-pointer hover:opacity-80 transition-opacity"
+              onClick={() => handleViewProfile(user.id)}
+            >
               <Avatar className="h-16 w-16 sm:h-20 sm:w-20 ring-3 ring-[#01ae79]/30 border-2 border-border">
                 <AvatarImage 
                   src={getProfileImageUrl(user.profileImage) || undefined} 
@@ -649,7 +660,10 @@ function SearchPageContent() {
             <div className="flex-1 min-w-0 space-y-2">
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0 flex-1 space-y-1">
-                  <h3 className="font-bold text-base sm:text-lg lg:text-xl text-card-foreground leading-tight break-words line-clamp-2">
+                  <h3 
+                    className="font-bold text-base sm:text-lg lg:text-xl text-card-foreground leading-tight break-words line-clamp-2 cursor-pointer hover:text-[#01ae79] transition-colors"
+                    onClick={() => handleViewProfile(user.id)}
+                  >
                     {user.fullName || 'Unknown User'}
                   </h3>
                   {user.organizationName && (
@@ -709,7 +723,10 @@ function SearchPageContent() {
               <div className="flex items-center text-muted-foreground">
                 <User className="h-4 w-4 mr-2 text-[#01ae79] flex-shrink-0" />
                 <span className="font-medium">
-                  {[user.height, user.weight].filter(Boolean).join(' / ')}
+                  {[
+                    user.height, 
+                    user.weight ? `${user.weight} lbs` : null
+                  ].filter(Boolean).join(' / ')}
                 </span>
               </div>
             )}
