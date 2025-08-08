@@ -71,7 +71,7 @@ async function parseSearchParams(request: NextRequest) {
       if (body.pageSize !== undefined && sanitizeNumber(body.pageSize, 1, 50) === null) {
         throw new RequestValidationError('Invalid pageSize: must be a number between 1 and 50');
       }
-      if (body.role !== undefined && body.role !== null && !['athlete', 'coach', 'recruiter'].includes(String(body.role))) {
+      if (body.role !== undefined && body.role !== null && !['athlete', 'coach', 'recruiter'].includes(sanitizeText(String(body.role)))) {
         throw new RequestValidationError('Invalid role specified');
       }
 
@@ -117,7 +117,7 @@ async function parseSearchParams(request: NextRequest) {
         query: sanitizeText(body.query || ''),
         page: Math.min(Math.max(sanitizeNumber(body.page, 1, 100) || 1, 1), 100),
         pageSize: Math.min(Math.max(sanitizeNumber(body.pageSize, 1, 50) || 10, 1), 50),
-        requestedRole: body.role as 'athlete' | 'coach' | 'recruiter' | null,
+        requestedRole: body.role ? sanitizeText(String(body.role)) as 'athlete' | 'coach' | 'recruiter' : null,
         sports: sportsArray.map((s: string) => sanitizeText(s)).filter(Boolean),
         divisions: divisionsArray.map((d: string) => sanitizeText(d)).filter(Boolean),
         states: statesArray.map((s: string) => sanitizeText(s)).filter(Boolean)

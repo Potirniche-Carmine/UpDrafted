@@ -359,13 +359,9 @@ function SearchPageContent() {
       // Helper to produce better error messages
       const ensureOk = async (res: Response) => {
         if (res.ok) return;
-        try {
-          const data = await res.json();
-          const message = data?.error || data?.message || 'Failed to load users';
-          throw new Error(message);
-        } catch {
-          throw new Error('Failed to load users');
-        }
+        const data = await res.json().catch(() => ({}));
+        const message = data?.error || data?.message || 'Failed to load users';
+        throw new Error(message);
       };
 
       if (usePost) {
@@ -382,7 +378,9 @@ function SearchPageContent() {
         // Check if it's a URL too long error and retry with POST
         if (response.status === 414 && !usePost) {
           response = await requestWithPost();
-          await ensureOk(response);
+          if (!response.ok) {
+            await ensureOk(response);
+          }
         } else {
           await ensureOk(response);
         }
