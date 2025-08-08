@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
+import { Input, SocialInput } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -14,9 +14,9 @@ import { cn } from "@/lib/utils";
 import { 
   DIVISIONS,
   US_STATES, 
-  GRADUATION_YEARS, 
   getPositionsForSport, 
-  getSportsList 
+  getSportsList,
+  getStudentClassificationOptions
 } from "@/lib/sports-data";
 import { FormValidator, FIELD_LIMITS } from "@/app/(onboarding)/lib/form-validation";
 import { OnboardingData } from "../lib/types";
@@ -188,18 +188,20 @@ function CountryCombobox({
 export default function CoachForm({ data, onInputChange }: CoachFormProps) {
   const [validationErrors, setValidationErrors] = useState<{[key: string]: string}>({});
 
-  const toggleRecruitingYear = (year: number) => {
-    const years = data.recruitingGraduationYears.includes(year)
-      ? data.recruitingGraduationYears.filter(y => y !== year)
-      : [...data.recruitingGraduationYears, year];
-    onInputChange('recruitingGraduationYears', years);
-  };
+
 
   const toggleRecruitingPosition = (position: string) => {
     const positions = data.recruitingPositions.includes(position)
       ? data.recruitingPositions.filter(p => p !== position)
       : [...data.recruitingPositions, position];
     onInputChange('recruitingPositions', positions);
+  };
+
+  const toggleStudentClassification = (classification: string) => {
+    const classifications = data.recruitingStudentClassifications.includes(classification)
+      ? data.recruitingStudentClassifications.filter(c => c !== classification)
+      : [...data.recruitingStudentClassifications, classification];
+    onInputChange('recruitingStudentClassifications', classifications);
   };
 
   // Validate field and update errors
@@ -559,12 +561,13 @@ export default function CoachForm({ data, onInputChange }: CoachFormProps) {
           </div>
           <div className="space-y-3">
             <Label htmlFor="orgInstagramHandle" className="text-sm font-medium">Program Instagram</Label>
-            <Input
+            <SocialInput
               id="orgInstagramHandle"
-              placeholder="@universityfootball"
+              placeholder="universityfootball"
               value={data.orgInstagramHandle}
               onChange={(e) => validateAndUpdateField('orgInstagramHandle', e.target.value)}
               className={`h-11 bg-background ${validationErrors.orgInstagramHandle ? 'border-red-500' : ''}`}
+              maxLength={30}
             />
             {validationErrors.orgInstagramHandle && (
               <p className="text-sm text-red-500">{validationErrors.orgInstagramHandle}</p>
@@ -572,12 +575,13 @@ export default function CoachForm({ data, onInputChange }: CoachFormProps) {
           </div>
           <div className="space-y-3">
             <Label htmlFor="orgTwitterHandle" className="text-sm font-medium">Program Twitter</Label>
-            <Input
+            <SocialInput
               id="orgTwitterHandle"
-              placeholder="@UniversityFB"
+              placeholder="UniversityFB"
               value={data.orgTwitterHandle}
               onChange={(e) => validateAndUpdateField('orgTwitterHandle', e.target.value)}
               className={`h-11 bg-background ${validationErrors.orgTwitterHandle ? 'border-red-500' : ''}`}
+              maxLength={15}
             />
             {validationErrors.orgTwitterHandle && (
               <p className="text-sm text-red-500">{validationErrors.orgTwitterHandle}</p>
@@ -613,19 +617,24 @@ export default function CoachForm({ data, onInputChange }: CoachFormProps) {
             </p>
           </div>
 
-          {/* Graduation Years */}
+
+
+          {/* Student Classifications */}
           <div className="space-y-3">
-            <Label className="text-base font-medium">Graduation Years Currently Recruiting *</Label>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-              {GRADUATION_YEARS.map(year => (
-                <div key={year} className="flex items-center space-x-2">
+            <Label className="text-base font-medium">Student Classifications Currently Recruiting *</Label>
+            <p className="text-sm text-muted-foreground">
+              Select the types of students you are actively recruiting.
+            </p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {getStudentClassificationOptions().map(({ value, label }) => (
+                <div key={value} className="flex items-center space-x-2">
                   <Checkbox
-                    id={`recruiting-year-${year}`}
-                    checked={data.recruitingGraduationYears.includes(year)}
-                    onCheckedChange={() => toggleRecruitingYear(year)}
+                    id={`recruiting-classification-${value}`}
+                    checked={data.recruitingStudentClassifications.includes(value)}
+                    onCheckedChange={() => toggleStudentClassification(value)}
                   />
-                  <Label htmlFor={`recruiting-year-${year}`} className="text-sm cursor-pointer">
-                    {year}
+                  <Label htmlFor={`recruiting-classification-${value}`} className="text-sm cursor-pointer">
+                    {label}
                   </Label>
                 </div>
               ))}

@@ -8,9 +8,10 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
+
 import { Badge } from "@/components/ui/badge";
 import { Save, X } from "lucide-react";
-import { getSportsList, US_STATES, GRADUATION_YEARS, DIVISIONS, getPositionsForSport } from '@/lib/sports-data';
+import { getSportsList, US_STATES, DIVISIONS, getPositionsForSport, getStudentClassificationOptions } from '@/lib/sports-data';
 import { CoachProfileData } from './coach-profile-types';
 import { sanitizeProfileData } from '@/utils/sanitization';
 import { FileUpload } from '@/components/ui/file-upload';
@@ -128,7 +129,7 @@ export function CoachEditDialogs({
         break;
       case 'recruiting-needs':
         setEditData({
-          graduationYears: profileData.recruitingNeeds?.graduationYears || [],
+          studentClassifications: profileData.recruitingNeeds?.studentClassifications || [],
           positions: profileData.recruitingNeeds?.positions || [],
           scholarshipsAvailable: profileData.recruitingNeeds?.scholarshipsAvailable ?? '',
           recruitingPhilosophy: profileData.recruitingNeeds?.recruitingPhilosophy || ''
@@ -230,13 +231,7 @@ export function CoachEditDialogs({
     }
   };
 
-  const toggleGraduationYear = (year: number) => {
-    const years = editData.graduationYears || [];
-    const updatedYears = years.includes(year)
-      ? years.filter((y: number) => y !== year)
-      : [...years, year].sort();
-    handleFieldChange('graduationYears', updatedYears);
-  };
+
 
   const addPosition = (position: string) => {
     const positions = editData.positions || [];
@@ -248,6 +243,14 @@ export function CoachEditDialogs({
   const removePosition = (position: string) => {
     const positions = editData.positions || [];
     handleFieldChange('positions', positions.filter((p: string) => p !== position));
+  };
+
+  const toggleStudentClassification = (classification: string) => {
+    const classifications = editData.studentClassifications || [];
+    const newClassifications = classifications.includes(classification)
+      ? classifications.filter((c: string) => c !== classification)
+      : [...classifications, classification];
+    handleFieldChange('studentClassifications', newClassifications);
   };
 
   const handleImageUpload = async (file: File, imageType: 'profile' | 'organization') => {
@@ -397,6 +400,17 @@ export function CoachEditDialogs({
     await handleImageUpload(file, imageType);
   };
 
+  // Helper function to check if recruiting needs form is valid
+  const isRecruitingNeedsFormValid = () => {
+    if (dialogType !== 'recruiting-needs') return true;
+    
+    // Check required fields based on schema: studentClassifications and positions are required (.notNull())
+    const hasStudentClassifications = editData.studentClassifications && editData.studentClassifications.length > 0;
+    const hasPositions = editData.positions && editData.positions.length > 0;
+    
+    return hasStudentClassifications && hasPositions;
+  };
+
   const handleSave = () => {
     // Image uploads handle their own saving
     if (dialogType === 'profile-image' || dialogType === 'organization-logo') {
@@ -413,6 +427,20 @@ export function CoachEditDialogs({
           errors[field] = error;
         }
       });
+
+      // Additional validation for recruiting needs
+      if (dialogType === 'recruiting-needs') {
+        if (!editData.studentClassifications || editData.studentClassifications.length === 0) {
+          errors.studentClassifications = 'At least one student classification is required';
+        }
+        if (!editData.positions || editData.positions.length === 0) {
+          errors.positions = 'At least one position is required';
+        }
+        // Validate scholarshipsAvailable is a valid number if provided
+        if (editData.scholarshipsAvailable !== '' && editData.scholarshipsAvailable !== undefined && isNaN(Number(editData.scholarshipsAvailable))) {
+          errors.scholarshipsAvailable = 'Must be a valid number';
+        }
+      }
 
       if (Object.keys(errors).length > 0) {
         setValidationErrors(errors);
@@ -453,12 +481,13 @@ export function CoachEditDialogs({
           };
           break;
         case 'recruiting-needs':
+          const scholarshipsValue = editData.scholarshipsAvailable && editData.scholarshipsAvailable !== '' ? Number(editData.scholarshipsAvailable) : undefined;
           updates = {
             recruitingNeeds: {
-              ...profileData.recruitingNeeds,
-              graduationYears: editData.graduationYears,
+              ...(profileData.recruitingNeeds || {}),
+              studentClassifications: editData.studentClassifications,
               positions: editData.positions,
-              scholarshipsAvailable: editData.scholarshipsAvailable ? Number(editData.scholarshipsAvailable) : undefined,
+              scholarshipsAvailable: scholarshipsValue,
               recruitingPhilosophy: editData.recruitingPhilosophy
             }
           };
@@ -490,6 +519,7 @@ export function CoachEditDialogs({
       const sanitizedUpdates = sanitizeProfileData(updates) as Partial<CoachProfileData>;
 
       onSave(sanitizedUpdates);
+      onClose();
     } catch (error) {
       console.error('Error saving profile data:', error);
       setValidationErrors({ general: 'An error occurred while saving. Please try again.' });
@@ -673,23 +703,35 @@ export function CoachEditDialogs({
         return (
           <div className="space-y-6">
             <div className="space-y-3">
-              <Label>Recruiting Graduation Years</Label>
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2">
-                {GRADUATION_YEARS.map(year => (
-                  <div key={year} className="flex items-center space-x-2">
+              <Label className={`${(!editData.studentClassifications || editData.studentClassifications.length === 0) && validationErrors.studentClassifications ? 'text-red-600' : ''}`}>
+                Student Classifications Currently Recruiting *
+              </Label>
+              <p className="text-sm text-muted-foreground">
+                Select the types of students you are actively recruiting.
+              </p>
+              <div className={`grid grid-cols-1 md:grid-cols-2 gap-3 ${(!editData.studentClassifications || editData.studentClassifications.length === 0) && validationErrors.studentClassifications ? 'border border-red-300 rounded-md p-2' : ''}`}>
+                {getStudentClassificationOptions().map(({ value, label }) => (
+                  <div key={value} className="flex items-center space-x-2">
                     <Checkbox
-                      id={`year-${year}`}
-                      checked={(editData.graduationYears || []).includes(year)}
-                      onCheckedChange={() => toggleGraduationYear(year)}
+                      id={`classification-${value}`}
+                      checked={(editData.studentClassifications || []).includes(value)}
+                      onCheckedChange={() => toggleStudentClassification(value)}
                     />
-                    <Label htmlFor={`year-${year}`} className="text-sm">{year}</Label>
+                    <Label htmlFor={`classification-${value}`} className="text-sm cursor-pointer">
+                      {label}
+                    </Label>
                   </div>
                 ))}
               </div>
+              {validationErrors.studentClassifications && (
+                <p className="text-red-500 text-sm">{validationErrors.studentClassifications}</p>
+              )}
             </div>
 
             <div className="space-y-3">
-              <Label>Positions Looking For</Label>
+              <Label className={`${(!editData.positions || editData.positions.length === 0) && validationErrors.positions ? 'text-red-600' : ''}`}>
+                Positions Looking For *
+              </Label>
               <div className="space-y-2">
                 <div className="flex flex-wrap gap-2">
                   {(editData.positions || []).map((position: string) => (
@@ -699,7 +741,7 @@ export function CoachEditDialogs({
                   ))}
                 </div>
                 <Select onValueChange={(value) => addPosition(value)}>
-                  <SelectTrigger>
+                  <SelectTrigger className={`${(!editData.positions || editData.positions.length === 0) && validationErrors.positions ? 'border-red-300' : ''}`}>
                     <SelectValue placeholder="Select a position to add" />
                   </SelectTrigger>
                   <SelectContent className="z-[70]">
@@ -712,6 +754,9 @@ export function CoachEditDialogs({
                 </Select>
                 <p className="text-xs text-muted-foreground">Select positions from the dropdown. Click on badges to remove.</p>
               </div>
+              {validationErrors.positions && (
+                <p className="text-red-500 text-sm">{validationErrors.positions}</p>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -948,7 +993,10 @@ export function CoachEditDialogs({
             Cancel
           </Button>
           {dialogType !== 'profile-image' && dialogType !== 'organization-logo' && (
-            <Button onClick={handleSave} disabled={isUploading}>
+            <Button 
+              onClick={handleSave} 
+              disabled={isUploading || !isRecruitingNeedsFormValid()}
+            >
               <Save className="w-4 h-4 mr-2" />
               Save Changes
             </Button>

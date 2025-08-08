@@ -4,6 +4,7 @@ import { connectionOperations, userOperations, messageOperations, notificationOp
 import { sanitizeText } from '@/utils/sanitization';
 import { withRateLimit } from '@/utils/security';
 import { getCachedWithType, setCachedWithType, invalidateCachePattern, createErrorResponse, createSuccessResponse } from '@/utils/security';
+import { validateClerkHeaders, logSecurityValidation } from '@/utils/clerk-security';
 
 export const runtime = 'nodejs';
 
@@ -45,6 +46,12 @@ interface ConnectionsResponse {
 // Create a new connection request
 export async function POST(request: NextRequest) {
   try {
+    const validation = validateClerkHeaders(request);
+    if (!validation.isValid) {
+      logSecurityValidation(validation, '/api/connections');
+      return createErrorResponse('Invalid security headers', 401);
+    }
+
     // Verify authentication
     const authResult = await requireAnyRole();
     if (authResult instanceof NextResponse) return authResult;
@@ -95,12 +102,12 @@ export async function POST(request: NextRequest) {
     // TRANSFER PORTAL VERIFICATION: Check if target athlete requires transfer portal verification
     if (targetUser.role === 'athlete' && targetUser.athleteProfile) {
       const educationLevel = targetUser.athleteProfile.educationLevel;
-      const competitionLevel = targetUser.athleteProfile.competitionLevel;
+      const division = targetUser.athleteProfile.division;
       
       // Only D1, D2, and D3 college athletes need transfer portal verification
       if ((educationLevel === 'undergraduate' || educationLevel === 'graduate') && 
-          competitionLevel && 
-          ['division_1', 'division_2', 'division_3'].includes(competitionLevel)) {
+          division && 
+          ['division_1', 'division_2', 'division_3'].includes(division)) {
         if (!targetUser.athleteProfile.isOnTransferPortal) {
           return createErrorResponse(
             'This athlete must be verified for NCAA Transfer Portal before connections can be made. They need to complete transfer portal verification first.',
@@ -165,6 +172,12 @@ export async function POST(request: NextRequest) {
 // Get user's connections
 export async function GET(request: NextRequest) {
   try {
+    const validation = validateClerkHeaders(request);
+    if (!validation.isValid) {
+      logSecurityValidation(validation, '/api/connections');
+      return createErrorResponse('Invalid security headers', 401);
+    }
+
     // Verify authentication
     const authResult = await requireAnyRole();
     if (authResult instanceof NextResponse) return authResult;
@@ -277,6 +290,12 @@ export async function GET(request: NextRequest) {
 // Delete/reject a connection
 export async function DELETE(request: NextRequest) {
   try {
+    const validation = validateClerkHeaders(request);
+    if (!validation.isValid) {
+      logSecurityValidation(validation, '/api/connections');
+      return createErrorResponse('Invalid security headers', 401);
+    }
+
     // Verify authentication
     const authResult = await requireAnyRole();
     if (authResult instanceof NextResponse) return authResult;
@@ -331,6 +350,12 @@ export async function DELETE(request: NextRequest) {
 // Accept a connection request
 export async function PUT(request: NextRequest) {
   try {
+    const validation = validateClerkHeaders(request);
+    if (!validation.isValid) {
+      logSecurityValidation(validation, '/api/connections');
+      return createErrorResponse('Invalid security headers', 401);
+    }
+
     // Verify authentication
     const authResult = await requireAnyRole();
     if (authResult instanceof NextResponse) return authResult;

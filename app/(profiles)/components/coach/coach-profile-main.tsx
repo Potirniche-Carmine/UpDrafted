@@ -32,6 +32,7 @@ import { CoachProfileData, CoachProfileProps } from './coach-profile-types';
 import { ConnectionDialog } from "../shared/connection-dialog";
 import { useUser } from "@clerk/nextjs";
 import { useRoleView } from '@/hooks/use-role-view';
+import { getStudentClassificationDisplayName, StudentClassification } from '@/lib/sports-data';
 
 // Social Media Section Component (same as athlete profile)
 const SocialMediaSection = memo(({ socialMedia, isOwnProfile, onEdit }: { 
@@ -169,7 +170,24 @@ export function CoachProfile({
   // Update profile data and track changes
   const updateProfileData = (updates: Partial<CoachProfileData>) => {
     try {
-      const newData = { ...profileData, ...updates };
+      // Handle nested object updates properly
+      const newData = { ...profileData };
+      
+      // For each update, handle nested objects specially
+      Object.keys(updates).forEach(key => {
+        const typedKey = key as keyof CoachProfileData;
+        if (typedKey === 'recruitingNeeds' && updates[typedKey]) {
+          // Ensure recruitingNeeds is properly merged
+          newData.recruitingNeeds = {
+            ...(profileData.recruitingNeeds || {}),
+            ...updates[typedKey]
+          };
+        } else {
+          // @ts-expect-error - TypeScript can't infer the correct type here but it's safe
+          newData[typedKey] = updates[typedKey];
+        }
+      });
+      
       setProfileData(newData);
       checkForChanges(newData);
     } catch (error) {
@@ -313,7 +331,16 @@ export function CoachProfile({
       });
 
       if (!response.ok) {
-        throw new Error('Failed to update profile');
+        // Get the actual error message from the response
+        let errorMessage = 'Failed to update profile';
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.error || errorData.message || errorMessage;
+        } catch {
+          // If we can't parse the error response, use a generic message
+          errorMessage = `Server returned ${response.status}: ${response.statusText}`;
+        }
+        throw new Error(errorMessage);
       }
 
       const result = await response.json();
@@ -345,7 +372,27 @@ export function CoachProfile({
       }
     } catch (error) {
       console.error('Error saving profile:', error);
-      alert('Failed to save profile. Please try again.');
+      
+      // Show a detailed error message to the user
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      
+      // Create a more prominent error notification
+      const notification = document.createElement('div');
+      notification.className = 'fixed top-4 left-1/2 transform -translate-x-1/2 bg-red-500 text-white px-6 py-4 rounded-lg shadow-lg z-50 max-w-md text-center';
+      notification.innerHTML = `
+        <div class="font-semibold">Failed to save profile</div>
+        <div class="text-sm mt-1">${errorMessage}</div>
+        <div class="text-xs mt-2 opacity-90">Please try again or contact support if the issue persists.</div>
+      `;
+      document.body.appendChild(notification);
+      
+      // Remove notification after 8 seconds
+      setTimeout(() => {
+        if (document.body.contains(notification)) {
+          document.body.removeChild(notification);
+        }
+      }, 8000);
+      
       setIsSaving(false); // Only turn off loading on error
     }
   };
@@ -574,6 +621,16 @@ export function CoachProfile({
             }, 0);
           } catch (error) {
             console.error('Error updating profile data:', error);
+            // Show user-friendly error notification
+            const notification = document.createElement('div');
+            notification.className = 'fixed top-4 right-4 bg-red-500 text-white px-4 py-2 rounded-lg shadow-lg z-50';
+            notification.textContent = 'Error saving changes. Please try again.';
+            document.body.appendChild(notification);
+            setTimeout(() => {
+              if (notification.parentNode) {
+                notification.parentNode.removeChild(notification);
+              }
+            }, 5000);
             // Keep dialog open if there's an error
           }
         }}
@@ -667,9 +724,9 @@ export function CoachProfile({
                     </div>
                     {profileData.country && (
                       <div className="flex justify-center mt-1">
-                        <Badge className="bg-gradient-to-r from-blue-600 to-purple-600 text-white text-xs px-3 py-1 shadow-md font-semibold uppercase tracking-wide">
+                        <span className="text-sm text-muted-foreground">
                           {profileData.country}
-                        </Badge>
+                        </span>
                       </div>
                     )}
                   </div>
@@ -806,7 +863,7 @@ export function CoachProfile({
             </Card>
 
             {/* Verification Section - Show for own profile or admin viewing */}
-            {(effectiveIsOwnProfile || (effectiveRole && hasPendingVerification !== undefined)) && (
+            {(effectiveIsOwnProfile || (effectiveRole && hasPendingVerification !== undefined)) && !isPreviewMode && (
               <CoachVerificationSection
                 profileData={profileData}
                 isOwnProfile={effectiveIsOwnProfile}
@@ -898,30 +955,38 @@ export function CoachProfile({
                   </div>
                 </CardHeader>
                 <CardContent>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                     <div className="text-center">
-                      <p className="text-sm text-muted-foreground mb-2">Graduation Years</p>
+                      <p className="text-sm text-muted-foreground mb-2">Student Classifications</p>
                       <div className="flex flex-wrap justify-center gap-1">
-                        {profileData.recruitingNeeds.graduationYears?.map((year) => (
-                          <Badge key={year} variant="outline" className="text-sm">
-                            {year}
-                          </Badge>
-                        ))}
+                        {profileData.recruitingNeeds?.studentClassifications && profileData.recruitingNeeds.studentClassifications.length > 0 ? (
+                          profileData.recruitingNeeds.studentClassifications.map((classification) => (
+                            <Badge key={classification} className="bg-purple-100 text-purple-800 text-sm">
+                              {getStudentClassificationDisplayName(classification as StudentClassification)}
+                            </Badge>
+                          ))
+                        ) : (
+                          <p className="text-xs text-muted-foreground italic">No classifications specified</p>
+                        )}
                       </div>
                     </div>
 
                     <div className="text-center">
                       <p className="text-sm text-muted-foreground mb-2">Positions Needed</p>
                       <div className="flex flex-wrap justify-center gap-1">
-                        {profileData.recruitingNeeds.positions?.map((position) => (
-                          <Badge key={position} className="bg-blue-100 text-blue-800 text-sm">
-                            {position}
-                          </Badge>
-                        ))}
+                        {profileData.recruitingNeeds?.positions && profileData.recruitingNeeds.positions.length > 0 ? (
+                          profileData.recruitingNeeds.positions.map((position) => (
+                            <Badge key={position} className="bg-blue-100 text-blue-800 text-sm">
+                              {position}
+                            </Badge>
+                          ))
+                        ) : (
+                          <p className="text-xs text-muted-foreground italic">No positions specified</p>
+                        )}
                       </div>
                     </div>
 
-                    {profileData.recruitingNeeds.scholarshipsAvailable && (
+                    {profileData.recruitingNeeds?.scholarshipsAvailable && (
                       <div className="text-center">
                         <p className="text-sm text-muted-foreground mb-2">Scholarships Available</p>
                         <div className="bg-green-50 dark:bg-green-950 p-4 rounded-lg">
@@ -932,22 +997,24 @@ export function CoachProfile({
                   </div>
 
                   {/* What We're Looking For section - uses recruitingPhilosophy */}
-                  <div className="mt-6 p-4 bg-gradient-to-r from-blue-50 to-orange-50 dark:from-blue-950 dark:to-orange-950 rounded-lg">
-                    <div className="flex items-center gap-2 mb-2">
-                      <Users className="w-5 h-5 text-blue-600" />
-                      <h4 className="font-medium">What We&apos;re Looking For</h4>
+                  <div className="mt-6 p-4 bg-muted/50 rounded-lg">
+                    <div className="flex items-start justify-between mb-2 gap-2">
+                      <div className="flex items-center gap-2 min-w-0 flex-1">
+                        <Users className="w-5 h-5 text-blue-600 flex-shrink-0" />
+                        <h4 className="font-medium">What We&apos;re Looking For</h4>
+                      </div>
                       {effectiveIsOwnProfile && (
                         <Button
                           size="sm"
                           variant="ghost"
-                          className="p-1 h-6 w-6 ml-auto"
+                          className="p-1 h-6 w-6 flex-shrink-0"
                           onClick={() => handleEditSection('recruiting-needs')}
                         >
                           <Edit className="w-3 h-3" />
                         </Button>
                       )}
                     </div>
-                    {profileData.recruitingNeeds.recruitingPhilosophy ? (
+                    {profileData.recruitingNeeds?.recruitingPhilosophy ? (
                       <p className="text-sm text-muted-foreground">
                         {profileData.recruitingNeeds.recruitingPhilosophy}
                       </p>

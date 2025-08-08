@@ -18,8 +18,7 @@ export interface AthleteProfileData {
   secondarySports?: string[];
   graduationYear: number;
   educationLevel: EducationLevel;
-  competitionLevel?: string; // 'division_1', 'division_2', 'division_3', 'naia', 'njcaa', 'club', 'intramural', 'recreational'
-  division?: string;
+  division?: string; // 'division_1', 'division_2', 'division_3', 'naia', 'njcaa', 'club', 'intramural', 'recreational'
   conference?: string;
   organizationName: string;
   city: string;
@@ -31,6 +30,17 @@ export interface AthleteProfileData {
   height: string;
   weight: string;
   positions: string[];
+  campExperience?: Array<{
+    id?: number; // Database ID for existing experiences
+    type: 'Camp' | 'Club';
+    name: string;
+    city: string;
+    stateCountry: string;
+    startDate: Date | string; // Allow both Date and string for flexibility
+    endDate: Date | string; // Allow both Date and string for flexibility (uses special date for "Present")
+    sport: string;
+    description: string;
+  }>;
 
   // Verification
   maxPrepsUrl?: string;
@@ -40,6 +50,8 @@ export interface AthleteProfileData {
 
   // Media
   hudlUrl?: string;
+  sports247Url?: string;
+  espnUrl?: string;
   youtubeVideos?: {
     id?: string;
     title: string;

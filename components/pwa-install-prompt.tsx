@@ -119,7 +119,6 @@ export function PWAInstallPrompt() {
   useEffect(() => {
     // Listen for the beforeinstallprompt event
     const handleBeforeInstallPrompt = (e: Event) => {
-      console.log('beforeinstallprompt event fired');
       e.preventDefault();
       const promptEvent = e as BeforeInstallPromptEvent;
       setDeferredPrompt(promptEvent);
@@ -130,7 +129,6 @@ export function PWAInstallPrompt() {
 
     // Listen for app installation
     const handleAppInstalled = () => {
-      console.log('App successfully installed');
       setDeferredPrompt(null);
       setShowPrompt(false);
       localStorage.setItem('pwa-install-dismissed', 'true');
@@ -201,17 +199,12 @@ export function PWAInstallPrompt() {
   const handleInstallClick = async () => {
     if (deferredPrompt) {
       try {
-        console.log('Triggering install prompt...');
         await deferredPrompt.prompt();
         const { outcome } = await deferredPrompt.userChoice;
         
-        console.log('User choice:', outcome);
-        
         if (outcome === 'accepted') {
-          console.log('User accepted the install prompt');
           localStorage.setItem('pwa-install-dismissed', 'true');
         } else {
-          console.log('User dismissed the install prompt');
           localStorage.setItem('pwa-install-dismissed', Date.now().toString());
         }
         
@@ -244,16 +237,7 @@ export function PWAInstallPrompt() {
   // Debug information (only in development)
   useEffect(() => {
     if (process.env.NODE_ENV === 'development') {
-      console.log('PWA Install Prompt Debug:', {
-        isSignedIn,
-        isMobile,
-        isStandalone,
-        isInstallable,
-        browserType,
-        hasDeferredPrompt: !!deferredPrompt,
-        showPrompt,
-        currentPath: window.location.pathname
-      });
+      // Debug logging removed for production
     }
   }, [isSignedIn, isMobile, isStandalone, isInstallable, browserType, deferredPrompt, showPrompt]);
 

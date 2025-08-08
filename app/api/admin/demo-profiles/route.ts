@@ -1,9 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { validateClerkHeaders, logSecurityValidation } from '@/utils/clerk-security'
 import { requireAdmin } from '@/utils/roles'
 import { adminOperations } from '@/database/db-utils'
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
+    const validation = validateClerkHeaders(request);
+    if (!validation.isValid) {
+      logSecurityValidation(validation, '/api/admin/demo-profiles');
+      return NextResponse.json({ error: 'Invalid security headers' }, { status: 401 });
+    }
     const result = await requireAdmin();
     if (result instanceof NextResponse) return result;
     
@@ -25,6 +31,11 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   try {
+    const validation = validateClerkHeaders(request);
+    if (!validation.isValid) {
+      logSecurityValidation(validation, '/api/admin/demo-profiles');
+      return NextResponse.json({ error: 'Invalid security headers' }, { status: 401 });
+    }
     const result = await requireAdmin();
     if (result instanceof NextResponse) return result;
     
@@ -70,6 +81,11 @@ export async function POST(request: NextRequest) {
 
 export async function PUT(request: NextRequest) {
   try {
+    const validation = validateClerkHeaders(request);
+    if (!validation.isValid) {
+      logSecurityValidation(validation, '/api/admin/demo-profiles');
+      return NextResponse.json({ error: 'Invalid security headers' }, { status: 401 });
+    }
     const result = await requireAdmin();
     if (result instanceof NextResponse) return result;
     

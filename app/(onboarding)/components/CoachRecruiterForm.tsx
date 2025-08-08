@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
+import { Input, SocialInput } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -11,7 +11,6 @@ import { Check, ChevronsUpDown } from "lucide-react";
 import { 
   DIVISIONS,
   US_STATES, 
-  GRADUATION_YEARS, 
   getPositionsForSport, 
   getSportsList 
 } from "@/lib/sports-data";
@@ -101,12 +100,7 @@ function SportCombobox({
 export default function CoachRecruiterForm({ data, onInputChange }: CoachRecruiterFormProps) {
   const [validationErrors, setValidationErrors] = useState<{[key: string]: string}>({});
 
-  const toggleRecruitingYear = (year: number) => {
-    const years = data.recruitingGraduationYears.includes(year)
-      ? data.recruitingGraduationYears.filter(y => y !== year)
-      : [...data.recruitingGraduationYears, year];
-    onInputChange('recruitingGraduationYears', years);
-  };
+
 
   const toggleRecruitingPosition = (position: string) => {
     const positions = data.recruitingPositions.includes(position)
@@ -429,13 +423,13 @@ export default function CoachRecruiterForm({ data, onInputChange }: CoachRecruit
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="space-y-3">
           <Label htmlFor="orgInstagramHandle" className="text-base font-medium">Program Instagram</Label>
-          <Input
+          <SocialInput
             id="orgInstagramHandle"
-            placeholder="@programname"
+            placeholder="programname"
             value={data.orgInstagramHandle}
             onChange={(e) => validateAndUpdateField('orgInstagramHandle', e.target.value)}
             className={`h-11 bg-background ${validationErrors.orgInstagramHandle ? 'border-red-500' : ''}`}
-            maxLength={31} // 30 chars + @ symbol
+            maxLength={30}
           />
           {validationErrors.orgInstagramHandle && (
             <p className="text-sm text-red-500">{validationErrors.orgInstagramHandle}</p>
@@ -443,13 +437,13 @@ export default function CoachRecruiterForm({ data, onInputChange }: CoachRecruit
         </div>
         <div className="space-y-3">
           <Label htmlFor="orgTwitterHandle" className="text-base font-medium">Program Twitter</Label>
-          <Input
+          <SocialInput
             id="orgTwitterHandle"
-            placeholder="@programname"
+            placeholder="programname"
             value={data.orgTwitterHandle}
             onChange={(e) => validateAndUpdateField('orgTwitterHandle', e.target.value)}
             className={`h-11 bg-background ${validationErrors.orgTwitterHandle ? 'border-red-500' : ''}`}
-            maxLength={16} // 15 chars + @ symbol
+            maxLength={15}
           />
           {validationErrors.orgTwitterHandle && (
             <p className="text-sm text-red-500">{validationErrors.orgTwitterHandle}</p>
@@ -479,21 +473,7 @@ export default function CoachRecruiterForm({ data, onInputChange }: CoachRecruit
       <div className="border-t pt-6 space-y-6">
         <h3 className="text-lg font-semibold">Current Recruiting Needs</h3>
         
-        <div className="space-y-3">
-          <Label className="text-base font-medium">Graduation Years Recruiting *</Label>
-          <div className="grid grid-cols-4 gap-3">
-            {GRADUATION_YEARS.map(year => (
-              <div key={year} className="flex items-center space-x-2">
-                <Checkbox
-                  id={`year-${year}`}
-                  checked={data.recruitingGraduationYears.includes(year)}
-                  onCheckedChange={() => toggleRecruitingYear(year)}
-                />
-                <label htmlFor={`year-${year}`} className="text-sm cursor-pointer">{year}</label>
-              </div>
-            ))}
-          </div>
-        </div>
+
 
         {data.sportCoaching && (
           <div className="space-y-3">

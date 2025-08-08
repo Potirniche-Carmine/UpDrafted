@@ -5,14 +5,15 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { User, Users, Target, MapPin, Shield, GraduationCap, Send, ChevronDown, X, Clock, Building2, Filter, Search} from "lucide-react";
-import { useSearchParams } from 'next/navigation';
-import Link from "next/link";
+import { useSearchParams, useRouter } from 'next/navigation';
+
 import { AuthWrapper } from '@/components/auth-wrapper';
 import { useUser } from "@clerk/nextjs";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { sanitizeText } from '@/utils/sanitization';
+import { createSecureHeaders } from '@/utils/clerk-security';
 import { getSportsList, DIVISIONS, US_STATES } from '@/lib/sports-data';
 import { 
   Popover, 
@@ -43,6 +44,7 @@ interface DiscoverUser {
   profileImage: string | null;
   city: string;
   state: string;
+  country?: string;
   isVerified: boolean;
   role: 'athlete' | 'coach' | 'recruiter';
   sport: string;
@@ -51,6 +53,9 @@ interface DiscoverUser {
   educationLevel?: string;
   hasPendingRequest: boolean;
   graduationYear?: number;
+  height?: string;
+  weight?: string;
+  positions?: string[];
 }
 
 interface DiscoverResponse {
@@ -197,10 +202,7 @@ const getAvailableTabs = (userRole: string) => {
     case 'coach':
     case 'recruiter':
       return [
-        { value: 'all' as TabValue, label: 'All', icon: <Users className="h-4 w-4" /> },
-        { value: 'athletes' as TabValue, label: 'Athletes', icon: <User className="h-4 w-4" /> },
-        { value: 'coaches' as TabValue, label: 'Coaches', icon: <GraduationCap className="h-4 w-4" /> },
-        { value: 'recruiters' as TabValue, label: 'Recruiters', icon: <Target className="h-4 w-4" /> }
+        { value: 'athletes' as TabValue, label: 'Athletes', icon: <User className="h-4 w-4" /> }
       ];
     default:
       return [
@@ -228,9 +230,21 @@ const getTabRole = (tab: TabValue): string | null => {
 
 function SearchPageContent() {
   const searchParams = useSearchParams();
+  const router = useRouter();
   const { user } = useUser();
   const effectiveRole = user?.publicMetadata?.role as string;
-  const [activeTab, setActiveTab] = useState<TabValue>(searchParams?.get('tab') as TabValue || 'all');
+  
+  // Set default tab based on user role
+  const getDefaultTab = (userRole: string): TabValue => {
+    if (userRole === 'coach' || userRole === 'recruiter') {
+      return 'athletes'; // Coaches and recruiters can only see athletes
+    }
+    return 'all'; // Athletes default to 'all'
+  };
+  
+  const [activeTab, setActiveTab] = useState<TabValue>(
+    searchParams?.get('tab') as TabValue || getDefaultTab(effectiveRole)
+  );
   
   // Filter states
   const [selectedSports, setSelectedSports] = useState<FilterOption[]>([]);
@@ -247,11 +261,12 @@ function SearchPageContent() {
   // Filter states
   const [showMobileFilters, setShowMobileFilters] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
-  const [showDiscoverButton, setShowDiscoverButton] = useState(true);
+  const [showDiscoverButton, setShowDiscoverButton] = useState(false);
   
-  // Refs for infinite scroll
+  // Refs for infinite scroll and preventing double initial load
   const observerRef = useRef<IntersectionObserver | null>(null);
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
+  const initialLoadTriggered = useRef(false);
 
   const availableTabs = useMemo(() => 
     getAvailableTabs(effectiveRole)
@@ -300,34 +315,75 @@ function SearchPageContent() {
       };
       const token = await windowWithClerk.Clerk?.session?.getToken();
 
-      const params = new URLSearchParams({
+      // Prepare the search parameters
+      const searchParams = {
         page: pageNum.toString(),
-        pageSize: '10' // Show 10 profiles per load
+        pageSize: '10', // Show 10 profiles per load
+        sports: selectedSports.map(sport => sanitizeText(sport.value)),
+        divisions: selectedDivisions.map(div => sanitizeText(div.value)),
+        states: selectedStates.map(state => sanitizeText(state.value))
+      };
+
+      // Calculate approximate URL length if we were to use GET
+      const params = new URLSearchParams({
+        page: searchParams.page,
+        pageSize: searchParams.pageSize
       });
+      
+      searchParams.sports.forEach(sport => params.append('sports', sport));
+      searchParams.divisions.forEach(div => params.append('divisions', div));
+      searchParams.states.forEach(state => params.append('states', state));
+      
+      const baseUrl = '/api/discover';
+      const estimatedUrlLength = baseUrl.length + params.toString().length + 1; // +1 for '?'
+      
+      // Use POST if URL would be too long (> 3000 chars to be safe)
+      const usePost = estimatedUrlLength > 3000;
 
-      // Don't filter by role in API call - we'll filter client-side
-      // This allows users to switch between tabs without losing results
+      let response: Response;
 
-      // Add filters
-      selectedSports.forEach(sport => 
-        params.append('sports', sanitizeText(sport.value))
-      );
-      selectedDivisions.forEach(div => 
-        params.append('divisions', sanitizeText(div.value))
-      );
-      selectedStates.forEach(state => 
-        params.append('states', sanitizeText(state.value))
-      );
+      // Helper to send POST request (avoids duplication)
+      const requestWithPost = async () =>
+        fetch('/api/discover', {
+          method: 'POST',
+          headers: createSecureHeaders(token || ''),
+          body: JSON.stringify({
+            page: pageNum,
+            pageSize: 10,
+            sports: selectedSports.map(sport => sanitizeText(sport.value)),
+            divisions: selectedDivisions.map(div => sanitizeText(div.value)),
+            states: selectedStates.map(state => sanitizeText(state.value))
+          })
+        });
 
-      const response = await fetch(`/api/discover?${params.toString()}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      });
+      // Helper to produce better error messages
+      const ensureOk = async (res: Response) => {
+        if (res.ok) return;
+        const data = await res.json().catch(() => ({}));
+        const message = data?.error || data?.message || 'Failed to load users';
+        throw new Error(message);
+      };
+
+      if (usePost) {
+        // Use POST request for large filter sets
+        response = await requestWithPost();
+      } else {
+        // Use GET request for smaller filter sets
+        response = await fetch(`${baseUrl}?${params.toString()}`, {
+          headers: createSecureHeaders(token || ''),
+        });
+      }
 
       if (!response.ok) {
-        throw new Error('Failed to load users');
+        // Check if it's a URL too long error and retry with POST
+        if (response.status === 414 && !usePost) {
+          response = await requestWithPost();
+          if (!response.ok) {
+            await ensureOk(response);
+          }
+        } else {
+          await ensureOk(response);
+        }
       }
 
       const data: DiscoverResponse = await response.json();
@@ -352,31 +408,130 @@ function SearchPageContent() {
   // Store all results from the search
   const [allUsers, setAllUsers] = useState<DiscoverUser[]>([]);
 
-  // Show discover button when filters change
-  useEffect(() => {
-    if (!showDiscoverButton) {
-      setShowDiscoverButton(true);
+  // Cache key for search state
+  const CACHE_KEY = 'discover_search_state';
+
+  // Save current search state to cache
+  const saveSearchState = useCallback(() => {
+    const searchState = {
+      selectedSports,
+      selectedDivisions, 
+      selectedStates,
+      allUsers: allUsers.slice(0, 50), // Limit cached users to prevent storage overflow
+      activeTab,
+      page,
+      hasSearched,
+      timestamp: Date.now()
+    };
+    try {
+      const stateString = JSON.stringify(searchState);
+      // Check if the data is too large for localStorage (typical limit is 5-10MB)
+      const sizeMB = new Blob([stateString]).size / (1024 * 1024);
+      if (sizeMB > 2) { // Limit to 2MB to be safe
+        console.warn('Search state too large for localStorage, skipping cache');
+        return;
+      }
+      localStorage.setItem(CACHE_KEY, stateString);
+    } catch (error) {
+      console.warn('Failed to save search state to cache:', error);
+      // Try to clear old cache and retry with reduced data
+      try {
+        localStorage.removeItem(CACHE_KEY);
+        const reducedState = {
+          ...searchState,
+          allUsers: allUsers.slice(0, 20) // Further reduce cached users
+        };
+        const reducedStateString = JSON.stringify(reducedState);
+        const reducedSizeMB = new Blob([reducedStateString]).size / (1024 * 1024);
+        if (reducedSizeMB <= 1) {
+          localStorage.setItem(CACHE_KEY, reducedStateString);
+        }
+      } catch (retryError) {
+        console.warn('Failed to save reduced search state to cache:', retryError);
+      }
     }
-  }, [selectedSports, selectedDivisions, selectedStates, showDiscoverButton]);
+  }, [selectedSports, selectedDivisions, selectedStates, allUsers, activeTab, page, hasSearched]);
+
+  // Load search state from cache
+  const loadSearchState = useCallback(() => {
+    try {
+      const cachedState = localStorage.getItem(CACHE_KEY);
+      if (cachedState) {
+        const parsed = JSON.parse(cachedState);
+        const isRecent = Date.now() - (parsed.timestamp || 0) < 30 * 60 * 1000; // 30 minutes
+        
+        if (isRecent && parsed.allUsers && parsed.allUsers.length > 0) {
+          setSelectedSports(parsed.selectedSports || []);
+          setSelectedDivisions(parsed.selectedDivisions || []);
+          setSelectedStates(parsed.selectedStates || []);
+          setAllUsers(parsed.allUsers || []);
+          setActiveTab(parsed.activeTab || getDefaultTab(effectiveRole));
+          setPage(parsed.page || 1);
+          setHasSearched(parsed.hasSearched || false);
+          return true; // Successfully loaded cache
+        }
+      }
+    } catch (error) {
+      console.warn('Failed to load search state from cache:', error);
+    }
+    return false; // No valid cache found
+  }, [effectiveRole]);
+
+  // Handle profile view with caching
+  const handleViewProfile = useCallback((userId: string) => {
+    saveSearchState();
+    router.push(`/profile/${userId}`);
+  }, [saveSearchState, router]);
+
+  // Auto-load results when the page first loads
+  useEffect(() => {
+    if (effectiveRole && !hasSearched && !initialLoading && !loading && !initialLoadTriggered.current) {
+      initialLoadTriggered.current = true;
+      
+      // Try to load from cache first
+      const cacheLoaded = loadSearchState();
+      
+      // Only fetch fresh data if no valid cache found
+      if (!cacheLoaded) {
+        loadUsers(1, true);
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [effectiveRole]); // Only depend on effectiveRole to prevent multiple triggers
+
+  // Show discover button when filters change (only if filters are applied)
+  useEffect(() => {
+    const hasFiltersApplied = selectedSports.length > 0 || selectedDivisions.length > 0 || selectedStates.length > 0;
+    setShowDiscoverButton(hasFiltersApplied && hasSearched);
+  }, [selectedSports, selectedDivisions, selectedStates, hasSearched]);
+
+  // Save search state whenever important data changes
+  useEffect(() => {
+    if (hasSearched && allUsers.length > 0) {
+      saveSearchState();
+    }
+  }, [selectedSports, selectedDivisions, selectedStates, allUsers, activeTab, page, hasSearched, saveSearchState]);
 
   // Filter displayed users based on active tab
   const displayedUsers = useMemo(() => {
     if (!hasSearched || allUsers.length === 0) return [];
     
     const tabRole = getTabRole(activeTab);
-    if (!tabRole) return allUsers; // 'all' tab shows all users
+    if (!tabRole) {
+      // 'all' tab logic depends on user role
+      if (effectiveRole === 'athlete') {
+        // Athletes see only coaches and recruiters in 'all' tab
+        return allUsers.filter(user => user.role === 'coach' || user.role === 'recruiter');
+      }
+      // For other roles, show all users
+      return allUsers;
+    }
     
     return allUsers.filter(user => user.role === tabRole);
-  }, [allUsers, activeTab, hasSearched]);
+  }, [allUsers, activeTab, hasSearched, effectiveRole]);
 
   // Discover/Search function
   const handleDiscover = () => {
-    // Require at least one filter to be selected
-    if (activeFiltersCount === 0) {
-      setError('Please select at least one filter before discovering.');
-      return;
-    }
-    
     setShowMobileFilters(false);
     setShowDiscoverButton(false);
     loadUsers(1, true);
@@ -388,10 +543,10 @@ function SearchPageContent() {
     setSelectedDivisions([]);
     setSelectedStates([]);
     setShowMobileFilters(false);
-    setAllUsers([]);
-    setHasSearched(false);
-    setShowDiscoverButton(true);
+    setShowDiscoverButton(false);
     setError(null);
+    // Re-load results without filters
+    loadUsers(1, true);
   };
 
   // Infinite scroll setup
@@ -434,126 +589,227 @@ function SearchPageContent() {
     return `${baseUrl}/${profileImage}`;
   };
 
-  // Role badge helper
-  const getRoleBadge = (user: DiscoverUser) => {
-    const roleConfig = {
-      athlete: { 
-        color: 'bg-blue-500/10 text-blue-600 border-blue-200 dark:bg-blue-500/20 dark:text-blue-300 dark:border-blue-700', 
-        icon: <User className="h-3 w-3" />,
-        label: 'Athlete'
-      },
-      coach: { 
-        color: 'bg-emerald-500/10 text-emerald-600 border-emerald-200 dark:bg-emerald-500/20 dark:text-emerald-300 dark:border-emerald-700', 
-        icon: <GraduationCap className="h-3 w-3" />,
-        label: 'Coach'
-      },
-      recruiter: { 
-        color: 'bg-purple-500/10 text-purple-600 border-purple-200 dark:bg-purple-500/20 dark:text-purple-300 dark:border-purple-700', 
-        icon: <Target className="h-3 w-3" />,
-        label: 'Recruiter'
-      }
-    };
+  // Helper to format education level consistently  
+  const formatEducationLevel = (educationLevel?: string) => {
+    if (educationLevel === 'high_school') return 'High School';
+    if (educationLevel === 'associate') return 'Associate';
+    if (educationLevel === 'undergraduate') return 'Undergraduate';
+    if (educationLevel === 'graduate') return 'Graduate';
+    return educationLevel;
+  };
 
-    const config = roleConfig[user.role];
+  // Helper to format division consistently
+  const formatDivision = (division?: string) => {
+    if (division === 'high_school') return 'High School';
+    return division;
+  };
+
+  // Role badge helper with division-based color coding
+  const getRoleBadge = (user: DiscoverUser) => {
+    let roleText = '';
+    let roleColor = '';
+
+    if (user.role === 'athlete') {
+      if (user.educationLevel === 'high_school') {
+        roleText = 'HS Athlete';
+        roleColor = 'bg-blue-500/10 text-blue-700 border-blue-200 dark:bg-blue-500/20 dark:text-blue-300 dark:border-blue-700';
+      } else if (user.educationLevel === 'associate') {
+        roleText = 'JC Athlete';
+        roleColor = 'bg-orange-500/10 text-orange-700 border-orange-200 dark:bg-orange-500/20 dark:text-orange-300 dark:border-orange-700';
+      } else if (user.educationLevel === 'undergraduate' || user.educationLevel === 'graduate') {
+        roleText = 'College Athlete';
+        roleColor = 'bg-purple-500/10 text-purple-700 border-purple-200 dark:bg-purple-500/20 dark:text-purple-300 dark:border-purple-700';
+      } else {
+        roleText = 'Athlete';
+        roleColor = 'bg-gray-500/10 text-gray-700 border-gray-200 dark:bg-gray-500/20 dark:text-gray-300 dark:border-gray-700';
+      }
+    } else if (user.role === 'coach') {
+      if (user.division === 'High School') {
+        roleText = 'HS Coach';
+        roleColor = 'bg-blue-500/10 text-blue-700 border-blue-200 dark:bg-blue-500/20 dark:text-blue-300 dark:border-blue-700';
+      } else if (user.division === 'Club Sports') {
+        roleText = 'Club Coach';
+        roleColor = 'bg-green-500/10 text-green-700 border-green-200 dark:bg-green-500/20 dark:text-green-300 dark:border-green-700';
+      } else if (user.division === 'Community College' || user.division === 'Junior College' || user.division?.includes('NJCAA')) {
+        roleText = 'JC Coach';
+        roleColor = 'bg-orange-500/10 text-orange-700 border-orange-200 dark:bg-orange-500/20 dark:text-orange-300 dark:border-orange-700';
+      } else if (user.division?.includes('NCAA') || user.division === 'NAIA') {
+        roleText = 'College Coach';
+        roleColor = 'bg-purple-500/10 text-purple-700 border-purple-200 dark:bg-purple-500/20 dark:text-purple-300 dark:border-purple-700';
+      } else {
+        roleText = 'Coach';
+        roleColor = 'bg-gray-500/10 text-gray-700 border-gray-200 dark:bg-gray-500/20 dark:text-gray-300 dark:border-gray-700';
+      }
+    } else if (user.role === 'recruiter') {
+      if (user.division === 'High School') {
+        roleText = 'HS Recruiter';
+        roleColor = 'bg-blue-500/10 text-blue-700 border-blue-200 dark:bg-blue-500/20 dark:text-blue-300 dark:border-blue-700';
+      } else if (user.division === 'Club Sports') {
+        roleText = 'Club Recruiter';
+        roleColor = 'bg-green-500/10 text-green-700 border-green-200 dark:bg-green-500/20 dark:text-green-300 dark:border-green-700';
+      } else if (user.division === 'Community College' || user.division === 'Junior College' || user.division?.includes('NJCAA')) {
+        roleText = 'JC Recruiter';
+        roleColor = 'bg-orange-500/10 text-orange-700 border-orange-200 dark:bg-orange-500/20 dark:text-orange-300 dark:border-orange-700';
+      } else if (user.division?.includes('NCAA') || user.division === 'NAIA') {
+        roleText = 'College Recruiter';
+        roleColor = 'bg-purple-500/10 text-purple-700 border-purple-200 dark:bg-purple-500/20 dark:text-purple-300 dark:border-purple-700';
+      } else {
+        roleText = 'Recruiter';
+        roleColor = 'bg-gray-500/10 text-gray-700 border-gray-200 dark:bg-gray-500/20 dark:text-gray-300 dark:border-gray-700';
+      }
+    }
     
     return (
       <Badge 
         variant="outline" 
-        className={cn("text-xs font-medium border flex items-center gap-1", config.color)}
+        className={cn("text-xs font-medium px-1.5 py-0.5 border whitespace-nowrap sm:px-2", roleColor)}
       >
-        {config.icon}
-        {config.label}
+        {roleText}
       </Badge>
     );
   };
 
   // User card component
   const renderUserCard = (user: DiscoverUser) => (
-    <Card key={user.id} className="group hover:shadow-lg transition-all duration-200 border-0 shadow-md bg-gradient-to-br from-emerald-50 to-green-50 dark:from-emerald-900/20 dark:to-green-900/20 hover:from-emerald-100 hover:to-green-100 dark:hover:from-emerald-800/30 dark:hover:to-green-800/30">
+    <Card key={user.id} className="group hover:shadow-2xl transition-all duration-300 border border-border shadow-xl bg-card hover:bg-card/90 hover:border-[#01ae79]/50">
       <CardContent className="p-6">
-        <div className="flex items-start space-x-4">
-          {/* Avatar */}
-          <div className="relative flex-shrink-0">
-            <Avatar className="h-16 w-16 ring-2 ring-emerald-200 dark:ring-emerald-700">
-              <AvatarImage 
-                src={getProfileImageUrl(user.profileImage) || undefined} 
-                alt={user.fullName}
-                className="object-cover"
-              />
-              <AvatarFallback className="bg-gradient-to-br from-[#01ae79] to-emerald-600 text-white font-semibold text-lg">
-                {user.fullName.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
-              </AvatarFallback>
-            </Avatar>
-            {user.isVerified && (
-              <div className="absolute -bottom-1 -right-1 bg-[#01ae79] rounded-full p-1">
-                <Shield className="h-4 w-4 text-white" />
+        <div className="space-y-5">
+          {/* Header with Avatar, Name, and Badge */}
+          <div className="flex items-start gap-4">
+            {/* Avatar - Clickable */}
+            <div 
+              className="relative flex-shrink-0 cursor-pointer hover:opacity-80 transition-opacity"
+              onClick={() => handleViewProfile(user.id)}
+            >
+              <Avatar className="h-16 w-16 sm:h-20 sm:w-20 ring-3 ring-[#01ae79]/30 border-2 border-border">
+                <AvatarImage 
+                  src={getProfileImageUrl(user.profileImage) || undefined} 
+                  alt={user.fullName || 'User'}
+                  className="object-cover"
+                />
+                <AvatarFallback className="bg-gradient-to-br from-[#01ae79] to-emerald-600 text-white font-semibold text-lg sm:text-xl">
+                  {user.fullName ? user.fullName.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() : 'UN'}
+                </AvatarFallback>
+              </Avatar>
+              {user.isVerified && (
+                <div className="absolute -bottom-2 -right-2 bg-[#01ae79] rounded-full p-1.5 border-2 border-background">
+                  <Shield className="h-4 w-4 text-white" />
+                </div>
+              )}
+            </div>
+
+            {/* Name, Organization and Badge */}
+            <div className="flex-1 min-w-0 space-y-2">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0 flex-1 space-y-1">
+                  <h3 
+                    className="font-bold text-base sm:text-lg lg:text-xl text-card-foreground leading-tight break-words line-clamp-2 cursor-pointer hover:text-[#01ae79] transition-colors"
+                    onClick={() => handleViewProfile(user.id)}
+                  >
+                    {user.fullName || 'Unknown User'}
+                  </h3>
+                  {user.organizationName && (
+                    <p className="text-sm sm:text-base text-muted-foreground font-medium leading-tight break-words line-clamp-2">
+                      {user.organizationName}
+                    </p>
+                  )}
+                </div>
+                <div className="flex-shrink-0 ml-2">
+                  {getRoleBadge(user)}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Information Grid */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 text-xs sm:text-sm">
+            {/* Sport */}
+            {user.sport && (
+              <div className="flex items-center text-muted-foreground col-span-full">
+                <Building2 className="h-4 w-4 mr-2 text-[#01ae79] flex-shrink-0" />
+                <span className="font-medium">{user.sport}</span>
+              </div>
+            )}
+
+            {/* Location with Country */}
+            {(user.city || user.state || user.country) && (
+              <div className="flex items-center text-muted-foreground col-span-full">
+                <MapPin className="h-4 w-4 mr-2 text-[#01ae79] flex-shrink-0" />
+                <span className="font-medium">
+                  {[user.city, user.state, user.country !== 'United States' ? user.country : null]
+                    .filter(Boolean)
+                    .join(', ')
+                  }
+                </span>
+              </div>
+            )}
+
+            {/* Division/Education Level */}
+            {(user.division || user.educationLevel) && (
+              <div className="flex items-center text-muted-foreground">
+                <GraduationCap className="h-4 w-4 mr-2 text-[#01ae79] flex-shrink-0" />
+                <span className="font-medium">{formatDivision(user.division) || formatEducationLevel(user.educationLevel)}</span>
+              </div>
+            )}
+
+            {/* Title/Position for coaches/recruiters */}
+            {user.title && (
+              <div className="flex items-center text-muted-foreground">
+                <User className="h-4 w-4 mr-2 text-[#01ae79] flex-shrink-0" />
+                <span className="font-medium">{user.title}</span>
+              </div>
+            )}
+
+            {/* Athlete-specific: Height & Weight */}
+            {user.role === 'athlete' && (user.height || user.weight) && (
+              <div className="flex items-center text-muted-foreground">
+                <User className="h-4 w-4 mr-2 text-[#01ae79] flex-shrink-0" />
+                <span className="font-medium">
+                  {[
+                    user.height, 
+                    user.weight ? `${user.weight} lbs` : null
+                  ].filter(Boolean).join(' / ')}
+                </span>
+              </div>
+            )}
+
+            {/* Graduation Year */}
+            {user.role === 'athlete' && user.graduationYear && (
+              <div className="flex items-center text-muted-foreground">
+                <Clock className="h-4 w-4 mr-2 text-[#01ae79] flex-shrink-0" />
+                <span className="font-medium">Class of {user.graduationYear}</span>
+              </div>
+            )}
+
+            {/* Positions for athletes */}
+            {user.role === 'athlete' && user.positions && user.positions.length > 0 && (
+              <div className="flex items-center text-muted-foreground col-span-full">
+                <Target className="h-4 w-4 mr-2 text-[#01ae79] flex-shrink-0" />
+                <span className="font-medium">{user.positions.join(', ')}</span>
               </div>
             )}
           </div>
 
-          {/* Content */}
-          <div className="flex-1 min-w-0">
-            <div className="flex items-start justify-between gap-2 mb-3">
-              <div className="min-w-0 flex-1">
-                <h3 className="font-semibold text-gray-900 dark:text-white truncate text-base">
-                  {user.fullName}
-                </h3>
-                <p className="text-sm text-gray-600 dark:text-gray-300 truncate">
-                  {user.organizationName}
-                </p>
-              </div>
-              {getRoleBadge(user)}
-            </div>
-
-            {/* Details */}
-            <div className="space-y-2 mb-4">
-              {user.sport && (
-                <div className="flex items-center text-sm text-gray-600 dark:text-gray-300">
-                  <Building2 className="h-4 w-4 mr-2 flex-shrink-0" />
-                  <span className="truncate">{user.sport}</span>
-                </div>
+          {/* Action Button - Always at bottom with consistent positioning */}
+          <div className="pt-3">
+            <Button 
+              size="lg" 
+              className="w-full bg-[#01ae79] hover:bg-[#01ae79]/90 text-white border-0 shadow-lg hover:shadow-xl transition-all duration-200 font-semibold py-3 text-sm sm:text-base"
+              disabled={user.hasPendingRequest}
+              onClick={() => handleViewProfile(user.id)}
+            >
+              {user.hasPendingRequest ? (
+                <>
+                  <Clock className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
+                  Request Sent
+                </>
+              ) : (
+                <>
+                  <Send className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
+                  View Profile
+                </>
               )}
-              
-              <div className="flex items-center text-sm text-gray-600 dark:text-gray-300">
-                <MapPin className="h-4 w-4 mr-2 flex-shrink-0" />
-                <span className="truncate">{user.city}, {user.state}</span>
-              </div>
-
-              {user.division && (
-                <div className="flex items-center text-sm text-gray-600 dark:text-gray-300">
-                  <GraduationCap className="h-4 w-4 mr-2 flex-shrink-0" />
-                  <span className="truncate">{user.division}</span>
-                </div>
-              )}
-
-              {user.title && (
-                <div className="flex items-center text-sm text-gray-600 dark:text-gray-300">
-                  <Clock className="h-4 w-4 mr-2 flex-shrink-0" />
-                  <span className="truncate">{user.title}</span>
-                </div>
-              )}
-            </div>
-
-            {/* Action Button */}
-            <Link href={`/profile/${user.id}`}>
-              <Button 
-                size="sm" 
-                className="w-full bg-[#01ae79] hover:bg-[#01ae79]/90 text-white border-0 shadow-sm"
-                disabled={user.hasPendingRequest}
-              >
-                {user.hasPendingRequest ? (
-                  <>
-                    <Clock className="h-4 w-4 mr-2" />
-                    Request Sent
-                  </>
-                ) : (
-                  <>
-                    <Send className="h-4 w-4 mr-2" />
-                    View Profile
-                  </>
-                )}
-              </Button>
-            </Link>
+            </Button>
           </div>
         </div>
       </CardContent>
@@ -566,9 +822,9 @@ function SearchPageContent() {
   return (
     <div className="bg-background p-4 md:p-6">
       <div className="max-w-7xl mx-auto">
-        <div className="flex flex-col lg:flex-row gap-6">
+        <div className="flex flex-col xl:flex-row gap-6">
           {/* Desktop Filters Sidebar */}
-          <div className="hidden sm:block w-full lg:w-80 flex-shrink-0">
+          <div className="hidden xl:block w-full xl:w-80 flex-shrink-0">
             <div className="bg-card rounded-lg shadow-sm border border-border p-6 sticky top-6">
               <div className="flex items-center justify-between mb-6">
                 <div>
@@ -584,7 +840,7 @@ function SearchPageContent() {
                 <Button
                   onClick={() => setShowMobileFilters(!showMobileFilters)}
                   variant="outline"
-                  className="sm:hidden relative"
+                  className="xl:hidden relative"
                 >
                   <Filter className="h-4 w-4 mr-2" />
                   Filters
@@ -656,27 +912,18 @@ function SearchPageContent() {
                 {showDiscoverButton && (
                   <Button 
                     onClick={handleDiscover}
-                    disabled={activeFiltersCount === 0}
-                    className="w-full bg-[#01ae79] hover:bg-[#01ae79]/90 text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="w-full bg-[#01ae79] hover:bg-[#01ae79]/90 text-white"
                   >
                     <Search className="h-4 w-4 mr-2" />
-                    Discover
+                    Apply Filters
                   </Button>
                 )}
-                
-                <div className="h-6 flex items-center justify-center mt-2">
-                  {activeFiltersCount === 0 && showDiscoverButton && (
-                    <p className="text-xs text-muted-foreground text-center">
-                      Select at least one filter to discover profiles
-                    </p>
-                  )}
-                </div>
               </div>
             </div>
           </div>
 
-          {/* Mobile Header - Only visible on mobile */}
-          <div className="sm:hidden mb-4">
+          {/* Mobile/Tablet Header - Only visible when sidebar is hidden */}
+          <div className="xl:hidden mb-4">
             <div className="flex items-center justify-between mb-4">
               <div className="flex-1">
                 <h1 className="text-2xl font-bold text-foreground mb-1">
@@ -701,9 +948,9 @@ function SearchPageContent() {
             </div>
           </div>
 
-          {/* Mobile Filters Overlay */}
+          {/* Mobile/Tablet Filters Overlay */}
           {showMobileFilters && (
-            <div className="fixed inset-0 bg-black bg-opacity-50 z-50 sm:hidden flex items-center justify-center p-4">
+            <div className="fixed inset-0 bg-black/20 backdrop-blur-sm z-50 xl:hidden flex items-center justify-center p-4">
               <div className="w-full max-w-md bg-card rounded-lg p-6 max-h-[90vh] overflow-y-auto">
                 <div className="flex items-center justify-between mb-4">
                   <h2 className="text-lg font-semibold text-foreground">Filters</h2>
@@ -770,20 +1017,11 @@ function SearchPageContent() {
                     {showDiscoverButton && (
                       <Button 
                         onClick={handleDiscover}
-                        disabled={activeFiltersCount === 0}
-                        className="flex-1 bg-[#01ae79] hover:bg-[#01ae79]/90 text-white disabled:opacity-50"
+                        className="flex-1 bg-[#01ae79] hover:bg-[#01ae79]/90 text-white"
                       >
                         <Search className="h-4 w-4 mr-2" />
-                        Discover
+                        Apply Filters
                       </Button>
-                    )}
-                  </div>
-                  
-                  <div className="h-6 flex items-center justify-center mt-2">
-                    {activeFiltersCount === 0 && showDiscoverButton && (
-                      <p className="text-xs text-muted-foreground text-center">
-                        Select at least one filter to discover profiles
-                      </p>
                     )}
                   </div>
                 </div>
@@ -824,28 +1062,7 @@ function SearchPageContent() {
                     </div>
                   ) : !hasSearched ? (
                     <div className="text-center py-8">
-                      <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                      <h3 className="text-lg font-medium text-foreground mb-2">Ready to discover</h3>
-                      <p className="text-muted-foreground mb-4">
-                        Select your filters and click &quot;Discover&quot; to find athletes, coaches, and recruiters.
-                      </p>
-                      {showDiscoverButton && (
-                        <Button 
-                          onClick={handleDiscover} 
-                          disabled={activeFiltersCount === 0}
-                          className="bg-[#01ae79] hover:bg-[#01ae79]/90 text-white disabled:opacity-50"
-                        >
-                          <Search className="h-4 w-4 mr-2" />
-                          Discover
-                        </Button>
-                      )}
-                      <div className="h-6 flex items-center justify-center mt-2">
-                        {activeFiltersCount === 0 && showDiscoverButton && (
-                          <p className="text-xs text-muted-foreground text-center">
-                            Select at least one filter to get started
-                          </p>
-                        )}
-                      </div>
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#01ae79] mx-auto"></div>
                     </div>
                   ) : displayedUsers.length === 0 ? (
                     <div className="text-center py-8">
@@ -854,7 +1071,7 @@ function SearchPageContent() {
                       <p className="text-muted-foreground mb-4">
                         {activeFiltersCount > 0 
                           ? "Try adjusting your filters to see more results."
-                          : "No users match your current search criteria."
+                          : "No users are available to discover at the moment."
                         }
                       </p>
                       {activeFiltersCount > 0 && (
@@ -877,8 +1094,8 @@ function SearchPageContent() {
                         </p>
                       </div>
 
-                      {/* User Grid */}
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                      {/* User Grid - responsive columns */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-2 gap-6 mb-8">
                         {displayedUsers.map(renderUserCard)}
                       </div>
 

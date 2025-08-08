@@ -24,6 +24,7 @@ export const verificationRequestStatusEnum = pgEnum('verification_request_status
 export const verificationTypeEnum = pgEnum('verification_type', ['general', 'transfer_portal']);
 export const educationLevelEnum = pgEnum('education_level', ['high_school', 'undergraduate', 'graduate', 'associate']);
 export const notificationTypeEnum = pgEnum('notification_type', ['profileView', 'newConnection', 'newMessage', 'systemUpdate', 'premiumFeature', 'connectionAccepted']);
+export const studentClassificationEnum = pgEnum('student_classification', ['high_school', 'university_transfers', 'juco_students', 'graduate_transfers', 'international_students']);
 
 export const users = pgTable('users', {
   id: text('id').primaryKey(),
@@ -47,7 +48,6 @@ export const athleteProfiles = pgTable('athlete_profiles', {
   division: text('division'),
   conference: text('conference'),
   educationLevel: educationLevelEnum('education_level').notNull().default('high_school'),
-  competitionLevel: text('competition_level'),
   organizationName: text('organization_name').notNull(),
   city: text('city').notNull(),
   country: text('country').notNull().default('United States'), // Added country (required)
@@ -61,6 +61,8 @@ export const athleteProfiles = pgTable('athlete_profiles', {
   intendedMajor: text('intended_major'),
   gender: text('gender'),
   maxprepsUrl: text('maxpreps_url'),
+  sports247Url: text('sports247_url'),
+  espnUrl: text('espn_url'),
   isVerified: boolean('is_verified').default(false),
   transferPortalVerifiedAt: timestamp('transfer_portal_verified_at', { withTimezone: true }),
   isOnTransferPortal: boolean('is_on_transfer_portal').default(false),
@@ -102,6 +104,28 @@ export const athleteVideos = pgTable('athlete_videos', {
 }, (table) => [
   index('idx_athlete_videos_athlete_id').on(table.athleteId),
   index('idx_athlete_videos_sort_order').on(table.sortOrder),
+]);
+
+export const athleteExperience = pgTable('athlete_experience', {
+  id: serial('id').primaryKey(),
+  athleteId: integer('athlete_id').notNull().references(() => athleteProfiles.id, { onDelete: 'cascade' }),
+  type: text('type').notNull(), // 'Camp' or 'Club'
+  name: text('name').notNull(),
+  city: text('city').notNull(),
+  stateCountry: text('state_country').notNull(),
+  startDate: date('start_date').notNull(), // Store as proper date for querying/sorting
+  endDate: date('end_date').notNull(), // Store as proper date for querying/sorting. Use '9999-12-31' to represent "Present"
+  sport: text('sport').notNull(),
+  description: text('description').notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+}, (table) => [
+  index('idx_athlete_experience_athlete_id').on(table.athleteId),
+  index('idx_athlete_experience_type').on(table.type),
+  index('idx_athlete_experience_sport').on(table.sport),
+  index('idx_athlete_experience_start_date').on(table.startDate),
+  index('idx_athlete_experience_end_date').on(table.endDate),
+  index('idx_athlete_experience_dates').on(table.startDate, table.endDate),
 ]);
 
 export const coachProfiles = pgTable('coach_profiles', {
@@ -172,7 +196,7 @@ export const recruitingProfiles = pgTable('recruiting_profiles', {
 export const recruitingNeeds = pgTable('recruiting_needs', {
   id: serial('id').primaryKey(),
   coachId: integer('coach_id').notNull().references(() => coachProfiles.id, { onDelete: 'cascade' }),
-  graduationYears: integer('graduation_years').array().notNull(),
+  studentClassifications: studentClassificationEnum('student_classifications').array().notNull(),
   positions: text('positions').array().notNull(),
   scholarshipsAvailable: integer('scholarships_available'),
   recruitingPhilosophy: text('recruiting_philosophy'),
@@ -187,7 +211,7 @@ export const recruitingProfileNeeds = pgTable('recruiting_profile_needs', {
   id: serial('id').primaryKey(),
   recruitingProfileId: integer('recruiting_profile_id').notNull().references(() => recruitingProfiles.id, { onDelete: 'cascade' }),
   sport: text('sport').notNull(), 
-  graduationYears: integer('graduation_years').array().notNull(),
+  studentClassifications: studentClassificationEnum('student_classifications').array().notNull(),
   positions: text('positions').array().notNull(),
   scholarshipsAvailable: integer('scholarships_available'),
   recruitingPhilosophy: text('recruiting_philosophy'),
@@ -387,6 +411,7 @@ export const athleteProfilesRelations = relations(athleteProfiles, ({ one, many 
   }),
   measurables: many(athleteMeasurables),
   videos: many(athleteVideos),
+  experience: many(athleteExperience),
   conversations: many(conversations),
 }));
 
@@ -413,12 +438,19 @@ export const athleteVideosRelations = relations(athleteVideos, ({ one }) => ({
   }),
 }));
 
-export const recruitingProfilesRelations = relations(recruitingProfiles, ({ one }) => ({
+export const athleteExperienceRelations = relations(athleteExperience, ({ one }) => ({
+  athlete: one(athleteProfiles, {
+    fields: [athleteExperience.athleteId],
+    references: [athleteProfiles.id],
+  }),
+}));
+
+export const recruitingProfilesRelations = relations(recruitingProfiles, ({ one, many }) => ({
   user: one(users, {
     fields: [recruitingProfiles.userId],
     references: [users.id],
   }),
-  recruitingNeeds: one(recruitingProfileNeeds),
+  recruitingNeeds: many(recruitingProfileNeeds),
 }));
 
 export const recruitingNeedsRelations = relations(recruitingNeeds, ({ one }) => ({
@@ -511,6 +543,8 @@ export type AthleteMeasurable = typeof athleteMeasurables.$inferSelect;
 export type NewAthleteMeasurable = typeof athleteMeasurables.$inferInsert;
 export type AthleteVideo = typeof athleteVideos.$inferSelect;
 export type NewAthleteVideo = typeof athleteVideos.$inferInsert;
+export type AthleteExperience = typeof athleteExperience.$inferSelect;
+export type NewAthleteExperience = typeof athleteExperience.$inferInsert;
 export type CoachProfile = typeof coachProfiles.$inferSelect;
 export type NewCoachProfile = typeof coachProfiles.$inferInsert;
 export type RecruitingProfile = typeof recruitingProfiles.$inferSelect;

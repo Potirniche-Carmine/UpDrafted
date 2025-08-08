@@ -1,11 +1,18 @@
 import { auth } from '@clerk/nextjs/server';
 import { NextRequest, NextResponse } from 'next/server';
+import { validateClerkHeaders, logSecurityValidation } from '@/utils/clerk-security';
 import { db } from '@/database/db';
 import { athleteProfiles, coachProfiles, recruitingProfiles } from '@/database/schema';
 import { eq, and } from 'drizzle-orm';
 
 export async function GET(request: NextRequest) {
   try {
+    const validation = validateClerkHeaders(request);
+    if (!validation.isValid) {
+      logSecurityValidation(validation, '/api/admin/verification');
+      return NextResponse.json({ error: 'Invalid security headers' }, { status: 401 });
+    }
+
     const { userId } = await auth();
     
     if (!userId) {
@@ -116,6 +123,12 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
+    const validation = validateClerkHeaders(request);
+    if (!validation.isValid) {
+      logSecurityValidation(validation, '/api/admin/verification');
+      return NextResponse.json({ error: 'Invalid security headers' }, { status: 401 });
+    }
+
     const { userId } = await auth();
     
     if (!userId) {

@@ -306,6 +306,108 @@ const SocialMediaSection = memo(({ socialMedia, isOwnProfile, onEdit }: {
 
 SocialMediaSection.displayName = "SocialMediaSection";
 
+
+
+// Update CampExperienceCard prop types and usage
+import { formatDateRange } from '@/lib/date-utils';
+
+function CampExperienceCard({ experiences, isOwnProfile, onEdit }: { 
+  experiences: Array<{
+    id?: number; // Database ID for existing experiences
+    type: 'Camp' | 'Club';
+    name: string;
+    city: string;
+    stateCountry: string;
+    startDate: Date | string; // Allow both Date and string for flexibility
+    endDate: Date | string; // Allow both Date and string for flexibility (uses special date for "Present")
+    sport: string;
+    description: string;
+  }>, 
+  isOwnProfile: boolean, 
+  onEdit?: () => void 
+}) {
+  // If there are no experiences and it's not the user's own profile (including preview mode), don't show the card
+  if (experiences.length === 0 && !isOwnProfile) {
+    return null;
+  }
+
+    return (
+    <Card className="mb-4 w-full max-w-xs mx-auto sm:max-w-full sm:mx-0 min-h-[260px]">
+      <CardContent className="p-4">
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-muted rounded-full">
+              <Trophy className="w-5 h-5 text-muted-foreground" />
+            </div>
+            <div>
+              <h3 className="font-semibold text-lg">Camp and Club Experience</h3>
+                  <p className="text-sm text-muted-foreground">
+                {experiences.length === 0 
+                  ? "Start building your athletic resume" 
+                  : "Showcase your athletic journey outside your main team"
+                }
+              </p>
+            </div>
+          </div>
+          {isOwnProfile && (
+            <Button size="sm" variant="ghost" onClick={onEdit}>
+              <Edit className="w-4 h-4 mr-1" />
+              Edit
+            </Button>
+          )}
+        </div>
+        <div className="space-y-4">
+          {experiences.length === 0 ? (
+            <div className="bg-muted/50 rounded-lg p-6 text-center border border-border">
+              <div className="w-12 h-12 bg-muted rounded-full flex items-center justify-center mx-auto mb-3">
+                <Trophy className="w-6 h-6 text-muted-foreground" />
+              </div>
+              <h4 className="font-semibold text-base mb-2 text-foreground">No Camp or Club Experience Added</h4>
+              <p className="text-sm text-muted-foreground mb-4 leading-relaxed">
+                Showcase your athletic journey by adding camps, showcases, or clubs you&apos;ve participated in. This helps coaches see your dedication and versatility beyond your main team.
+              </p>
+              {isOwnProfile && (
+                <Button size="sm" variant="default" onClick={onEdit}>
+                  <Plus className="w-4 h-4 mr-2" />
+                  Add Your First Experience
+                </Button>
+              )}
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {experiences.map((exp: {
+                id?: number; // Database ID for existing experiences
+                type: 'Camp' | 'Club';
+                name: string;
+                city: string;
+                stateCountry: string;
+                startDate: Date | string; // Allow both Date and string for flexibility
+                endDate: Date | string; // Allow both Date and string for flexibility (uses special date for "Present")
+                sport: string;
+                description: string;
+              }, idx: number) => (
+                <div key={idx} className="bg-muted/30 rounded-lg p-4 border border-border shadow-sm">
+                  {/* Badges always at the top of the card */}
+                  <div className="flex gap-1 mb-2">
+                                                <Badge className={`text-white text-[10px] px-2 py-0.5 ${exp.type === 'Camp' ? 'bg-blue-600' : 'bg-cyan-700'}`}>{exp.type === 'Camp' ? 'Camp' : 'Club'}</Badge>
+                            <Badge className="bg-muted text-foreground text-[10px] px-2 py-0.5 border border-border">{exp.sport}</Badge>
+                  </div>
+                  <div className="font-semibold text-base mb-1">{exp.name}</div>
+                  <div className="flex flex-wrap gap-4 text-sm text-muted-foreground mb-1">
+                    <span className="flex items-center gap-1"><MapPin className="w-3 h-3" />{exp.city && exp.stateCountry ? `${exp.city}, ${exp.stateCountry}` : exp.city || exp.stateCountry}</span>
+                    <span>{formatDateRange(exp.startDate, exp.endDate)}</span>
+                  </div>
+                  <p className="text-sm text-foreground mt-1">{exp.description}</p>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 export function AthleteProfile({ 
   data, 
   isOwnProfile = false, 
@@ -829,6 +931,11 @@ export function AthleteProfile({
     }
   };
 
+  // Use campExperience from profileData if present, otherwise use empty array for testing
+  const campExperience = safeProfileData.campExperience && safeProfileData.campExperience.length > 0
+    ? safeProfileData.campExperience
+    : [];
+
   if (!safeProfileData) {
     return null;
   }
@@ -905,7 +1012,8 @@ export function AthleteProfile({
         dialogType={editDialogOpen}
         profileData={{
           ...safeProfileData,
-          measurables: measurablesWithStableIds
+          measurables: measurablesWithStableIds,
+          campExperience: campExperience
         }}
         measurableIdToEdit={measurableIdToEdit}
         onClose={() => {
@@ -920,6 +1028,16 @@ export function AthleteProfile({
             setMeasurableIdToEdit(null);
           } catch (error) {
             console.error('Error updating profile data:', error);
+            // Show user-friendly error notification
+            const notification = document.createElement('div');
+            notification.className = 'fixed top-4 right-4 bg-red-500 text-white px-4 py-2 rounded-lg shadow-lg z-50';
+            notification.textContent = 'Error saving changes. Please try again.';
+            document.body.appendChild(notification);
+            setTimeout(() => {
+              if (notification.parentNode) {
+                notification.parentNode.removeChild(notification);
+              }
+            }, 5000);
             // Keep dialog open if there's an error
           }
         }}
@@ -942,7 +1060,7 @@ export function AthleteProfile({
           {/* Sidebar - Basic Info */}
           <div className="space-y-4 md:space-y-6">
             {/* Profile Card */}
-            <Card>
+            <Card className="w-full max-w-xs mx-auto sm:max-w-full sm:mx-0 min-h-[260px]">
               <CardContent className="p-4 md:p-6">
                 <div className="text-center">
                   <div className="relative w-24 h-24 md:w-32 md:h-32 mx-auto mb-4 flex-shrink-0">
@@ -1051,9 +1169,9 @@ export function AthleteProfile({
                       </div>
                       {safeProfileData.country && (
                         <div className="flex justify-center mt-1">
-                          <Badge className="bg-gradient-to-r from-blue-600 to-purple-600 text-white text-xs px-3 py-1 shadow-md font-semibold uppercase tracking-wide">
+                          <span className="text-sm text-muted-foreground">
                             {safeProfileData.country}
-                          </Badge>
+                          </span>
                         </div>
                       )}
                       <p className="text-center break-words">{safeProfileData.organizationName}</p>
@@ -1061,7 +1179,7 @@ export function AthleteProfile({
                       
                       {/* Education Level and Competition Level Badges */}
                       <div className="flex flex-col items-center gap-2 pt-2">
-                        <div className="flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-lg shadow-md">
+                        <div className="flex items-center gap-2 px-3 py-2 text-foreground rounded-lg border border-border">
                           <GraduationCap className="w-4 h-4" />
                           <span className="text-sm font-medium">
                             {safeProfileData.educationLevel === 'high_school' && 'High School Student'}
@@ -1073,19 +1191,7 @@ export function AthleteProfile({
                         
                         {/* Competition Level Badge - Only show for college athletes */}
                         {safeProfileData.division && (safeProfileData.educationLevel === 'undergraduate' || safeProfileData.educationLevel === 'graduate') && (
-                          <div className={`flex items-center gap-2 px-3 py-2 text-white rounded-lg shadow-md text-sm font-medium ${
-                            safeProfileData.division === 'NCAA Division I' 
-                              ? 'bg-gradient-to-r from-red-600 to-red-700' 
-                              : safeProfileData.division === 'NCAA Division II'
-                              ? 'bg-gradient-to-r from-orange-600 to-orange-700'
-                              : safeProfileData.division === 'NCAA Division III'
-                              ? 'bg-gradient-to-r from-green-600 to-green-700'
-                              : safeProfileData.division === 'Club Sports'
-                              ? 'bg-gradient-to-r from-blue-600 to-blue-700'
-                              : safeProfileData.division === 'NAIA'
-                              ? 'bg-gradient-to-r from-purple-600 to-purple-700'
-                              : 'bg-gradient-to-r from-gray-600 to-gray-700'
-                          }`}>
+                          <div className="flex items-center gap-2 px-3 py-2 text-foreground rounded-lg border border-border text-sm font-medium">
                             <Trophy className="w-4 h-4" />
                             <span>{safeProfileData.division}</span>
                           </div>
@@ -1095,7 +1201,7 @@ export function AthleteProfile({
                         {safeProfileData.conference && 
                          safeProfileData.division && 
                          ['NCAA Division I', 'NCAA Division II', 'NCAA Division III'].includes(safeProfileData.division) && (
-                          <div className="flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-indigo-600 to-indigo-700 text-white rounded-lg shadow-md text-sm font-medium">
+                          <div className="flex items-center gap-2 px-3 py-2 text-foreground rounded-lg border border-border text-sm font-medium">
                             <Trophy className="w-4 h-4" />
                             <span>{safeProfileData.conference}</span>
                           </div>
@@ -1141,17 +1247,24 @@ export function AthleteProfile({
                 />
               </CardContent>
             </Card>
-
-            {/* Academic Summary Card */}
-            <AcademicSummaryCard
-              gpa={safeProfileData.gpa}
-              satScore={safeProfileData.satScore}
-              actScore={safeProfileData.actScore}
-              intendedMajor={safeProfileData.intendedMajor}
-              educationLevel={safeProfileData.educationLevel}
+            {/* Camp Experience / Club Card */}
+            <CampExperienceCard 
+              experiences={campExperience} 
               isOwnProfile={effectiveIsOwnProfile}
-              onEditSection={handleEditSection}
+              onEdit={() => handleEditSection('camp-experience')}
             />
+            {/* Academic Summary Card */}
+            <div className="w-full max-w-xs mx-auto sm:max-w-full sm:mx-0 min-h-[260px]">
+              <AcademicSummaryCard
+                gpa={safeProfileData.gpa}
+                satScore={safeProfileData.satScore}
+                actScore={safeProfileData.actScore}
+                intendedMajor={safeProfileData.intendedMajor}
+                educationLevel={safeProfileData.educationLevel}
+                isOwnProfile={effectiveIsOwnProfile}
+                onEditSection={handleEditSection}
+              />
+            </div>
           </div>
 
           {/* Main Content */}
@@ -1224,7 +1337,7 @@ export function AthleteProfile({
             />
 
             {/* Verification Section */}
-            {effectiveIsOwnProfile && (
+            {effectiveIsOwnProfile && !isPreviewMode && (
               <VerificationSection
                 profileData={data}
                 displayData={safeProfileData}
@@ -1356,6 +1469,112 @@ export function AthleteProfile({
                         >
                           <Plus className="w-4 h-4 mr-2" />
                           Add MaxPreps URL
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            )}
+
+            {/* 247Sports Profile */}
+            {(safeProfileData.sports247Url || effectiveIsOwnProfile) && (
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <CardTitle>247Sports Profile</CardTitle>
+                    {effectiveIsOwnProfile && (
+                      <Button 
+                        size="sm" 
+                        variant="ghost"
+                        onClick={() => handleEditSection('sports247-verification')}
+                      >
+                        <Edit className="w-4 h-4 mr-1" />
+                        Edit
+                      </Button>
+                    )}
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  {safeProfileData.sports247Url ? (
+                    <div className="bg-muted rounded-lg p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                      <div className="min-w-0 flex-1">
+                        <p className="font-medium">247Sports Profile</p>
+                        <p className="text-sm text-muted-foreground">Recruiting rankings, evaluations, and scouting reports</p>
+                      </div>
+                      <Link href={safeProfileData.sports247Url} target="_blank" className="flex-shrink-0">
+                        <Button variant="outline" size="sm" className="bg-[#01ae79] hover:bg-[#01ae79]/90 text-white border-[#01ae79] dark:bg-[#01ae79] dark:hover:bg-[#01ae79]/70 w-full sm:w-auto">
+                          <ExternalLink className="w-4 h-4 mr-1" />
+                          View Profile
+                        </Button>
+                      </Link>
+                    </div>
+                  ) : effectiveIsOwnProfile && (
+                    <div className="bg-muted/50 rounded-lg p-4">
+                      <div className="text-center">
+                        <p className="font-medium text-muted-foreground mb-2">247Sports Profile Not Added</p>
+                        <p className="text-sm text-muted-foreground mb-4">
+                          Add your 247Sports profile to showcase recruiting rankings and evaluations
+                        </p>
+                        <Button 
+                          variant="outline"
+                          onClick={() => handleEditSection('sports247-verification')}
+                        >
+                          <Plus className="w-4 h-4 mr-2" />
+                          Add 247Sports URL
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            )}
+
+            {/* ESPN Profile */}
+            {(safeProfileData.espnUrl || effectiveIsOwnProfile) && (
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <CardTitle>ESPN Profile</CardTitle>
+                    {effectiveIsOwnProfile && (
+                      <Button 
+                        size="sm" 
+                        variant="ghost"
+                        onClick={() => handleEditSection('espn-verification')}
+                      >
+                        <Edit className="w-4 h-4 mr-1" />
+                        Edit
+                      </Button>
+                    )}
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  {safeProfileData.espnUrl ? (
+                    <div className="bg-muted rounded-lg p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                      <div className="min-w-0 flex-1">
+                        <p className="font-medium">ESPN Profile</p>
+                        <p className="text-sm text-muted-foreground">Rankings, stats, and evaluations</p>
+                      </div>
+                      <Link href={safeProfileData.espnUrl} target="_blank" className="flex-shrink-0">
+                        <Button variant="outline" size="sm" className="bg-[#ff0000] hover:bg-[#ff0000]/90 text-white border-[#ff0000] dark:bg-[#ff0000] dark:hover:bg-[#ff0000]/70 w-full sm:w-auto">
+                          <ExternalLink className="w-4 h-4 mr-1" />
+                          View Profile
+                        </Button>
+                      </Link>
+                    </div>
+                  ) : effectiveIsOwnProfile && (
+                    <div className="bg-muted/50 rounded-lg p-4">
+                      <div className="text-center">
+                        <p className="font-medium text-muted-foreground mb-2">ESPN Profile Not Added</p>
+                        <p className="text-sm text-muted-foreground mb-4">
+                          Add your ESPN profile to showcase rankings, stats, and evaluations
+                        </p>
+                        <Button 
+                          variant="outline"
+                          onClick={() => handleEditSection('espn-verification')}
+                        >
+                          <Plus className="w-4 h-4 mr-2" />
+                          Add ESPN URL
                         </Button>
                       </div>
                     </div>

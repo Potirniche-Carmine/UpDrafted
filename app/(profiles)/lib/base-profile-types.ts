@@ -31,7 +31,7 @@ export interface BaseProfileData {
 }
 
 export interface RecruitingNeeds {
-  graduationYears: number[];
+  studentClassifications: string[];
   positions: string[];
   scholarshipsAvailable?: number;
   recruitingPhilosophy?: string;

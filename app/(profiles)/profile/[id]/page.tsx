@@ -9,7 +9,8 @@ import { RecruiterProfileWrapper } from '../../components/recruiter-profile-wrap
 import { AuthWrapper } from '../../../../components/auth-wrapper';
 import { navigationStateManager } from '../../lib/navigation-state';
 import type { AthleteProfileData } from '../../components/athlete-profile';
-import type { CoachProfileData, RecruitingProfileData } from '../../lib/base-profile-types';
+import type { CoachProfileData } from '../../lib/base-profile-types';
+import type { RecruiterProfileData } from '../../components/recruiter/recruiter-profile-types';
 
 // Global cache that persists across component mounts/unmounts
 const globalProfileCache = new Map<string, { 
@@ -87,6 +88,9 @@ interface ProfileApiResponse {
   hasRejectedTransferPortalVerification?: boolean;
   transferPortalRejectionReason?: string;
   transferPortalRejectedAt?: string;
+  // Demo profile properties
+  isDemoProfile?: boolean;
+  adminViewingRole?: string;
 }
 
 export default function ProfilePage({ params }: ProfilePageProps) {
@@ -440,7 +444,7 @@ function ProfileContent({ profileId }: { profileId: string }) {
 
       {profileData.profileType === 'recruiter' && (
         <RecruiterProfileWrapper
-          data={profileData.profile as RecruitingProfileData}
+          data={profileData.profile as RecruiterProfileData}
           isOwnProfile={effectiveIsOwnProfile}
           connectionStatus={profileData.connectionStatus}
           connectionDirection={profileData.connectionDirection}

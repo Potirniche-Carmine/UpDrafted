@@ -32,6 +32,7 @@ import { RecruiterProfileData, RecruiterProfileProps } from './recruiter-profile
 import { ConnectionDialog } from "../shared/connection-dialog";
 import { useUser } from "@clerk/nextjs";
 import { useRoleView } from '@/hooks/use-role-view';
+import { getStudentClassificationDisplayName, StudentClassification } from '@/lib/sports-data';
 
 // Social Media Section Component (same as athlete profile)
 const SocialMediaSection = memo(({ socialMedia, isOwnProfile, onEdit }: { 
@@ -127,18 +128,21 @@ const SportSpecificNeedsSection = ({
   selectedSport, 
   onSportChange, 
   isOwnProfile, 
-  onEditSection 
+  onEditSection,
+  onRemoveSport
 }: { 
-  sportSpecificNeeds: { [sport: string]: { graduationYears: number[]; positions: string[]; scholarshipsAvailable?: number; recruitingPhilosophy?: string; } };
+  sportSpecificNeeds: { [sport: string]: { studentClassifications: string[]; positions: string[]; scholarshipsAvailable?: number; recruitingPhilosophy?: string; } };
   allSports: string[];
   selectedSport: string;
   onSportChange: (sport: string) => void;
   isOwnProfile?: boolean;
   onEditSection: (section: string, sport?: string) => void;
+  onRemoveSport?: (sport: string) => void;
 }) => {
   const currentNeeds = sportSpecificNeeds[selectedSport];
+  
   const hasAnyNeeds = currentNeeds && (
-    (currentNeeds.graduationYears && currentNeeds.graduationYears.length > 0) ||
+    (currentNeeds.studentClassifications && currentNeeds.studentClassifications.length > 0) ||
     (currentNeeds.positions && currentNeeds.positions.length > 0) ||
     (currentNeeds.scholarshipsAvailable !== null && currentNeeds.scholarshipsAvailable !== undefined) ||
     currentNeeds.recruitingPhilosophy
@@ -148,36 +152,36 @@ const SportSpecificNeedsSection = ({
     <Card className="border-primary/20">
       <CardHeader>
         <div className="space-y-4">
-                      <div className="flex items-center justify-between">
-              <CardTitle className="text-lg font-semibold flex items-center gap-2 text-primary">
-                <Target className="w-5 h-5" />
-                Current Recruiting Needs
-              </CardTitle>
-              {isOwnProfile && (
-                <div className="flex items-center gap-2">
+          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+            <CardTitle className="text-lg font-semibold flex items-center gap-2 text-primary min-w-0">
+              <Target className="w-5 h-5 flex-shrink-0" />
+              Current Recruiting Needs
+            </CardTitle>
+            {isOwnProfile && (
+              <div className="flex items-center gap-2 sm:flex-shrink-0">
+                <Button 
+                  size="sm" 
+                  variant="outline"
+                  className="text-xs px-2 py-1"
+                  onClick={() => onEditSection('add-sport')}
+                >
+                  <Plus className="w-3 h-3 mr-1" />
+                  Add Sport
+                </Button>
+                {hasAnyNeeds && (
                   <Button 
                     size="sm" 
                     variant="outline"
                     className="text-xs px-2 py-1"
-                    onClick={() => onEditSection('add-sport')}
+                    onClick={() => onEditSection('recruiting-needs', selectedSport)}
                   >
-                    <Plus className="w-3 h-3 mr-1" />
-                    Add Sport
+                    <Edit className="w-3 h-3 mr-1" />
+                    Edit
                   </Button>
-                  {hasAnyNeeds && (
-                    <Button 
-                      size="sm" 
-                      variant="outline"
-                      className="text-xs px-2 py-1"
-                      onClick={() => onEditSection('recruiting-needs', selectedSport)}
-                    >
-                      <Edit className="w-3 h-3 mr-1" />
-                      Edit
-                    </Button>
-                  )}
-                </div>
-              )}
-            </div>
+                )}
+              </div>
+            )}
+          </div>
           
           {/* Sport Selector - Only show if multiple sports */}
           {allSports.length > 1 && (
@@ -185,16 +189,31 @@ const SportSpecificNeedsSection = ({
               <p className="text-sm font-medium text-muted-foreground">View recruiting needs for:</p>
               <div className="flex flex-wrap gap-2">
                 {allSports.map(sport => (
-                  <Button
-                    key={sport}
-                    size="sm"
-                    variant={selectedSport === sport ? "default" : "outline"}
-                    className="text-xs h-8"
-                    onClick={() => onSportChange(sport)}
-                  >
-                    {sport}
-                    {sport === allSports[0] && <Badge variant="secondary" className="ml-2 text-xs">Primary</Badge>}
-                  </Button>
+                  <div key={sport} className="relative group">
+                    <Button
+                      size="sm"
+                      variant={selectedSport === sport ? "default" : "outline"}
+                      className="text-xs h-8 pr-8"
+                      onClick={() => onSportChange(sport)}
+                    >
+                      {sport}
+                      {sport === allSports[0] && <Badge variant="secondary" className="ml-2 text-xs">Primary</Badge>}
+                    </Button>
+                    {/* Red X button - only show for non-primary sports and when user owns profile */}
+                    {isOwnProfile && sport !== allSports[0] && onRemoveSport && (
+                      <Button
+                        size="sm"
+                        variant="destructive"
+                        className="absolute -top-1 -right-1 h-5 w-5 p-0 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onRemoveSport(sport);
+                        }}
+                      >
+                        <X className="w-3 h-3" />
+                      </Button>
+                    )}
+                  </div>
                 ))}
               </div>
             </div>
@@ -204,34 +223,38 @@ const SportSpecificNeedsSection = ({
       <CardContent>
         {hasAnyNeeds ? (
           <div className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {/* Graduation Years */}
-              {currentNeeds.graduationYears && currentNeeds.graduationYears.length > 0 && (
-                <div className="text-center">
-                  <p className="text-sm text-muted-foreground mb-2">Graduation Years</p>
-                  <div className="flex flex-wrap justify-center gap-1">
-                    {currentNeeds.graduationYears.map((year) => (
-                      <Badge key={year} variant="outline" className="text-sm">
-                        {year}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Student Classifications */}
+              <div className="text-center">
+                <p className="text-sm text-muted-foreground mb-2">Student Classifications</p>
+                <div className="flex flex-wrap justify-center gap-1">
+                  {currentNeeds.studentClassifications && currentNeeds.studentClassifications.length > 0 ? (
+                    currentNeeds.studentClassifications.map((classification) => (
+                      <Badge key={classification} className="bg-purple-100 text-purple-800 text-sm">
+                        {getStudentClassificationDisplayName(classification as StudentClassification)}
                       </Badge>
-                    ))}
-                  </div>
+                    ))
+                  ) : (
+                    <p className="text-xs text-muted-foreground italic">No classifications specified</p>
+                  )}
                 </div>
-              )}
+              </div>
 
               {/* Positions */}
-              {currentNeeds.positions && currentNeeds.positions.length > 0 && (
-                <div className="text-center">
-                  <p className="text-sm text-muted-foreground mb-2">Positions Needed</p>
-                  <div className="flex flex-wrap justify-center gap-1">
-                    {currentNeeds.positions.map((position) => (
+              <div className="text-center">
+                <p className="text-sm text-muted-foreground mb-2">Positions Needed</p>
+                <div className="flex flex-wrap justify-center gap-1">
+                  {currentNeeds.positions && currentNeeds.positions.length > 0 ? (
+                    currentNeeds.positions.map((position) => (
                       <Badge key={position} className="bg-blue-100 text-blue-800 text-sm">
                         {position}
                       </Badge>
-                    ))}
-                  </div>
+                    ))
+                  ) : (
+                    <p className="text-xs text-muted-foreground italic">No positions specified</p>
+                  )}
                 </div>
-              )}
+              </div>
 
               {/* Scholarships */}
               {(currentNeeds.scholarshipsAvailable !== null && currentNeeds.scholarshipsAvailable !== undefined) && (
@@ -245,15 +268,17 @@ const SportSpecificNeedsSection = ({
             </div>
 
             {/* What We're Looking For section */}
-            <div className="p-4 bg-gradient-to-r from-blue-50 to-orange-50 dark:from-blue-950 dark:to-orange-950 rounded-lg">
-              <div className="flex items-center gap-2 mb-2">
-                <Users className="w-5 h-5 text-blue-600" />
-                <h4 className="font-medium">What We&apos;re Looking For</h4>
+            <div className="p-4 bg-muted/50 rounded-lg">
+              <div className="flex items-start justify-between mb-2 gap-2">
+                <div className="flex items-center gap-2 min-w-0 flex-1">
+                  <Users className="w-5 h-5 text-blue-600 flex-shrink-0" />
+                  <h4 className="font-medium">What We&apos;re Looking For</h4>
+                </div>
                 {isOwnProfile && (
                   <Button
                     size="sm"
                     variant="ghost"
-                    className="p-1 h-6 w-6 ml-auto"
+                    className="p-1 h-6 w-6 flex-shrink-0"
                     onClick={() => onEditSection('recruiting-needs', selectedSport)}
                   >
                     <Edit className="w-3 h-3" />
@@ -289,7 +314,7 @@ const SportSpecificNeedsSection = ({
         ) : (
           <div className="space-y-4">
             {/* Empty State */}
-            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/30 dark:to-indigo-950/30 rounded-lg p-6 text-center">
+            <div className="bg-muted/50 rounded-lg p-6 text-center">
               <div className="w-16 h-16 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center mx-auto mb-4">
                 <Target className="w-8 h-8 text-blue-600" />
               </div>
@@ -349,19 +374,39 @@ export function RecruiterProfile({
   const [isSaving, setIsSaving] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState<string | null>(null);
   const [verificationDialogOpen, setVerificationDialogOpen] = useState(false);
-  const [selectedSport, setSelectedSport] = useState(data.sportRecruiting);
+  // Initialize selectedSport to the first sport that has recruiting needs, or fallback to primary sport
+  const [selectedSport, setSelectedSport] = useState(() => {
+    if (data.sportSpecificNeeds && Object.keys(data.sportSpecificNeeds).length > 0) {
+      return Object.keys(data.sportSpecificNeeds)[0];
+    }
+    return data.sportRecruiting;
+  });
   const [connectionDialogOpen, setConnectionDialogOpen] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
   const [currentConnectionStatus, setCurrentConnectionStatus] = useState(connectionStatus);
   const [isPreviewMode, setIsPreviewMode] = useState(false);
+
+  // Update selectedSport when sportSpecificNeeds changes to ensure it always points to a sport with data
+  useEffect(() => {
+    if (profileData?.sportSpecificNeeds && Object.keys(profileData.sportSpecificNeeds).length > 0) {
+      const availableSports = Object.keys(profileData.sportSpecificNeeds);
+      // If current selectedSport doesn't have data, switch to the first sport that does
+      if (!availableSports.includes(selectedSport)) {
+        setSelectedSport(availableSports[0]);
+      }
+    }
+  }, [profileData?.sportSpecificNeeds, selectedSport]);
   const { user } = useUser();
   const effectiveRole = user?.publicMetadata?.role as string;
   
   // Get admin role information for demo profile uploads
   const { isAdmin, viewingAs } = useRoleView();
 
-  // Memoize computed values
-  const allSports = useMemo(() => [profileData.sportRecruiting, ...(profileData.secondarySports || [])], [profileData.sportRecruiting, profileData.secondarySports]);
+  // Memoize computed values with safety checks
+  const allSports = useMemo(() => {
+    if (!profileData?.sportRecruiting) return [];
+    return [profileData.sportRecruiting, ...(profileData.secondarySports || [])];
+  }, [profileData?.sportRecruiting, profileData?.secondarySports]);
   
   // Calculate effective ownership - in preview mode, treat as if viewing someone else's profile
   const effectiveIsOwnProfile = isOwnProfile && !isPreviewMode;
@@ -380,9 +425,38 @@ export function RecruiterProfile({
 
   // Update profile data and track changes
   const updateProfileData = (updates: Partial<RecruiterProfileData>) => {
-    const newData = { ...profileData, ...updates };
-    setProfileData(newData);
-    checkForChanges(newData);
+    try {
+      // Handle nested object updates properly
+      const newData = { ...profileData };
+      
+      // For each update, handle nested objects specially
+      Object.keys(updates).forEach(key => {
+        const typedKey = key as keyof RecruiterProfileData;
+        if (typedKey === 'sportSpecificNeeds' && updates[typedKey] !== undefined) {
+          // For sportSpecificNeeds, we want to replace the entire object, not merge
+          // This allows us to properly handle deletions
+          newData.sportSpecificNeeds = updates[typedKey] as RecruiterProfileData['sportSpecificNeeds'];
+        } else {
+          // @ts-expect-error - TypeScript can't infer the correct type here but it's safe
+          newData[typedKey] = updates[typedKey];
+        }
+      });
+      
+      setProfileData(newData);
+      checkForChanges(newData);
+    } catch (error) {
+      console.error('Error updating profile data:', error);
+      // Show user-friendly error notification
+      const notification = document.createElement('div');
+      notification.className = 'fixed top-4 right-4 bg-red-500 text-white px-4 py-2 rounded-lg shadow-lg z-50';
+      notification.textContent = 'Error updating profile. Please try again.';
+      document.body.appendChild(notification);
+      setTimeout(() => {
+        if (notification.parentNode) {
+          notification.parentNode.removeChild(notification);
+        }
+      }, 5000);
+    }
   };
 
   // Create ref to store beforeunload handler so we can remove it during save
@@ -423,6 +497,28 @@ export function RecruiterProfile({
     }
     
     setEditDialogOpen(section);
+  };
+
+  const handleRemoveSport = (sportToRemove: string) => {
+    // Create a copy of the current sportSpecificNeeds, handling undefined case
+    const updatedSportSpecificNeeds = { ...(profileData.sportSpecificNeeds || {}) };
+    
+    // Remove the sport from sportSpecificNeeds
+    delete updatedSportSpecificNeeds[sportToRemove];
+    
+    // Also remove the sport from secondarySports if it exists there
+    const updatedSecondarySports = profileData.secondarySports?.filter(sport => sport !== sportToRemove) || [];
+    
+    // Update the profile data
+    updateProfileData({
+      sportSpecificNeeds: updatedSportSpecificNeeds,
+      secondarySports: updatedSecondarySports
+    });
+    
+    // If the removed sport was the currently selected sport, switch to the primary sport
+    if (selectedSport === sportToRemove) {
+      setSelectedSport(profileData.sportRecruiting);
+    }
   };
 
   const saveProfile = async () => {
@@ -855,9 +951,9 @@ export function RecruiterProfile({
                     </div>
                     {profileData.country && (
                       <div className="flex justify-center mt-1">
-                        <Badge className="bg-gradient-to-r from-blue-600 to-purple-600 text-white text-xs px-3 py-1 shadow-md font-semibold uppercase tracking-wide">
+                        <span className="text-sm text-muted-foreground">
                           {profileData.country}
-                        </Badge>
+                        </span>
                       </div>
                     )}
                   </div>
@@ -994,7 +1090,7 @@ export function RecruiterProfile({
             </Card>
 
             {/* Verification Section - Show for own profile or admin viewing */}
-            {(effectiveIsOwnProfile || (effectiveRole && (hasPendingVerification !== undefined || hasRejectedVerification !== undefined))) && (
+            {(effectiveIsOwnProfile || (effectiveRole && (hasPendingVerification !== undefined || hasRejectedVerification !== undefined))) && !isPreviewMode && (
               <RecruiterVerificationSection
                 profileData={profileData}
                 isOwnProfile={effectiveIsOwnProfile}
@@ -1078,6 +1174,7 @@ export function RecruiterProfile({
               onSportChange={setSelectedSport}
               isOwnProfile={effectiveIsOwnProfile}
               onEditSection={handleEditSection}
+              onRemoveSport={handleRemoveSport}
             />
 
             {/* Showcase Video */}
@@ -1173,6 +1270,16 @@ export function RecruiterProfile({
             }, 0);
           } catch (error) {
             console.error('Error updating profile data:', error);
+            // Show user-friendly error notification
+            const notification = document.createElement('div');
+            notification.className = 'fixed top-4 right-4 bg-red-500 text-white px-4 py-2 rounded-lg shadow-lg z-50';
+            notification.textContent = 'Error saving changes. Please try again.';
+            document.body.appendChild(notification);
+            setTimeout(() => {
+              if (notification.parentNode) {
+                notification.parentNode.removeChild(notification);
+              }
+            }, 5000);
             // Keep dialog open if there's an error
           }
         }}

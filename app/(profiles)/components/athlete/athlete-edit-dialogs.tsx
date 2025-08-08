@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,6 +18,14 @@ import { useRoleView } from '@/hooks/use-role-view';
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
 import { ConferenceSelector } from "@/components/ui/conference-selector";
 import { divisionHasConferences } from "@/lib/conference-data";
+import { 
+  generateCampDateOptions, 
+  generateFilteredEndDateOptions,
+  isoStringToDate,
+  formatDateRange,
+  toTitleCase,
+  type CampDateOption 
+} from '@/lib/date-utils';
 
 // Import field validation
 const FIELD_LIMITS = {
@@ -69,6 +77,9 @@ const YEAR_OPTIONS = Array.from({ length: 11 }, (_, i) => {
   const year = currentYear - i;
   return { value: year.toString(), label: year.toString() };
 });
+
+// Use the new date utilities for camp experience options
+const CAMP_DATE_OPTIONS = generateCampDateOptions();
 
 // Add constant for video limit
 const VIDEO_LIMIT = 2;
@@ -125,6 +136,8 @@ export interface AthleteProfileData {
   isVerified: boolean;
   hudlUrl?: string;
   hudlEmbedUrl?: string;
+  sports247Url?: string;
+  espnUrl?: string;
   youtubeVideos?: {
     id?: string;
     title: string;
@@ -140,6 +153,17 @@ export interface AthleteProfileData {
   personalStatement?: string;
   achievements?: string[];
   measurables?: Measurable[];
+      campExperience?: Array<{
+      id?: number; // Database ID for existing experiences
+      type: 'Camp' | 'Club',
+      name: string,
+      city: string;
+      stateCountry: string;
+      startDate: Date | string;
+      endDate: Date | string; // Uses special date for "Present"
+      sport: string,
+      description: string
+    }>;
 }
 
 interface AthleteEditDialogsProps {
@@ -151,6 +175,49 @@ interface AthleteEditDialogsProps {
   onSave: (updates: Partial<AthleteProfileData>) => void;
   selectedSport: string;
 }
+
+// Add mockCampExperience at the top of the file for use in the dialog - COMMENTED OUT FOR TESTING EMPTY STATE
+// const mockCampExperience: Array<{
+//   type: 'Camp' | 'Club';
+//   name: string;
+//   city: string;
+//   stateCountry: string;
+//   startDate: string;
+//   endDate: string;
+//   sport: string;
+//   description: string;
+// }> = [
+//   {
+//     type: "Camp" as 'Camp',
+//     name: "Nike Elite Football Camp",
+//     city: "Dallas",
+//     stateCountry: "TX",
+//     startDate: "June 2023",
+//     endDate: "June 2023",
+//     sport: "Football",
+//     description: "Participated in advanced skills training and scrimmages with top high school athletes. Selected for All-Star team.",
+//   },
+//   {
+//     type: "Club" as 'Club',
+//     name: "Dallas Select 7v7",
+//     city: "Dallas",
+//     stateCountry: "TX",
+//     startDate: "Spring 2022",
+//     endDate: "Summer 2023",
+//     sport: "Flag Football",
+//     description: "Starting Wide Receiver. Helped team reach state semifinals."
+//   },
+//   {
+//     type: "Camp" as 'Camp',
+//     name: "Adidas National Soccer Showcase",
+//     city: "Houston",
+//     stateCountry: "TX",
+//     startDate: "July 2022",
+//     endDate: "July 2022",
+//     sport: "Soccer",
+//     description: "Trained with top coaches and played in showcase matches."
+//   }
+// ];
 
 export function AthleteEditDialogs({
   isOpen,
@@ -170,6 +237,34 @@ export function AthleteEditDialogs({
   const [profileImagePreview, setProfileImagePreview] = useState<string | null>(null);
   const [selectedProfileFile, setSelectedProfileFile] = useState<File | null>(null);
   const [isDirty, setIsDirty] = useState(false);
+
+  // Add state for camp/club experience editing
+  const [tempCampExperience, setTempCampExperience] = useState<Array<{
+    id?: number; // Database ID for existing experiences
+    type: 'Camp' | 'Club',
+    name: string,
+    city: string,
+    stateCountry: string,
+    startDate: Date,
+    endDate: Date, // Uses special date for "Present"
+    sport: string,
+    description: string
+  }>>([]);
+  const [campEditIndex, setCampEditIndex] = useState<number | null>(null);
+  const [campForm, setCampForm] = useState({
+    type: 'Camp' as 'Camp' | 'Club',
+    name: '',
+    city: '',
+    stateCountry: '',
+    startDate: '' as string, // This will be the ISO string value for the select
+    endDate: '' as string, // This will be the ISO string value for the select
+    sport: '',
+    description: ''
+  });
+  const [campFormError, setCampFormError] = useState<string | null>(null);
+  const [filteredEndDateOptions, setFilteredEndDateOptions] = useState<CampDateOption[]>([]);
+  // Ref for the add/edit form
+
 
   // Get admin role information for demo profile uploads
   const { isAdmin, viewingAs } = useRoleView();
@@ -274,6 +369,16 @@ export function AthleteEditDialogs({
           maxPrepsUrl: profileData.maxPrepsUrl || ''
         });
         break;
+      case 'sports247-verification':
+        setEditData({
+          sports247Url: profileData.sports247Url || ''
+        });
+        break;
+      case 'espn-verification':
+        setEditData({
+          espnUrl: profileData.espnUrl || ''
+        });
+        break;
       case 'hudl-highlights':
         setEditData({
           hudlUrl: profileData.hudlUrl || ''
@@ -316,6 +421,9 @@ export function AthleteEditDialogs({
         setEditData({});
         // Only reset image state when dialog first opens, not when profileData changes
         // This prevents resetting the form after successful image upload
+        break;
+      case 'camp-experience':
+        // Initialization now handled in separate useEffect
         break;
     }
   }, [dialogType, profileData, measurableToEdit, selectedSport]);
@@ -451,6 +559,61 @@ export function AthleteEditDialogs({
           }
         }
         break;
+             case 'sports247Url':
+         if (typeof value === 'string' && value.trim()) {
+           const url = value.trim();
+           
+           // Validate 247Sports URL format: [https://][www.]247sports.com/player/{name}-{id}
+           const sports247Regex = /^(https?:\/\/)?(www\.)?247sports\.com\/player\//i;
+           
+           if (!sports247Regex.test(url)) {
+             return 'Please enter a valid 247Sports player URL that contains "/player/" in the path';
+           }
+          
+          // Extract athlete name for validation - just check if name appears anywhere in URL
+          const athleteName = profileData.fullName.toLowerCase();
+          const nameParts = athleteName.split(' ').filter(part => part.length > 1); // Filter out single character parts
+          
+          // Convert URL to lowercase for case-insensitive matching
+          const urlLower = url.toLowerCase();
+          
+          // Check if at least first and last name appear somewhere in the URL
+          const firstNameMatch = nameParts[0] && urlLower.includes(nameParts[0]);
+          const lastNameMatch = nameParts[nameParts.length - 1] && urlLower.includes(nameParts[nameParts.length - 1]);
+          
+          if (!firstNameMatch || !lastNameMatch) {
+            return `247Sports URL should contain your name (${profileData.fullName}) to verify it's your profile`;
+          }
+        }
+        break;
+      case 'espnUrl':
+        if (typeof value === 'string' && value.trim()) {
+          const url = value.trim();
+          
+          // Validate ESPN URL format: [https://][www.]espn.com/college-{sport}/player/_/id/{id}/{name}
+          // or [https://][www.]espn.com/college-sports/{sport}/recruiting/player/_/id/{id}/{name}
+          const espnRegex = /^(https?:\/\/)?(www\.)?espn\.com\/college(-sports)?\/(football|basketball|recruiting\/basketball|basketball\/recruiting)\/player\/_\/id\/\d+\//i;
+          
+          if (!espnRegex.test(url)) {
+            return 'Please enter a valid ESPN player URL that contains "/player/_/id/" in the path';
+          }
+          
+          // Extract athlete name for validation - just check if name appears anywhere in URL
+          const athleteName = profileData.fullName.toLowerCase();
+          const nameParts = athleteName.split(' ').filter(part => part.length > 1); // Filter out single character parts
+          
+          // Convert URL to lowercase for case-insensitive matching
+          const urlLower = url.toLowerCase();
+          
+          // Check if at least first and last name appear somewhere in the URL
+          const firstNameMatch = nameParts[0] && urlLower.includes(nameParts[0]);
+          const lastNameMatch = nameParts[nameParts.length - 1] && urlLower.includes(nameParts[nameParts.length - 1]);
+          
+          if (!firstNameMatch || !lastNameMatch) {
+            return `ESPN URL should contain your name (${profileData.fullName}) to verify it's your profile`;
+          }
+        }
+        break;
     }
     return null;
   };
@@ -458,7 +621,14 @@ export function AthleteEditDialogs({
   // Modify handleFieldChange to track dirty state
   const handleFieldChange = (field: string, value: string | number) => {
     setIsDirty(true);
-    setEditData(prev => ({ ...prev, [field]: value }));
+    
+    // Apply title case to city and state fields
+    let processedValue = value;
+    if (typeof value === 'string' && (field === 'city' || field === 'state')) {
+      processedValue = toTitleCase(value);
+    }
+    
+    setEditData(prev => ({ ...prev, [field]: processedValue }));
     
     // Clear existing validation error for this field
     if (validationErrors[field]) {
@@ -470,7 +640,7 @@ export function AthleteEditDialogs({
     }
 
     // Validate the field
-    const error = validateField(field, value);
+    const error = validateField(field, processedValue);
     if (error) {
       setValidationErrors(prev => ({ ...prev, [field]: error }));
     }
@@ -814,6 +984,14 @@ export function AthleteEditDialogs({
         if (profileData.educationLevel === 'high_school' && editData.hudlUrl) {
           updates.isVerified = true;
         }
+        break;
+
+      case 'sports247-verification':
+        updates.sports247Url = editData.sports247Url || undefined;
+        break;
+
+      case 'espn-verification':
+        updates.espnUrl = editData.espnUrl || undefined;
         break;
 
       case 'measurable':
@@ -1442,6 +1620,70 @@ export function AthleteEditDialogs({
           </>
         );
 
+      case 'sports247-verification':
+        return (
+          <>
+            <DialogHeader>
+              <DialogTitle>Add 247Sports Profile</DialogTitle>
+              <DialogDescription>Connect your 247Sports profile to showcase recruiting rankings and evaluations.</DialogDescription>
+            </DialogHeader>
+            <div className="space-y-6">
+              <div className="space-y-2">
+                <Label htmlFor="edit-sports247Url">247Sports Profile URL</Label>
+                <Input
+                  id="edit-sports247Url"
+                  placeholder={`247sports.com/player/${profileData.fullName.toLowerCase().replace(/\s+/g, '-')}-12345`}
+                  value={editData.sports247Url || ''}
+                  onChange={(e) => handleFieldChange('sports247Url', e.target.value)}
+                  className={`h-12 ${validationErrors.sports247Url ? 'border-red-500' : ''}`}
+                  maxLength={FIELD_LIMITS.URL}
+                  autoComplete="off"
+                  inputMode="url"
+                />
+                {validationErrors.sports247Url && (
+                  <p className="text-sm text-red-500">{validationErrors.sports247Url}</p>
+                )}
+                <p className="text-sm text-muted-foreground">
+                  Add your 247Sports player profile URL. Example: 247sports.com/player/{profileData.fullName.toLowerCase().replace(/\s+/g, '-')}-12345
+                </p>
+              </div>
+            </div>
+          </>
+        );
+
+      case 'espn-verification':
+        return (
+          <>
+            <DialogHeader>
+              <DialogTitle>Add ESPN Profile</DialogTitle>
+              <DialogDescription>Connect your ESPN profile to showcase rankings, stats, and evaluations.</DialogDescription>
+            </DialogHeader>
+            <div className="space-y-6">
+              <div className="space-y-2">
+                <Label htmlFor="edit-espnUrl">ESPN Profile URL</Label>
+                <Input
+                  id="edit-espnUrl"
+                  placeholder={`espn.com/college-sports/football/recruiting/player/_/id/12345/${profileData.fullName.toLowerCase().replace(/\s+/g, '-')}`}
+                  value={editData.espnUrl || ''}
+                  onChange={(e) => handleFieldChange('espnUrl', e.target.value)}
+                  className={`h-12 ${validationErrors.espnUrl ? 'border-red-500' : ''}`}
+                  maxLength={FIELD_LIMITS.URL}
+                  autoComplete="off"
+                  inputMode="url"
+                />
+                {validationErrors.espnUrl && (
+                  <p className="text-sm text-red-500">{validationErrors.espnUrl}</p>
+                )}
+                <p className="text-sm text-muted-foreground">
+                  Add your ESPN player profile URL. Examples:<br/>
+                  • Football: espn.com/college-sports/football/recruiting/player/_/id/12345/{profileData.fullName.toLowerCase().replace(/\s+/g, '-')}<br/>
+                  • Basketball: espn.com/college-sports/basketball/recruiting/player/_/id/12345/{profileData.fullName.toLowerCase().replace(/\s+/g, '-')}
+                </p>
+              </div>
+            </div>
+          </>
+        );
+
       case 'hudl-highlights':
         return (
           <>
@@ -1842,6 +2084,425 @@ export function AthleteEditDialogs({
         );
       }
 
+      case 'camp-experience': {
+        // Limit to 3 experiences
+        const MAX_EXPERIENCES = 3;
+        const atMax = tempCampExperience.length >= MAX_EXPERIENCES;
+        return (
+          <>
+            <DialogHeader>
+              <DialogTitle>Edit Camp and Club Experience</DialogTitle>
+              <DialogDescription>
+                You can add up to 3 camp or club experiences. Edit, remove, or add new experiences below.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-6 max-h-[70vh] overflow-y-auto pr-2">
+              {/* List current experiences */}
+              <div className="space-y-2">
+                <h4 className="font-medium flex items-center gap-2">
+                  Current Experiences
+                  <span className="text-xs text-muted-foreground">({tempCampExperience.length} / {MAX_EXPERIENCES})</span>
+                </h4>
+                {tempCampExperience.length === 0 && (
+                  <div className="text-muted-foreground text-sm">No experiences added yet.</div>
+                )}
+                {tempCampExperience.map((exp, idx) => (
+                  <div key={idx} className="border rounded-lg p-3 flex flex-col gap-1 bg-muted/30">
+                    {campEditIndex === idx ? (
+                      <>
+                        <div className="flex flex-wrap gap-2 items-center mb-2">
+                          {/* Type dropdown */}
+                          <Select value={campForm.type} onValueChange={v => setCampForm(f => ({ ...f, type: v as 'Camp' | 'Club' }))}>
+                            <SelectTrigger className="w-24"><SelectValue /></SelectTrigger>
+                            <SelectContent className="z-[9999]">
+                              <SelectItem value="Camp">Camp</SelectItem>
+                              <SelectItem value="Club">Club</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          {/* Sport dropdown */}
+                          <Select value={campForm.sport} onValueChange={v => setCampForm(f => ({ ...f, sport: v }))}>
+                            <SelectTrigger className="w-32"><SelectValue placeholder="Sport" /></SelectTrigger>
+                            <SelectContent className="z-[9999]">
+                              {getSportsList().map(sport => (
+                                <SelectItem key={sport} value={sport}>{sport}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        {/* Editable title */}
+                        <Input
+                          className="font-semibold text-base mb-1"
+                          value={campForm.name}
+                          onChange={e => setCampForm(f => ({ ...f, name: e.target.value }))}
+                          maxLength={50}
+                          placeholder="Title"
+                        />
+                        {/* City, State/Country on the same line */}
+                        <div className="flex flex-row gap-4 text-sm text-muted-foreground mb-1 flex-nowrap">
+                          <Input
+                            className="w-32"
+                            value={campForm.city}
+                            onChange={e => setCampForm(f => ({ ...f, city: toTitleCase(e.target.value) }))}
+                            maxLength={50}
+                            placeholder="City"
+                          />
+                          <Input
+                            className="w-40"
+                            value={campForm.stateCountry}
+                            onChange={e => setCampForm(f => ({ ...f, stateCountry: toTitleCase(e.target.value) }))}
+                            maxLength={50}
+                            placeholder="State/Country"
+                          />
+                        </div>
+                        {/* Start Date and End Date on the same line */}
+                        <div className="flex flex-row gap-4 text-sm text-muted-foreground mb-1 flex-nowrap">
+                          <div className="w-40">
+                            <Label className="text-xs">Start Date</Label>
+                            <Select
+                              value={campForm.startDate}
+                              onValueChange={value => setCampForm(f => ({ ...f, startDate: value }))}
+                            >
+                              <SelectTrigger className="h-8">
+                                <SelectValue placeholder="Select start date" />
+                              </SelectTrigger>
+                              <SelectContent className="z-[9999]">
+                                {CAMP_DATE_OPTIONS.map(option => (
+                                  <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="w-40">
+                            <Label className="text-xs">End Date</Label>
+                            <Select
+                              value={campForm.endDate}
+                              onValueChange={value => setCampForm(f => ({ ...f, endDate: value }))}
+                              disabled={!campForm.startDate}
+                            >
+                              <SelectTrigger className={`h-8 ${!campForm.startDate ? 'opacity-50 cursor-not-allowed' : ''}`}>
+                                <SelectValue placeholder={campForm.startDate ? "Select end date" : "Select start date first"} />
+                              </SelectTrigger>
+                              <SelectContent className="z-[9999]">
+                                {filteredEndDateOptions.map(option => (
+                                  <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </div>
+                        {/* Editable description */}
+                        <Textarea
+                          className="text-sm text-foreground mt-1"
+                          value={campForm.description}
+                          onChange={e => setCampForm(f => ({ ...f, description: e.target.value }))}
+                          maxLength={200}
+                          rows={2}
+                          placeholder="Description"
+                        />
+                        {campFormError && <p className="text-red-500 text-sm mt-2">{campFormError}</p>}
+                        <div className="flex gap-2 mt-2">
+                          <Button size="sm" onClick={() => {
+                            // Validate
+                            if (!campForm.name.trim() || !campForm.city.trim() || !campForm.stateCountry.trim() || !campForm.startDate || !campForm.sport.trim() || !campForm.description.trim()) {
+                              setCampFormError('All fields are required.');
+                              return;
+                            }
+                            
+                            // Convert string values to Date objects using the new date utilities
+                            const startDate = isoStringToDate(campForm.startDate);
+                            const endDate = isoStringToDate(campForm.endDate);
+                            
+                            if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+                              setCampFormError('Invalid date format.');
+                              return;
+                            }
+                            
+                            setCampFormError(null);
+                            // Save changes to this experience
+                            const updated = [...tempCampExperience];
+                            const newExperience = {
+                              type: campForm.type,
+                              name: campForm.name,
+                              city: campForm.city,
+                              stateCountry: campForm.stateCountry,
+                              startDate,
+                              endDate,
+                              sport: campForm.sport,
+                              description: campForm.description
+                            };
+                            
+                            if (campEditIndex < tempCampExperience.length) {
+                              // Editing existing experience
+                              updated[campEditIndex] = newExperience;
+                            } else {
+                              // Adding new experience
+                              updated.push(newExperience);
+                            }
+                            setTempCampExperience(updated);
+                            setCampEditIndex(null);
+                            setCampForm({ type: 'Camp', name: '', city: '', stateCountry: '', startDate: '', endDate: '', sport: '', description: '' });
+                            setIsDirty(true);
+                          }}>Save</Button>
+                          <Button size="sm" variant="outline" onClick={() => {
+                            setCampEditIndex(null);
+                            setCampForm({ type: 'Camp', name: '', city: '', stateCountry: '', startDate: '', endDate: '', sport: '', description: '' });
+                            setCampFormError(null);
+                          }}>Cancel</Button>
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        {/* Badges always at the top of the card */}
+                        <div className="flex gap-1 mb-2">
+                          <Badge className={exp.type === 'Camp' ? 'bg-blue-600 text-white' : 'bg-cyan-700 text-white'}>{exp.type}</Badge>
+                          <Badge className="bg-muted text-foreground border border-border">{exp.sport}</Badge>
+                        </div>
+                        {/* Title underneath badges */}
+                        <div className="font-semibold text-base mb-1">{exp.name}</div>
+                        <div className="flex flex-wrap gap-2 items-center text-xs text-muted-foreground mb- space-x-1">
+                          <span>{exp.city && exp.stateCountry ? `${exp.city}, ${exp.stateCountry}` : exp.city || exp.stateCountry}</span>
+                          <span>{formatDateRange(exp.startDate, exp.endDate)}</span>
+                        </div>
+                        <div className="text-sm text-muted-foreground">{exp.description}</div>
+                        <div className="flex gap-2 mt-1">
+                          <Button size="sm" variant="outline" onClick={() => {
+                            setCampEditIndex(idx);
+                            // Convert dates to the exact format expected by Select components
+                            const findMatchingOption = (date: Date | string, options: CampDateOption[]): string => {
+                              let targetDate: Date;
+                              
+                              if (typeof date === 'string') {
+                                // Use the isoStringToDate function to handle timezone issues properly
+                                targetDate = isoStringToDate(date);
+                              } else {
+                                targetDate = date;
+                              }
+                              
+                              // Find the option that matches the year and month using UTC methods
+                              const targetYear = targetDate.getUTCFullYear();
+                              const targetMonth = targetDate.getUTCMonth();
+                              
+                              const matchingOption = options.find(option => {
+                                // Handle both YYYY-MM-DD format and ISO string format
+                                let optionDate: Date;
+                                if (/^\d{4}-\d{2}-\d{2}$/.test(option.value)) {
+                                  // YYYY-MM-DD format - use UTC constructor
+                                  const [year, month] = option.value.split('-').map(Number);
+                                  optionDate = new Date(Date.UTC(year, month - 1, 1));
+                                } else {
+                                  // ISO string format
+                                  optionDate = new Date(option.value);
+                                }
+                                return optionDate.getUTCFullYear() === targetYear && optionDate.getUTCMonth() === targetMonth;
+                              });
+                              
+                              return matchingOption ? matchingOption.value : '';
+                            };
+                            
+                            const startDateValue = findMatchingOption(exp.startDate, CAMP_DATE_OPTIONS);
+                            
+                            // Generate filtered end date options for the existing start date first
+                            let filteredOptions: CampDateOption[] = [];
+                            if (startDateValue) {
+                              filteredOptions = generateFilteredEndDateOptions(startDateValue);
+                            }
+                            
+                            const endDateValue = findMatchingOption(exp.endDate, filteredOptions);
+                            
+                            setCampForm({
+                              type: exp.type,
+                              name: exp.name,
+                              city: exp.city,
+                              stateCountry: exp.stateCountry,
+                              startDate: startDateValue,
+                              endDate: endDateValue,
+                              sport: exp.sport,
+                              description: exp.description
+                            });
+                            
+                            // Set the filtered end date options we already generated
+                            setFilteredEndDateOptions(filteredOptions);
+                            
+                            setCampFormError(null);
+                          }}>Edit</Button>
+                          <Button size="sm" variant="destructive" onClick={() => {
+                            setTempCampExperience(tempCampExperience.filter((_, i) => i !== idx));
+                            setIsDirty(true);
+                            if (campEditIndex === idx) {
+                              setCampEditIndex(null);
+                              setCampForm({ type: 'Camp', name: '', city: '', stateCountry: '', startDate: '', endDate: '', sport: '', description: '' });
+                            }
+                          }}>Remove</Button>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                ))}
+                {/* New experience form */}
+                {campEditIndex === tempCampExperience.length && (
+                  <div className="border rounded-lg p-3 flex flex-col gap-1 bg-muted/30 border-dashed">
+                    <div className="flex flex-wrap gap-2 items-center mb-2">
+                      {/* Type dropdown */}
+                      <Select value={campForm.type} onValueChange={v => setCampForm(f => ({ ...f, type: v as 'Camp' | 'Club' }))}>
+                        <SelectTrigger className="w-24"><SelectValue /></SelectTrigger>
+                        <SelectContent className="z-[9999]">
+                          <SelectItem value="Camp">Camp</SelectItem>
+                          <SelectItem value="Club">Club</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      {/* Sport dropdown */}
+                      <Select value={campForm.sport} onValueChange={v => setCampForm(f => ({ ...f, sport: v }))}>
+                        <SelectTrigger className="w-32"><SelectValue placeholder="Sport" /></SelectTrigger>
+                        <SelectContent className="z-[9999]">
+                          {getSportsList().map(sport => (
+                            <SelectItem key={sport} value={sport}>{sport}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    {/* Editable title */}
+                    <Input
+                      className="font-semibold text-base mb-1"
+                      value={campForm.name}
+                      onChange={e => setCampForm(f => ({ ...f, name: e.target.value }))}
+                      maxLength={50}
+                      placeholder="Title"
+                    />
+                    {/* City, State/Country on the same line */}
+                    <div className="flex flex-row gap-4 text-sm text-muted-foreground mb-1 flex-nowrap">
+                      <Input
+                        className="w-32"
+                        value={campForm.city}
+                        onChange={e => setCampForm(f => ({ ...f, city: toTitleCase(e.target.value) }))}
+                        maxLength={50}
+                        placeholder="City"
+                      />
+                      <Input
+                        className="w-40"
+                        value={campForm.stateCountry}
+                        onChange={e => setCampForm(f => ({ ...f, stateCountry: toTitleCase(e.target.value) }))}
+                        maxLength={50}
+                        placeholder="State/Country"
+                      />
+                    </div>
+                    {/* Start Date and End Date on the same line */}
+                    <div className="flex flex-row gap-4 text-sm text-muted-foreground mb-1 flex-nowrap">
+                      <div className="w-40">
+                        <Label className="text-xs">Start Date</Label>
+                        <Select
+                          value={campForm.startDate}
+                          onValueChange={value => setCampForm(f => ({ ...f, startDate: value }))}
+                        >
+                          <SelectTrigger className="h-8">
+                            <SelectValue placeholder="Select start date" />
+                          </SelectTrigger>
+                          <SelectContent className="z-[9999]">
+                            {CAMP_DATE_OPTIONS.map(option => (
+                              <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="w-40">
+                        <Label className="text-xs">End Date</Label>
+                        <Select
+                          value={campForm.endDate}
+                          onValueChange={value => setCampForm(f => ({ ...f, endDate: value }))}
+                          disabled={!campForm.startDate}
+                        >
+                          <SelectTrigger className={`h-8 ${!campForm.startDate ? 'opacity-50 cursor-not-allowed' : ''}`}>
+                            <SelectValue placeholder={campForm.startDate ? "Select end date" : "Select start date first"} />
+                          </SelectTrigger>
+                          <SelectContent className="z-[9999]">
+                            {filteredEndDateOptions.map(option => (
+                              <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                    {/* Editable description */}
+                    <Textarea
+                      className="text-sm text-foreground mt-1"
+                      value={campForm.description}
+                      onChange={e => setCampForm(f => ({ ...f, description: e.target.value }))}
+                      maxLength={200}
+                      rows={2}
+                      placeholder="Description"
+                    />
+                    {campFormError && <p className="text-red-500 text-sm mt-2">{campFormError}</p>}
+                    <div className="flex gap-2 mt-2">
+                      <Button size="sm" onClick={() => {
+                        // Validate
+                        if (!campForm.name.trim() || !campForm.city.trim() || !campForm.stateCountry.trim() || !campForm.startDate || !campForm.sport.trim() || !campForm.description.trim()) {
+                          setCampFormError('All fields are required.');
+                          return;
+                        }
+                        
+                        // Convert string values to Date objects using the new date utilities
+                        const startDate = isoStringToDate(campForm.startDate);
+                        const endDate = isoStringToDate(campForm.endDate);
+                        
+                        if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+                          setCampFormError('Invalid date format.');
+                          return;
+                        }
+                        
+                        setCampFormError(null);
+                        // Add new experience
+                        const updated = [...tempCampExperience];
+                        const newExperience = {
+                          type: campForm.type,
+                          name: campForm.name,
+                          city: campForm.city,
+                          stateCountry: campForm.stateCountry,
+                          startDate,
+                          endDate,
+                          sport: campForm.sport,
+                          description: campForm.description
+                        };
+                        updated.push(newExperience);
+                        setTempCampExperience(updated);
+                        setCampEditIndex(null);
+                        setCampForm({ type: 'Camp', name: '', city: '', stateCountry: '', startDate: '', endDate: '', sport: '', description: '' });
+                        setIsDirty(true);
+                      }}>Save</Button>
+                      <Button size="sm" variant="outline" onClick={() => {
+                        setCampEditIndex(null);
+                        setCampForm({ type: 'Camp', name: '', city: '', stateCountry: '', startDate: '', endDate: '', sport: '', description: '' });
+                        setCampFormError(null);
+                      }}>Cancel</Button>
+                    </div>
+                  </div>
+                )}
+                {/* Add new experience button if less than 3 and not editing */}
+                {!atMax && campEditIndex === null && (
+                  <div className="pt-2">
+                    <Button size="sm" variant="outline" onClick={() => {
+                      setCampEditIndex(tempCampExperience.length);
+                      setCampForm({ type: 'Camp', name: '', city: '', stateCountry: '', startDate: '', endDate: '', sport: '', description: '' });
+                      setCampFormError(null);
+                    }}>
+                      + Add New Experience
+                    </Button>
+                  </div>
+                )}
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={onClose}>Cancel</Button>
+              <Button onClick={() => {
+                // Remove any empty new experience that was never saved
+                const cleaned = tempCampExperience.filter(exp => exp.name.trim() && exp.city.trim() && exp.stateCountry.trim() && exp.sport.trim() && exp.description.trim());
+                onSave({ campExperience: cleaned });
+                setIsDirty(false);
+                onClose();
+              }} disabled={!isDirty}>Save All Changes</Button>
+            </DialogFooter>
+          </>
+        );
+      }
+
       default:
         return (
           <>
@@ -1856,6 +2517,50 @@ export function AthleteEditDialogs({
         );
     }
   };
+
+  // Only initialize tempCampExperience when dialog is first opened for camp-experience
+  useEffect(() => {
+    if (isOpen && dialogType === 'camp-experience' && !campExperienceInitializedRef.current) {
+      setTempCampExperience(
+        Array.isArray(profileData.campExperience) && profileData.campExperience.length > 0
+          ? profileData.campExperience.map(exp => ({
+              ...exp, // This preserves the id field if it exists
+              startDate: typeof exp.startDate === 'string' ? isoStringToDate(exp.startDate) : exp.startDate,
+              endDate: typeof exp.endDate === 'string' ? isoStringToDate(exp.endDate) : exp.endDate
+            }))
+          : []
+      );
+      setCampEditIndex(null);
+      setCampForm({ type: 'Camp', name: '', city: '', stateCountry: '', startDate: '', endDate: '', sport: '', description: '' });
+      setCampFormError(null);
+      setFilteredEndDateOptions([]);
+      campExperienceInitializedRef.current = true;
+    }
+    if (!isOpen) {
+      campExperienceInitializedRef.current = false;
+      setFilteredEndDateOptions([]);
+    }
+  }, [isOpen, dialogType, profileData.campExperience]);
+
+  // Add a ref to track if initialization has happened for this open session
+  const campExperienceInitializedRef = useRef(false);
+
+  // Update filtered end date options when start date changes
+  useEffect(() => {
+    if (campForm.startDate) {
+      const filteredOptions = generateFilteredEndDateOptions(campForm.startDate);
+      setFilteredEndDateOptions(filteredOptions);
+      
+      // If current end date is no longer valid, clear it
+      if (campForm.endDate && !filteredOptions.some(option => option.value === campForm.endDate)) {
+        setCampForm(prev => ({ ...prev, endDate: '' }));
+      }
+    } else {
+      setFilteredEndDateOptions([]);
+      // Clear end date when start date is cleared
+      setCampForm(prev => ({ ...prev, endDate: '' }));
+    }
+  }, [campForm.startDate, campForm.endDate]);
 
   return (
     <>
@@ -1896,7 +2601,7 @@ export function AthleteEditDialogs({
                   Delete Metric
                 </Button>
               </DialogFooter>
-            ) : dialogType !== 'profile-image' ? (
+            ) : (dialogType !== 'profile-image' && dialogType !== 'camp-experience') ? (
               <DialogFooter>
                 <Button variant="outline" onClick={onClose}>Cancel</Button>
                 <Button 
