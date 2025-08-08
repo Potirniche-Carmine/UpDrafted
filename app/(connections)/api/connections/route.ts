@@ -4,6 +4,7 @@ import { connectionOperations, userOperations, messageOperations, notificationOp
 import { sanitizeText } from '@/utils/sanitization';
 import { withRateLimit } from '@/utils/security';
 import { getCachedWithType, setCachedWithType, invalidateCachePattern, createErrorResponse, createSuccessResponse } from '@/utils/security';
+import { validateClerkHeaders, logSecurityValidation } from '@/utils/clerk-security';
 
 export const runtime = 'nodejs';
 
@@ -45,6 +46,12 @@ interface ConnectionsResponse {
 // Create a new connection request
 export async function POST(request: NextRequest) {
   try {
+    const validation = validateClerkHeaders(request);
+    if (!validation.isValid) {
+      logSecurityValidation(validation, '/api/connections');
+      return createErrorResponse('Invalid security headers', 401);
+    }
+
     // Verify authentication
     const authResult = await requireAnyRole();
     if (authResult instanceof NextResponse) return authResult;
@@ -165,6 +172,12 @@ export async function POST(request: NextRequest) {
 // Get user's connections
 export async function GET(request: NextRequest) {
   try {
+    const validation = validateClerkHeaders(request);
+    if (!validation.isValid) {
+      logSecurityValidation(validation, '/api/connections');
+      return createErrorResponse('Invalid security headers', 401);
+    }
+
     // Verify authentication
     const authResult = await requireAnyRole();
     if (authResult instanceof NextResponse) return authResult;
@@ -277,6 +290,12 @@ export async function GET(request: NextRequest) {
 // Delete/reject a connection
 export async function DELETE(request: NextRequest) {
   try {
+    const validation = validateClerkHeaders(request);
+    if (!validation.isValid) {
+      logSecurityValidation(validation, '/api/connections');
+      return createErrorResponse('Invalid security headers', 401);
+    }
+
     // Verify authentication
     const authResult = await requireAnyRole();
     if (authResult instanceof NextResponse) return authResult;
@@ -331,6 +350,12 @@ export async function DELETE(request: NextRequest) {
 // Accept a connection request
 export async function PUT(request: NextRequest) {
   try {
+    const validation = validateClerkHeaders(request);
+    if (!validation.isValid) {
+      logSecurityValidation(validation, '/api/connections');
+      return createErrorResponse('Invalid security headers', 401);
+    }
+
     // Verify authentication
     const authResult = await requireAnyRole();
     if (authResult instanceof NextResponse) return authResult;

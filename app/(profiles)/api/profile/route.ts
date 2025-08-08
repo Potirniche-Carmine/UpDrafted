@@ -3,12 +3,19 @@ import { requireAnyRole } from '@/utils/roles';
 import { profileOperations } from '@/database/db-utils';
 import { withRateLimit } from '@/utils/security';
 import { getCachedWithType, setCachedWithType, createErrorResponse, createSuccessResponse } from '@/utils/security';
+import { validateClerkHeaders, logSecurityValidation } from '@/utils/clerk-security';
 
 // Force Node.js runtime for database operations
 export const runtime = 'nodejs';
 
 export async function GET(request: NextRequest) {
   try {
+    const validation = validateClerkHeaders(request);
+    if (!validation.isValid) {
+      logSecurityValidation(validation, '/api/profile');
+      return createErrorResponse('Invalid security headers', 401);
+    }
+
     // Rate limiting
     const rateLimit = await withRateLimit(request, 'general');
     if (!rateLimit.success) return rateLimit.response;

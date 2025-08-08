@@ -1,9 +1,16 @@
 import { auth } from '@clerk/nextjs/server'
 import { NextRequest, NextResponse } from 'next/server'
+import { validateClerkHeaders, logSecurityValidation } from '@/utils/clerk-security'
 import { userOperations } from '@/database/db-utils'
 
 export async function POST(request: NextRequest) {
   try {
+    const validation = validateClerkHeaders(request)
+    if (!validation.isValid) {
+      logSecurityValidation(validation, '/api/admin/initialize')
+      return NextResponse.json({ error: 'Invalid security headers' }, { status: 401 })
+    }
+
     const { userId, sessionClaims } = await auth()
     
     if (!userId) {
