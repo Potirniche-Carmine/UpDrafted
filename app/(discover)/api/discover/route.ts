@@ -23,6 +23,7 @@ class RequestValidationError extends Error {
 // Security limits
 const MAX_URL_LENGTH = 8192;
 const MAX_QUERY_LENGTH = 4096;
+const MAX_BODY_SIZE = 1024 * 10; // 10KB limit for POST request bodies
 // Max total parameters (including array entries) to mitigate parameter pollution
 const MAX_QUERY_PARAMS = 300;
 // Per-array caps for POST bodies
@@ -142,8 +143,17 @@ async function handleDiscoverRequest(request: NextRequest) {
       );
     }
 
-    // For GET requests, still check URL length to prevent abuse
-    if (request.method === 'GET') {
+    // Security validations for different request methods
+    if (request.method === 'POST') {
+      // Validate POST request body size to prevent abuse
+      const bodySize = parseInt(request.headers.get('content-length') || '0', 10);
+      if (bodySize > MAX_BODY_SIZE) {
+        return NextResponse.json(
+          { error: 'Request body too large. Please reduce the number of filters or try again.' },
+          { status: 413 }
+        );
+      }
+    } else if (request.method === 'GET') {
       const url = new URL(request.url);
       
       // Limit total URL length for GET requests

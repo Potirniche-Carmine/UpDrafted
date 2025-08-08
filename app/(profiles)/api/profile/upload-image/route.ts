@@ -106,9 +106,9 @@ export async function POST(request: NextRequest) {
     }
 
     // File validation
-    const validation = validateFile(file);
-    if (!validation.valid) {
-      return createErrorResponse(validation.error || 'Invalid file', 400);
+    const fileValidation = validateFile(file);
+    if (!fileValidation.valid) {
+      return createErrorResponse(fileValidation.error || 'Invalid file', 400);
     }
 
     // Content scanning
