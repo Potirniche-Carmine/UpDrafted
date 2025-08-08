@@ -26,8 +26,8 @@ ENV NEXT_PUBLIC_CLERK_SIGN_IN_URL=$NEXT_PUBLIC_CLERK_SIGN_IN_URL
 ENV NEXT_PUBLIC_CLERK_SIGN_UP_URL=$NEXT_PUBLIC_CLERK_SIGN_UP_URL
 ENV NEXT_PUBLIC_APP_URL=$NEXT_PUBLIC_APP_URL
 
-# Set NODE_ENV to development for dev build
-ENV NODE_ENV=development
+# Set NODE_ENV to production for build (Next.js needs this for optimized builds)
+ENV NODE_ENV=production
 
 # Run the build command
 RUN npm run build
@@ -45,11 +45,11 @@ COPY --from=builder /app/.next ./.next
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/package.json ./package.json
 
-# Set NODE_ENV to development
-ENV NODE_ENV=development
+# Set NODE_ENV to production for runtime (Next.js optimizations)
+ENV NODE_ENV=production
 
-# Expose port 7000 for development
-EXPOSE 7000
+# Expose the standard Next.js port
+EXPOSE 3000
 
-# Start the application on port 7000
-CMD ["npm", "start", "--", "-p", "7000"]
+# Start the application on the standard port (port mapping happens at container level)
+CMD ["npm", "start"]

@@ -1,6 +1,6 @@
 "use client";
 
-import { useUser } from "@clerk/nextjs";
+import { useUser, useAuth } from "@clerk/nextjs";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -10,6 +10,7 @@ import { AdminRoleSwitcher } from "@/components/admin-role-switcher";
 
 export default function AdminPage() {
   const { user, isLoaded } = useUser();
+  const { getToken } = useAuth();
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [initialized, setInitialized] = useState(false);
@@ -34,11 +35,21 @@ export default function AdminPage() {
       }
 
       try {
+        const token = await getToken();
+        
+        if (!token) {
+          setError('No authentication token available');
+          setCheckingStatus(false);
+          return;
+        }
+
         // Try to initialize (it will return existing user if already exists)
         const response = await fetch('/api/admin/initialize', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+            'Accept': 'application/json',
           },
           body: JSON.stringify({
             email: user?.emailAddresses?.[0]?.emailAddress
@@ -61,7 +72,7 @@ export default function AdminPage() {
     if (user?.emailAddresses?.[0]?.emailAddress) {
       checkInitStatus();
     }
-  }, [isAdmin, user?.emailAddresses]);
+  }, [isAdmin, user?.emailAddresses, getToken]);
 
   const handleInitialize = async () => {
     if (!user?.emailAddresses?.[0]?.emailAddress) {
@@ -73,10 +84,19 @@ export default function AdminPage() {
     setError(null);
 
     try {
+      const token = await getToken();
+      
+      if (!token) {
+        setError('No authentication token available');
+        return;
+      }
+
       const response = await fetch('/api/admin/initialize', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+          'Accept': 'application/json',
         },
         body: JSON.stringify({
           email: user.emailAddresses[0].emailAddress
