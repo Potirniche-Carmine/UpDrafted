@@ -1,6 +1,6 @@
 "use client";
 
-import { useUser } from "@clerk/nextjs";
+import { useUser, useAuth } from "@clerk/nextjs";
 import { useEffect, useState, useCallback, useRef } from "react";
 
 type ViewRole = 'athlete' | 'coach' | 'recruiter';
@@ -17,6 +17,7 @@ let pendingUpdateRequest: Promise<void> | null = null;
 
 export function useRoleView() {
   const { user } = useUser();
+  const { getToken } = useAuth();
   const [viewingAs, setViewingAs] = useState<ViewRole | null>(null);
   const [verificationStatus, setVerificationStatus] = useState<boolean>(false);
   const [loading, setLoading] = useState(true);
@@ -53,7 +54,18 @@ export function useRoleView() {
     // Create new request
     const request = (async (): Promise<boolean> => {
       try {
-        const response = await fetch(`/api/admin/verification?role=${role}`);
+        const token = await getToken();
+        if (!token) {
+          console.error('No auth token available');
+          return false;
+        }
+
+        const response = await fetch(`/api/admin/verification?role=${role}`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Accept': 'application/json',
+          }
+        });
         if (response.ok) {
           const { isVerified } = await response.json();
           return isVerified;
@@ -74,7 +86,7 @@ export function useRoleView() {
     if (isMounted.current) {
       setVerificationStatus(isVerified);
     }
-  }, [isAdmin]);
+  }, [isAdmin, getToken]);
 
   // Fetch admin preferences from database with deduplication
   const fetchAdminPreferences = useCallback(async (): Promise<void> => {
@@ -103,7 +115,18 @@ export function useRoleView() {
     // Create new request
     pendingPreferencesRequest = (async (): Promise<AdminRolePreferences | null> => {
       try {
-        const response = await fetch('/api/admin/role-preferences');
+        const token = await getToken();
+        if (!token) {
+          console.error('No auth token available');
+          return null;
+        }
+
+        const response = await fetch('/api/admin/role-preferences', {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Accept': 'application/json',
+          }
+        });
         if (response.ok) {
           const { preferences }: { preferences: AdminRolePreferences } = await response.json();
           return preferences;
@@ -133,17 +156,25 @@ export function useRoleView() {
     if (isMounted.current) {
       setLoading(false);
     }
-  }, [isAdmin, fetchVerificationStatus]);
+  }, [isAdmin, fetchVerificationStatus, getToken]);
 
   // Update verification status in database
   const updateVerificationStatus = useCallback(async (role: ViewRole, isVerified: boolean): Promise<void> => {
     if (!isAdmin || !isMounted.current) return;
 
     try {
+      const token = await getToken();
+      if (!token) {
+        console.error('No auth token available');
+        return;
+      }
+
       const response = await fetch('/api/admin/verification', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+          'Accept': 'application/json',
         },
         body: JSON.stringify({
           role,
@@ -157,7 +188,7 @@ export function useRoleView() {
     } catch (error) {
       console.error('Failed to update verification status:', error);
     }
-  }, [isAdmin]);
+  }, [isAdmin, getToken]);
 
   // Update admin preferences in database with deduplication
   const updateAdminPreferences = useCallback(async (
@@ -173,10 +204,18 @@ export function useRoleView() {
     // Create new request
     pendingUpdateRequest = (async () => {
       try {
+        const token = await getToken();
+        if (!token) {
+          console.error('No auth token available');
+          return;
+        }
+
         const response = await fetch('/api/admin/role-preferences', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+            'Accept': 'application/json',
           },
           body: JSON.stringify({
             currentViewingRole,
@@ -203,7 +242,7 @@ export function useRoleView() {
     })();
 
     return pendingUpdateRequest;
-  }, [isAdmin, fetchVerificationStatus]);
+  }, [isAdmin, fetchVerificationStatus, getToken]);
 
   useEffect(() => {
     if (isAdmin && !hasFetched.current && isMounted.current) {

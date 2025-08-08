@@ -1,6 +1,7 @@
 "use client";
 
 import { useRoleView } from "@/hooks/use-role-view";
+import { useAuth } from "@clerk/nextjs";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -25,6 +26,8 @@ export function AdminRoleSwitcher() {
     setVerificationStatus 
   } = useRoleView();
   
+  const { getToken } = useAuth();
+  
   const [demoProfiles, setDemoProfiles] = useState<DemoProfiles>({
     athlete: null,
     coach: null,
@@ -41,7 +44,18 @@ export function AdminRoleSwitcher() {
       hasFetchedProfiles.current = true;
       
       try {
-        const response = await fetch('/api/admin/demo-profiles');
+        const token = await getToken();
+        if (!token) {
+          console.error('No auth token available');
+          return;
+        }
+
+        const response = await fetch('/api/admin/demo-profiles', {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Accept': 'application/json',
+          }
+        });
         if (response.ok) {
           const { profiles } = await response.json();
           setDemoProfiles(profiles);
@@ -59,7 +73,7 @@ export function AdminRoleSwitcher() {
       setLoadingProfiles(false);
       hasFetchedProfiles.current = false; // Reset for when user becomes admin
     }
-  }, [isAdmin]);
+  }, [isAdmin, getToken]);
 
   if (!isAdmin) {
     return null;
