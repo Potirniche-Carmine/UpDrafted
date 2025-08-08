@@ -169,6 +169,14 @@ function transformProfileData(profileData: Record<string, any>, profileType: str
       transformed.maxPrepsUrl = undefined;
     }
     
+    if (!transformed.sports247Url || transformed.sports247Url.trim() === '') {
+      transformed.sports247Url = undefined;
+    }
+
+    if (!transformed.espnUrl || transformed.espnUrl.trim() === '') {
+      transformed.espnUrl = undefined;
+    }
+    
     if (!transformed.hudlUrl || transformed.hudlUrl.trim() === '') {
       transformed.hudlUrl = undefined;
     }
@@ -1026,6 +1034,8 @@ export async function PUT(
       
       // Handle URL fields with correct field names
       if (sanitizedData.maxPrepsUrl !== undefined) profileUpdateData.maxprepsUrl = sanitizedData.maxPrepsUrl as string;
+      if (sanitizedData.sports247Url !== undefined) profileUpdateData.sports247Url = sanitizedData.sports247Url as string;
+      if (sanitizedData.espnUrl !== undefined) profileUpdateData.espnUrl = sanitizedData.espnUrl as string;
       if (sanitizedData.hudlUrl !== undefined) profileUpdateData.hudlUrl = sanitizedData.hudlUrl as string;
       if (sanitizedData.hudlEmbedUrl !== undefined) profileUpdateData.hudlEmbedUrl = sanitizedData.hudlEmbedUrl as string;
       
@@ -1202,28 +1212,64 @@ export async function PUT(
           // All frontend experiences without IDs are new
           newExperiences.push(...frontendExperiencesWithoutId);
 
-          // Wrap all operations in a transaction to ensure consistency
-          await db.transaction(async (tx) => {
-            // First, update existing experiences (before any deletions)
-            for (const { id, data } of existingExperiencesToUpdate) {
-              await tx
-                .update(athleteExperience)
-                .set(data)
-                .where(eq(athleteExperience.id, id));
-            }
+          // Wrap all operations in a transaction to ensure consistency and atomicity
+          try {
+            await db.transaction(async (tx) => {
+              // Transaction safety: track operations for rollback logging
+              const operationsLog: string[] = [];
+              
+              try {
+                // First, update existing experiences (before any deletions)
+                for (const { id, data } of existingExperiencesToUpdate) {
+                  try {
+                    await tx
+                      .update(athleteExperience)
+                      .set(data)
+                      .where(eq(athleteExperience.id, id));
+                    operationsLog.push(`Updated experience ID ${id}`);
+                  } catch (updateError) {
+                    console.error(`Transaction error updating experience ${id}:`, updateError);
+                    throw new Error(`Failed to update camp experience ${id}: ${updateError instanceof Error ? updateError.message : 'Unknown error'}`);
+                  }
+                }
 
-            // Then, create new experiences
-            for (const newExp of newExperiences) {
-              await tx.insert(athleteExperience).values(newExp);
-            }
+                // Then, create new experiences
+                for (const newExp of newExperiences) {
+                  try {
+                    await tx.insert(athleteExperience).values(newExp);
+                    operationsLog.push(`Created new experience: ${newExp.name}`);
+                  } catch (insertError) {
+                    console.error(`Transaction error creating experience "${newExp.name}":`, insertError);
+                    throw new Error(`Failed to create camp experience "${newExp.name}": ${insertError instanceof Error ? insertError.message : 'Unknown error'}`);
+                  }
+                }
 
-            // Finally, delete experiences that are no longer in the frontend
-            for (const id of experiencesToDelete) {
-              await tx
-                .delete(athleteExperience)
-                .where(eq(athleteExperience.id, id));
-            }
-          });
+                // Finally, delete experiences that are no longer in the frontend
+                for (const id of experiencesToDelete) {
+                  try {
+                    await tx
+                      .delete(athleteExperience)
+                      .where(eq(athleteExperience.id, id));
+                    operationsLog.push(`Deleted experience ID ${id}`);
+                  } catch (deleteError) {
+                    console.error(`Transaction error deleting experience ${id}:`, deleteError);
+                    throw new Error(`Failed to delete camp experience ${id}: ${deleteError instanceof Error ? deleteError.message : 'Unknown error'}`);
+                  }
+                }
+
+                console.log('Camp experience transaction completed successfully:', operationsLog);
+              } catch (innerError) {
+                // Log the transaction operations attempted before failure
+                console.error('Transaction rollback triggered. Operations attempted:', operationsLog);
+                throw innerError; // Re-throw to trigger transaction rollback
+              }
+            });
+          } catch (transactionError) {
+            console.error('Camp experience transaction failed:', transactionError);
+            
+            // Provide detailed error response for transaction failures
+            throw new Error(`Database transaction failed during camp experience update: ${transactionError instanceof Error ? transactionError.message : 'Unknown transaction error'}. All changes have been rolled back.`);
+          }
         }
       }
       
