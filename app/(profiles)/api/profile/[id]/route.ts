@@ -168,15 +168,11 @@ function transformProfileData(profileData: Record<string, any>, profileType: str
       transformed.maxPrepsUrl = undefined;
     }
     
-    if (transformed.sports247Url) {
-      transformed.sports247Url = transformed.sports247Url;
-    } else {
+    if (!transformed.sports247Url || transformed.sports247Url.trim() === '') {
       transformed.sports247Url = undefined;
     }
-    
-    if (transformed.espnUrl) {
-      transformed.espnUrl = transformed.espnUrl;
-    } else {
+
+    if (!transformed.espnUrl || transformed.espnUrl.trim() === '') {
       transformed.espnUrl = undefined;
     }
     
