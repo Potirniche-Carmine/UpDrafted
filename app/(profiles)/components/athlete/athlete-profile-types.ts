@@ -50,6 +50,8 @@ export interface AthleteProfileData {
 
   // Media
   hudlUrl?: string;
+  sports247Url?: string;
+  espnUrl?: string;
   youtubeVideos?: {
     id?: string;
     title: string;

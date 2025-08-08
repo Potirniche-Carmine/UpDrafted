@@ -168,6 +168,18 @@ function transformProfileData(profileData: Record<string, any>, profileType: str
       transformed.maxPrepsUrl = undefined;
     }
     
+    if (transformed.sports247Url) {
+      transformed.sports247Url = transformed.sports247Url;
+    } else {
+      transformed.sports247Url = undefined;
+    }
+    
+    if (transformed.espnUrl) {
+      transformed.espnUrl = transformed.espnUrl;
+    } else {
+      transformed.espnUrl = undefined;
+    }
+    
     if (!transformed.hudlUrl || transformed.hudlUrl.trim() === '') {
       transformed.hudlUrl = undefined;
     }
@@ -1013,6 +1025,8 @@ export async function PUT(
       
       // Handle URL fields with correct field names
       if (sanitizedData.maxPrepsUrl !== undefined) profileUpdateData.maxprepsUrl = sanitizedData.maxPrepsUrl as string;
+      if (sanitizedData.sports247Url !== undefined) profileUpdateData.sports247Url = sanitizedData.sports247Url as string;
+      if (sanitizedData.espnUrl !== undefined) profileUpdateData.espnUrl = sanitizedData.espnUrl as string;
       if (sanitizedData.hudlUrl !== undefined) profileUpdateData.hudlUrl = sanitizedData.hudlUrl as string;
       if (sanitizedData.hudlEmbedUrl !== undefined) profileUpdateData.hudlEmbedUrl = sanitizedData.hudlEmbedUrl as string;
       

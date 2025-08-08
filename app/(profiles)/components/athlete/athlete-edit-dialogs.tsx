@@ -136,6 +136,8 @@ export interface AthleteProfileData {
   isVerified: boolean;
   hudlUrl?: string;
   hudlEmbedUrl?: string;
+  sports247Url?: string;
+  espnUrl?: string;
   youtubeVideos?: {
     id?: string;
     title: string;
@@ -367,6 +369,16 @@ export function AthleteEditDialogs({
           maxPrepsUrl: profileData.maxPrepsUrl || ''
         });
         break;
+      case 'sports247-verification':
+        setEditData({
+          sports247Url: profileData.sports247Url || ''
+        });
+        break;
+      case 'espn-verification':
+        setEditData({
+          espnUrl: profileData.espnUrl || ''
+        });
+        break;
       case 'hudl-highlights':
         setEditData({
           hudlUrl: profileData.hudlUrl || ''
@@ -544,6 +556,61 @@ export function AthleteEditDialogs({
           
           if (!firstNameMatch || !lastNameMatch) {
             return `MaxPreps URL should contain your name (${profileData.fullName}) to verify it's your profile`;
+          }
+        }
+        break;
+             case 'sports247Url':
+         if (typeof value === 'string' && value.trim()) {
+           const url = value.trim();
+           
+           // Validate 247Sports URL format: [https://][www.]247sports.com/player/{name}-{id}
+           const sports247Regex = /^(https?:\/\/)?(www\.)?247sports\.com\/player\//i;
+           
+           if (!sports247Regex.test(url)) {
+             return 'Please enter a valid 247Sports player URL that contains "/player/" in the path';
+           }
+          
+          // Extract athlete name for validation - just check if name appears anywhere in URL
+          const athleteName = profileData.fullName.toLowerCase();
+          const nameParts = athleteName.split(' ').filter(part => part.length > 1); // Filter out single character parts
+          
+          // Convert URL to lowercase for case-insensitive matching
+          const urlLower = url.toLowerCase();
+          
+          // Check if at least first and last name appear somewhere in the URL
+          const firstNameMatch = nameParts[0] && urlLower.includes(nameParts[0]);
+          const lastNameMatch = nameParts[nameParts.length - 1] && urlLower.includes(nameParts[nameParts.length - 1]);
+          
+          if (!firstNameMatch || !lastNameMatch) {
+            return `247Sports URL should contain your name (${profileData.fullName}) to verify it's your profile`;
+          }
+        }
+        break;
+      case 'espnUrl':
+        if (typeof value === 'string' && value.trim()) {
+          const url = value.trim();
+          
+          // Validate ESPN URL format: [https://][www.]espn.com/college-{sport}/player/_/id/{id}/{name}
+          // or [https://][www.]espn.com/college-sports/{sport}/recruiting/player/_/id/{id}/{name}
+          const espnRegex = /^(https?:\/\/)?(www\.)?espn\.com\/college(-sports)?\/(football|basketball|recruiting\/basketball|basketball\/recruiting)\/player\/_\/id\/\d+\//i;
+          
+          if (!espnRegex.test(url)) {
+            return 'Please enter a valid ESPN player URL that contains "/player/_/id/" in the path';
+          }
+          
+          // Extract athlete name for validation - just check if name appears anywhere in URL
+          const athleteName = profileData.fullName.toLowerCase();
+          const nameParts = athleteName.split(' ').filter(part => part.length > 1); // Filter out single character parts
+          
+          // Convert URL to lowercase for case-insensitive matching
+          const urlLower = url.toLowerCase();
+          
+          // Check if at least first and last name appear somewhere in the URL
+          const firstNameMatch = nameParts[0] && urlLower.includes(nameParts[0]);
+          const lastNameMatch = nameParts[nameParts.length - 1] && urlLower.includes(nameParts[nameParts.length - 1]);
+          
+          if (!firstNameMatch || !lastNameMatch) {
+            return `ESPN URL should contain your name (${profileData.fullName}) to verify it's your profile`;
           }
         }
         break;
@@ -917,6 +984,14 @@ export function AthleteEditDialogs({
         if (profileData.educationLevel === 'high_school' && editData.hudlUrl) {
           updates.isVerified = true;
         }
+        break;
+
+      case 'sports247-verification':
+        updates.sports247Url = editData.sports247Url || undefined;
+        break;
+
+      case 'espn-verification':
+        updates.espnUrl = editData.espnUrl || undefined;
         break;
 
       case 'measurable':
@@ -1541,6 +1616,70 @@ export function AthleteEditDialogs({
                   </p>
                 </div>
               )}
+            </div>
+          </>
+        );
+
+      case 'sports247-verification':
+        return (
+          <>
+            <DialogHeader>
+              <DialogTitle>Add 247Sports Profile</DialogTitle>
+              <DialogDescription>Connect your 247Sports profile to showcase recruiting rankings and evaluations.</DialogDescription>
+            </DialogHeader>
+            <div className="space-y-6">
+              <div className="space-y-2">
+                <Label htmlFor="edit-sports247Url">247Sports Profile URL</Label>
+                <Input
+                  id="edit-sports247Url"
+                  placeholder={`247sports.com/player/${profileData.fullName.toLowerCase().replace(/\s+/g, '-')}-12345`}
+                  value={editData.sports247Url || ''}
+                  onChange={(e) => handleFieldChange('sports247Url', e.target.value)}
+                  className={`h-12 ${validationErrors.sports247Url ? 'border-red-500' : ''}`}
+                  maxLength={FIELD_LIMITS.URL}
+                  autoComplete="off"
+                  inputMode="url"
+                />
+                {validationErrors.sports247Url && (
+                  <p className="text-sm text-red-500">{validationErrors.sports247Url}</p>
+                )}
+                <p className="text-sm text-muted-foreground">
+                  Add your 247Sports player profile URL. Example: 247sports.com/player/{profileData.fullName.toLowerCase().replace(/\s+/g, '-')}-12345
+                </p>
+              </div>
+            </div>
+          </>
+        );
+
+      case 'espn-verification':
+        return (
+          <>
+            <DialogHeader>
+              <DialogTitle>Add ESPN Profile</DialogTitle>
+              <DialogDescription>Connect your ESPN profile to showcase rankings, stats, and evaluations.</DialogDescription>
+            </DialogHeader>
+            <div className="space-y-6">
+              <div className="space-y-2">
+                <Label htmlFor="edit-espnUrl">ESPN Profile URL</Label>
+                <Input
+                  id="edit-espnUrl"
+                  placeholder={`espn.com/college-sports/football/recruiting/player/_/id/12345/${profileData.fullName.toLowerCase().replace(/\s+/g, '-')}`}
+                  value={editData.espnUrl || ''}
+                  onChange={(e) => handleFieldChange('espnUrl', e.target.value)}
+                  className={`h-12 ${validationErrors.espnUrl ? 'border-red-500' : ''}`}
+                  maxLength={FIELD_LIMITS.URL}
+                  autoComplete="off"
+                  inputMode="url"
+                />
+                {validationErrors.espnUrl && (
+                  <p className="text-sm text-red-500">{validationErrors.espnUrl}</p>
+                )}
+                <p className="text-sm text-muted-foreground">
+                  Add your ESPN player profile URL. Examples:<br/>
+                  • Football: espn.com/college-sports/football/recruiting/player/_/id/12345/{profileData.fullName.toLowerCase().replace(/\s+/g, '-')}<br/>
+                  • Basketball: espn.com/college-sports/basketball/recruiting/player/_/id/12345/{profileData.fullName.toLowerCase().replace(/\s+/g, '-')}
+                </p>
+              </div>
             </div>
           </>
         );

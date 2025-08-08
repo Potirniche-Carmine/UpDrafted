@@ -1477,6 +1477,112 @@ export function AthleteProfile({
               </Card>
             )}
 
+            {/* 247Sports Profile */}
+            {(safeProfileData.sports247Url || effectiveIsOwnProfile) && (
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <CardTitle>247Sports Profile</CardTitle>
+                    {effectiveIsOwnProfile && (
+                      <Button 
+                        size="sm" 
+                        variant="ghost"
+                        onClick={() => handleEditSection('sports247-verification')}
+                      >
+                        <Edit className="w-4 h-4 mr-1" />
+                        Edit
+                      </Button>
+                    )}
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  {safeProfileData.sports247Url ? (
+                    <div className="bg-muted rounded-lg p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                      <div className="min-w-0 flex-1">
+                        <p className="font-medium">247Sports Profile</p>
+                        <p className="text-sm text-muted-foreground">Recruiting rankings, evaluations, and scouting reports</p>
+                      </div>
+                      <Link href={safeProfileData.sports247Url} target="_blank" className="flex-shrink-0">
+                        <Button variant="outline" size="sm" className="bg-[#01ae79] hover:bg-[#01ae79]/90 text-white border-[#01ae79] dark:bg-[#01ae79] dark:hover:bg-[#01ae79]/70 w-full sm:w-auto">
+                          <ExternalLink className="w-4 h-4 mr-1" />
+                          View Profile
+                        </Button>
+                      </Link>
+                    </div>
+                  ) : effectiveIsOwnProfile && (
+                    <div className="bg-muted/50 rounded-lg p-4">
+                      <div className="text-center">
+                        <p className="font-medium text-muted-foreground mb-2">247Sports Profile Not Added</p>
+                        <p className="text-sm text-muted-foreground mb-4">
+                          Add your 247Sports profile to showcase recruiting rankings and evaluations
+                        </p>
+                        <Button 
+                          variant="outline"
+                          onClick={() => handleEditSection('sports247-verification')}
+                        >
+                          <Plus className="w-4 h-4 mr-2" />
+                          Add 247Sports URL
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            )}
+
+            {/* ESPN Profile */}
+            {(safeProfileData.espnUrl || effectiveIsOwnProfile) && (
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <CardTitle>ESPN Profile</CardTitle>
+                    {effectiveIsOwnProfile && (
+                      <Button 
+                        size="sm" 
+                        variant="ghost"
+                        onClick={() => handleEditSection('espn-verification')}
+                      >
+                        <Edit className="w-4 h-4 mr-1" />
+                        Edit
+                      </Button>
+                    )}
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  {safeProfileData.espnUrl ? (
+                    <div className="bg-muted rounded-lg p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                      <div className="min-w-0 flex-1">
+                        <p className="font-medium">ESPN Profile</p>
+                        <p className="text-sm text-muted-foreground">Rankings, stats, and evaluations</p>
+                      </div>
+                      <Link href={safeProfileData.espnUrl} target="_blank" className="flex-shrink-0">
+                        <Button variant="outline" size="sm" className="bg-[#ff0000] hover:bg-[#ff0000]/90 text-white border-[#ff0000] dark:bg-[#ff0000] dark:hover:bg-[#ff0000]/70 w-full sm:w-auto">
+                          <ExternalLink className="w-4 h-4 mr-1" />
+                          View Profile
+                        </Button>
+                      </Link>
+                    </div>
+                  ) : effectiveIsOwnProfile && (
+                    <div className="bg-muted/50 rounded-lg p-4">
+                      <div className="text-center">
+                        <p className="font-medium text-muted-foreground mb-2">ESPN Profile Not Added</p>
+                        <p className="text-sm text-muted-foreground mb-4">
+                          Add your ESPN profile to showcase rankings, stats, and evaluations
+                        </p>
+                        <Button 
+                          variant="outline"
+                          onClick={() => handleEditSection('espn-verification')}
+                        >
+                          <Plus className="w-4 h-4 mr-2" />
+                          Add ESPN URL
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            )}
+
             {/* YouTube Videos */}
             {(safeProfileData.youtubeVideos && safeProfileData.youtubeVideos.length > 0) || effectiveIsOwnProfile ? (
               <Card>

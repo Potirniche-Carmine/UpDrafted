@@ -61,6 +61,8 @@ export const athleteProfiles = pgTable('athlete_profiles', {
   intendedMajor: text('intended_major'),
   gender: text('gender'),
   maxprepsUrl: text('maxpreps_url'),
+  sports247Url: text('sports247_url'),
+  espnUrl: text('espn_url'),
   isVerified: boolean('is_verified').default(false),
   transferPortalVerifiedAt: timestamp('transfer_portal_verified_at', { withTimezone: true }),
   isOnTransferPortal: boolean('is_on_transfer_portal').default(false),
