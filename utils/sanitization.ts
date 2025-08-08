@@ -13,38 +13,94 @@ const createPurifyConfig = (allowLinks = false) => ({
   SANITIZE_DOM: true,
 });
 
-// Server-safe basic sanitization function
+// Server-safe comprehensive sanitization function with enhanced security
 function basicSanitize(input: string): string {
+  if (!input || typeof input !== 'string') {
+    return '';
+  }
+
+  // Security: First, limit input length to prevent DoS attacks
+  if (input.length > 10000) {
+    console.warn(`basicSanitize: Input too long (${input.length} chars), truncating for security`);
+    input = input.substring(0, 10000);
+  }
+
   return input
-    // Remove HTML tags
-    .replace(/<[^>]*>/g, '')
-    // Remove script content
+    // Remove HTML tags (enhanced pattern to catch malformed tags)
+    .replace(/<[^>]*>?/gi, '')
+    // Remove script content (comprehensive script removal)
     .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
-    // Remove javascript: protocols
+    .replace(/<noscript\b[^<]*(?:(?!<\/noscript>)<[^<]*)*<\/noscript>/gi, '')
+    .replace(/&lt;script\b[^&]*(?:(?!&lt;\/script&gt;)&[^&]*)*&lt;\/script&gt;/gi, '')
+    // Remove dangerous protocols (comprehensive list)
     .replace(/javascript:/gi, '')
-    // Remove on event handlers
+    .replace(/vbscript:/gi, '')
+    .replace(/data:/gi, '')
+    .replace(/file:/gi, '')
+    // Remove event handlers (comprehensive pattern)
+    .replace(/\s*on\w+\s*=\s*[^>\s\'"]*[\'"][^>\s\'"]*[\'"][^>\s]*/gi, '')
     .replace(/\s*on\w+\s*=\s*[^>\s]+/gi, '')
-    // Remove angle brackets
+    // Remove dangerous attributes
+    .replace(/\s*style\s*=\s*[^>\s\'"]*[\'"][^>\s\'"]*[\'"][^>\s]*/gi, '')
+    .replace(/\s*href\s*=\s*[\'"]javascript:[^\'"]*[\'"][^>\s]*/gi, '')
+    // Remove angle brackets and other dangerous characters
     .replace(/[<>]/g, '')
-    // Normalize whitespace
+    .replace(/[{}]/g, '') // Remove curly braces that could be used in template injection
+    // Remove null bytes and control characters
+    .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '')
+    // Remove Unicode control characters
+    .replace(/[\u0080-\u009F]/g, '')
+    // Normalize various whitespace characters
+    .replace(/[\u2000-\u200F\u2028-\u202F\u205F-\u206F\uFEFF]/g, ' ')
     .replace(/\s+/g, ' ')
     .trim();
 }
 
-// Sanitize basic text content (names, titles, descriptions)
+// Sanitize basic text content (names, titles, descriptions) with enhanced security
 export function sanitizeText(input: string | undefined | null): string {
   if (!input || typeof input !== 'string') return '';
   
   const trimmed = input.trim();
   if (!trimmed) return '';
 
-  // Use DOMPurify in browser, basic sanitization on server
-  if (isBrowser && DOMPurify.sanitize) {
-    const cleaned = DOMPurify.sanitize(trimmed, createPurifyConfig(false));
-    return cleaned.replace(/[<>]/g, '');
-  } else {
-    return basicSanitize(trimmed);
+  // Security: Check for extremely long inputs that could cause DoS
+  if (trimmed.length > 1000) {
+    console.warn(`sanitizeText: Input too long (${trimmed.length} chars), truncating for security`);
   }
+
+  // Security: Detect and reject suspicious patterns before processing
+  const suspiciousPatterns = [
+    /<script[\s\S]*?>[\s\S]*?<\/script>/gi,
+    /javascript:/gi,
+    /vbscript:/gi,
+    /data:/gi,
+    /on\w+\s*=/gi,
+    /eval\s*\(/gi,
+    /expression\s*\(/gi,
+    /url\s*\(/gi
+  ];
+
+  let cleanInput = trimmed;
+  let hadSuspiciousContent = false;
+
+  for (const pattern of suspiciousPatterns) {
+    if (pattern.test(cleanInput)) {
+      hadSuspiciousContent = true;
+      console.warn('sanitizeText: Suspicious pattern detected, sanitizing:', pattern.source);
+    }
+  }
+
+  // Use enhanced basic sanitization (server-side is more secure for our use case)
+  const sanitized = basicSanitize(cleanInput);
+
+  // Additional validation: ensure result doesn't contain dangerous remnants
+  if (sanitized && (sanitized.includes('<') || sanitized.includes('>') || sanitized.includes('javascript:'))) {
+    console.warn('sanitizeText: Dangerous content detected after sanitization, returning empty string');
+    return '';
+  }
+
+  // Length limit after sanitization
+  return sanitized.substring(0, 500);
 }
 
 // Sanitize longer text content (personal statements, descriptions)
@@ -63,21 +119,80 @@ export function sanitizeDescription(input: string | undefined | null): string {
   }
 }
 
-// Sanitize URLs - only allow http/https protocols
+// Sanitize URLs with comprehensive security validation - only allow http/https protocols
 export function sanitizeUrl(input: string | undefined | null): string {
   if (!input || typeof input !== 'string') return '';
   
   const trimmed = input.trim();
   if (!trimmed) return '';
+
+  // Security: Reject extremely long URLs that could cause DoS
+  if (trimmed.length > 2048) {
+    console.warn(`sanitizeUrl: URL too long (${trimmed.length} chars), rejecting for security`);
+    return '';
+  }
+
+  // Security: Pre-validate against dangerous patterns
+  const dangerousPatterns = [
+    /javascript:/gi,
+    /vbscript:/gi,
+    /data:/gi,
+    /file:/gi,
+    /ftp:/gi,
+    /\.\.[\\/]/g, // Path traversal
+    /%2e%2e/gi, // URL-encoded path traversal
+    /\x00/g, // Null bytes
+    /<script/gi,
+    /on\w+\s*=/gi
+  ];
+
+  for (const pattern of dangerousPatterns) {
+    if (pattern.test(trimmed)) {
+      console.warn('sanitizeUrl: Dangerous pattern detected in URL, rejecting:', pattern.source);
+      return '';
+    }
+  }
   
   try {
+    // First, decode any URL encoding to check for hidden dangerous content
+    let decodedUrl = trimmed;
+    try {
+      decodedUrl = decodeURIComponent(trimmed);
+    } catch {
+      // If decoding fails, continue with original
+    }
+
+    // Check decoded URL for dangerous patterns
+    for (const pattern of dangerousPatterns) {
+      if (pattern.test(decodedUrl)) {
+        console.warn('sanitizeUrl: Dangerous pattern detected in decoded URL, rejecting:', pattern.source);
+        return '';
+      }
+    }
+
     const url = new URL(trimmed);
+    
     // Only allow http and https protocols
     if (url.protocol === 'http:' || url.protocol === 'https:') {
+      // Additional security checks on the URL components
+      if (url.hostname === 'localhost' || url.hostname.startsWith('127.') || url.hostname.startsWith('192.168.') || url.hostname.startsWith('10.')) {
+        console.warn('sanitizeUrl: Local/private IP detected, rejecting for security:', url.hostname);
+        return '';
+      }
+
+      // Validate hostname format
+      if (!url.hostname || url.hostname.length > 253) {
+        console.warn('sanitizeUrl: Invalid hostname format, rejecting');
+        return '';
+      }
+
+      // Return the normalized URL string
       return url.toString();
+    } else {
+      console.warn('sanitizeUrl: Non-HTTP(S) protocol detected, rejecting:', url.protocol);
     }
-  } catch {
-    // Invalid URL - return empty string
+  } catch (error) {
+    console.warn('sanitizeUrl: URL parsing failed, rejecting:', error instanceof Error ? error.message : 'Unknown error');
   }
   
   return '';

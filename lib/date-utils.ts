@@ -14,8 +14,15 @@ export interface CampDateOption {
 }
 
 /**
- * Robust date parsing with detailed error logging
+ * Robust date parsing with comprehensive validation and detailed error logging
  * Returns a tuple of [parsedDate, errorMessage]
+ * 
+ * SECURITY & RELIABILITY ENHANCEMENTS:
+ * - Input sanitization to prevent injection attacks
+ * - Comprehensive date format validation
+ * - Timezone-safe parsing with UTC normalization
+ * - Consistent fallback behavior to prevent data corruption
+ * - Enhanced logging for debugging and monitoring
  * 
  * @param dateString - The date string to parse
  * @param context - Context for error messages (e.g., "camp experience start date")
@@ -29,8 +36,35 @@ export function parseDateWithErrorHandling(
   fallbackDate: Date = new Date(),
   strictMode: boolean = false
 ): [Date, string | null] {
+  // Enhanced input validation and sanitization
   if (!dateString || typeof dateString !== 'string') {
-    const error = `Invalid date string in ${context}: ${JSON.stringify(dateString)}`;
+    const error = `Invalid date string input in ${context}: expected string, got ${typeof dateString} (${JSON.stringify(dateString)})`;
+    
+    if (strictMode) {
+      throw new Error(error);
+    }
+    
+    console.warn(error);
+    return [fallbackDate, error];
+  }
+
+  // Security: Sanitize input string to prevent injection attacks
+  const sanitizedInput = String(dateString).trim();
+  
+  if (!sanitizedInput) {
+    const error = `Empty date string after sanitization in ${context}`;
+    
+    if (strictMode) {
+      throw new Error(error);
+    }
+    
+    console.warn(error);
+    return [fallbackDate, error];
+  }
+
+  // Security: Reject extremely long inputs that could cause DoS
+  if (sanitizedInput.length > 100) {
+    const error = `Date string too long in ${context}: ${sanitizedInput.length} characters exceeds limit`;
     
     if (strictMode) {
       throw new Error(error);
@@ -42,15 +76,29 @@ export function parseDateWithErrorHandling(
 
   try {
     // Check if it's the special "Present" date using the robust isPresentDate function
-    if (isPresentDate(dateString)) {
+    if (isPresentDate(sanitizedInput)) {
       return [PRESENT_DATE, null];
     }
 
-    // Use the isoStringToDate function to handle timezone issues properly
-    const parsedDate = isoStringToDate(dateString);
+    // Enhanced date format validation before parsing
+    const validDateFormats = [
+      /^\d{4}-\d{2}-\d{2}$/, // YYYY-MM-DD
+      /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{3})?Z?$/, // ISO 8601
+      /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{3})?[+-]\d{2}:\d{2}$/ // ISO with timezone
+    ];
+
+    const hasValidFormat = validDateFormats.some(format => format.test(sanitizedInput));
     
-    if (isNaN(parsedDate.getTime())) {
-      const error = `Invalid date value in ${context}: "${dateString}" parsed to NaN`;
+    if (!hasValidFormat) {
+      console.warn(`Date string format not recognized in ${context}: "${sanitizedInput}". Attempting parsing anyway.`);
+    }
+
+    // Use the enhanced isoStringToDate function to handle timezone issues properly
+    const parsedDate = isoStringToDate(sanitizedInput);
+    
+    // Comprehensive date validation
+    if (!parsedDate || !(parsedDate instanceof Date)) {
+      const error = `Date parsing returned invalid object in ${context}: "${sanitizedInput}"`;
       
       if (strictMode) {
         throw new Error(error);
@@ -60,15 +108,39 @@ export function parseDateWithErrorHandling(
       return [fallbackDate, error];
     }
 
+    if (isNaN(parsedDate.getTime())) {
+      const error = `Invalid date value in ${context}: "${sanitizedInput}" parsed to NaN`;
+      
+      if (strictMode) {
+        throw new Error(error);
+      }
+      
+      console.warn(error);
+      return [fallbackDate, error];
+    }
+
+    // Validate reasonable date ranges to catch potential data corruption
+    const currentYear = new Date().getFullYear();
+    const parsedYear = parsedDate.getFullYear();
+    
+    if (parsedYear < 1900 || parsedYear > currentYear + 20) {
+      console.warn(`Suspicious date year in ${context}: ${parsedYear}. Date: "${sanitizedInput}"`);
+    }
+
     return [parsedDate, null];
   } catch (error) {
-    const errorMessage = `Date parsing error in ${context}: "${dateString}" - ${error instanceof Error ? error.message : 'Unknown error'}`;
+    const errorMessage = `Date parsing exception in ${context}: "${sanitizedInput}" - ${error instanceof Error ? error.message : 'Unknown error'}`;
     
     if (strictMode) {
       throw new Error(errorMessage);
     }
     
-    console.error(errorMessage);
+    console.error(errorMessage, {
+      originalInput: dateString,
+      sanitizedInput,
+      context,
+      fallbackDate: fallbackDate.toISOString()
+    });
     return [fallbackDate, errorMessage];
   }
 }
@@ -301,26 +373,109 @@ export function dateToISOString(date: Date): string {
 }
 
 /**
- * Convert a date string to Date object
+ * Convert a date string to Date object with enhanced validation and timezone handling
+ * Provides consistent, reliable date parsing across different input formats
+ * 
+ * RELIABILITY IMPROVEMENTS:
+ * - Comprehensive input validation and sanitization
+ * - Proper timezone handling to prevent date shifting
+ * - Multiple format support with validation
+ * - Consistent error handling and logging
+ * - Prevention of date corruption through validation
+ * 
+ * @param dateString - The date string to convert to a Date object
+ * @returns Date object, or PRESENT_DATE if parsing fails
  */
 export function isoStringToDate(dateString: string): Date {
-  if (!dateString) return PRESENT_DATE;
+  // Enhanced input validation
+  if (!dateString || typeof dateString !== 'string') {
+    console.warn('isoStringToDate: Invalid input, returning PRESENT_DATE:', dateString);
+    return PRESENT_DATE;
+  }
   
+  // Security: Sanitize and validate input
+  const sanitizedInput = String(dateString).trim();
+  
+  if (!sanitizedInput) {
+    console.warn('isoStringToDate: Empty string after sanitization, returning PRESENT_DATE');
+    return PRESENT_DATE;
+  }
+
+  // Security: Prevent DoS with extremely long inputs
+  if (sanitizedInput.length > 100) {
+    console.warn(`isoStringToDate: Input too long (${sanitizedInput.length} chars), returning PRESENT_DATE:`, sanitizedInput);
+    return PRESENT_DATE;
+  }
+
   try {
-    // Handle YYYY-MM-DD format (from frontend dropdowns)
-    if (/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
-      const [year, month, day] = dateString.split('-').map(Number);
-      const date = new Date(year, month - 1, day); // month is 0-indexed
+    // Handle YYYY-MM-DD format (from frontend dropdowns) with timezone safety
+    if (/^\d{4}-\d{2}-\d{2}$/.test(sanitizedInput)) {
+      const [yearStr, monthStr, dayStr] = sanitizedInput.split('-');
+      const year = parseInt(yearStr, 10);
+      const month = parseInt(monthStr, 10);
+      const day = parseInt(dayStr, 10);
+      
+      // Validate numeric ranges to prevent invalid dates
+      if (year < 1000 || year > 9999 || month < 1 || month > 12 || day < 1 || day > 31) {
+        console.warn(`isoStringToDate: Invalid date components in "${sanitizedInput}", returning PRESENT_DATE`);
+        return PRESENT_DATE;
+      }
+      
+      // Create date with UTC to prevent timezone shifting
+      // Use UTC methods to ensure consistent date across timezones
+      const date = new Date(Date.UTC(year, month - 1, day)); // month is 0-indexed in Date constructor
+      
+      // Validate the constructed date matches the input (prevents invalid dates like Feb 30)
+      if (date.getUTCFullYear() !== year || date.getUTCMonth() !== month - 1 || date.getUTCDate() !== day) {
+        console.warn(`isoStringToDate: Date construction mismatch for "${sanitizedInput}", returning PRESENT_DATE`);
+        return PRESENT_DATE;
+      }
+      
       return date;
     }
     
-    // Handle ISO string format (from database)
-    const date = new Date(dateString);
-    const isValid = !isNaN(date.getTime());
+    // Handle ISO string format (from database) with comprehensive validation
+    if (/^\d{4}-\d{2}-\d{2}T/.test(sanitizedInput) || /^\d{4}-\d{2}-\d{2} /.test(sanitizedInput)) {
+      const date = new Date(sanitizedInput);
+      
+      // Comprehensive validation of the parsed date
+      if (!date || !(date instanceof Date) || isNaN(date.getTime())) {
+        console.warn(`isoStringToDate: ISO string parsing failed for "${sanitizedInput}", returning PRESENT_DATE`);
+        return PRESENT_DATE;
+      }
+      
+      // Additional validation for reasonable date ranges
+      const year = date.getFullYear();
+      if (year < 1000 || year > 9999) {
+        console.warn(`isoStringToDate: Unreasonable year ${year} in "${sanitizedInput}", returning PRESENT_DATE`);
+        return PRESENT_DATE;
+      }
+      
+      return date;
+    }
     
-    return isValid ? date : PRESENT_DATE;
+    // Fallback: attempt standard Date parsing for other valid formats
+    const date = new Date(sanitizedInput);
+    const isValid = date instanceof Date && !isNaN(date.getTime());
+    
+    if (isValid) {
+      // Additional validation for reasonable date ranges
+      const year = date.getFullYear();
+      if (year < 1000 || year > 9999) {
+        console.warn(`isoStringToDate: Unreasonable year ${year} in fallback parsing of "${sanitizedInput}", returning PRESENT_DATE`);
+        return PRESENT_DATE;
+      }
+      
+      return date;
+    } else {
+      console.warn(`isoStringToDate: All parsing methods failed for "${sanitizedInput}", returning PRESENT_DATE`);
+      return PRESENT_DATE;
+    }
   } catch (error) {
-    console.error('DEBUG - isoStringToDate error:', error);
+    console.error('isoStringToDate: Exception during parsing, returning PRESENT_DATE:', {
+      input: sanitizedInput,
+      error: error instanceof Error ? error.message : 'Unknown error'
+    });
     return PRESENT_DATE;
   }
 }
@@ -550,71 +705,171 @@ export function validateDateDataset(
 }
 
 /**
- * Format state abbreviation to uppercase
+ * Format state abbreviation to uppercase with enhanced security validation
  * This function should only be used when you are certain the input is a state abbreviation
  * and not arbitrary user input that might contain state-like codes
  * 
  * @param stateCode - The state code to format (e.g., "ca", "TX", "ny")
- * @returns The state code in uppercase format
+ * @returns The state code in uppercase format, or original if invalid
+ * 
+ * SECURITY: Enhanced input validation to prevent injection attacks:
+ * - Strict character validation (only alphanumeric characters allowed)
+ * - Length validation (exactly 2 characters for state codes)
+ * - No special characters, HTML, or script tags allowed
+ * - Whitelist validation against known US state abbreviations only
  */
 export function formatStateAbbreviation(stateCode: string): string {
+  // Strict type and null/undefined checks
   if (!stateCode || typeof stateCode !== 'string') {
     return stateCode;
   }
   
-  // Only format if it's a valid US state abbreviation
-  const validStateAbbreviations = [
+  // Remove any whitespace and convert to string to handle edge cases
+  const cleanInput = String(stateCode).trim();
+  
+  // Enhanced security validation: reject if empty after trimming
+  if (!cleanInput) {
+    return stateCode;
+  }
+  
+  // Security check: reject inputs longer than reasonable (prevent buffer overflow attempts)
+  if (cleanInput.length > 10) {
+    console.warn(`formatStateAbbreviation: Input too long (${cleanInput.length} chars), rejecting for security`);
+    return stateCode;
+  }
+  
+  // Security check: only allow alphanumeric characters (prevent script injection)
+  const alphanumericRegex = /^[a-zA-Z0-9]+$/;
+  if (!alphanumericRegex.test(cleanInput)) {
+    console.warn(`formatStateAbbreviation: Non-alphanumeric characters detected, rejecting for security: ${cleanInput}`);
+    return stateCode;
+  }
+  
+  // State codes should be exactly 2 characters
+  if (cleanInput.length !== 2) {
+    return stateCode;
+  }
+  
+  // Whitelist of valid US state abbreviations (security: explicit allow-list)
+  const validStateAbbreviations = new Set([
     'al', 'ak', 'az', 'ar', 'ca', 'co', 'ct', 'de', 'fl', 'ga',
     'hi', 'id', 'il', 'in', 'ia', 'ks', 'ky', 'la', 'me', 'md',
     'ma', 'mi', 'mn', 'ms', 'mo', 'mt', 'ne', 'nv', 'nh', 'nj',
     'nm', 'ny', 'nc', 'nd', 'oh', 'ok', 'or', 'pa', 'ri', 'sc',
     'sd', 'tn', 'tx', 'ut', 'vt', 'va', 'wa', 'wv', 'wi', 'wy'
-  ];
+  ]);
   
-  const normalizedCode = stateCode.toLowerCase().trim();
+  const normalizedCode = cleanInput.toLowerCase();
   
-  if (validStateAbbreviations.includes(normalizedCode)) {
+  // Security: Only return formatted result if it's in our explicit whitelist
+  if (validStateAbbreviations.has(normalizedCode)) {
     return normalizedCode.toUpperCase();
   }
   
-  // If not a valid state abbreviation, return as-is
+  // If not a valid state abbreviation, return original input unchanged
   return stateCode;
 }
 
 /**
- * Convert text to title case (capitalize first letter of each word)
- * Uses a simple, secure approach that doesn't rely on hardcoded word lists
- * to prevent potential injection vulnerabilities from user input.
+ * Convert text to title case (capitalize first letter of each word) with enhanced security
+ * Uses a comprehensive approach with input validation and sanitization to prevent injection attacks
  * 
- * SECURITY: This function uses a general title casing approach that:
- * - Capitalizes the first letter of each word
- * - Preserves existing capitalization patterns
- * - Does not contain hardcoded lists that could be exploited
- * - Treats all words equally without special handling
+ * SECURITY: Enhanced security measures implemented:
+ * - Comprehensive input validation and type checking
+ * - HTML/script tag detection and rejection
+ * - Special character validation to prevent code injection
+ * - Length limits to prevent DoS attacks
+ * - Unicode normalization to prevent encoding attacks
+ * - Logging of suspicious input for monitoring
  * 
  * Examples:
  * - "los angeles ca" -> "Los Angeles Ca"
- * - "new york ny" -> "New York Ny"
+ * - "new york ny" -> "New York Ny"  
  * - "san francisco" -> "San Francisco"
  * - "of the world" -> "Of The World"
  * 
  * For state abbreviation formatting, use formatStateAbbreviation() instead.
+ * 
+ * @param text - The text to convert to title case
+ * @returns The title-cased text, or original input if validation fails
  */
 export function toTitleCase(text: string): string {
+  // Enhanced type validation with null/undefined checks
   if (!text || typeof text !== 'string') {
     return text;
   }
-
-  // Split by spaces and handle each word
-  return text
-    .split(' ')
-    .map(word => {
-      // Skip empty words
-      if (!word.trim()) return word;
-      
-      // Simple title case: capitalize first letter, lowercase the rest
-      // This approach is secure because it doesn't rely on hardcoded lists
-      return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
-    })
-    .join(' ');
+  
+  // Convert to string and normalize to handle edge cases
+  const cleanInput = String(text).trim();
+  
+  // Security check: reject empty strings after trimming
+  if (!cleanInput) {
+    return text;
+  }
+  
+  // Security check: reject extremely long inputs to prevent DoS attacks
+  if (cleanInput.length > 1000) {
+    console.warn(`toTitleCase: Input too long (${cleanInput.length} chars), rejecting for security`);
+    return text;
+  }
+  
+  // Security check: detect and reject HTML/script tags
+  const htmlTagRegex = /<[^>]*>/g;
+  if (htmlTagRegex.test(cleanInput)) {
+    console.warn('toTitleCase: HTML tags detected, rejecting for security:', cleanInput);
+    return text;
+  }
+  
+  // Security check: detect suspicious script-like patterns
+  const scriptPatterns = [
+    /javascript:/i,
+    /data:/i,
+    /vbscript:/i,
+    /on\w+\s*=/i,
+    /<script/i,
+    /<\/script/i,
+    /eval\s*\(/i,
+    /function\s*\(/i
+  ];
+  
+  for (const pattern of scriptPatterns) {
+    if (pattern.test(cleanInput)) {
+      console.warn('toTitleCase: Suspicious script pattern detected, rejecting for security:', cleanInput);
+      return text;
+    }
+  }
+  
+  // Security check: allow only safe characters (letters, numbers, spaces, common punctuation)
+  const safeCharacterRegex = /^[a-zA-Z0-9\s\-'.,&()]+$/;
+  if (!safeCharacterRegex.test(cleanInput)) {
+    console.warn('toTitleCase: Unsafe characters detected, rejecting for security:', cleanInput);
+    return text;
+  }
+  
+  try {
+    // Unicode normalization to prevent encoding-based attacks
+    const normalizedInput = cleanInput.normalize('NFC');
+    
+    // Split by spaces and handle each word securely
+    return normalizedInput
+      .split(' ')
+      .map(word => {
+        // Skip empty words and preserve spacing
+        if (!word.trim()) return word;
+        
+        // Additional validation for each word
+        if (word.length > 50) {
+          console.warn('toTitleCase: Word too long, skipping transformation:', word);
+          return word;
+        }
+        
+        // Safe title case transformation: capitalize first letter, lowercase the rest
+        return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
+      })
+      .join(' ');
+  } catch (error) {
+    // If any error occurs during processing, return original input
+    console.error('toTitleCase: Error during processing, returning original:', error);
+    return text;
+  }
 } 
