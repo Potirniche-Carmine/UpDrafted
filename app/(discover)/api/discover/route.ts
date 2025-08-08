@@ -5,14 +5,40 @@ import { users, athleteProfiles, coachProfiles, recruitingProfiles, connections 
 import { and, eq, or, not, ilike, isNull, exists, ne } from 'drizzle-orm';
 import { sanitizeText, sanitizeNumber } from '@/utils/sanitization';
 import { withRateLimit } from '@/utils/security';
+import { validateClerkHeaders, logSecurityValidation } from '@/utils/clerk-security';
 
 // Force Node.js runtime
 export const runtime = 'nodejs';
+
+// Validation error class for clearer client feedback
+class RequestValidationError extends Error {
+  status: number;
+  constructor(message: string, status = 400) {
+    super(message);
+    this.name = 'RequestValidationError';
+    this.status = status;
+  }
+}
+
+// Security limits
+const MAX_URL_LENGTH = 8192;
+const MAX_QUERY_LENGTH = 4096;
+// Max total parameters (including array entries) to mitigate parameter pollution
+const MAX_QUERY_PARAMS = 300;
+// Per-array caps for POST bodies
+const MAX_FILTER_ITEMS = 200;
+const ALLOWED_BODY_KEYS = new Set(['query', 'page', 'pageSize', 'role', 'sports', 'divisions', 'states']);
 
 // Helper function to parse search parameters from either GET query params or POST body
 async function parseSearchParams(request: NextRequest) {
   if (request.method === 'GET') {
     const { searchParams } = new URL(request.url);
+    // Optional: defensive count of total params for GET as well
+    const totalParams = Array.from(searchParams).length;
+    if (totalParams > MAX_QUERY_PARAMS) {
+      throw new RequestValidationError('Too many parameters in query string');
+    }
+
     return {
       query: sanitizeText(searchParams.get('query') || ''),
       page: Math.min(Math.max(sanitizeNumber(searchParams.get('page'), 1, 100) || 1, 1), 100),
@@ -26,29 +52,101 @@ async function parseSearchParams(request: NextRequest) {
     // POST request - parse from body
     try {
       const body = await request.json();
+
+      if (!body || typeof body !== 'object' || Array.isArray(body)) {
+        throw new RequestValidationError('Request body must be a JSON object');
+      }
+
+      // Reject unknown parameters to prevent pollution
+      const unknownKeys = Object.keys(body).filter((k) => !ALLOWED_BODY_KEYS.has(k));
+      if (unknownKeys.length > 0) {
+        throw new RequestValidationError(`Unknown parameter(s): ${unknownKeys.join(', ')}`);
+      }
+
+      // Validate individual fields for clearer errors
+      if (body.page !== undefined && sanitizeNumber(body.page, 1, 100) === null) {
+        throw new RequestValidationError('Invalid page: must be a number between 1 and 100');
+      }
+      if (body.pageSize !== undefined && sanitizeNumber(body.pageSize, 1, 50) === null) {
+        throw new RequestValidationError('Invalid pageSize: must be a number between 1 and 50');
+      }
+      if (body.role !== undefined && body.role !== null && !['athlete', 'coach', 'recruiter'].includes(String(body.role))) {
+        throw new RequestValidationError('Invalid role specified');
+      }
+
+      const sportsArray = Array.isArray(body.sports) ? body.sports : [];
+      const divisionsArray = Array.isArray(body.divisions) ? body.divisions : [];
+      const statesArray = Array.isArray(body.states) ? body.states : [];
+
+      if (body.sports !== undefined && !Array.isArray(body.sports)) {
+        throw new RequestValidationError('Invalid sports: must be an array of strings');
+      }
+      if (body.divisions !== undefined && !Array.isArray(body.divisions)) {
+        throw new RequestValidationError('Invalid divisions: must be an array of strings');
+      }
+      if (body.states !== undefined && !Array.isArray(body.states)) {
+        throw new RequestValidationError('Invalid states: must be an array of strings');
+      }
+
+      if (sportsArray.length > MAX_FILTER_ITEMS) {
+        throw new RequestValidationError(`Too many sports selected. Max ${MAX_FILTER_ITEMS}.`);
+      }
+      if (divisionsArray.length > MAX_FILTER_ITEMS) {
+        throw new RequestValidationError(`Too many divisions selected. Max ${MAX_FILTER_ITEMS}.`);
+      }
+      if (statesArray.length > MAX_FILTER_ITEMS) {
+        throw new RequestValidationError(`Too many states selected. Max ${MAX_FILTER_ITEMS}.`);
+      }
+
+      // Total param count check to match the spirit of GET validation
+      const totalParamCount =
+        (body.query ? 1 : 0) +
+        (body.page !== undefined ? 1 : 0) +
+        (body.pageSize !== undefined ? 1 : 0) +
+        (body.role ? 1 : 0) +
+        sportsArray.length +
+        divisionsArray.length +
+        statesArray.length;
+
+      if (totalParamCount > MAX_QUERY_PARAMS) {
+        throw new RequestValidationError('Too many parameters selected. Please reduce the number of filters.');
+      }
+
       return {
         query: sanitizeText(body.query || ''),
         page: Math.min(Math.max(sanitizeNumber(body.page, 1, 100) || 1, 1), 100),
         pageSize: Math.min(Math.max(sanitizeNumber(body.pageSize, 1, 50) || 10, 1), 50),
         requestedRole: body.role as 'athlete' | 'coach' | 'recruiter' | null,
-        sports: Array.isArray(body.sports) ? body.sports.map((s: string) => sanitizeText(s)).filter(Boolean) : [],
-        divisions: Array.isArray(body.divisions) ? body.divisions.map((d: string) => sanitizeText(d)).filter(Boolean) : [],
-        states: Array.isArray(body.states) ? body.states.map((s: string) => sanitizeText(s)).filter(Boolean) : []
+        sports: sportsArray.map((s: string) => sanitizeText(s)).filter(Boolean),
+        divisions: divisionsArray.map((d: string) => sanitizeText(d)).filter(Boolean),
+        states: statesArray.map((s: string) => sanitizeText(s)).filter(Boolean)
       };
-    } catch {
-      throw new Error('Invalid JSON body');
+    } catch (err) {
+      if (err instanceof RequestValidationError) {
+        throw err;
+      }
+      throw new RequestValidationError('Invalid JSON body');
     }
   }
 }
 
 async function handleDiscoverRequest(request: NextRequest) {
   try {
+    // Validate client security headers
+    const headerValidation = validateClerkHeaders(request);
+    if (!headerValidation.isValid) {
+      logSecurityValidation(headerValidation, '/api/discover');
+      return NextResponse.json(
+        { error: 'Invalid security headers', missingHeaders: headerValidation.missingHeaders },
+        { status: 401 }
+      );
+    }
+
     // For GET requests, still check URL length to prevent abuse
     if (request.method === 'GET') {
       const url = new URL(request.url);
       
       // Limit total URL length for GET requests
-      const MAX_URL_LENGTH = 8192;
       if (request.url.length > MAX_URL_LENGTH) {
         return NextResponse.json(
           { error: 'URL too long. Consider using fewer filters or try again.' },
@@ -57,10 +155,17 @@ async function handleDiscoverRequest(request: NextRequest) {
       }
 
       // Limit query string size for GET requests
-      const MAX_QUERY_LENGTH = 4096;
       if (url.search.length > MAX_QUERY_LENGTH) {
         return NextResponse.json(
           { error: 'Too many filters selected. Please reduce the number of filters.' },
+          { status: 400 }
+        );
+      }
+      // Defensive check on total parameter entries
+      const totalParams = Array.from(url.searchParams).length;
+      if (totalParams > MAX_QUERY_PARAMS) {
+        return NextResponse.json(
+          { error: 'Too many parameters in query string.' },
           { status: 400 }
         );
       }
@@ -409,6 +514,12 @@ async function handleDiscoverRequest(request: NextRequest) {
     return response;
   } catch (error) {
     console.error('Discover API error:', error);
+    if (error instanceof RequestValidationError) {
+      return NextResponse.json(
+        { error: error.message },
+        { status: error.status }
+      );
+    }
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

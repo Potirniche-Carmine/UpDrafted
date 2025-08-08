@@ -13,6 +13,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { sanitizeText } from '@/utils/sanitization';
+import { createSecureHeaders } from '@/utils/clerk-security';
 import { getSportsList, DIVISIONS, US_STATES } from '@/lib/sports-data';
 import { 
   Popover, 
@@ -341,14 +342,11 @@ function SearchPageContent() {
 
       let response: Response;
 
-      if (usePost) {
-        // Use POST request for large filter sets
-        response = await fetch('/api/discover', {
+      // Helper to send POST request (avoids duplication)
+      const requestWithPost = async () =>
+        fetch('/api/discover', {
           method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
+          headers: createSecureHeaders(token || ''),
           body: JSON.stringify({
             page: pageNum,
             pageSize: 10,
@@ -357,39 +355,36 @@ function SearchPageContent() {
             states: selectedStates.map(state => sanitizeText(state.value))
           })
         });
+
+      // Helper to produce better error messages
+      const ensureOk = async (res: Response) => {
+        if (res.ok) return;
+        try {
+          const data = await res.json();
+          const message = data?.error || data?.message || 'Failed to load users';
+          throw new Error(message);
+        } catch {
+          throw new Error('Failed to load users');
+        }
+      };
+
+      if (usePost) {
+        // Use POST request for large filter sets
+        response = await requestWithPost();
       } else {
         // Use GET request for smaller filter sets
         response = await fetch(`${baseUrl}?${params.toString()}`, {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
+          headers: createSecureHeaders(token || ''),
         });
       }
 
       if (!response.ok) {
         // Check if it's a URL too long error and retry with POST
         if (response.status === 414 && !usePost) {
-          response = await fetch('/api/discover', {
-            method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${token}`,
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              page: pageNum,
-              pageSize: 10,
-              sports: selectedSports.map(sport => sanitizeText(sport.value)),
-              divisions: selectedDivisions.map(div => sanitizeText(div.value)),
-              states: selectedStates.map(state => sanitizeText(state.value))
-            })
-          });
-          
-          if (!response.ok) {
-            throw new Error('Failed to load users');
-          }
+          response = await requestWithPost();
+          await ensureOk(response);
         } else {
-          throw new Error('Failed to load users');
+          await ensureOk(response);
         }
       }
 
