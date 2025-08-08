@@ -4,12 +4,19 @@ import { uploadProfilePicture, uploadOrganizationLogo } from '@/database/r2/uplo
 import { deleteFromR2, getR2KeyFromUrl } from '@/database/r2/config';
 import { coachOperations, athleteOperations, recruitingOperations, userOperations, adminOperations } from '@/database/db-utils';
 import { withRateLimit } from '@/utils/security';
+import { validateClerkHeaders, logSecurityValidation } from '@/utils/clerk-security';
 import { validateFile, scanContent, createErrorResponse, createSuccessResponse, invalidateCache } from '@/utils/security';
 
 export const runtime = 'nodejs';
 
 export async function POST(request: NextRequest) {
   try {
+    const validation = validateClerkHeaders(request);
+    if (!validation.isValid) {
+      logSecurityValidation(validation, '/api/profile/upload-image');
+      return createErrorResponse('Invalid security headers', 401);
+    }
+
     // Rate limiting for file uploads
     const rateLimitCheck = await withRateLimit(request, 'fileUpload');
     if (!rateLimitCheck.success) {
@@ -99,9 +106,9 @@ export async function POST(request: NextRequest) {
     }
 
     // File validation
-    const validation = validateFile(file);
-    if (!validation.valid) {
-      return createErrorResponse(validation.error || 'Invalid file', 400);
+    const fileValidation = validateFile(file);
+    if (!fileValidation.valid) {
+      return createErrorResponse(fileValidation.error || 'Invalid file', 400);
     }
 
     // Content scanning

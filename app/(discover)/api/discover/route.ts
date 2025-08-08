@@ -5,40 +5,180 @@ import { users, athleteProfiles, coachProfiles, recruitingProfiles, connections 
 import { and, eq, or, not, ilike, isNull, exists, ne } from 'drizzle-orm';
 import { sanitizeText, sanitizeNumber } from '@/utils/sanitization';
 import { withRateLimit } from '@/utils/security';
+import { validateClerkHeaders, logSecurityValidation } from '@/utils/clerk-security';
 
 // Force Node.js runtime
 export const runtime = 'nodejs';
 
-export async function GET(request: NextRequest) {
+// Validation error class for clearer client feedback
+class RequestValidationError extends Error {
+  status: number;
+  constructor(message: string, status = 400) {
+    super(message);
+    this.name = 'RequestValidationError';
+    this.status = status;
+  }
+}
+
+// Security limits
+const MAX_URL_LENGTH = 8192;
+const MAX_QUERY_LENGTH = 4096;
+const MAX_BODY_SIZE = 1024 * 10; // 10KB limit for POST request bodies
+// Max total parameters (including array entries) to mitigate parameter pollution
+const MAX_QUERY_PARAMS = 300;
+// Per-array caps for POST bodies
+const MAX_FILTER_ITEMS = 200;
+const ALLOWED_BODY_KEYS = new Set(['query', 'page', 'pageSize', 'role', 'sports', 'divisions', 'states']);
+
+// Helper function to parse search parameters from either GET query params or POST body
+async function parseSearchParams(request: NextRequest) {
+  if (request.method === 'GET') {
+    const { searchParams } = new URL(request.url);
+    // Optional: defensive count of total params for GET as well
+    const totalParams = Array.from(searchParams).length;
+    if (totalParams > MAX_QUERY_PARAMS) {
+      throw new RequestValidationError('Too many parameters in query string');
+    }
+
+    return {
+      query: sanitizeText(searchParams.get('query') || ''),
+      page: Math.min(Math.max(sanitizeNumber(searchParams.get('page'), 1, 100) || 1, 1), 100),
+      pageSize: Math.min(Math.max(sanitizeNumber(searchParams.get('pageSize'), 1, 50) || 10, 1), 50),
+      requestedRole: searchParams.get('role') as 'athlete' | 'coach' | 'recruiter' | null,
+      sports: searchParams.getAll('sports').map(s => sanitizeText(s)).filter(Boolean),
+      divisions: searchParams.getAll('divisions').map(d => sanitizeText(d)).filter(Boolean),
+      states: searchParams.getAll('states').map(s => sanitizeText(s)).filter(Boolean)
+    };
+  } else {
+    // POST request - parse from body
+    try {
+      const body = await request.json();
+
+      if (!body || typeof body !== 'object' || Array.isArray(body)) {
+        throw new RequestValidationError('Request body must be a JSON object');
+      }
+
+      // Reject unknown parameters to prevent pollution
+      const unknownKeys = Object.keys(body).filter((k) => !ALLOWED_BODY_KEYS.has(k));
+      if (unknownKeys.length > 0) {
+        throw new RequestValidationError(`Unknown parameter(s): ${unknownKeys.join(', ')}`);
+      }
+
+      // Validate individual fields for clearer errors
+      if (body.page !== undefined && sanitizeNumber(body.page, 1, 100) === null) {
+        throw new RequestValidationError('Invalid page: must be a number between 1 and 100');
+      }
+      if (body.pageSize !== undefined && sanitizeNumber(body.pageSize, 1, 50) === null) {
+        throw new RequestValidationError('Invalid pageSize: must be a number between 1 and 50');
+      }
+      if (body.role !== undefined && body.role !== null && !['athlete', 'coach', 'recruiter'].includes(sanitizeText(String(body.role)))) {
+        throw new RequestValidationError('Invalid role specified');
+      }
+
+      const sportsArray = Array.isArray(body.sports) ? body.sports : [];
+      const divisionsArray = Array.isArray(body.divisions) ? body.divisions : [];
+      const statesArray = Array.isArray(body.states) ? body.states : [];
+
+      if (body.sports !== undefined && !Array.isArray(body.sports)) {
+        throw new RequestValidationError('Invalid sports: must be an array of strings');
+      }
+      if (body.divisions !== undefined && !Array.isArray(body.divisions)) {
+        throw new RequestValidationError('Invalid divisions: must be an array of strings');
+      }
+      if (body.states !== undefined && !Array.isArray(body.states)) {
+        throw new RequestValidationError('Invalid states: must be an array of strings');
+      }
+
+      if (sportsArray.length > MAX_FILTER_ITEMS) {
+        throw new RequestValidationError(`Too many sports selected. Max ${MAX_FILTER_ITEMS}.`);
+      }
+      if (divisionsArray.length > MAX_FILTER_ITEMS) {
+        throw new RequestValidationError(`Too many divisions selected. Max ${MAX_FILTER_ITEMS}.`);
+      }
+      if (statesArray.length > MAX_FILTER_ITEMS) {
+        throw new RequestValidationError(`Too many states selected. Max ${MAX_FILTER_ITEMS}.`);
+      }
+
+      // Total param count check to match the spirit of GET validation
+      const totalParamCount =
+        (body.query ? 1 : 0) +
+        (body.page !== undefined ? 1 : 0) +
+        (body.pageSize !== undefined ? 1 : 0) +
+        (body.role ? 1 : 0) +
+        sportsArray.length +
+        divisionsArray.length +
+        statesArray.length;
+
+      if (totalParamCount > MAX_QUERY_PARAMS) {
+        throw new RequestValidationError('Too many parameters selected. Please reduce the number of filters.');
+      }
+
+      return {
+        query: sanitizeText(body.query || ''),
+        page: Math.min(Math.max(sanitizeNumber(body.page, 1, 100) || 1, 1), 100),
+        pageSize: Math.min(Math.max(sanitizeNumber(body.pageSize, 1, 50) || 10, 1), 50),
+        requestedRole: body.role ? sanitizeText(String(body.role)) as 'athlete' | 'coach' | 'recruiter' : null,
+        sports: sportsArray.map((s: string) => sanitizeText(s)).filter(Boolean),
+        divisions: divisionsArray.map((d: string) => sanitizeText(d)).filter(Boolean),
+        states: statesArray.map((s: string) => sanitizeText(s)).filter(Boolean)
+      };
+    } catch (err) {
+      if (err instanceof RequestValidationError) {
+        throw err;
+      }
+      throw new RequestValidationError('Invalid JSON body');
+    }
+  }
+}
+
+async function handleDiscoverRequest(request: NextRequest) {
   try {
-    // SECURITY: Validate request size and URL length to prevent DoS attacks
-    const url = new URL(request.url);
-    
-    // Limit total URL length (increased for multiple filters)
-    const MAX_URL_LENGTH = 8192; // Increased from 2048 to handle multiple filters
-    if (request.url.length > MAX_URL_LENGTH) {
+    // Validate client security headers
+    const headerValidation = validateClerkHeaders(request);
+    if (!headerValidation.isValid) {
+      logSecurityValidation(headerValidation, '/api/discover');
       return NextResponse.json(
-        { error: 'URL too long' },
-        { status: 414 } // 414 URI Too Long
+        { error: 'Invalid security headers', missingHeaders: headerValidation.missingHeaders },
+        { status: 401 }
       );
     }
 
-    // Limit query string size (increased for multiple filters)
-    const MAX_QUERY_LENGTH = 4096; // Increased from 1024
-    if (url.search.length > MAX_QUERY_LENGTH) {
-      return NextResponse.json(
-        { error: 'Query parameters too long' },
-        { status: 400 }
-      );
-    }
+    // Security validations for different request methods
+    if (request.method === 'POST') {
+      // Validate POST request body size to prevent abuse
+      const bodySize = parseInt(request.headers.get('content-length') || '0', 10);
+      if (bodySize > MAX_BODY_SIZE) {
+        return NextResponse.json(
+          { error: 'Request body too large. Please reduce the number of filters or try again.' },
+          { status: 413 }
+        );
+      }
+    } else if (request.method === 'GET') {
+      const url = new URL(request.url);
+      
+      // Limit total URL length for GET requests
+      if (request.url.length > MAX_URL_LENGTH) {
+        return NextResponse.json(
+          { error: 'URL too long. Consider using fewer filters or try again.' },
+          { status: 414 }
+        );
+      }
 
-    // Limit number of query parameters to prevent parameter pollution (increased for filters)
-    const MAX_QUERY_PARAMS = 100; // Increased from 10 to handle multiple filter selections
-    if (url.searchParams.size > MAX_QUERY_PARAMS) {
-      return NextResponse.json(
-        { error: 'Too many query parameters' },
-        { status: 400 }
-      );
+      // Limit query string size for GET requests
+      if (url.search.length > MAX_QUERY_LENGTH) {
+        return NextResponse.json(
+          { error: 'Too many filters selected. Please reduce the number of filters.' },
+          { status: 400 }
+        );
+      }
+      // Defensive check on total parameter entries
+      const totalParams = Array.from(url.searchParams).length;
+      if (totalParams > MAX_QUERY_PARAMS) {
+        return NextResponse.json(
+          { error: 'Too many parameters in query string.' },
+          { status: 400 }
+        );
+      }
     }
 
     // Verify authentication and get user info
@@ -50,13 +190,17 @@ export async function GET(request: NextRequest) {
     // Apply rate limiting for search operations
     const rateLimitCheck = await withRateLimit(request, 'search', userId, role);
     if (!rateLimitCheck.success) return rateLimitCheck.response;
-    const { searchParams } = url;
 
-    // Sanitize and validate query parameters
-    const query = sanitizeText(searchParams.get('query') || '');
-    const page = Math.min(Math.max(sanitizeNumber(searchParams.get('page'), 1, 100) || 1, 1), 100); // Limit page numbers
-    const pageSize = Math.min(Math.max(sanitizeNumber(searchParams.get('pageSize'), 1, 50) || 10, 1), 50); // Default to 10, limit to 50
-    const requestedRole = searchParams.get('role') as 'athlete' | 'coach' | 'recruiter' | null;
+    // Parse search parameters from either GET or POST
+    const {
+      query,
+      page,
+      pageSize,
+      requestedRole,
+      sports,
+      divisions,
+      states
+    } = await parseSearchParams(request);
 
     // Validate role if specified
     if (requestedRole && !['athlete', 'coach', 'recruiter'].includes(requestedRole)) {
@@ -65,11 +209,6 @@ export async function GET(request: NextRequest) {
         { status: 400 }
       );
     }
-
-    // Get filter parameters
-    const sports = searchParams.getAll('sports').map(s => sanitizeText(s)).filter(Boolean);
-    const divisions = searchParams.getAll('divisions').map(d => sanitizeText(d)).filter(Boolean);
-    const states = searchParams.getAll('states').map(s => sanitizeText(s)).filter(Boolean);
 
     const offset = (page - 1) * pageSize;
 
@@ -99,6 +238,24 @@ export async function GET(request: NextRequest) {
       ))
     ];
 
+    // Role-based discovery restrictions and default role filtering:
+    // - Coaches and recruiters can only discover athletes
+    // - Athletes can discover coaches, recruiters, and other athletes
+    const roleFilterConditions = [];
+    if (role === 'coach' || role === 'recruiter') {
+      // Only show athletes to coaches and recruiters
+      roleFilterConditions.push(
+        eq(users.role, 'athlete')
+      );
+      
+      // If no specific role requested, default to athlete for coaches/recruiters
+      if (!requestedRole) {
+        baseExcludeConditions.push(
+          not(isNull(athleteProfiles.userId))
+        );
+      }
+    }
+
     // Add role-based filtering - only include users with the requested role's profile
     if (requestedRole === 'athlete') {
       baseExcludeConditions.push(
@@ -111,18 +268,6 @@ export async function GET(request: NextRequest) {
     } else if (requestedRole === 'recruiter') {
       baseExcludeConditions.push(
         not(isNull(recruitingProfiles.userId))
-      );
-    }
-
-    // Role-based discovery restrictions:
-    // - Coaches and recruiters can only discover athletes
-    // - Athletes can discover coaches, recruiters, and other athletes
-    const roleFilterConditions = [];
-    if (role === 'coach' || role === 'recruiter') {
-      // Only show athletes to coaches and recruiters
-      // Add positive condition to show only athletes
-      roleFilterConditions.push(
-        eq(users.role, 'athlete')
       );
     }
 
@@ -161,40 +306,51 @@ export async function GET(request: NextRequest) {
       )
     ] : [];
 
-    // Filter conditions
+    // Filter conditions - Fixed logic
     const filterConditions = [];
     
-    // Sports filter
+    // Sports filter - users must match at least one selected sport
     if (sports.length > 0) {
       filterConditions.push(
         or(
-          and(not(isNull(athleteProfiles.userId)), or(...sports.map(sport => eq(athleteProfiles.sport, sport)))),
-          and(not(isNull(coachProfiles.userId)), or(...sports.map(sport => eq(coachProfiles.sportCoaching, sport)))),
-          and(not(isNull(recruitingProfiles.userId)), or(...sports.map(sport => eq(recruitingProfiles.sportRecruiting, sport))))
+          and(not(isNull(athleteProfiles.userId)), or(...sports.map((sport: string) => eq(athleteProfiles.sport, sport)))),
+          and(not(isNull(coachProfiles.userId)), or(...sports.map((sport: string) => eq(coachProfiles.sportCoaching, sport)))),
+          and(not(isNull(recruitingProfiles.userId)), or(...sports.map((sport: string) => eq(recruitingProfiles.sportRecruiting, sport))))
         )
       );
     }
 
-    // Divisions filter
+    // Divisions filter - only apply to coaches and recruiters, users must match at least one selected division
     if (divisions.length > 0) {
       filterConditions.push(
         or(
-          and(not(isNull(coachProfiles.userId)), or(...divisions.map(div => eq(coachProfiles.division, div)))),
-          and(not(isNull(recruitingProfiles.userId)), or(...divisions.map(div => eq(recruitingProfiles.division, div))))
+          // For athletes, division filter doesn't apply, so include all athletes
+          not(isNull(athleteProfiles.userId)),
+          // For coaches and recruiters, check division
+          and(not(isNull(coachProfiles.userId)), or(...divisions.map((div: string) => eq(coachProfiles.division, div)))),
+          and(not(isNull(recruitingProfiles.userId)), or(...divisions.map((div: string) => eq(recruitingProfiles.division, div))))
         )
       );
     }
 
-    // States filter
+    // States filter - users must match at least one selected state
     if (states.length > 0) {
       filterConditions.push(
         or(
-          and(not(isNull(athleteProfiles.userId)), or(...states.map(state => eq(athleteProfiles.state, state)))),
-          and(not(isNull(coachProfiles.userId)), or(...states.map(state => eq(coachProfiles.state, state)))),
-          and(not(isNull(recruitingProfiles.userId)), or(...states.map(state => eq(recruitingProfiles.state, state))))
+          and(not(isNull(athleteProfiles.userId)), or(...states.map((state: string) => eq(athleteProfiles.state, state)))),
+          and(not(isNull(coachProfiles.userId)), or(...states.map((state: string) => eq(coachProfiles.state, state)))),
+          and(not(isNull(recruitingProfiles.userId)), or(...states.map((state: string) => eq(recruitingProfiles.state, state))))
         )
       );
     }
+
+    // Combine all conditions
+    const allConditions = [
+      ...baseExcludeConditions,
+      ...searchConditions,
+      ...filterConditions,
+      ...roleFilterConditions
+    ];
 
     // Execute the search query using Drizzle's query builder with relations
     const results = await db
@@ -236,7 +392,7 @@ export async function GET(request: NextRequest) {
           eq(recruitingProfiles.isDemoProfile, false)
         )
       ))
-      .where(and(...baseExcludeConditions, ...searchConditions, ...filterConditions, ...roleFilterConditions))
+      .where(allConditions.length > 0 ? and(...allConditions) : undefined)
       .limit(pageSize)
       .offset(offset);
 
@@ -368,9 +524,23 @@ export async function GET(request: NextRequest) {
     return response;
   } catch (error) {
     console.error('Discover API error:', error);
+    if (error instanceof RequestValidationError) {
+      return NextResponse.json(
+        { error: error.message },
+        { status: error.status }
+      );
+    }
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
     );
   }
+}
+
+export async function GET(request: NextRequest) {
+  return handleDiscoverRequest(request);
+}
+
+export async function POST(request: NextRequest) {
+  return handleDiscoverRequest(request);
 } 

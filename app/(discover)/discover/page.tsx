@@ -13,6 +13,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { sanitizeText } from '@/utils/sanitization';
+import { createSecureHeaders } from '@/utils/clerk-security';
 import { getSportsList, DIVISIONS, US_STATES } from '@/lib/sports-data';
 import { 
   Popover, 
@@ -314,34 +315,75 @@ function SearchPageContent() {
       };
       const token = await windowWithClerk.Clerk?.session?.getToken();
 
-      const params = new URLSearchParams({
+      // Prepare the search parameters
+      const searchParams = {
         page: pageNum.toString(),
-        pageSize: '10' // Show 10 profiles per load
+        pageSize: '10', // Show 10 profiles per load
+        sports: selectedSports.map(sport => sanitizeText(sport.value)),
+        divisions: selectedDivisions.map(div => sanitizeText(div.value)),
+        states: selectedStates.map(state => sanitizeText(state.value))
+      };
+
+      // Calculate approximate URL length if we were to use GET
+      const params = new URLSearchParams({
+        page: searchParams.page,
+        pageSize: searchParams.pageSize
       });
+      
+      searchParams.sports.forEach(sport => params.append('sports', sport));
+      searchParams.divisions.forEach(div => params.append('divisions', div));
+      searchParams.states.forEach(state => params.append('states', state));
+      
+      const baseUrl = '/api/discover';
+      const estimatedUrlLength = baseUrl.length + params.toString().length + 1; // +1 for '?'
+      
+      // Use POST if URL would be too long (> 3000 chars to be safe)
+      const usePost = estimatedUrlLength > 3000;
 
-      // Don't filter by role in API call - we'll filter client-side
-      // This allows users to switch between tabs without losing results
+      let response: Response;
 
-      // Add filters
-      selectedSports.forEach(sport => 
-        params.append('sports', sanitizeText(sport.value))
-      );
-      selectedDivisions.forEach(div => 
-        params.append('divisions', sanitizeText(div.value))
-      );
-      selectedStates.forEach(state => 
-        params.append('states', sanitizeText(state.value))
-      );
+      // Helper to send POST request (avoids duplication)
+      const requestWithPost = async () =>
+        fetch('/api/discover', {
+          method: 'POST',
+          headers: createSecureHeaders(token || ''),
+          body: JSON.stringify({
+            page: pageNum,
+            pageSize: 10,
+            sports: selectedSports.map(sport => sanitizeText(sport.value)),
+            divisions: selectedDivisions.map(div => sanitizeText(div.value)),
+            states: selectedStates.map(state => sanitizeText(state.value))
+          })
+        });
 
-      const response = await fetch(`/api/discover?${params.toString()}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      });
+      // Helper to produce better error messages
+      const ensureOk = async (res: Response) => {
+        if (res.ok) return;
+        const data = await res.json().catch(() => ({}));
+        const message = data?.error || data?.message || 'Failed to load users';
+        throw new Error(message);
+      };
+
+      if (usePost) {
+        // Use POST request for large filter sets
+        response = await requestWithPost();
+      } else {
+        // Use GET request for smaller filter sets
+        response = await fetch(`${baseUrl}?${params.toString()}`, {
+          headers: createSecureHeaders(token || ''),
+        });
+      }
 
       if (!response.ok) {
-        throw new Error('Failed to load users');
+        // Check if it's a URL too long error and retry with POST
+        if (response.status === 414 && !usePost) {
+          response = await requestWithPost();
+          if (!response.ok) {
+            await ensureOk(response);
+          }
+        } else {
+          await ensureOk(response);
+        }
       }
 
       const data: DiscoverResponse = await response.json();
@@ -475,10 +517,18 @@ function SearchPageContent() {
     if (!hasSearched || allUsers.length === 0) return [];
     
     const tabRole = getTabRole(activeTab);
-    if (!tabRole) return allUsers; // 'all' tab shows all users
+    if (!tabRole) {
+      // 'all' tab logic depends on user role
+      if (effectiveRole === 'athlete') {
+        // Athletes see only coaches and recruiters in 'all' tab
+        return allUsers.filter(user => user.role === 'coach' || user.role === 'recruiter');
+      }
+      // For other roles, show all users
+      return allUsers;
+    }
     
     return allUsers.filter(user => user.role === tabRole);
-  }, [allUsers, activeTab, hasSearched]);
+  }, [allUsers, activeTab, hasSearched, effectiveRole]);
 
   // Discover/Search function
   const handleDiscover = () => {
@@ -621,13 +671,16 @@ function SearchPageContent() {
 
   // User card component
   const renderUserCard = (user: DiscoverUser) => (
-    <Card key={user.id} className="group hover:shadow-2xl transition-all duration-300 border border-border shadow-xl bg-card hover:bg-card/90 hover:scale-[1.01] hover:border-[#01ae79]/50">
+    <Card key={user.id} className="group hover:shadow-2xl transition-all duration-300 border border-border shadow-xl bg-card hover:bg-card/90 hover:border-[#01ae79]/50">
       <CardContent className="p-6">
         <div className="space-y-5">
           {/* Header with Avatar, Name, and Badge */}
           <div className="flex items-start gap-4">
-            {/* Avatar */}
-            <div className="relative flex-shrink-0">
+            {/* Avatar - Clickable */}
+            <div 
+              className="relative flex-shrink-0 cursor-pointer hover:opacity-80 transition-opacity"
+              onClick={() => handleViewProfile(user.id)}
+            >
               <Avatar className="h-16 w-16 sm:h-20 sm:w-20 ring-3 ring-[#01ae79]/30 border-2 border-border">
                 <AvatarImage 
                   src={getProfileImageUrl(user.profileImage) || undefined} 
@@ -649,7 +702,10 @@ function SearchPageContent() {
             <div className="flex-1 min-w-0 space-y-2">
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0 flex-1 space-y-1">
-                  <h3 className="font-bold text-base sm:text-lg lg:text-xl text-card-foreground leading-tight break-words line-clamp-2">
+                  <h3 
+                    className="font-bold text-base sm:text-lg lg:text-xl text-card-foreground leading-tight break-words line-clamp-2 cursor-pointer hover:text-[#01ae79] transition-colors"
+                    onClick={() => handleViewProfile(user.id)}
+                  >
                     {user.fullName || 'Unknown User'}
                   </h3>
                   {user.organizationName && (
@@ -709,7 +765,10 @@ function SearchPageContent() {
               <div className="flex items-center text-muted-foreground">
                 <User className="h-4 w-4 mr-2 text-[#01ae79] flex-shrink-0" />
                 <span className="font-medium">
-                  {[user.height, user.weight].filter(Boolean).join(' / ')}
+                  {[
+                    user.height, 
+                    user.weight ? `${user.weight} lbs` : null
+                  ].filter(Boolean).join(' / ')}
                 </span>
               </div>
             )}
