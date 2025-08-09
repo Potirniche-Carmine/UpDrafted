@@ -434,6 +434,36 @@ export function RecruiterEditDialogs({
     );
   };
 
+  // Helper function to check if at least one program link exists
+  const hasAtLeastOneProgramLink = (updates: any) => {
+    const currentInstagram = profileData.instagramHandle;
+    const currentTwitter = profileData.twitterHandle;
+    const currentProgramWebsite = profileData.programWebsite;
+    const currentSchoolWebsite = profileData.schoolWebsite;
+    
+    // For social media updates
+    if (dialogType === 'social-media') {
+      const newInstagram = updates.instagramHandle;
+      const newTwitter = updates.twitterHandle;
+      // Check if we're deleting both social media AND there are no websites
+      if (!newInstagram && !newTwitter && !currentProgramWebsite && !currentSchoolWebsite) {
+        return false;
+      }
+    }
+    
+    // For program links updates
+    if (dialogType === 'program-links') {
+      const newProgramWebsite = updates.programWebsite;
+      const newSchoolWebsite = updates.schoolWebsite;
+      // Check if we're deleting both websites AND there are no social media links
+      if (!newProgramWebsite && !newSchoolWebsite && !currentInstagram && !currentTwitter) {
+        return false;
+      }
+    }
+    
+    return true;
+  };
+
   const handleSave = () => {
     // Image uploads handle their own saving
     if (dialogType === 'profile-image' || dialogType === 'organization-logo') {
@@ -586,6 +616,16 @@ export function RecruiterEditDialogs({
           }
         };
         break;
+    }
+    
+    // Validate that at least one program link remains
+    if (dialogType === 'social-media' || dialogType === 'program-links') {
+      if (!hasAtLeastOneProgramLink(updates)) {
+        setValidationErrors({ 
+          general: 'You must have at least one program link (website or social media). Please add another link before removing this one.' 
+        });
+        return;
+      }
     }
     
     // SECURITY: Sanitize all user input to prevent XSS attacks

@@ -958,15 +958,7 @@ export function RecruiterProfile({
                     )}
                   </div>
 
-                  {/* Social Media Links */}
-                  <SocialMediaSection 
-                    socialMedia={{
-                      instagram: profileData.instagramHandle,
-                      twitter: profileData.twitterHandle
-                    }} 
-                    isOwnProfile={effectiveIsOwnProfile}
-                    onEdit={() => handleEditSection('social-media')}
-                  />
+
                 </div>
               </CardContent>
             </Card>
@@ -1086,6 +1078,16 @@ export function RecruiterProfile({
                     </Button>
                   </div>
                 )}
+
+                {/* Social Media Links */}
+                <SocialMediaSection 
+                  socialMedia={{
+                    instagram: profileData.instagramHandle,
+                    twitter: profileData.twitterHandle
+                  }} 
+                  isOwnProfile={effectiveIsOwnProfile}
+                  onEdit={() => handleEditSection('social-media')}
+                />
               </CardContent>
             </Card>
 
