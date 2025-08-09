@@ -223,48 +223,53 @@ const SportSpecificNeedsSection = ({
       <CardContent>
         {hasAnyNeeds ? (
           <div className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Student Classifications */}
-              <div className="text-center">
-                <p className="text-sm text-muted-foreground mb-2">Student Classifications</p>
-                <div className="flex flex-wrap justify-center gap-1">
-                  {currentNeeds.studentClassifications && currentNeeds.studentClassifications.length > 0 ? (
-                    currentNeeds.studentClassifications.map((classification) => (
-                      <Badge key={classification} className="bg-purple-100 text-purple-800 text-sm">
-                        {getStudentClassificationDisplayName(classification as StudentClassification)}
-                      </Badge>
-                    ))
-                  ) : (
-                    <p className="text-xs text-muted-foreground italic">No classifications specified</p>
-                  )}
-                </div>
-              </div>
-
-              {/* Positions */}
-              <div className="text-center">
-                <p className="text-sm text-muted-foreground mb-2">Positions Needed</p>
-                <div className="flex flex-wrap justify-center gap-1">
-                  {currentNeeds.positions && currentNeeds.positions.length > 0 ? (
-                    currentNeeds.positions.map((position) => (
-                      <Badge key={position} className="bg-blue-100 text-blue-800 text-sm">
-                        {position}
-                      </Badge>
-                    ))
-                  ) : (
-                    <p className="text-xs text-muted-foreground italic">No positions specified</p>
-                  )}
-                </div>
-              </div>
-
-              {/* Scholarships */}
-              {(currentNeeds.scholarshipsAvailable !== null && currentNeeds.scholarshipsAvailable !== undefined) && (
-                <div className="text-center">
-                  <p className="text-sm text-muted-foreground mb-2">Scholarships Available</p>
-                  <div className="bg-green-50 dark:bg-green-950 p-4 rounded-lg">
-                    <p className="font-bold text-green-600 text-2xl">{currentNeeds.scholarshipsAvailable}</p>
+            <div className="space-y-4">
+              {/* Recruiting Overview */}
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                {/* Student Classifications */}
+                <div className="p-4 border rounded-lg bg-card">
+                  <p className="text-sm font-medium text-foreground mb-3">Student Classifications</p>
+                  <div className="flex flex-wrap gap-1">
+                    {currentNeeds.studentClassifications && currentNeeds.studentClassifications.length > 0 ? (
+                      currentNeeds.studentClassifications.map((classification) => (
+                        <Badge key={classification} variant="outline" className="text-xs">
+                          {getStudentClassificationDisplayName(classification as StudentClassification)}
+                        </Badge>
+                      ))
+                    ) : (
+                      <p className="text-xs text-muted-foreground italic">No classifications specified</p>
+                    )}
                   </div>
                 </div>
-              )}
+
+                {/* Positions */}
+                <div className="p-4 border rounded-lg bg-card">
+                  <p className="text-sm font-medium text-foreground mb-3">Positions Needed</p>
+                  <div className="flex flex-wrap gap-1">
+                    {currentNeeds.positions && currentNeeds.positions.length > 0 ? (
+                      currentNeeds.positions.map((position) => (
+                        <Badge key={position} variant="outline" className="text-xs">
+                          {position}
+                        </Badge>
+                      ))
+                    ) : (
+                      <p className="text-xs text-muted-foreground italic">No positions specified</p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Scholarships */}
+                {(currentNeeds.scholarshipsAvailable !== null && currentNeeds.scholarshipsAvailable !== undefined) && (
+                  <div className="p-4 border rounded-lg bg-card">
+                    <p className="text-sm font-medium text-foreground mb-3">Scholarships Available</p>
+                    <div className="flex items-center justify-center">
+                      <div className="bg-gradient-to-r from-[#01ae79]/20 to-[#01ae79]/10 border border-[#01ae79]/30 rounded-xl px-6 py-4 min-w-[80px] flex items-center justify-center">
+                        <span className="text-4xl font-bold text-[#01ae79]">{currentNeeds.scholarshipsAvailable}</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* What We're Looking For section */}

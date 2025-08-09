@@ -236,7 +236,9 @@ export async function GET(request: NextRequest) {
                             otherUser.recruitingProfile?.organizationName || '',
           title: otherUser.coachProfile?.title || 
                  otherUser.recruitingProfile?.title || '',
-          sport: otherUser.athleteProfile?.sport || '',
+          sport: otherUser.athleteProfile?.sport || 
+                 otherUser.coachProfile?.sportCoaching ||
+                 otherUser.recruitingProfile?.sportRecruiting || '',
           city: otherUser.athleteProfile?.city || 
                 otherUser.coachProfile?.city || 
                 otherUser.recruitingProfile?.city || '',
@@ -254,7 +256,30 @@ export async function GET(request: NextRequest) {
           // Add athlete-specific fields
           height: otherUser.athleteProfile?.height || undefined,
           weight: otherUser.athleteProfile?.weight || undefined,
-          positions: otherUser.athleteProfile?.positions || undefined
+          positions: otherUser.athleteProfile?.positions || undefined,
+          // Add recruiting needs for coaches and recruiters
+          recruitingNeeds: (() => {
+            if (otherUser.role === 'coach' && otherUser.coachProfile?.recruitingNeeds) {
+              return {
+                studentClassifications: otherUser.coachProfile.recruitingNeeds.studentClassifications || [],
+                positions: otherUser.coachProfile.recruitingNeeds.positions || [],
+                scholarshipsAvailable: otherUser.coachProfile.recruitingNeeds.scholarshipsAvailable || null,
+              };
+            } else if (otherUser.role === 'recruiter' && otherUser.recruitingProfile?.recruitingNeeds) {
+              // Get recruiting needs for the main sport
+              const mainSportNeeds = otherUser.recruitingProfile.recruitingNeeds.find(
+                need => need.sport === otherUser.recruitingProfile?.sportRecruiting
+              );
+              if (mainSportNeeds) {
+                return {
+                  studentClassifications: mainSportNeeds.studentClassifications || [],
+                  positions: mainSportNeeds.positions || [],
+                  scholarshipsAvailable: mainSportNeeds.scholarshipsAvailable || null,
+                };
+              }
+            }
+            return null;
+          })(),
         }
       };
 

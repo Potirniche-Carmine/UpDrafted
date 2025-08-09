@@ -2,7 +2,7 @@
 
 import { useState, useEffect, Suspense, useCallback, useRef } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { Search, MapPin, Calendar, School, Shield, Users } from "lucide-react";
+import { Search, MapPin, Calendar, School, Shield, Users, Clock, Target, Building2 } from "lucide-react";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -28,6 +28,9 @@ interface SearchResult {
   division?: string;
   graduationYear?: number;
   educationLevel?: string;
+  height?: string;
+  weight?: string;
+  positions?: string[];
 }
 
 // Helper function to get role badge with descriptive text and improved styling (same as connections page)
@@ -440,30 +443,57 @@ function SearchPageContent() {
                       </div>
                       
                       <div className="space-y-1">
-                        <div className="flex items-center gap-2 text-xs md:text-sm text-green-600 dark:text-green-400">
-                          <span className="font-medium">{user.sport}</span>
+                        {/* Sport/Title */}
+                        <div className="flex items-center gap-2 text-xs md:text-sm text-muted-foreground">
+                          <Building2 className="w-3 h-3 md:w-4 md:h-4 flex-shrink-0 text-[#01ae79]" />
+                          <span className="font-medium">{user.role === 'athlete' ? user.sport : user.title}</span>
                         </div>
                         
-                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                          <MapPin className="w-3 h-3 flex-shrink-0" />
-                          <span>{user.city}, {user.state}</span>
+                        {/* Location */}
+                        <div className="flex items-center gap-2 text-xs md:text-sm text-muted-foreground">
+                          <MapPin className="w-3 h-3 md:w-4 md:h-4 flex-shrink-0 text-[#01ae79]" />
+                          <span className="font-medium">{user.city}, {user.state}</span>
                         </div>
                         
-                        <p className="text-xs text-muted-foreground truncate">
+                        {/* Organization */}
+                        <p className="text-xs md:text-sm font-medium text-muted-foreground truncate">
                           {user.organizationName}
                         </p>
                         
-                        {user.graduationYear && (
-                          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                            <Calendar className="w-3 h-3 flex-shrink-0" />
-                            <span>Class of {user.graduationYear}</span>
+                        {/* Athlete-specific: Height & Weight */}
+                        {user.role === 'athlete' && (user.height || user.weight) && (
+                          <div className="flex items-center gap-2 text-xs md:text-sm text-muted-foreground">
+                            <Users className="w-3 h-3 md:w-4 md:h-4 flex-shrink-0 text-[#01ae79]" />
+                            <span className="font-medium">
+                              {[
+                                user.height, 
+                                user.weight ? `${user.weight} lbs` : null
+                              ].filter(Boolean).join(' / ')}
+                            </span>
                           </div>
                         )}
                         
-                        {user.title && (
-                          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                            <School className="w-3 h-3 flex-shrink-0" />
-                            <span className="truncate">{user.title}</span>
+                        {/* Graduation Year */}
+                        {user.graduationYear && (
+                          <div className="flex items-center gap-2 text-xs md:text-sm text-muted-foreground">
+                            <Clock className="w-3 h-3 md:w-4 md:h-4 flex-shrink-0 text-[#01ae79]" />
+                            <span className="font-medium">Class of {user.graduationYear}</span>
+                          </div>
+                        )}
+                        
+                        {/* Positions for athletes */}
+                        {user.role === 'athlete' && user.positions && user.positions.length > 0 && (
+                          <div className="flex items-center gap-2 text-xs md:text-sm text-muted-foreground">
+                            <Target className="w-3 h-3 md:w-4 md:h-4 flex-shrink-0 text-[#01ae79]" />
+                            <span className="font-medium">{user.positions.join(', ')}</span>
+                          </div>
+                        )}
+                        
+                        {/* Title for coaches/recruiters */}
+                        {user.title && user.role !== 'athlete' && (
+                          <div className="flex items-center gap-2 text-xs md:text-sm text-muted-foreground">
+                            <School className="w-3 h-3 md:w-4 md:h-4 flex-shrink-0 text-[#01ae79]" />
+                            <span className="font-medium truncate">{user.title}</span>
                           </div>
                         )}
                       </div>

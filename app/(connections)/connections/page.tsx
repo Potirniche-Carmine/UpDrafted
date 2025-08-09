@@ -37,6 +37,11 @@ interface Connection {
     height?: string;
     weight?: string;
     positions?: string[];
+    recruitingNeeds?: {
+      studentClassifications: string[];
+      positions: string[];
+      scholarshipsAvailable: number | null;
+    } | null;
   };
 }
 
@@ -64,6 +69,11 @@ interface PendingRequest {
     height?: string;
     weight?: string;
     positions?: string[];
+    recruitingNeeds?: {
+      studentClassifications: string[];
+      positions: string[];
+      scholarshipsAvailable: number | null;
+    } | null;
   };
 }
 
@@ -232,8 +242,8 @@ const UserCard: React.FC<UserCardProps> = ({ connection, onRemoveConnection }) =
                     {getRoleBadge(otherUser.role, otherUser.division, otherUser.educationLevel)}
                   </div>
 
-                  <p className="text-xs md:text-sm font-medium text-muted-foreground truncate">
-                    {otherUser.role === 'athlete' ? otherUser.sport : otherUser.title}
+                  <p className="text-sm font-medium text-muted-foreground truncate">
+                    {otherUser.title || (otherUser.role === 'athlete' ? otherUser.sport : 'No title specified')}
                   </p>
                 </div>
               </div>
@@ -244,29 +254,37 @@ const UserCard: React.FC<UserCardProps> = ({ connection, onRemoveConnection }) =
           <div className="mb-3 md:mb-4">
             <div className="inline-flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-1 sm:py-1.5 bg-[#01ae79]/10 text-[#01ae79] rounded-full border border-[#01ae79]/20">
               <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-[#01ae79] rounded-full"></div>
-              <span className="text-[10px] sm:text-xs font-medium">Connected</span>
+              <span className="text-xs sm:text-sm font-medium">Connected</span>
             </div>
           </div>
 
           {/* Information Grid */}
-          <div className="grid grid-cols-1 gap-2 text-xs sm:text-sm mb-3 md:mb-4">
+          <div className="grid grid-cols-1 gap-2 text-sm mb-3 md:mb-4">
             {/* Organization */}
             <div className="flex items-center text-muted-foreground">
-              <Building2 className="w-3 h-3 md:w-4 md:h-4 mr-1.5 text-[#01ae79] flex-shrink-0" />
+              <Building2 className="h-4 w-4 mr-2 text-[#01ae79] flex-shrink-0" />
               <span className="font-medium truncate">{otherUser.organizationName}</span>
             </div>
 
-            {/* Sport/Title */}
-            {(otherUser.sport || otherUser.title) && (
+            {/* Sport */}
+            {otherUser.sport && (
               <div className="flex items-center text-muted-foreground">
-                <User className="w-3 h-3 md:w-4 md:h-4 mr-1.5 text-[#01ae79] flex-shrink-0" />
-                <span className="font-medium">{otherUser.role === 'athlete' ? otherUser.sport : otherUser.title}</span>
+                <User className="h-4 w-4 mr-2 text-[#01ae79] flex-shrink-0" />
+                <span className="font-medium">{otherUser.sport}</span>
+              </div>
+            )}
+
+            {/* Scholarships Available for Coaches and Recruiters */}
+            {(otherUser.role === 'coach' || otherUser.role === 'recruiter') && otherUser.recruitingNeeds?.scholarshipsAvailable !== null && otherUser.recruitingNeeds?.scholarshipsAvailable !== undefined && (
+              <div className="flex items-center text-muted-foreground">
+                <Target className="h-4 w-4 mr-2 text-[#01ae79] flex-shrink-0" />
+                <span className="font-medium">Scholarships: {otherUser.recruitingNeeds.scholarshipsAvailable}</span>
               </div>
             )}
 
             {/* Location */}
             <div className="flex items-center text-muted-foreground">
-              <MapPin className="w-3 h-3 md:w-4 md:h-4 mr-1.5 text-[#01ae79] flex-shrink-0" />
+              <MapPin className="h-4 w-4 mr-2 text-[#01ae79] flex-shrink-0" />
               <span className="font-medium truncate">{otherUser.city}, {otherUser.state}</span>
             </div>
 
@@ -276,7 +294,7 @@ const UserCard: React.FC<UserCardProps> = ({ connection, onRemoveConnection }) =
                 {/* Height & Weight */}
                 {(otherUser.height || otherUser.weight) && (
                   <div className="flex items-center text-muted-foreground">
-                    <User className="w-3 h-3 md:w-4 md:h-4 mr-1.5 text-[#01ae79] flex-shrink-0" />
+                    <User className="h-4 w-4 mr-2 text-[#01ae79] flex-shrink-0" />
                     <span className="font-medium">
                       {[
                         otherUser.height, 
@@ -289,7 +307,7 @@ const UserCard: React.FC<UserCardProps> = ({ connection, onRemoveConnection }) =
                 {/* Graduation Year */}
                 {otherUser.graduationYear && (
                   <div className="flex items-center text-muted-foreground">
-                    <Clock className="w-3 h-3 md:w-4 md:h-4 mr-1.5 text-[#01ae79] flex-shrink-0" />
+                    <Clock className="h-4 w-4 mr-2 text-[#01ae79] flex-shrink-0" />
                     <span className="font-medium">Class of {otherUser.graduationYear}</span>
                   </div>
                 )}
@@ -297,11 +315,36 @@ const UserCard: React.FC<UserCardProps> = ({ connection, onRemoveConnection }) =
                 {/* Positions */}
                 {otherUser.positions && otherUser.positions.length > 0 && (
                   <div className="flex items-center text-muted-foreground">
-                    <Target className="w-3 h-3 md:w-4 md:h-4 mr-1.5 text-[#01ae79] flex-shrink-0" />
+                    <Target className="h-4 w-4 mr-2 text-[#01ae79] flex-shrink-0" />
                     <span className="font-medium">{otherUser.positions.join(', ')}</span>
                   </div>
                 )}
               </>
+            )}
+
+            {/* Student Classifications for Coaches and Recruiters */}
+            {(otherUser.role === 'coach' || otherUser.role === 'recruiter') && otherUser.recruitingNeeds && otherUser.recruitingNeeds.studentClassifications && otherUser.recruitingNeeds.studentClassifications.length > 0 && (
+              <div className="flex items-center text-muted-foreground">
+                <Users className="h-4 w-4 mr-2 text-[#01ae79] flex-shrink-0" />
+                <span className="font-medium">Looking for: {otherUser.recruitingNeeds.studentClassifications.map(classification => {
+                  switch(classification) {
+                    case 'high_school': return 'High School';
+                    case 'university_transfers': return 'University Transfers';
+                    case 'juco_students': return 'JUCO Students';
+                    case 'graduate_transfers': return 'Graduate Transfers';
+                    case 'international_students': return 'International Students';
+                    default: return classification;
+                  }
+                }).join(', ')}</span>
+              </div>
+            )}
+
+            {/* Positions Needed for Coaches and Recruiters */}
+            {(otherUser.role === 'coach' || otherUser.role === 'recruiter') && otherUser.recruitingNeeds && otherUser.recruitingNeeds.positions && otherUser.recruitingNeeds.positions.length > 0 && (
+              <div className="flex items-center text-muted-foreground">
+                <Target className="h-4 w-4 mr-2 text-[#01ae79] flex-shrink-0" />
+                <span className="font-medium">Positions in need: {otherUser.recruitingNeeds.positions.join(', ')}</span>
+              </div>
             )}
           </div>
 
@@ -421,8 +464,8 @@ const PendingRequestCard: React.FC<PendingRequestCardProps> = ({ request, onAcce
                     </div>
                   </div>
 
-                  <p className="text-xs md:text-sm font-medium text-muted-foreground truncate">
-                    {otherUser.role === 'athlete' ? otherUser.sport : otherUser.title}
+                  <p className="text-sm font-medium text-muted-foreground truncate">
+                    {otherUser.title || (otherUser.role === 'athlete' ? otherUser.sport : 'No title specified')}
                   </p>
                 </div>
               </div>
@@ -434,29 +477,37 @@ const PendingRequestCard: React.FC<PendingRequestCardProps> = ({ request, onAcce
             <div className="inline-flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-1 sm:py-1.5 bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 rounded-full border border-amber-200 dark:border-amber-700">
               <Clock size={10} className="sm:hidden" />
               <Clock size={12} className="hidden sm:block" />
-              <span className="text-[10px] sm:text-xs font-medium">Pending Request</span>
+              <span className="text-xs sm:text-sm font-medium">Pending Request</span>
             </div>
           </div>
 
           {/* Information Grid */}
-          <div className="grid grid-cols-1 gap-2 text-xs sm:text-sm mb-3 md:mb-4">
+          <div className="grid grid-cols-1 gap-2 text-sm mb-3 md:mb-4">
             {/* Organization */}
             <div className="flex items-center text-muted-foreground">
-              <Building2 className="w-3 h-3 md:w-4 md:h-4 mr-1.5 text-[#01ae79] flex-shrink-0" />
+              <Building2 className="h-4 w-4 mr-2 text-[#01ae79] flex-shrink-0" />
               <span className="font-medium truncate">{otherUser.organizationName}</span>
             </div>
 
-            {/* Sport/Title */}
-            {(otherUser.sport || otherUser.title) && (
+            {/* Sport */}
+            {otherUser.sport && (
               <div className="flex items-center text-muted-foreground">
-                <User className="w-3 h-3 md:w-4 md:h-4 mr-1.5 text-[#01ae79] flex-shrink-0" />
-                <span className="font-medium">{otherUser.role === 'athlete' ? otherUser.sport : otherUser.title}</span>
+                <User className="h-4 w-4 mr-2 text-[#01ae79] flex-shrink-0" />
+                <span className="font-medium">{otherUser.sport}</span>
+              </div>
+            )}
+
+            {/* Scholarships Available for Coaches and Recruiters */}
+            {(otherUser.role === 'coach' || otherUser.role === 'recruiter') && otherUser.recruitingNeeds?.scholarshipsAvailable !== null && otherUser.recruitingNeeds?.scholarshipsAvailable !== undefined && (
+              <div className="flex items-center text-muted-foreground">
+                <Target className="h-4 w-4 mr-2 text-[#01ae79] flex-shrink-0" />
+                <span className="font-medium">Scholarships: {otherUser.recruitingNeeds.scholarshipsAvailable}</span>
               </div>
             )}
 
             {/* Location */}
             <div className="flex items-center text-muted-foreground">
-              <MapPin className="w-3 h-3 md:w-4 md:h-4 mr-1.5 text-[#01ae79] flex-shrink-0" />
+              <MapPin className="h-4 w-4 mr-2 text-[#01ae79] flex-shrink-0" />
               <span className="font-medium truncate">{otherUser.city}, {otherUser.state}</span>
             </div>
 
@@ -466,7 +517,7 @@ const PendingRequestCard: React.FC<PendingRequestCardProps> = ({ request, onAcce
                 {/* Height & Weight */}
                 {(otherUser.height || otherUser.weight) && (
                   <div className="flex items-center text-muted-foreground">
-                    <User className="w-3 h-3 md:w-4 md:h-4 mr-1.5 text-[#01ae79] flex-shrink-0" />
+                    <User className="h-4 w-4 mr-2 text-[#01ae79] flex-shrink-0" />
                     <span className="font-medium">
                       {[
                         otherUser.height, 
@@ -479,7 +530,7 @@ const PendingRequestCard: React.FC<PendingRequestCardProps> = ({ request, onAcce
                 {/* Graduation Year */}
                 {otherUser.graduationYear && (
                   <div className="flex items-center text-muted-foreground">
-                    <Clock className="w-3 h-3 md:w-4 md:h-4 mr-1.5 text-[#01ae79] flex-shrink-0" />
+                    <Clock className="h-4 w-4 mr-2 text-[#01ae79] flex-shrink-0" />
                     <span className="font-medium">Class of {otherUser.graduationYear}</span>
                   </div>
                 )}
@@ -487,11 +538,36 @@ const PendingRequestCard: React.FC<PendingRequestCardProps> = ({ request, onAcce
                 {/* Positions */}
                 {otherUser.positions && otherUser.positions.length > 0 && (
                   <div className="flex items-center text-muted-foreground">
-                    <Target className="w-3 h-3 md:w-4 md:h-4 mr-1.5 text-[#01ae79] flex-shrink-0" />
+                    <Target className="h-4 w-4 mr-2 text-[#01ae79] flex-shrink-0" />
                     <span className="font-medium">{otherUser.positions.join(', ')}</span>
                   </div>
                 )}
               </>
+            )}
+
+            {/* Student Classifications for Coaches and Recruiters */}
+            {(otherUser.role === 'coach' || otherUser.role === 'recruiter') && otherUser.recruitingNeeds && otherUser.recruitingNeeds.studentClassifications && otherUser.recruitingNeeds.studentClassifications.length > 0 && (
+              <div className="flex items-center text-muted-foreground">
+                <Users className="h-4 w-4 mr-2 text-[#01ae79] flex-shrink-0" />
+                <span className="font-medium">Looking for: {otherUser.recruitingNeeds.studentClassifications.map(classification => {
+                  switch(classification) {
+                    case 'high_school': return 'High School';
+                    case 'university_transfers': return 'University Transfers';
+                    case 'juco_students': return 'JUCO Students';
+                    case 'graduate_transfers': return 'Graduate Transfers';
+                    case 'international_students': return 'International Students';
+                    default: return classification;
+                  }
+                }).join(', ')}</span>
+              </div>
+            )}
+
+            {/* Positions Needed for Coaches and Recruiters */}
+            {(otherUser.role === 'coach' || otherUser.role === 'recruiter') && otherUser.recruitingNeeds && otherUser.recruitingNeeds.positions && otherUser.recruitingNeeds.positions.length > 0 && (
+              <div className="flex items-center text-muted-foreground">
+                <Target className="h-4 w-4 mr-2 text-[#01ae79] flex-shrink-0" />
+                <span className="font-medium">Positions in need: {otherUser.recruitingNeeds.positions.join(', ')}</span>
+              </div>
             )}
           </div>
 
@@ -626,8 +702,8 @@ const SentRequestCard: React.FC<SentRequestCardProps> = ({ request, onWithdraw, 
                     </div>
                   </div>
 
-                  <p className="text-xs md:text-sm font-medium text-muted-foreground truncate">
-                    {otherUser.role === 'athlete' ? otherUser.sport : otherUser.title}
+                  <p className="text-sm font-medium text-muted-foreground truncate">
+                    {otherUser.title || (otherUser.role === 'athlete' ? otherUser.sport : 'No title specified')}
                   </p>
                 </div>
               </div>
@@ -639,29 +715,37 @@ const SentRequestCard: React.FC<SentRequestCardProps> = ({ request, onWithdraw, 
             <div className="inline-flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-1 sm:py-1.5 bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 rounded-full border border-blue-200 dark:border-blue-700">
               <Send size={10} className="sm:hidden" />
               <Send size={12} className="hidden sm:block" />
-              <span className="text-[10px] sm:text-xs font-medium">Request Sent</span>
+              <span className="text-xs sm:text-sm font-medium">Request Sent</span>
             </div>
           </div>
 
           {/* Information Grid */}
-          <div className="grid grid-cols-1 gap-2 text-xs sm:text-sm mb-3 md:mb-4">
+          <div className="grid grid-cols-1 gap-2 text-sm mb-3 md:mb-4">
             {/* Organization */}
             <div className="flex items-center text-muted-foreground">
-              <Building2 className="w-3 h-3 md:w-4 md:h-4 mr-1.5 text-[#01ae79] flex-shrink-0" />
+              <Building2 className="h-4 w-4 mr-2 text-[#01ae79] flex-shrink-0" />
               <span className="font-medium truncate">{otherUser.organizationName}</span>
             </div>
 
-            {/* Sport/Title */}
-            {(otherUser.sport || otherUser.title) && (
+            {/* Sport */}
+            {otherUser.sport && (
               <div className="flex items-center text-muted-foreground">
-                <User className="w-3 h-3 md:w-4 md:h-4 mr-1.5 text-[#01ae79] flex-shrink-0" />
-                <span className="font-medium">{otherUser.role === 'athlete' ? otherUser.sport : otherUser.title}</span>
+                <User className="h-4 w-4 mr-2 text-[#01ae79] flex-shrink-0" />
+                <span className="font-medium">{otherUser.sport}</span>
+              </div>
+            )}
+
+            {/* Scholarships Available for Coaches and Recruiters */}
+            {(otherUser.role === 'coach' || otherUser.role === 'recruiter') && otherUser.recruitingNeeds?.scholarshipsAvailable !== null && otherUser.recruitingNeeds?.scholarshipsAvailable !== undefined && (
+              <div className="flex items-center text-muted-foreground">
+                <Target className="h-4 w-4 mr-2 text-[#01ae79] flex-shrink-0" />
+                <span className="font-medium">Scholarships: {otherUser.recruitingNeeds.scholarshipsAvailable}</span>
               </div>
             )}
 
             {/* Location */}
             <div className="flex items-center text-muted-foreground">
-              <MapPin className="w-3 h-3 md:w-4 md:h-4 mr-1.5 text-[#01ae79] flex-shrink-0" />
+              <MapPin className="h-4 w-4 mr-2 text-[#01ae79] flex-shrink-0" />
               <span className="font-medium truncate">{otherUser.city}, {otherUser.state}</span>
             </div>
 
@@ -671,7 +755,7 @@ const SentRequestCard: React.FC<SentRequestCardProps> = ({ request, onWithdraw, 
                 {/* Height & Weight */}
                 {(otherUser.height || otherUser.weight) && (
                   <div className="flex items-center text-muted-foreground">
-                    <User className="w-3 h-3 md:w-4 md:h-4 mr-1.5 text-[#01ae79] flex-shrink-0" />
+                    <User className="h-4 w-4 mr-2 text-[#01ae79] flex-shrink-0" />
                     <span className="font-medium">
                       {[
                         otherUser.height, 
@@ -684,7 +768,7 @@ const SentRequestCard: React.FC<SentRequestCardProps> = ({ request, onWithdraw, 
                 {/* Graduation Year */}
                 {otherUser.graduationYear && (
                   <div className="flex items-center text-muted-foreground">
-                    <Clock className="w-3 h-3 md:w-4 md:h-4 mr-1.5 text-[#01ae79] flex-shrink-0" />
+                    <Clock className="h-4 w-4 mr-2 text-[#01ae79] flex-shrink-0" />
                     <span className="font-medium">Class of {otherUser.graduationYear}</span>
                   </div>
                 )}
@@ -692,11 +776,36 @@ const SentRequestCard: React.FC<SentRequestCardProps> = ({ request, onWithdraw, 
                 {/* Positions */}
                 {otherUser.positions && otherUser.positions.length > 0 && (
                   <div className="flex items-center text-muted-foreground">
-                    <Target className="w-3 h-3 md:w-4 md:h-4 mr-1.5 text-[#01ae79] flex-shrink-0" />
+                    <Target className="h-4 w-4 mr-2 text-[#01ae79] flex-shrink-0" />
                     <span className="font-medium">{otherUser.positions.join(', ')}</span>
                   </div>
                 )}
               </>
+            )}
+
+            {/* Student Classifications for Coaches and Recruiters */}
+            {(otherUser.role === 'coach' || otherUser.role === 'recruiter') && otherUser.recruitingNeeds && otherUser.recruitingNeeds.studentClassifications && otherUser.recruitingNeeds.studentClassifications.length > 0 && (
+              <div className="flex items-center text-muted-foreground">
+                <Users className="h-4 w-4 mr-2 text-[#01ae79] flex-shrink-0" />
+                <span className="font-medium">Looking for: {otherUser.recruitingNeeds.studentClassifications.map(classification => {
+                  switch(classification) {
+                    case 'high_school': return 'High School';
+                    case 'university_transfers': return 'University Transfers';
+                    case 'juco_students': return 'JUCO Students';
+                    case 'graduate_transfers': return 'Graduate Transfers';
+                    case 'international_students': return 'International Students';
+                    default: return classification;
+                  }
+                }).join(', ')}</span>
+              </div>
+            )}
+
+            {/* Positions Needed for Coaches and Recruiters */}
+            {(otherUser.role === 'coach' || otherUser.role === 'recruiter') && otherUser.recruitingNeeds && otherUser.recruitingNeeds.positions && otherUser.recruitingNeeds.positions.length > 0 && (
+              <div className="flex items-center text-muted-foreground">
+                <Target className="h-4 w-4 mr-2 text-[#01ae79] flex-shrink-0" />
+                <span className="font-medium">Positions in need: {otherUser.recruitingNeeds.positions.join(', ')}</span>
+              </div>
             )}
           </div>
 

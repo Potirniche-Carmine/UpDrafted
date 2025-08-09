@@ -603,22 +603,29 @@ export const connectionOperations = {
             },
             coachProfile: {
               columns: {
+                id: true,
                 fullName: true,
                 profileImageR3Key: true,
                 organizationName: true,
                 title: true,
+                sportCoaching: true,
                 city: true,
                 state: true,
                 division: true,
                 isVerified: true,
               },
+              with: {
+                recruitingNeeds: true,
+              },
             },
             recruitingProfile: {
               columns: {
+                id: true,
                 fullName: true,
                 profileImageR3Key: true,
                 organizationName: true,
                 title: true,
+                sportRecruiting: true,
                 city: true,
                 state: true,
                 division: true,
@@ -651,22 +658,29 @@ export const connectionOperations = {
             },
             coachProfile: {
               columns: {
+                id: true,
                 fullName: true,
                 profileImageR3Key: true,
                 organizationName: true,
                 title: true,
+                sportCoaching: true,
                 city: true,
                 state: true,
                 division: true,
                 isVerified: true,
               },
+              with: {
+                recruitingNeeds: true,
+              },
             },
             recruitingProfile: {
               columns: {
+                id: true,
                 fullName: true,
                 profileImageR3Key: true,
                 organizationName: true,
                 title: true,
+                sportRecruiting: true,
                 city: true,
                 state: true,
                 division: true,
@@ -679,7 +693,64 @@ export const connectionOperations = {
       orderBy: [desc(connections.createdAt)],
     });
 
-    return userConnections;
+    // For recruiting profiles, we need to fetch recruiting profile needs separately
+    // as they're in a different table
+    const allUsers = [
+      ...userConnections.map(conn => conn.fromUser),
+      ...userConnections.map(conn => conn.toUser)
+    ];
+    
+    const recruiterProfileIds = allUsers
+      .filter(user => user.role === 'recruiter' && user.recruitingProfile)
+      .map(user => user.recruitingProfile!.id);
+
+    const recruiterNeeds = recruiterProfileIds.length > 0 ? 
+      await db.query.recruitingProfileNeeds.findMany({
+        where: or(...recruiterProfileIds.map(id => eq(recruitingProfileNeeds.recruitingProfileId, id)))
+      }) : [];
+
+    // Create a map for quick lookup
+    const recruiterNeedsMap = new Map<number, Array<{
+      sport: string;
+      studentClassifications: string[];
+      positions: string[];
+      scholarshipsAvailable: number | null;
+      recruitingPhilosophy: string | null;
+    }>>();
+    
+    recruiterNeeds.forEach(need => {
+      if (!recruiterNeedsMap.has(need.recruitingProfileId)) {
+        recruiterNeedsMap.set(need.recruitingProfileId, []);
+      }
+      recruiterNeedsMap.get(need.recruitingProfileId)!.push({
+        sport: need.sport,
+        studentClassifications: need.studentClassifications,
+        positions: need.positions,
+        scholarshipsAvailable: need.scholarshipsAvailable,
+        recruitingPhilosophy: need.recruitingPhilosophy,
+      });
+    });
+
+    // Attach recruiting needs to recruiting profiles
+    const connectionsWithNeeds = userConnections.map(connection => ({
+      ...connection,
+      fromUser: {
+        ...connection.fromUser,
+        recruitingProfile: connection.fromUser.recruitingProfile ? {
+          ...connection.fromUser.recruitingProfile,
+          recruitingNeeds: recruiterNeedsMap.get(connection.fromUser.recruitingProfile.id) || []
+        } : undefined
+      },
+      toUser: {
+        ...connection.toUser,
+        recruitingProfile: connection.toUser.recruitingProfile ? {
+          ...connection.toUser.recruitingProfile,
+          recruitingNeeds: recruiterNeedsMap.get(connection.toUser.recruitingProfile.id) || []
+        } : undefined
+      }
+    }));
+
+    return connectionsWithNeeds;
   },
 
   // Check if a connection exists between two users

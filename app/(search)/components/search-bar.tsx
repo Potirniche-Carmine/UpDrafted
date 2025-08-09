@@ -21,6 +21,7 @@ export function SearchBar({ }: SearchBarProps) {
   // userRole is no longer used to prevent layout shifts, but kept for interface compatibility
   const [searchTerm, setSearchTerm] = useState('');
   const [isOpen, setIsOpen] = useState(false);
+  const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0, width: 200 });
   const searchRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
   const placeholder = useStablePlaceholder();
@@ -29,6 +30,31 @@ export function SearchBar({ }: SearchBarProps) {
   useEffect(() => {
     setIsOpen(searchTerm.length >= 3);
   }, [searchTerm.length]);
+
+  // Update dropdown position when it opens or on scroll/resize
+  useEffect(() => {
+    const updatePosition = () => {
+      if (searchRef.current && isOpen) {
+        const rect = searchRef.current.getBoundingClientRect();
+        setDropdownPosition({
+          top: rect.bottom + 8,
+          left: rect.left,
+          width: rect.width
+        });
+      }
+    };
+
+    if (isOpen) {
+      updatePosition();
+      window.addEventListener('scroll', updatePosition);
+      window.addEventListener('resize', updatePosition);
+      
+      return () => {
+        window.removeEventListener('scroll', updatePosition);
+        window.removeEventListener('resize', updatePosition);
+      };
+    }
+  }, [isOpen]);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -59,7 +85,7 @@ export function SearchBar({ }: SearchBarProps) {
   };
 
   return (
-    <div ref={searchRef} className="relative w-full max-w-md min-w-0">
+    <div ref={searchRef} className="relative w-full max-w-md min-w-0 z-[9999]">
       <form onSubmit={handleSearch}>
         <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground flex-shrink-0 z-10" />
         <Input
@@ -75,7 +101,14 @@ export function SearchBar({ }: SearchBarProps) {
       
       {/* Search Results Dropdown */}
       {isOpen && (
-        <div className="absolute top-full left-0 right-0 mt-2 bg-card border border-border/50 rounded-lg shadow-lg z-50 min-w-[200px]">
+        <div 
+          className="fixed bg-card border border-border/50 rounded-lg shadow-lg z-[9999] min-w-[200px]"
+          style={{
+            top: `${dropdownPosition.top}px`,
+            left: `${dropdownPosition.left}px`,
+            width: `${dropdownPosition.width}px`
+          }}
+        >
           <div className="p-2">
             {/* Search for query option */}
             <Link 
