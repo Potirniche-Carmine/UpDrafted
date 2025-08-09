@@ -797,7 +797,7 @@ export default function MessagingPage() {
               <div className="p-4 border-b border-border/50 bg-card/50 backdrop-blur-sm space-y-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <h1 className="text-2xl font-bold bg-gradient-to-r from-[#01ae79] via-[#01ae79] to-[#01ae79] bg-clip-text text-transparent">
+                    <h1 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-[#01ae79] via-[#01ae79] to-[#01ae79] bg-clip-text text-transparent">
                       Messages
                     </h1>
                     <div className="flex items-center gap-2 mt-1">
@@ -856,7 +856,7 @@ export default function MessagingPage() {
                           </div>
                           <div className="flex-1 min-w-0">
                             <div className="flex justify-between items-center mb-1">
-                              <h3 className={`text-sm font-semibold truncate ${
+                              <h3 className={`text-base font-semibold truncate ${
                                 selectedConversationId === convo.id 
                                   ? 'text-[#01ae79] dark:text-[#01ae79]' 
                                   : 'text-foreground'
@@ -923,7 +923,7 @@ export default function MessagingPage() {
                         <div className="flex items-center justify-between">
                           <div className="flex items-center">
                             <Link href={`/profile/${activeConversation?.partnerId}`} className="cursor-pointer hover:opacity-80 transition-opacity">
-                              <h2 className="text-lg font-semibold text-foreground">{activeConversation?.partnerName}</h2>
+                              <h2 className="text-base font-semibold text-foreground">{activeConversation?.partnerName}</h2>
                             </Link>
                             <div className="ml-2 cursor-help flex items-center" title="Messages are encrypted. UpDrafted may access them only to monitor for safety violations such as harassment, hate speech, or spam.">
                               <Lock size={14} className="text-muted-foreground" />

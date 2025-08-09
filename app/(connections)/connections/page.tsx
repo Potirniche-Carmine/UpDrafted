@@ -220,7 +220,7 @@ const UserCard: React.FC<UserCardProps> = ({ connection, onRemoveConnection }) =
 
                 <div className="flex-1 min-w-0 space-y-2">
                   <div className="flex items-start justify-between gap-2">
-                    <h3 className="font-semibold text-sm md:text-base text-foreground leading-tight hover:text-[#01ae79] transition-colors flex-1 min-w-0">
+                    <h3 className="font-semibold text-base text-foreground leading-tight hover:text-[#01ae79] transition-colors flex-1 min-w-0">
                       {otherUser.fullName}
                     </h3>
                     <span className="text-xs text-muted-foreground font-medium flex-shrink-0 mt-0.5">
@@ -407,7 +407,7 @@ const PendingRequestCard: React.FC<PendingRequestCardProps> = ({ request, onAcce
 
                 <div className="flex-1 min-w-0 space-y-1.5">
                   <div className="flex items-start justify-between gap-2">
-                    <h3 className="font-semibold text-sm md:text-base text-foreground leading-tight hover:text-[#01ae79] transition-colors flex-1 min-w-0">
+                    <h3 className="font-semibold text-base text-foreground leading-tight hover:text-[#01ae79] transition-colors flex-1 min-w-0">
                       {otherUser.fullName}
                     </h3>
                     <span className="text-xs text-muted-foreground font-medium flex-shrink-0 mt-0.5">
@@ -612,7 +612,7 @@ const SentRequestCard: React.FC<SentRequestCardProps> = ({ request, onWithdraw, 
 
                 <div className="flex-1 min-w-0 space-y-1.5">
                   <div className="flex items-start justify-between gap-2">
-                    <h3 className="font-semibold text-sm md:text-base text-foreground leading-tight hover:text-[#01ae79] transition-colors flex-1 min-w-0">
+                    <h3 className="font-semibold text-base text-foreground leading-tight hover:text-[#01ae79] transition-colors flex-1 min-w-0">
                       {otherUser.fullName}
                     </h3>
                     <span className="text-xs text-muted-foreground font-medium flex-shrink-0 mt-0.5">
@@ -1073,8 +1073,8 @@ function App() {
       <div className="max-w-6xl mx-auto">
         {/* Page Header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold tracking-tight">Connections</h1>
-          <p className="text-muted-foreground mt-2">
+          <h1 className="text-3xl md:text-4xl font-bold tracking-tight">Connections</h1>
+          <p className="text-base md:text-lg text-muted-foreground mt-2">
             Manage your professional network of athletes, coaches, and recruiters
           </p>
         </div>

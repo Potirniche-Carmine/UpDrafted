@@ -681,7 +681,7 @@ function SearchPageContent() {
                 <div className="min-w-0 flex-1 space-y-1">
                   <a 
                     href={`/profile/${user.id}`}
-                    className="font-semibold text-sm md:text-base text-card-foreground leading-tight break-words line-clamp-2 cursor-pointer hover:text-[#01ae79] transition-colors block"
+                    className="font-semibold text-base text-card-foreground leading-tight break-words line-clamp-2 cursor-pointer hover:text-[#01ae79] transition-colors block"
                     onClick={(e) => {
                       e.preventDefault();
                       handleViewProfile(user.id);
@@ -809,10 +809,10 @@ function SearchPageContent() {
             <div className="bg-card rounded-lg shadow-sm border border-border p-6 sticky top-6">
               <div className="flex items-center justify-between mb-6">
                 <div>
-                  <h1 className="text-xl font-bold text-foreground mb-1">
+                  <h1 className="text-3xl md:text-4xl font-bold text-foreground mb-1">
                     Discover
                   </h1>
-                  <p className="text-sm text-muted-foreground">
+                  <p className="text-base md:text-lg text-muted-foreground">
                     Find athletes, coaches & recruiters
                   </p>
                 </div>
@@ -907,10 +907,10 @@ function SearchPageContent() {
           <div className="xl:hidden mb-4">
             <div className="flex items-center justify-between mb-4">
               <div className="flex-1">
-                <h1 className="text-2xl font-bold text-foreground mb-1">
+                <h1 className="text-3xl md:text-4xl font-bold text-foreground mb-1">
                   Discover
                 </h1>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-base md:text-lg text-muted-foreground">
                   Find athletes, coaches & recruiters
                 </p>
               </div>
@@ -1019,10 +1019,10 @@ function SearchPageContent() {
                   <TabsTrigger 
                     key={tab.value} 
                     value={tab.value}
-                    className="flex items-center gap-2 data-[state=active]:bg-[#01ae79] data-[state=active]:text-white text-xs sm:text-sm px-2 sm:px-4"
+                    className="flex items-center gap-2 data-[state=active]:bg-[#01ae79] data-[state=active]:text-white text-sm px-2 sm:px-4"
                   >
                     {tab.icon}
-                    <span className="text-xs sm:text-sm">{tab.label}</span>
+                    <span className="text-sm">{tab.label}</span>
                   </TabsTrigger>
                 ))}
               </TabsList>
