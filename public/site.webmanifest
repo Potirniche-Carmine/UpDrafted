@@ -1,7 +1,7 @@
 {
-  "name": "UpDrafted - Premier Recruiting Platform",
+  "name": "UpDrafted",
   "short_name": "UpDrafted",
-  "description": "The premier platform connecting student-athletes with college programs. Access your dashboard, messages, and profile offline.",
+  "description": "The premier platform connecting student-athletes with college programs.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",

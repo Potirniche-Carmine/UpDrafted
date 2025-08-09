@@ -57,6 +57,23 @@ const nextConfig: NextConfig = {
     // Quality settings for different use cases
     loader: 'default',
   },
+  
+  // Redirects for SEO and proper canonicalization
+  redirects: async () => [
+    // Redirect www to non-www
+    {
+      source: '/:path*',
+      has: [
+        {
+          type: 'host',
+          value: 'www.updrafted.us',
+        },
+      ],
+      destination: 'https://updrafted.us/:path*',
+      permanent: true,
+    },
+  ],
+
   // Additional optimizations for cost efficiency
   experimental: {
     optimizePackageImports: ['lucide-react', '@radix-ui/react-icons'],

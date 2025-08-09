@@ -38,10 +38,8 @@ export const organizationStructuredData = {
   url: siteConfig.url,
   logo: `${siteConfig.url}/icons/icon-512x512.png`,
   sameAs: [
-    // Add your social media URLs here when available
-    // 'https://twitter.com/updraftedapp',
-    // 'https://linkedin.com/company/updrafted',
-    // 'https://instagram.com/updrafted'
+    'https://x.com/updrafted_us',
+    'https://instagram.com/updrafted.us'
   ],
   contactPoint: {
     '@type': 'ContactPoint',
@@ -106,7 +104,7 @@ export function generateMetadata({
       siteName: siteConfig.name,
       images: [
         {
-          url: metaImage,
+          url: metaImage.startsWith('http') ? metaImage : `${siteConfig.url}${metaImage}`,
           width: 1200,
           height: 630,
           alt: metaTitle,
@@ -117,7 +115,7 @@ export function generateMetadata({
       card: 'summary_large_image',
       title: metaTitle,
       description: metaDescription,
-      images: [metaImage],
+      images: [metaImage.startsWith('http') ? metaImage : `${siteConfig.url}${metaImage}`],
       creator: siteConfig.twitterCreator, 
     },
     icons: {

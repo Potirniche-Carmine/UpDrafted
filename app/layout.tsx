@@ -18,7 +18,11 @@ const roboto = Roboto({
   variable: "--font-roboto"
 });
 
-export const metadata: Metadata = generateMetadata({});
+export const metadata: Metadata = generateMetadata({
+  title: 'UpDrafted - Connect Student-Athletes with College Programs',
+  description: 'The premier platform connecting student-athletes with D1, D2, D3, and JUCO college programs. Streamline your recruitment process with verified profiles.',
+  noIndex: false 
+});
 
 export default function RootLayout({
   children,
