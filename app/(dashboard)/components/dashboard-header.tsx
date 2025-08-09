@@ -5,14 +5,12 @@ import { Search } from "lucide-react";
 import Link from "next/link";
 
 interface DashboardHeaderProps {
-  displayName: string;
   welcomeText: string;
   searchText: string;
   searchHref: string;
 }
 
 export function DashboardHeader({
-  displayName,
   welcomeText,
   searchText,
   searchHref
