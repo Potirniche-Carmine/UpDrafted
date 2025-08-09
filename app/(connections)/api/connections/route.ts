@@ -29,6 +29,9 @@ interface ConnectionData {
     division: string;
     isVerified: boolean;
     role: string;
+    height?: string;
+    weight?: string;
+    positions?: string[];
   };
 }
 
@@ -247,7 +250,11 @@ export async function GET(request: NextRequest) {
           isVerified: otherUser.athleteProfile?.isVerified || 
                      otherUser.coachProfile?.isVerified || 
                      otherUser.recruitingProfile?.isVerified || false,
-          role: otherUser.role
+          role: otherUser.role,
+          // Add athlete-specific fields
+          height: otherUser.athleteProfile?.height || undefined,
+          weight: otherUser.athleteProfile?.weight || undefined,
+          positions: otherUser.athleteProfile?.positions || undefined
         }
       };
 

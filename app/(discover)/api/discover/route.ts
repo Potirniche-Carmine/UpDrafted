@@ -214,26 +214,28 @@ async function handleDiscoverRequest(request: NextRequest) {
 
     // Base query to exclude:
     // 1. Current user
-    // 2. Users they're already connected to
-    // 3. Users they've sent requests to
-    // 4. Athletes can't discover other athletes
-    // 5. Demo profiles should never appear in discover
-    // 6. Admin profiles should never appear in discover
+    // 2. Users they're already connected to (but not pending requests - show those with proper status)
+    // 3. Athletes can't discover other athletes
+    // 4. Demo profiles should never appear in discover
+    // 5. Admin profiles should never appear in discover
     const baseExcludeConditions = [
       ne(users.id, userId), // Exclude self
       ne(users.role, 'admin'), // Exclude admin profiles
       not(exists(
         db.select()
           .from(connections)
-          .where(or(
-            and(
-              eq(connections.fromUserId, userId),
-              eq(connections.toUserId, users.id)
+          .where(and(
+            or(
+              and(
+                eq(connections.fromUserId, userId),
+                eq(connections.toUserId, users.id)
+              ),
+              and(
+                eq(connections.fromUserId, users.id),
+                eq(connections.toUserId, userId)
+              )
             ),
-            and(
-              eq(connections.fromUserId, users.id),
-              eq(connections.toUserId, userId)
-            )
+            eq(connections.status, 'connected') // Only exclude already connected users
           ))
       ))
     ];
@@ -364,8 +366,8 @@ async function handleDiscoverRequest(request: NextRequest) {
           db.select()
             .from(connections)
             .where(and(
-              eq(connections.fromUserId, users.id),
-              eq(connections.toUserId, userId),
+              eq(connections.fromUserId, userId),
+              eq(connections.toUserId, users.id),
               eq(connections.status, 'pending')
             ))
         )

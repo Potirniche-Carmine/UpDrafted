@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useMemo, useEffect, Suspense, useRef } from 'react';
-import { Users, Search, MessageSquare, Shield, CheckCircle, X, Clock, MapPin, User, UserCheck, Users2, Send } from 'lucide-react';
+import { Users, Search, MessageSquare, Shield, CheckCircle, X, Clock, MapPin, User, UserCheck, Users2, Send, Building2, Target } from 'lucide-react';
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -34,6 +34,9 @@ interface Connection {
     educationLevel?: string;
     isVerified: boolean;
     role: 'athlete' | 'coach' | 'recruiter';
+    height?: string;
+    weight?: string;
+    positions?: string[];
   };
 }
 
@@ -58,11 +61,15 @@ interface PendingRequest {
     educationLevel?: string;
     isVerified: boolean;
     role: 'athlete' | 'coach' | 'recruiter';
+    height?: string;
+    weight?: string;
+    positions?: string[];
   };
 }
 
 interface UserCardProps {
   connection: Connection;
+  onRemoveConnection: (connectionId: number, targetUserId: string) => void;
 }
 
 interface PendingRequestCardProps {
@@ -143,7 +150,7 @@ const getRoleBadge = (role: string, division?: string, educationLevel?: string) 
   return <Badge variant="outline" className={`text-xs font-medium px-2 py-0.5 border ${roleColor} whitespace-nowrap`}>{roleText}</Badge>;
 };
 
-const UserCard: React.FC<UserCardProps> = ({ connection }) => {
+const UserCard: React.FC<UserCardProps> = ({ connection, onRemoveConnection }) => {
   const router = useRouter();
   const { otherUser } = connection;
 
@@ -225,7 +232,7 @@ const UserCard: React.FC<UserCardProps> = ({ connection }) => {
                     {getRoleBadge(otherUser.role, otherUser.division, otherUser.educationLevel)}
                   </div>
 
-                  <p className="text-xs md:text-sm font-medium text-blue-600 dark:text-blue-400 truncate">
+                  <p className="text-xs md:text-sm font-medium text-muted-foreground truncate">
                     {otherUser.role === 'athlete' ? otherUser.sport : otherUser.title}
                   </p>
                 </div>
@@ -241,17 +248,65 @@ const UserCard: React.FC<UserCardProps> = ({ connection }) => {
             </div>
           </div>
 
-          {/* Info Section */}
-          <div className="space-y-2 md:space-y-3 mb-3 md:mb-4">
-            <div className="flex items-center gap-1.5 sm:gap-2 text-xs md:text-sm text-muted-foreground">
-              <MapPin className="w-3 h-3 md:w-4 md:h-4 flex-shrink-0" />
-              <span className="truncate">{otherUser.city}, {otherUser.state}</span>
+          {/* Information Grid */}
+          <div className="grid grid-cols-1 gap-2 text-xs sm:text-sm mb-3 md:mb-4">
+            {/* Organization */}
+            <div className="flex items-center text-muted-foreground">
+              <Building2 className="w-3 h-3 md:w-4 md:h-4 mr-1.5 text-[#01ae79] flex-shrink-0" />
+              <span className="font-medium truncate">{otherUser.organizationName}</span>
             </div>
-            <p className="text-xs md:text-sm text-muted-foreground truncate font-medium">{otherUser.organizationName}</p>
+
+            {/* Sport/Title */}
+            {(otherUser.sport || otherUser.title) && (
+              <div className="flex items-center text-muted-foreground">
+                <User className="w-3 h-3 md:w-4 md:h-4 mr-1.5 text-[#01ae79] flex-shrink-0" />
+                <span className="font-medium">{otherUser.role === 'athlete' ? otherUser.sport : otherUser.title}</span>
+              </div>
+            )}
+
+            {/* Location */}
+            <div className="flex items-center text-muted-foreground">
+              <MapPin className="w-3 h-3 md:w-4 md:h-4 mr-1.5 text-[#01ae79] flex-shrink-0" />
+              <span className="font-medium truncate">{otherUser.city}, {otherUser.state}</span>
+            </div>
+
+            {/* Athlete-specific information */}
+            {otherUser.role === 'athlete' && (
+              <>
+                {/* Height & Weight */}
+                {(otherUser.height || otherUser.weight) && (
+                  <div className="flex items-center text-muted-foreground">
+                    <User className="w-3 h-3 md:w-4 md:h-4 mr-1.5 text-[#01ae79] flex-shrink-0" />
+                    <span className="font-medium">
+                      {[
+                        otherUser.height, 
+                        otherUser.weight ? `${otherUser.weight} lbs` : null
+                      ].filter(Boolean).join(' / ')}
+                    </span>
+                  </div>
+                )}
+
+                {/* Graduation Year */}
+                {otherUser.graduationYear && (
+                  <div className="flex items-center text-muted-foreground">
+                    <Clock className="w-3 h-3 md:w-4 md:h-4 mr-1.5 text-[#01ae79] flex-shrink-0" />
+                    <span className="font-medium">Class of {otherUser.graduationYear}</span>
+                  </div>
+                )}
+
+                {/* Positions */}
+                {otherUser.positions && otherUser.positions.length > 0 && (
+                  <div className="flex items-center text-muted-foreground">
+                    <Target className="w-3 h-3 md:w-4 md:h-4 mr-1.5 text-[#01ae79] flex-shrink-0" />
+                    <span className="font-medium">{otherUser.positions.join(', ')}</span>
+                  </div>
+                )}
+              </>
+            )}
           </div>
 
-          {/* Message Button */}
-          <div className="pt-3 md:pt-4 border-t border-border/50">
+          {/* Action Buttons */}
+          <div className="pt-3 md:pt-4 border-t border-border/50 space-y-2">
             <Button
               onClick={(e) => {
                 e.preventDefault();
@@ -262,6 +317,18 @@ const UserCard: React.FC<UserCardProps> = ({ connection }) => {
             >
               <MessageSquare size={14} className="mr-1.5 sm:mr-2" />  
               Send Message
+            </Button>
+            <Button
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                onRemoveConnection(connection.id, otherUser.userId);
+              }}
+              variant="outline"
+              className="w-full h-8 sm:h-8 md:h-9 text-xs sm:text-sm font-medium hover:bg-destructive hover:text-destructive-foreground hover:border-destructive"
+            >
+              <X size={14} className="mr-1.5 sm:mr-2" />  
+              Remove Connection
             </Button>
           </div>
         </CardContent>
@@ -354,7 +421,7 @@ const PendingRequestCard: React.FC<PendingRequestCardProps> = ({ request, onAcce
                     </div>
                   </div>
 
-                  <p className="text-xs md:text-sm font-medium text-amber-600 dark:text-amber-400 truncate">
+                  <p className="text-xs md:text-sm font-medium text-muted-foreground truncate">
                     {otherUser.role === 'athlete' ? otherUser.sport : otherUser.title}
                   </p>
                 </div>
@@ -371,13 +438,61 @@ const PendingRequestCard: React.FC<PendingRequestCardProps> = ({ request, onAcce
             </div>
           </div>
 
-          {/* Info Section */}
-          <div className="space-y-2 md:space-y-3 mb-3 md:mb-4">
-            <div className="flex items-center gap-1.5 sm:gap-2 text-xs md:text-sm text-muted-foreground">
-              <MapPin className="w-3 h-3 md:w-4 md:h-4 flex-shrink-0" />
-              <span className="truncate">{otherUser.city}, {otherUser.state}</span>
+          {/* Information Grid */}
+          <div className="grid grid-cols-1 gap-2 text-xs sm:text-sm mb-3 md:mb-4">
+            {/* Organization */}
+            <div className="flex items-center text-muted-foreground">
+              <Building2 className="w-3 h-3 md:w-4 md:h-4 mr-1.5 text-[#01ae79] flex-shrink-0" />
+              <span className="font-medium truncate">{otherUser.organizationName}</span>
             </div>
-            <p className="text-xs md:text-sm text-muted-foreground truncate font-medium">{otherUser.organizationName}</p>
+
+            {/* Sport/Title */}
+            {(otherUser.sport || otherUser.title) && (
+              <div className="flex items-center text-muted-foreground">
+                <User className="w-3 h-3 md:w-4 md:h-4 mr-1.5 text-[#01ae79] flex-shrink-0" />
+                <span className="font-medium">{otherUser.role === 'athlete' ? otherUser.sport : otherUser.title}</span>
+              </div>
+            )}
+
+            {/* Location */}
+            <div className="flex items-center text-muted-foreground">
+              <MapPin className="w-3 h-3 md:w-4 md:h-4 mr-1.5 text-[#01ae79] flex-shrink-0" />
+              <span className="font-medium truncate">{otherUser.city}, {otherUser.state}</span>
+            </div>
+
+            {/* Athlete-specific information */}
+            {otherUser.role === 'athlete' && (
+              <>
+                {/* Height & Weight */}
+                {(otherUser.height || otherUser.weight) && (
+                  <div className="flex items-center text-muted-foreground">
+                    <User className="w-3 h-3 md:w-4 md:h-4 mr-1.5 text-[#01ae79] flex-shrink-0" />
+                    <span className="font-medium">
+                      {[
+                        otherUser.height, 
+                        otherUser.weight ? `${otherUser.weight} lbs` : null
+                      ].filter(Boolean).join(' / ')}
+                    </span>
+                  </div>
+                )}
+
+                {/* Graduation Year */}
+                {otherUser.graduationYear && (
+                  <div className="flex items-center text-muted-foreground">
+                    <Clock className="w-3 h-3 md:w-4 md:h-4 mr-1.5 text-[#01ae79] flex-shrink-0" />
+                    <span className="font-medium">Class of {otherUser.graduationYear}</span>
+                  </div>
+                )}
+
+                {/* Positions */}
+                {otherUser.positions && otherUser.positions.length > 0 && (
+                  <div className="flex items-center text-muted-foreground">
+                    <Target className="w-3 h-3 md:w-4 md:h-4 mr-1.5 text-[#01ae79] flex-shrink-0" />
+                    <span className="font-medium">{otherUser.positions.join(', ')}</span>
+                  </div>
+                )}
+              </>
+            )}
           </div>
 
           {/* Notes Section */}
@@ -511,7 +626,7 @@ const SentRequestCard: React.FC<SentRequestCardProps> = ({ request, onWithdraw, 
                     </div>
                   </div>
 
-                  <p className="text-xs md:text-sm font-medium text-blue-600 dark:text-blue-400 truncate">
+                  <p className="text-xs md:text-sm font-medium text-muted-foreground truncate">
                     {otherUser.role === 'athlete' ? otherUser.sport : otherUser.title}
                   </p>
                 </div>
@@ -528,13 +643,61 @@ const SentRequestCard: React.FC<SentRequestCardProps> = ({ request, onWithdraw, 
             </div>
           </div>
 
-          {/* Info Section - Fixed margin to match other cards */}
-          <div className="space-y-2 md:space-y-3 mb-3 md:mb-4">
-            <div className="flex items-center gap-1.5 sm:gap-2 text-xs md:text-sm text-muted-foreground">
-              <MapPin className="w-3 h-3 md:w-4 md:h-4 flex-shrink-0" />
-              <span className="truncate">{otherUser.city}, {otherUser.state}</span>
+          {/* Information Grid */}
+          <div className="grid grid-cols-1 gap-2 text-xs sm:text-sm mb-3 md:mb-4">
+            {/* Organization */}
+            <div className="flex items-center text-muted-foreground">
+              <Building2 className="w-3 h-3 md:w-4 md:h-4 mr-1.5 text-[#01ae79] flex-shrink-0" />
+              <span className="font-medium truncate">{otherUser.organizationName}</span>
             </div>
-            <p className="text-xs md:text-sm text-muted-foreground truncate font-medium">{otherUser.organizationName}</p>
+
+            {/* Sport/Title */}
+            {(otherUser.sport || otherUser.title) && (
+              <div className="flex items-center text-muted-foreground">
+                <User className="w-3 h-3 md:w-4 md:h-4 mr-1.5 text-[#01ae79] flex-shrink-0" />
+                <span className="font-medium">{otherUser.role === 'athlete' ? otherUser.sport : otherUser.title}</span>
+              </div>
+            )}
+
+            {/* Location */}
+            <div className="flex items-center text-muted-foreground">
+              <MapPin className="w-3 h-3 md:w-4 md:h-4 mr-1.5 text-[#01ae79] flex-shrink-0" />
+              <span className="font-medium truncate">{otherUser.city}, {otherUser.state}</span>
+            </div>
+
+            {/* Athlete-specific information */}
+            {otherUser.role === 'athlete' && (
+              <>
+                {/* Height & Weight */}
+                {(otherUser.height || otherUser.weight) && (
+                  <div className="flex items-center text-muted-foreground">
+                    <User className="w-3 h-3 md:w-4 md:h-4 mr-1.5 text-[#01ae79] flex-shrink-0" />
+                    <span className="font-medium">
+                      {[
+                        otherUser.height, 
+                        otherUser.weight ? `${otherUser.weight} lbs` : null
+                      ].filter(Boolean).join(' / ')}
+                    </span>
+                  </div>
+                )}
+
+                {/* Graduation Year */}
+                {otherUser.graduationYear && (
+                  <div className="flex items-center text-muted-foreground">
+                    <Clock className="w-3 h-3 md:w-4 md:h-4 mr-1.5 text-[#01ae79] flex-shrink-0" />
+                    <span className="font-medium">Class of {otherUser.graduationYear}</span>
+                  </div>
+                )}
+
+                {/* Positions */}
+                {otherUser.positions && otherUser.positions.length > 0 && (
+                  <div className="flex items-center text-muted-foreground">
+                    <Target className="w-3 h-3 md:w-4 md:h-4 mr-1.5 text-[#01ae79] flex-shrink-0" />
+                    <span className="font-medium">{otherUser.positions.join(', ')}</span>
+                  </div>
+                )}
+              </>
+            )}
           </div>
 
           {/* Action Button */}
@@ -704,15 +867,6 @@ function App() {
         };
 
         setConnections(prev => [...prev, newConnection]);
-
-        // Show success notification
-        const notification = document.createElement('div');
-        notification.className = 'fixed top-4 right-4 bg-green-500 text-white px-4 py-2 rounded-lg shadow-lg z-50';
-        notification.textContent = 'Connection request accepted successfully!';
-        document.body.appendChild(notification);
-        setTimeout(() => {
-          document.body.removeChild(notification);
-        }, 3000);
       } else {
         throw new Error(result.error || 'Failed to accept connection request');
       }
@@ -756,15 +910,6 @@ function App() {
       if (result.success) {
         // Remove from pending requests
         setPendingRequests(prev => prev.filter(r => r.id !== requestId));
-
-        // Show success notification
-        const notification = document.createElement('div');
-        notification.className = 'fixed top-4 right-4 bg-red-500 text-white px-4 py-2 rounded-lg shadow-lg z-50';
-        notification.textContent = 'Connection request declined.';
-        document.body.appendChild(notification);
-        setTimeout(() => {
-          document.body.removeChild(notification);
-        }, 3000);
       } else {
         throw new Error(result.error || 'Failed to decline connection request');
       }
@@ -802,14 +947,6 @@ function App() {
       if (result.success) {
         // Remove from local state
         setSentRequests(prev => prev.filter(r => r.id !== requestId));
-        // Use a more user-friendly notification instead of alert
-        const notification = document.createElement('div');
-        notification.className = 'fixed top-4 right-4 bg-green-500 text-white px-4 py-2 rounded-lg shadow-lg z-50';
-        notification.textContent = 'Connection request withdrawn successfully!';
-        document.body.appendChild(notification);
-        setTimeout(() => {
-          document.body.removeChild(notification);
-        }, 3000);
       } else {
         throw new Error(result.error || 'Failed to withdraw connection request');
       }
@@ -817,6 +954,47 @@ function App() {
       alert('Failed to withdraw connection request. Please try again.');
     } finally {
       // Request withdrawn
+    }
+  };
+
+  const handleRemoveConnection = async (connectionId: number, targetUserId: string) => {
+    if (!confirm('Are you sure you want to remove this connection? This action cannot be undone.')) {
+      return;
+    }
+
+    try {
+      // Get auth token
+      const windowWithClerk = window as unknown as {
+        Clerk?: {
+          session?: {
+            getToken: () => Promise<string>;
+          };
+        };
+      };
+      const token = await windowWithClerk.Clerk?.session?.getToken();
+
+      const response = await fetch('/api/connections', {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({ targetUserId }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to remove connection');
+      }
+
+      const result = await response.json();
+      if (result.success) {
+        // Remove from local state
+        setConnections(prev => prev.filter(c => c.id !== connectionId));
+      } else {
+        throw new Error(result.error || 'Failed to remove connection');
+      }
+    } catch {
+      alert('Failed to remove connection. Please try again.');
     }
   };
 
@@ -1020,6 +1198,7 @@ function App() {
                   <UserCard
                     key={connection.id}
                     connection={connection}
+                    onRemoveConnection={handleRemoveConnection}
                   />
                 ))}
               </div>

@@ -736,14 +736,6 @@ export function AthleteProfile({
       const result = await response.json();
       if (result.success) {
         setCurrentConnectionStatus("none");
-        // Use a more user-friendly notification instead of alert
-        const notification = document.createElement('div');
-        notification.className = 'fixed top-4 right-4 bg-green-500 text-white px-4 py-2 rounded-lg shadow-lg z-50';
-        notification.textContent = 'Connection request withdrawn successfully!';
-        document.body.appendChild(notification);
-        setTimeout(() => {
-          document.body.removeChild(notification);
-        }, 3000);
       } else {
         throw new Error(result.error || 'Failed to withdraw connection request');
       }
@@ -793,14 +785,6 @@ export function AthleteProfile({
       const result = await response.json();
       if (result.success) {
         setCurrentConnectionStatus("connected");
-        // Show success notification
-        const notification = document.createElement('div');
-        notification.className = 'fixed top-4 right-4 bg-green-500 text-white px-4 py-2 rounded-lg shadow-lg z-50';
-        notification.textContent = 'Connection request accepted!';
-        document.body.appendChild(notification);
-        setTimeout(() => {
-          document.body.removeChild(notification);
-        }, 3000);
       } else {
         throw new Error(result.error || 'Failed to accept connection request');
       }
@@ -850,14 +834,6 @@ export function AthleteProfile({
       const result = await response.json();
       if (result.success) {
         setCurrentConnectionStatus("none");
-        // Show success notification
-        const notification = document.createElement('div');
-        notification.className = 'fixed top-4 right-4 bg-blue-500 text-white px-4 py-2 rounded-lg shadow-lg z-50';
-        notification.textContent = 'Connection request declined.';
-        document.body.appendChild(notification);
-        setTimeout(() => {
-          document.body.removeChild(notification);
-        }, 3000);
       } else {
         throw new Error(result.error || 'Failed to decline connection request');
       }

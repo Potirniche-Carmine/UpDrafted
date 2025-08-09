@@ -596,6 +596,9 @@ export const connectionOperations = {
                 graduationYear: true,
                 educationLevel: true,
                 isVerified: true,
+                height: true,
+                weight: true,
+                positions: true,
               },
             },
             coachProfile: {
@@ -641,6 +644,9 @@ export const connectionOperations = {
                 graduationYear: true,
                 educationLevel: true,
                 isVerified: true,
+                height: true,
+                weight: true,
+                positions: true,
               },
             },
             coachProfile: {

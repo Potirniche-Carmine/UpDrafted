@@ -13,8 +13,6 @@ const nextConfig: NextConfig = {
   
   images: {
     dangerouslyAllowSVG: true,
-    // Add domains array for backward compatibility
-    domains: ['bucket.updrafted.us', 'img.clerk.com'],
     // Add local patterns for static assets
     localPatterns: [
       {

@@ -411,64 +411,39 @@ function SearchPageContent() {
   // Cache key for search state
   const CACHE_KEY = 'discover_search_state';
 
-  // Save current search state to cache
+  // Save current search state to cache (filters only, not user data)
   const saveSearchState = useCallback(() => {
     const searchState = {
       selectedSports,
       selectedDivisions, 
       selectedStates,
-      allUsers: allUsers.slice(0, 50), // Limit cached users to prevent storage overflow
       activeTab,
-      page,
       hasSearched,
       timestamp: Date.now()
     };
     try {
       const stateString = JSON.stringify(searchState);
-      // Check if the data is too large for localStorage (typical limit is 5-10MB)
-      const sizeMB = new Blob([stateString]).size / (1024 * 1024);
-      if (sizeMB > 2) { // Limit to 2MB to be safe
-        console.warn('Search state too large for localStorage, skipping cache');
-        return;
-      }
       localStorage.setItem(CACHE_KEY, stateString);
     } catch (error) {
       console.warn('Failed to save search state to cache:', error);
-      // Try to clear old cache and retry with reduced data
-      try {
-        localStorage.removeItem(CACHE_KEY);
-        const reducedState = {
-          ...searchState,
-          allUsers: allUsers.slice(0, 20) // Further reduce cached users
-        };
-        const reducedStateString = JSON.stringify(reducedState);
-        const reducedSizeMB = new Blob([reducedStateString]).size / (1024 * 1024);
-        if (reducedSizeMB <= 1) {
-          localStorage.setItem(CACHE_KEY, reducedStateString);
-        }
-      } catch (retryError) {
-        console.warn('Failed to save reduced search state to cache:', retryError);
-      }
     }
-  }, [selectedSports, selectedDivisions, selectedStates, allUsers, activeTab, page, hasSearched]);
+  }, [selectedSports, selectedDivisions, selectedStates, activeTab, hasSearched]);
 
-  // Load search state from cache
+  // Load search state from cache (filters only)
   const loadSearchState = useCallback(() => {
     try {
       const cachedState = localStorage.getItem(CACHE_KEY);
       if (cachedState) {
         const parsed = JSON.parse(cachedState);
-        const isRecent = Date.now() - (parsed.timestamp || 0) < 30 * 60 * 1000; // 30 minutes
+        const isRecent = Date.now() - (parsed.timestamp || 0) < 60 * 60 * 1000; // 1 hour for filters
         
-        if (isRecent && parsed.allUsers && parsed.allUsers.length > 0) {
+        if (isRecent) {
           setSelectedSports(parsed.selectedSports || []);
           setSelectedDivisions(parsed.selectedDivisions || []);
           setSelectedStates(parsed.selectedStates || []);
-          setAllUsers(parsed.allUsers || []);
           setActiveTab(parsed.activeTab || getDefaultTab(effectiveRole));
-          setPage(parsed.page || 1);
           setHasSearched(parsed.hasSearched || false);
-          return true; // Successfully loaded cache
+          return true; // Successfully loaded cache, but need to search fresh
         }
       }
     } catch (error) {
@@ -488,13 +463,11 @@ function SearchPageContent() {
     if (effectiveRole && !hasSearched && !initialLoading && !loading && !initialLoadTriggered.current) {
       initialLoadTriggered.current = true;
       
-      // Try to load from cache first
-      const cacheLoaded = loadSearchState();
+      // Try to load filters from cache first
+      loadSearchState();
       
-      // Only fetch fresh data if no valid cache found
-      if (!cacheLoaded) {
-        loadUsers(1, true);
-      }
+      // Always fetch fresh data (even if cache loaded, we only cached filters)
+      loadUsers(1, true);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [effectiveRole]); // Only depend on effectiveRole to prevent multiple triggers
@@ -671,45 +644,53 @@ function SearchPageContent() {
 
   // User card component
   const renderUserCard = (user: DiscoverUser) => (
-    <Card key={user.id} className="group hover:shadow-2xl transition-all duration-300 border border-border shadow-xl bg-card hover:bg-card/90 hover:border-[#01ae79]/50">
-      <CardContent className="p-6">
-        <div className="space-y-5">
+    <Card key={user.id} className="group hover:shadow-xl transition-all duration-300 border border-border shadow-md bg-card hover:bg-card/90 hover:border-[#01ae79]/50">
+      <CardContent className="p-4">
+        <div className="space-y-3">
           {/* Header with Avatar, Name, and Badge */}
-          <div className="flex items-start gap-4">
+          <div className="flex items-start gap-3">
             {/* Avatar - Clickable */}
-            <div 
-              className="relative flex-shrink-0 cursor-pointer hover:opacity-80 transition-opacity"
-              onClick={() => handleViewProfile(user.id)}
+            <a 
+              href={`/profile/${user.id}`}
+              className="relative flex-shrink-0 cursor-pointer hover:opacity-80 transition-opacity block"
+              onClick={(e) => {
+                e.preventDefault();
+                handleViewProfile(user.id);
+              }}
             >
-              <Avatar className="h-16 w-16 sm:h-20 sm:w-20 ring-3 ring-[#01ae79]/30 border-2 border-border">
+              <Avatar className="h-12 w-12 sm:h-14 sm:w-14 ring-2 ring-[#01ae79]/30 border-2 border-border">
                 <AvatarImage 
                   src={getProfileImageUrl(user.profileImage) || undefined} 
                   alt={user.fullName || 'User'}
                   className="object-cover"
                 />
-                <AvatarFallback className="bg-gradient-to-br from-[#01ae79] to-emerald-600 text-white font-semibold text-lg sm:text-xl">
+                <AvatarFallback className="bg-gradient-to-br from-[#01ae79] to-emerald-600 text-white font-semibold text-sm sm:text-base">
                   {user.fullName ? user.fullName.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() : 'UN'}
                 </AvatarFallback>
               </Avatar>
               {user.isVerified && (
-                <div className="absolute -bottom-2 -right-2 bg-[#01ae79] rounded-full p-1.5 border-2 border-background">
-                  <Shield className="h-4 w-4 text-white" />
+                <div className="absolute -bottom-1 -right-1 bg-[#01ae79] rounded-full p-1 border-2 border-background">
+                  <Shield className="h-3 w-3 text-white" />
                 </div>
               )}
-            </div>
+            </a>
 
             {/* Name, Organization and Badge */}
-            <div className="flex-1 min-w-0 space-y-2">
+            <div className="flex-1 min-w-0 space-y-1.5">
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0 flex-1 space-y-1">
-                  <h3 
-                    className="font-bold text-base sm:text-lg lg:text-xl text-card-foreground leading-tight break-words line-clamp-2 cursor-pointer hover:text-[#01ae79] transition-colors"
-                    onClick={() => handleViewProfile(user.id)}
+                  <a 
+                    href={`/profile/${user.id}`}
+                    className="font-semibold text-sm md:text-base text-card-foreground leading-tight break-words line-clamp-2 cursor-pointer hover:text-[#01ae79] transition-colors block"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      handleViewProfile(user.id);
+                    }}
                   >
                     {user.fullName || 'Unknown User'}
-                  </h3>
+                  </a>
                   {user.organizationName && (
-                    <p className="text-sm sm:text-base text-muted-foreground font-medium leading-tight break-words line-clamp-2">
+                    <p className="text-sm text-muted-foreground font-medium leading-tight break-words line-clamp-2">
                       {user.organizationName}
                     </p>
                   )}
@@ -722,7 +703,7 @@ function SearchPageContent() {
           </div>
 
           {/* Information Grid */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 text-xs sm:text-sm">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-2 text-sm">
             {/* Sport */}
             {user.sport && (
               <div className="flex items-center text-muted-foreground col-span-full">
@@ -791,25 +772,25 @@ function SearchPageContent() {
           </div>
 
           {/* Action Button - Always at bottom with consistent positioning */}
-          <div className="pt-3">
-            <Button 
-              size="lg" 
-              className="w-full bg-[#01ae79] hover:bg-[#01ae79]/90 text-white border-0 shadow-lg hover:shadow-xl transition-all duration-200 font-semibold py-3 text-sm sm:text-base"
-              disabled={user.hasPendingRequest}
-              onClick={() => handleViewProfile(user.id)}
-            >
-              {user.hasPendingRequest ? (
-                <>
-                  <Clock className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
-                  Request Sent
-                </>
-              ) : (
-                <>
-                  <Send className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
-                  View Profile
-                </>
-              )}
-            </Button>
+          <div className="pt-2">
+            {user.hasPendingRequest ? (
+              <div className="w-full bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 border-0 shadow-sm transition-all duration-200 font-medium py-2 text-sm rounded-md flex items-center justify-center">
+                <Clock className="h-4 w-4 mr-2" />
+                Request Sent
+              </div>
+            ) : (
+              <a
+                href={`/profile/${user.id}`}
+                className="w-full bg-[#01ae79] hover:bg-[#01ae79]/90 text-white border-0 shadow-sm hover:shadow-md transition-all duration-200 font-medium py-2 text-sm rounded-md flex items-center justify-center no-underline"
+                onClick={(e) => {
+                  e.preventDefault();
+                  handleViewProfile(user.id);
+                }}
+              >
+                <Send className="h-4 w-4 mr-2" />
+                View Profile
+              </a>
+            )}
           </div>
         </div>
       </CardContent>
