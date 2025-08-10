@@ -52,6 +52,7 @@ interface DiscoverUser {
   division?: string;
   educationLevel?: string;
   hasPendingRequest: boolean;
+  hasIncomingRequest: boolean;
   graduationYear?: number;
   height?: string;
   weight?: string;
@@ -306,6 +307,7 @@ function SearchPageContent() {
         setInitialLoading(true);
         setAllUsers([]); // Clear previous results
         setHasSearched(true);
+        setPage(1); // Reset page state immediately for new searches
       } else {
         setLoading(true);
       }
@@ -395,9 +397,10 @@ function SearchPageContent() {
 
       if (isNewSearch) {
         setAllUsers(data.results);
-        setPage(1);
+        // Page is already set to 1 at the beginning of the function
       } else {
         setAllUsers(prev => [...prev, ...data.results]);
+        setPage(pageNum + 1); // Update page for next load
       }
 
       setHasMore(data.results.length === 10); // If we got less than 10, no more pages
@@ -536,9 +539,8 @@ function SearchPageContent() {
     observerRef.current = new IntersectionObserver(
       (entries) => {
         if (entries[0].isIntersecting && hasMore && !loading && !initialLoading && hasSearched) {
-          const nextPage = page + 1;
-          setPage(nextPage);
-          loadUsers(nextPage, false);
+          // Use current page state for loading next page
+          loadUsers(page, false);
         }
       },
       { threshold: 0.1 }
@@ -814,6 +816,18 @@ function SearchPageContent() {
                 <Clock className="h-4 w-4 mr-2" />
                 Request Sent
               </div>
+            ) : user.hasIncomingRequest ? (
+              <a
+                href={`/profile/${user.id}`}
+                className="w-full bg-amber-100 hover:bg-amber-200 text-amber-700 dark:bg-amber-900/30 dark:hover:bg-amber-900/40 dark:text-amber-400 border border-amber-200 dark:border-amber-700 shadow-sm hover:shadow-md transition-all duration-200 font-medium py-2 text-sm rounded-md flex items-center justify-center no-underline"
+                onClick={(e) => {
+                  e.preventDefault();
+                  handleViewProfile(user.id);
+                }}
+              >
+                <Users className="h-4 w-4 mr-2" />
+                Connection Request Received - View Profile
+              </a>
             ) : (
               <a
                 href={`/profile/${user.id}`}

@@ -704,12 +704,20 @@ export const connectionOperations = {
       .filter(user => user.role === 'recruiter' && user.recruitingProfile)
       .map(user => user.recruitingProfile!.id);
 
-    const recruiterNeeds = recruiterProfileIds.length > 0 ? 
-      await db.query.recruitingProfileNeeds.findMany({
-        where: or(...recruiterProfileIds.map(id => eq(recruitingProfileNeeds.recruitingProfileId, id)))
-      }) : [];
+    let recruiterNeeds: typeof recruitingProfileNeeds.$inferSelect[] = [];
+    
+    try {
+      if (recruiterProfileIds.length > 0) {
+        recruiterNeeds = await db.query.recruitingProfileNeeds.findMany({
+          where: or(...recruiterProfileIds.map(id => eq(recruitingProfileNeeds.recruitingProfileId, id)))
+        });
+      }
+    } catch (error) {
+      console.error('Error fetching recruiter needs:', error);
+      // Continue without recruiter needs if there's an error
+    }
 
-    // Create a map for quick lookup
+    // Create a map for quick lookup with safe data handling
     const recruiterNeedsMap = new Map<number, Array<{
       sport: string;
       studentClassifications: string[];
@@ -719,16 +727,18 @@ export const connectionOperations = {
     }>>();
     
     recruiterNeeds.forEach(need => {
-      if (!recruiterNeedsMap.has(need.recruitingProfileId)) {
-        recruiterNeedsMap.set(need.recruitingProfileId, []);
+      if (need && typeof need.recruitingProfileId === 'number') {
+        if (!recruiterNeedsMap.has(need.recruitingProfileId)) {
+          recruiterNeedsMap.set(need.recruitingProfileId, []);
+        }
+        recruiterNeedsMap.get(need.recruitingProfileId)!.push({
+          sport: need.sport || '',
+          studentClassifications: Array.isArray(need.studentClassifications) ? need.studentClassifications : [],
+          positions: Array.isArray(need.positions) ? need.positions : [],
+          scholarshipsAvailable: typeof need.scholarshipsAvailable === 'number' ? need.scholarshipsAvailable : null,
+          recruitingPhilosophy: typeof need.recruitingPhilosophy === 'string' ? need.recruitingPhilosophy : null,
+        });
       }
-      recruiterNeedsMap.get(need.recruitingProfileId)!.push({
-        sport: need.sport,
-        studentClassifications: need.studentClassifications,
-        positions: need.positions,
-        scholarshipsAvailable: need.scholarshipsAvailable,
-        recruitingPhilosophy: need.recruitingPhilosophy,
-      });
     });
 
     // Attach recruiting needs to recruiting profiles

@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useRouter } from 'next/navigation';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
@@ -876,6 +877,10 @@ function App() {
   const [loading, setLoading] = useState(true);
   const loadingRef = useRef(false); // Track if API call is in progress
 
+  // Dialog states for confirmation
+  const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
+  const [connectionToRemove, setConnectionToRemove] = useState<{id: number, userId: string} | null>(null);
+
   const activeTab = searchParams?.get('tab') || 'connections';
 
   // Load connections data
@@ -1067,10 +1072,13 @@ function App() {
   };
 
   const handleRemoveConnection = async (connectionId: number, targetUserId: string) => {
-    if (!confirm('Are you sure you want to remove this connection? This action cannot be undone.')) {
-      return;
-    }
+    setConnectionToRemove({id: connectionId, userId: targetUserId});
+    setConfirmDialogOpen(true);
+  };
 
+  const confirmRemoveConnection = async () => {
+    if (!connectionToRemove) return;
+    
     try {
       // Get auth token
       const windowWithClerk = window as unknown as {
@@ -1088,7 +1096,7 @@ function App() {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`,
         },
-        body: JSON.stringify({ targetUserId }),
+        body: JSON.stringify({ targetUserId: connectionToRemove.userId }),
       });
 
       if (!response.ok) {
@@ -1098,12 +1106,15 @@ function App() {
       const result = await response.json();
       if (result.success) {
         // Remove from local state
-        setConnections(prev => prev.filter(c => c.id !== connectionId));
+        setConnections(prev => prev.filter(c => c.id !== connectionToRemove.id));
       } else {
         throw new Error(result.error || 'Failed to remove connection');
       }
     } catch {
       alert('Failed to remove connection. Please try again.');
+    } finally {
+      setConfirmDialogOpen(false);
+      setConnectionToRemove(null);
     }
   };
 
@@ -1389,6 +1400,26 @@ function App() {
           </TabsContent>
         </Tabs>
       </div>
+
+      {/* Confirmation Dialog */}
+      <Dialog open={confirmDialogOpen} onOpenChange={setConfirmDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Remove Connection</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to remove this connection? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setConfirmDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={confirmRemoveConnection}>
+              Remove
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

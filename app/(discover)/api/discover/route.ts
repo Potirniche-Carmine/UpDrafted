@@ -214,10 +214,11 @@ async function handleDiscoverRequest(request: NextRequest) {
 
     // Base query to exclude:
     // 1. Current user
-    // 2. Users they're already connected to (but not pending requests - show those with proper status)
-    // 3. Athletes can't discover other athletes
-    // 4. Demo profiles should never appear in discover
-    // 5. Admin profiles should never appear in discover
+    // 2. Users they're already connected to 
+    // 3. Users they have outgoing pending requests to (but allow incoming pending requests)
+    // 4. Athletes can't discover other athletes
+    // 5. Demo profiles should never appear in discover
+    // 6. Admin profiles should never appear in discover
     const baseExcludeConditions = [
       ne(users.id, userId), // Exclude self
       ne(users.role, 'admin'), // Exclude admin profiles
@@ -226,16 +227,24 @@ async function handleDiscoverRequest(request: NextRequest) {
           .from(connections)
           .where(and(
             or(
+              // Exclude if connected (in either direction)
               and(
                 eq(connections.fromUserId, userId),
-                eq(connections.toUserId, users.id)
+                eq(connections.toUserId, users.id),
+                eq(connections.status, 'connected')
               ),
               and(
                 eq(connections.fromUserId, users.id),
-                eq(connections.toUserId, userId)
+                eq(connections.toUserId, userId),
+                eq(connections.status, 'connected')
+              ),
+              // Exclude if current user has outgoing pending request
+              and(
+                eq(connections.fromUserId, userId),
+                eq(connections.toUserId, users.id),
+                eq(connections.status, 'pending')
               )
-            ),
-            eq(connections.status, 'connected') // Only exclude already connected users
+            )
           ))
       ))
     ];
@@ -370,6 +379,15 @@ async function handleDiscoverRequest(request: NextRequest) {
               eq(connections.toUserId, users.id),
               eq(connections.status, 'pending')
             ))
+        ),
+        hasIncomingRequest: exists(
+          db.select()
+            .from(connections)
+            .where(and(
+              eq(connections.fromUserId, users.id),
+              eq(connections.toUserId, userId),
+              eq(connections.status, 'pending')
+            ))
         )
       })
       .from(users)
@@ -407,19 +425,30 @@ async function handleDiscoverRequest(request: NextRequest) {
       .filter(user => user.role === 'recruiter' && user.recruitingProfile)
       .map(user => user.recruitingProfile!.id);
 
-    // Fetch coach recruiting needs
-    const coachRecruitingNeeds = coachProfileIds.length > 0 ? 
-      await db.query.recruitingNeeds.findMany({
-        where: or(...coachProfileIds.map(id => eq(recruitingNeeds.coachId, id)))
-      }) : [];
+    // Fetch recruiting needs with error handling
+    let coachRecruitingNeeds: typeof recruitingNeeds.$inferSelect[] = [];
+    let recruiterRecruitingNeeds: typeof recruitingProfileNeeds.$inferSelect[] = [];
 
-    // Fetch recruiter recruiting needs
-    const recruiterRecruitingNeeds = recruiterProfileIds.length > 0 ? 
-      await db.query.recruitingProfileNeeds.findMany({
-        where: or(...recruiterProfileIds.map(id => eq(recruitingProfileNeeds.recruitingProfileId, id)))
-      }) : [];
+    try {
+      // Fetch coach recruiting needs
+      if (coachProfileIds.length > 0) {
+        coachRecruitingNeeds = await db.query.recruitingNeeds.findMany({
+          where: or(...coachProfileIds.map(id => eq(recruitingNeeds.coachId, id)))
+        });
+      }
 
-    // Create maps for quick lookup
+      // Fetch recruiter recruiting needs
+      if (recruiterProfileIds.length > 0) {
+        recruiterRecruitingNeeds = await db.query.recruitingProfileNeeds.findMany({
+          where: or(...recruiterProfileIds.map(id => eq(recruitingProfileNeeds.recruitingProfileId, id)))
+        });
+      }
+    } catch (recruitingNeedsError) {
+      console.error('Error fetching recruiting needs:', recruitingNeedsError);
+      // Continue without recruiting needs data if fetch fails
+    }
+
+    // Create maps for quick lookup with safe data handling
     const coachNeedsMap = new Map<number, {
       studentClassifications: string[];
       positions: string[];
@@ -427,12 +456,14 @@ async function handleDiscoverRequest(request: NextRequest) {
       recruitingPhilosophy: string | null;
     }>();
     coachRecruitingNeeds.forEach(need => {
-      coachNeedsMap.set(need.coachId, {
-        studentClassifications: need.studentClassifications,
-        positions: need.positions,
-        scholarshipsAvailable: need.scholarshipsAvailable,
-        recruitingPhilosophy: need.recruitingPhilosophy
-      });
+      if (need && typeof need.coachId === 'number') {
+        coachNeedsMap.set(need.coachId, {
+          studentClassifications: Array.isArray(need.studentClassifications) ? need.studentClassifications : [],
+          positions: Array.isArray(need.positions) ? need.positions : [],
+          scholarshipsAvailable: typeof need.scholarshipsAvailable === 'number' ? need.scholarshipsAvailable : null,
+          recruitingPhilosophy: typeof need.recruitingPhilosophy === 'string' ? need.recruitingPhilosophy : null
+        });
+      }
     });
 
     const recruiterNeedsMap = new Map<number, Array<{
@@ -445,10 +476,20 @@ async function handleDiscoverRequest(request: NextRequest) {
       recruitingPhilosophy: string | null;
     }>>();
     recruiterRecruitingNeeds.forEach(need => {
-      if (!recruiterNeedsMap.has(need.recruitingProfileId)) {
-        recruiterNeedsMap.set(need.recruitingProfileId, []);
+      if (need && typeof need.recruitingProfileId === 'number') {
+        if (!recruiterNeedsMap.has(need.recruitingProfileId)) {
+          recruiterNeedsMap.set(need.recruitingProfileId, []);
+        }
+        recruiterNeedsMap.get(need.recruitingProfileId)!.push({
+          id: need.id,
+          recruitingProfileId: need.recruitingProfileId,
+          sport: need.sport || '',
+          studentClassifications: Array.isArray(need.studentClassifications) ? need.studentClassifications : [],
+          positions: Array.isArray(need.positions) ? need.positions : [],
+          scholarshipsAvailable: typeof need.scholarshipsAvailable === 'number' ? need.scholarshipsAvailable : null,
+          recruitingPhilosophy: typeof need.recruitingPhilosophy === 'string' ? need.recruitingPhilosophy : null
+        });
       }
-      recruiterNeedsMap.get(need.recruitingProfileId)!.push(need);
     });
 
     // Process results using a similar approach as the connections API
@@ -564,6 +605,7 @@ async function handleDiscoverRequest(request: NextRequest) {
         weight: userProfileData.weight ? sanitizeText(userProfileData.weight) : null,
         positions: userProfileData.positions || null,
         hasPendingRequest: user.hasPendingRequest || false,
+        hasIncomingRequest: user.hasIncomingRequest || false,
         recruitingNeeds: userProfileData.recruitingNeeds ? {
           studentClassifications: userProfileData.recruitingNeeds.studentClassifications || [],
           positions: userProfileData.recruitingNeeds.positions || [],

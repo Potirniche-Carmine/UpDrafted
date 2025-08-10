@@ -4,6 +4,7 @@ import React, { useState, useEffect, memo, useMemo, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import Image from "next/image";
 import Link from "next/link";
 import {
@@ -140,6 +141,7 @@ export function CoachProfile({
   const [isConnecting, setIsConnecting] = useState(false);
   const [currentConnectionStatus, setCurrentConnectionStatus] = useState(connectionStatus);
   const [isPreviewMode, setIsPreviewMode] = useState(false);
+  const [confirmDiscardOpen, setConfirmDiscardOpen] = useState(false);
     const { user } = useUser();
   const effectiveRole = user?.publicMetadata?.role as string;
   
@@ -399,12 +401,14 @@ export function CoachProfile({
 
   const discardChanges = () => {
     if (hasUnsavedChanges) {
-      const confirmed = window.confirm('You have unsaved changes. Are you sure you want to discard them?');
-      if (confirmed) {
-        setProfileData(data);
-        setHasUnsavedChanges(false);
-      }
+      setConfirmDiscardOpen(true);
     }
+  };
+
+  const handleConfirmDiscard = () => {
+    setProfileData(data);
+    setHasUnsavedChanges(false);
+    setConfirmDiscardOpen(false);
   };
 
   const handleRemoveImage = (imageType: 'profile' | 'organization') => {
@@ -1154,6 +1158,26 @@ export function CoachProfile({
           </div>
         </div>
       </div>
+
+      {/* Confirm Discard Changes Dialog */}
+      <Dialog open={confirmDiscardOpen} onOpenChange={setConfirmDiscardOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Discard Changes?</DialogTitle>
+          </DialogHeader>
+          <p className="text-muted-foreground">
+            You have unsaved changes. Are you sure you want to discard them?
+          </p>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setConfirmDiscardOpen(false)}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={handleConfirmDiscard}>
+              Discard Changes
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 } 
