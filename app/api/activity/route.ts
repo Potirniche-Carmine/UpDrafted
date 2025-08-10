@@ -2,16 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireAnyRole } from '@/utils/roles';
 import { activityOperations, profileOperations } from '@/database/db-utils';
 import { withRateLimit } from '@/utils/security';
-import { validateClerkHeaders, logSecurityValidation } from '@/utils/clerk-security';
 
 export async function GET(request: NextRequest) {
   try {
-    const validation = validateClerkHeaders(request);
-    if (!validation.isValid) {
-      logSecurityValidation(validation, '/api/activity');
-      return NextResponse.json({ success: false, error: 'Invalid security headers' }, { status: 401 });
-    }
-
     const authResult = await requireAnyRole();
     
     if (authResult instanceof NextResponse) {

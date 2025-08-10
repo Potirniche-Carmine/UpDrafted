@@ -271,36 +271,40 @@ export function AuthWrapper({
         }
       }
 
-      // Ensure we have a valid token for API calls
-      try {
-        const token = await getToken();
-        if (!token && requireAuth) {
-          await handleRedirect(getRedirectPath());
-          return;
-        }
-
-        // If server-side verification is required, verify with backend
-        if (enforceServerSide && !serverVerified) {
-          const response = await fetch('/api/auth/verify', {
-            headers: {
-              'Authorization': `Bearer ${token}`
-            }
-          });
-          
-          if (!response.ok) {
+        // Ensure we have a valid token for API calls
+        try {
+          const token = await getToken();
+          if (!token && requireAuth) {
+            console.warn('No authentication token available, redirecting to sign-in');
             await handleRedirect(getRedirectPath());
             return;
           }
-          
-          setServerVerified(true);
-        }
-      } catch (error) {
-        console.error('Error getting auth token:', error);
-        await handleRedirect(getRedirectPath());
-        return;
-      }
 
-      setIsAuthorized(true);
+          // If server-side verification is required, verify with backend
+          if (enforceServerSide && !serverVerified) {
+            const response = await fetch('/api/auth/verify', {
+              headers: {
+                'Authorization': `Bearer ${token}`,
+                'Accept': 'application/json',
+                'Content-Type': 'application/json'
+              }
+            });
+            
+            if (!response.ok) {
+              console.warn('Server-side auth verification failed, redirecting');
+              await handleRedirect(getRedirectPath());
+              return;
+            }
+            
+            setServerVerified(true);
+          }
+        } catch (error) {
+          console.error('Error getting auth token:', error);
+          if (requireAuth) {
+            await handleRedirect(getRedirectPath());
+            return;
+          }
+        }      setIsAuthorized(true);
       setIsLoading(false);
     };
 

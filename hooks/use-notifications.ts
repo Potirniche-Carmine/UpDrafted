@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { usePathname } from 'next/navigation';
+import { useAuth } from '@clerk/nextjs';
 
 interface NotificationsState {
   unreadCount: number;
@@ -12,16 +13,6 @@ interface NotificationsState {
   setHasCheckedOnStartup: (checked: boolean) => void;
   setIsFetching: (fetching: boolean) => void;
   fetchUnreadCount: (token: string) => Promise<void>;
-}
-
-interface ClerkSession {
-  getToken: () => Promise<string>;
-}
-
-interface WindowWithClerk extends Window {
-  Clerk?: {
-    session?: ClerkSession;
-  };
 }
 
 const useNotificationsStore = create(
@@ -40,30 +31,60 @@ const useNotificationsStore = create(
       setHasCheckedOnStartup: (checked) => set({ hasCheckedOnStartup: checked }),
       setIsFetching: (fetching) => set({ isFetching: fetching }),
       fetchUnreadCount: async (token) => {
-        // Prevent concurrent requests
-        if (get().isFetching) return;
+        // Prevent concurrent requests - but reset if stuck
+        const currentState = get();
+        if (currentState.isFetching) {
+          // Check if request has been stuck for more than 30 seconds
+          const now = Date.now();
+          const timeSinceLastFetch = currentState.lastFetched ? now - currentState.lastFetched : Infinity;
+          if (timeSinceLastFetch < 30000) { // Less than 30 seconds ago
+            return;
+          }
+        }
         
         set({ isFetching: true });
         try {
           const response = await fetch('/api/notifications?operation=getUnreadCount', {
             method: 'GET',
             headers: {
-              'Authorization': `Bearer ${token}`
+              'Authorization': `Bearer ${token}`,
+              'Accept': 'application/json',
+              'Content-Type': 'application/json'
             }
           });
 
-          if (response.ok) {
-            const data = await response.json();
-            if (data.success) {
-              // Only update if the count actually changed
-              const currentCount = get().unreadCount;
-              if (currentCount !== data.unreadCount) {
-                set({ unreadCount: data.unreadCount, lastFetched: Date.now() });
-              }
+          if (!response.ok) {
+            // Handle different error types
+            if (response.status === 401) {
+              throw new Error('Authentication failed');
+            } else if (response.status === 403) {
+              throw new Error('Access forbidden');
+            } else if (response.status >= 500) {
+              throw new Error('Server error');
+            } else {
+              throw new Error(`HTTP ${response.status}`);
             }
+          }
+
+          const data = await response.json();
+          if (data.success) {
+            // Only update if the count actually changed
+            const currentCount = get().unreadCount;
+            if (currentCount !== data.unreadCount) {
+              set({ unreadCount: data.unreadCount, lastFetched: Date.now() });
+            } else {
+              // Still update lastFetched even if count is the same
+              set({ lastFetched: Date.now() });
+            }
+          } else {
+            console.warn('Failed to fetch unread count:', data.error);
           }
         } catch (error) {
           console.error('Failed to fetch unread notifications count:', error);
+          // Don't reset count on network errors to prevent flickering
+          if (error instanceof Error && error.message === 'Authentication failed') {
+            set({ unreadCount: 0 }); // Reset count only on auth errors
+          }
         } finally {
           set({ isFetching: false });
         }
@@ -77,8 +98,8 @@ const useNotificationsStore = create(
 );
 
 // Constants outside the hook to prevent recreation
-const FETCH_COOLDOWN = 5 * 60 * 1000; // 5 minutes
-const POLLING_INTERVAL = 10 * 60 * 1000; // 10 minutes
+const FETCH_COOLDOWN = 30 * 1000; // 30 seconds - industry standard for active users
+const POLLING_INTERVAL = 45 * 1000; // 45 seconds - more responsive polling
 
 // React hook to use the store and fetch data
 export const useNotifications = () => {
@@ -89,15 +110,21 @@ export const useNotifications = () => {
     isFetching,
     fetchUnreadCount, 
     setUnreadCount, 
-    setHasCheckedOnStartup 
+    setHasCheckedOnStartup
   } = useNotificationsStore();
   const [localIsFetching, setLocalIsFetching] = useState(false);
   const pathname = usePathname();
+  const { getToken, isSignedIn, isLoaded } = useAuth();
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const isOnNotificationsPage = pathname === '/notifications';
   const lastFetchRef = useRef<number>(0);
 
   const fetchWithToken = useCallback(async (force = false) => {
+    // Don't fetch if Clerk isn't loaded yet or user isn't signed in
+    if (!isLoaded || !isSignedIn) {
+      return;
+    }
+    
     // Don't fetch if we're on the notifications page (banner count is cleared there)
     if (pathname === '/notifications') {
       // Clear the count immediately when on notifications page
@@ -115,39 +142,46 @@ export const useNotifications = () => {
     
     lastFetchRef.current = now;
     
-    const windowWithClerk = window as WindowWithClerk;
-    if (typeof windowWithClerk !== 'undefined' && windowWithClerk.Clerk?.session) {
-      setLocalIsFetching(true);
-      try {
-        const token = await windowWithClerk.Clerk.session.getToken();
-        if (token) {
-          await fetchUnreadCount(token);
-        }
-      } catch (error) {
-        console.error('Error fetching notifications count with token:', error);
-      } finally {
-        setLocalIsFetching(false);
+    setLocalIsFetching(true);
+    try {
+      const token = await getToken();
+      if (!token) {
+        console.warn('No authentication token available');
+        return;
       }
+      await fetchUnreadCount(token);
+    } catch (error) {
+      console.error('Error fetching notifications count with token:', error);
+      // Reset state on auth errors to prevent stuck loading states
+      if (error instanceof Error && error.message.includes('auth')) {
+        setUnreadCount(0);
+        setHasCheckedOnStartup(false);
+      }
+    } finally {
+      setLocalIsFetching(false);
     }
-  }, [pathname, fetchUnreadCount, setUnreadCount]);
+  }, [isLoaded, pathname, fetchUnreadCount, setUnreadCount, isSignedIn, getToken, setHasCheckedOnStartup]);
 
   // Check once on app startup/login
   useEffect(() => {
-    const windowWithClerk = window as WindowWithClerk;
-    
-    // Only fetch if we haven't checked on this session and user is authenticated
+    // Only fetch if Clerk is loaded, user is signed in, and we haven't checked on this session
     if (
-      typeof windowWithClerk !== 'undefined' &&
-      !hasCheckedOnStartup &&
-      windowWithClerk.Clerk?.session
+      isLoaded &&
+      isSignedIn &&
+      !hasCheckedOnStartup
     ) {
       fetchWithToken(true); // Force initial fetch
       setHasCheckedOnStartup(true);
     }
-  }, [hasCheckedOnStartup, fetchWithToken, setHasCheckedOnStartup]);
+  }, [isLoaded, isSignedIn, hasCheckedOnStartup, fetchWithToken, setHasCheckedOnStartup]);
 
   // Set up periodic polling when navigating between pages
   useEffect(() => {
+    // Don't do anything if Clerk isn't loaded yet
+    if (!isLoaded) {
+      return;
+    }
+
     // Clear any existing interval
     if (intervalRef.current) {
       clearInterval(intervalRef.current);
@@ -160,19 +194,14 @@ export const useNotifications = () => {
       return; // Don't set up polling when on notifications page
     }
 
-    // Only set up polling if not on notifications page and user is authenticated
-    const windowWithClerk = window as WindowWithClerk;
-    
-    if (typeof windowWithClerk !== 'undefined' && windowWithClerk.Clerk?.session) {
-      // Only fetch on page navigation if it's been a while since last fetch
-      const now = Date.now();
-      if (now - lastFetchRef.current > FETCH_COOLDOWN) {
-        fetchWithToken();
-      }
+    // Only set up polling if user is authenticated
+    if (isSignedIn) {
+      // Always fetch once on page navigation (remove cooldown for page changes)
+      fetchWithToken(true);
       
-      // Set up interval for periodic polling (every 10 minutes)
+      // Set up interval for periodic polling
       intervalRef.current = setInterval(() => {
-        if (!document.hidden && !isOnNotificationsPage) {
+        if (!document.hidden && !isOnNotificationsPage && isSignedIn) {
           fetchWithToken();
         }
       }, POLLING_INTERVAL);
@@ -185,9 +214,7 @@ export const useNotifications = () => {
         intervalRef.current = null;
       }
     };
-  }, [pathname, fetchWithToken, isOnNotificationsPage, setUnreadCount]);
-
-  // Handle page visibility changes (less aggressive)
+  }, [isLoaded, pathname, fetchWithToken, isOnNotificationsPage, setUnreadCount, isSignedIn]);  // Handle page visibility changes (less aggressive)
   useEffect(() => {
     const handleVisibilityChange = () => {
       if (document.hidden) {
@@ -199,9 +226,9 @@ export const useNotifications = () => {
       } else {
         // Page is visible, restart polling if not on notifications page
         if (!isOnNotificationsPage) {
-          // Only fetch if it's been a very long time since last fetch (double cooldown for visibility changes)
+          // Only fetch if it's been a while since last fetch (use standard cooldown for visibility changes)
           const now = Date.now();
-          if (now - lastFetchRef.current > (FETCH_COOLDOWN * 2)) {
+          if (now - lastFetchRef.current > FETCH_COOLDOWN) {
             fetchWithToken();
           }
           
@@ -231,17 +258,19 @@ export const useNotifications = () => {
     return fetchWithToken(true); // Force immediate fetch
   }, [fetchWithToken]);
 
-  // Reset startup check when user logs out (pathname changes to non-authenticated pages)
+  // Reset startup check when user logs out
   useEffect(() => {
-    if (pathname === '/' || pathname === '/sign-in' || pathname === '/sign-up') {
+    if (isLoaded && !isSignedIn) {
       setHasCheckedOnStartup(false);
       // Clear any polling when logged out
       if (intervalRef.current) {
         clearInterval(intervalRef.current);
         intervalRef.current = null;
       }
+      // Clear stored count when logged out
+      setUnreadCount(0);
     }
-  }, [pathname, setHasCheckedOnStartup]);
+  }, [isLoaded, isSignedIn, setHasCheckedOnStartup, setUnreadCount]);
 
   // Listen for dismissal events to force refetch
   useEffect(() => {

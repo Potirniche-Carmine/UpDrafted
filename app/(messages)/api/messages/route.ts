@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { messageOperations, connectionOperations, profileOperations } from '@/database/db-utils';
-import { validateClerkHeaders } from '@/utils/clerk-security';
+import { messageOperations, connectionOperations, profileOperations, notificationOperations } from '@/database/db-utils';
 import { requireAnyRole } from '@/utils/roles';
 import { decryptMessage } from '@/utils/encryption';
 import { sanitizeText } from '@/utils/sanitization';
@@ -78,15 +77,6 @@ interface GetOrCreateConversationRequestBody extends BaseRequestBody {
  * - getOrCreateConversation: Get or create a conversation with a specified partner
  */
 export async function POST(request: NextRequest) {
-  // Validate security headers
-  const validation = validateClerkHeaders(request);  
-  if (!validation.isValid) {
-    return NextResponse.json({
-      success: false,
-      error: 'Invalid security headers'
-    }, { status: 401 });
-  }
-
   try {
     const authResult = await requireAnyRole();
     
@@ -571,6 +561,18 @@ async function handleSendMessage(userId: string, body: SendMessageRequestBody) {
       sanitizedMessage
     );
     
+    // Create notification for the recipient
+    try {
+      await notificationOperations.createMessageNotification(
+        partnerId,
+        userId,
+        conversationIdNum
+      );
+    } catch (notificationError) {
+      // Log but don't fail the message send if notification creation fails
+      console.error('Failed to create message notification:', notificationError);
+    }
+    
     const response = NextResponse.json({
       success: true,
       message: 'Message sent successfully'
@@ -751,15 +753,7 @@ async function handleFixMissingConversations() {
  * GET handler for backward compatibility
  * Simply redirects to the POST handler with getConversations operation
  */
-export async function GET(request: NextRequest) {
-  const validation = validateClerkHeaders(request);  
-  if (!validation.isValid) {
-    return NextResponse.json({ 
-      success: false, 
-      error: 'Invalid security headers'
-    }, { status: 401 });
-  }
-
+export async function GET() {
   try {
     const authResult = await requireAnyRole();
     

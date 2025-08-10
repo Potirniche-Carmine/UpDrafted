@@ -39,7 +39,7 @@ interface NavItem {
 // Professional notification badge component
 function NotificationBadge({ count, className = "" }: { count: number; className?: string }) {
   if (count === 0) return null;
-  
+
   return (
     <div className={`absolute -top-2 -right-2 z-10 ${className}`}>
       <div className="relative">
@@ -54,13 +54,13 @@ function NotificationBadge({ count, className = "" }: { count: number; className
 }
 
 // Professional navigation item with notification support
-function NavItem({ 
-  item, 
-  notificationCount = 0, 
+function NavItem({
+  item,
+  notificationCount = 0,
   className = "",
-  onClick 
-}: { 
-  item: NavItem; 
+  onClick
+}: {
+  item: NavItem;
   notificationCount?: number;
   className?: string;
   onClick?: () => void;
@@ -74,7 +74,9 @@ function NavItem({
     >
       <div className="relative">
         {item.icon}
-        <NotificationBadge count={notificationCount} />
+        {item.key === 'notifications' && notificationCount > 0 && (
+          <NotificationBadge count={notificationCount} />
+        )}
       </div>
       <span className="ml-2 text-sm font-medium hidden xl:inline">
         {item.label}

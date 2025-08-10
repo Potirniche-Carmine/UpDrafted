@@ -330,6 +330,13 @@
       "when": 1754674590097,
       "tag": "0046_grey_tempest",
       "breakpoints": true
+    },
+    {
+      "idx": 47,
+      "version": "7",
+      "when": 1754857372512,
+      "tag": "0047_careless_nemesis",
+      "breakpoints": true
     }
   ]
 }

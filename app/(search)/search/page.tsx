@@ -2,7 +2,7 @@
 
 import { useState, useEffect, Suspense, useCallback, useRef } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { Search, MapPin, Calendar, School, Shield, Users, Clock, Target, Building2 } from "lucide-react";
+import { Search, MapPin, School, Shield, Users, Clock, Target, Building2 } from "lucide-react";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";

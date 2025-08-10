@@ -1,6 +1,5 @@
 import { auth, createClerkClient } from '@clerk/nextjs/server'
 import { NextRequest, NextResponse } from 'next/server'
-import { validateClerkHeaders } from '@/utils/clerk-security'
 import { validateRoleAssignment, validateRoleEscalation } from '@/utils/validation'
 import { uploadProfilePicture, uploadOrganizationLogo } from '@/database/r2'
 import { onboardingOperations, adminOperations } from '@/database/db-utils'
@@ -17,18 +16,7 @@ const clerkClient = createClerkClient({
 
 export async function POST(request: NextRequest) {
   try {
-    const validation = validateClerkHeaders(request)
-    if (!validation.isValid) {
-      return NextResponse.json(
-        { 
-          error: 'Missing required security headers',
-          missingHeaders: validation.missingHeaders
-        },
-        { status: 400 }
-      )
-    }
-
-    // Authenticate the request using Clerk
+    // Authenticate the request using Clerk (middleware already handled auth.protect())
     const { userId } = await auth()
     
     if (!userId) {
