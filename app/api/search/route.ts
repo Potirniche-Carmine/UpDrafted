@@ -25,6 +25,9 @@ export interface SearchResult {
   division?: string;
   graduationYear?: number;
   educationLevel?: string;
+  height?: string;
+  weight?: string;
+  positions?: string[];
 }
 
 export async function GET(request: NextRequest) {
@@ -114,6 +117,9 @@ export async function GET(request: NextRequest) {
               isVerified: athleteProfiles.isVerified,
               graduationYear: athleteProfiles.graduationYear,
               educationLevel: athleteProfiles.educationLevel,
+              height: athleteProfiles.height,
+              weight: athleteProfiles.weight,
+              positions: athleteProfiles.positions,
             })
             .from(athleteProfiles)
             .innerJoin(users, eq(users.id, athleteProfiles.userId))
@@ -247,6 +253,9 @@ export async function GET(request: NextRequest) {
             isVerified: athlete.isVerified ?? false,
             graduationYear: athlete.graduationYear,
             educationLevel: athlete.educationLevel,
+            height: athlete.height,
+            weight: athlete.weight,
+            positions: athlete.positions,
           });
         }
       }

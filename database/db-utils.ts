@@ -596,26 +596,36 @@ export const connectionOperations = {
                 graduationYear: true,
                 educationLevel: true,
                 isVerified: true,
+                height: true,
+                weight: true,
+                positions: true,
               },
             },
             coachProfile: {
               columns: {
+                id: true,
                 fullName: true,
                 profileImageR3Key: true,
                 organizationName: true,
                 title: true,
+                sportCoaching: true,
                 city: true,
                 state: true,
                 division: true,
                 isVerified: true,
               },
+              with: {
+                recruitingNeeds: true,
+              },
             },
             recruitingProfile: {
               columns: {
+                id: true,
                 fullName: true,
                 profileImageR3Key: true,
                 organizationName: true,
                 title: true,
+                sportRecruiting: true,
                 city: true,
                 state: true,
                 division: true,
@@ -641,26 +651,36 @@ export const connectionOperations = {
                 graduationYear: true,
                 educationLevel: true,
                 isVerified: true,
+                height: true,
+                weight: true,
+                positions: true,
               },
             },
             coachProfile: {
               columns: {
+                id: true,
                 fullName: true,
                 profileImageR3Key: true,
                 organizationName: true,
                 title: true,
+                sportCoaching: true,
                 city: true,
                 state: true,
                 division: true,
                 isVerified: true,
               },
+              with: {
+                recruitingNeeds: true,
+              },
             },
             recruitingProfile: {
               columns: {
+                id: true,
                 fullName: true,
                 profileImageR3Key: true,
                 organizationName: true,
                 title: true,
+                sportRecruiting: true,
                 city: true,
                 state: true,
                 division: true,
@@ -673,7 +693,74 @@ export const connectionOperations = {
       orderBy: [desc(connections.createdAt)],
     });
 
-    return userConnections;
+    // For recruiting profiles, we need to fetch recruiting profile needs separately
+    // as they're in a different table
+    const allUsers = [
+      ...userConnections.map(conn => conn.fromUser),
+      ...userConnections.map(conn => conn.toUser)
+    ];
+    
+    const recruiterProfileIds = allUsers
+      .filter(user => user.role === 'recruiter' && user.recruitingProfile)
+      .map(user => user.recruitingProfile!.id);
+
+    let recruiterNeeds: typeof recruitingProfileNeeds.$inferSelect[] = [];
+    
+    try {
+      if (recruiterProfileIds.length > 0) {
+        recruiterNeeds = await db.query.recruitingProfileNeeds.findMany({
+          where: or(...recruiterProfileIds.map(id => eq(recruitingProfileNeeds.recruitingProfileId, id)))
+        });
+      }
+    } catch (error) {
+      console.error('Error fetching recruiter needs:', error);
+      // Continue without recruiter needs if there's an error
+    }
+
+    // Create a map for quick lookup with safe data handling
+    const recruiterNeedsMap = new Map<number, Array<{
+      sport: string;
+      studentClassifications: string[];
+      positions: string[];
+      scholarshipsAvailable: number | null;
+      recruitingPhilosophy: string | null;
+    }>>();
+    
+    recruiterNeeds.forEach(need => {
+      if (need && typeof need.recruitingProfileId === 'number') {
+        if (!recruiterNeedsMap.has(need.recruitingProfileId)) {
+          recruiterNeedsMap.set(need.recruitingProfileId, []);
+        }
+        recruiterNeedsMap.get(need.recruitingProfileId)!.push({
+          sport: need.sport || '',
+          studentClassifications: Array.isArray(need.studentClassifications) ? need.studentClassifications : [],
+          positions: Array.isArray(need.positions) ? need.positions : [],
+          scholarshipsAvailable: typeof need.scholarshipsAvailable === 'number' ? need.scholarshipsAvailable : null,
+          recruitingPhilosophy: typeof need.recruitingPhilosophy === 'string' ? need.recruitingPhilosophy : null,
+        });
+      }
+    });
+
+    // Attach recruiting needs to recruiting profiles
+    const connectionsWithNeeds = userConnections.map(connection => ({
+      ...connection,
+      fromUser: {
+        ...connection.fromUser,
+        recruitingProfile: connection.fromUser.recruitingProfile ? {
+          ...connection.fromUser.recruitingProfile,
+          recruitingNeeds: recruiterNeedsMap.get(connection.fromUser.recruitingProfile.id) || []
+        } : undefined
+      },
+      toUser: {
+        ...connection.toUser,
+        recruitingProfile: connection.toUser.recruitingProfile ? {
+          ...connection.toUser.recruitingProfile,
+          recruitingNeeds: recruiterNeedsMap.get(connection.toUser.recruitingProfile.id) || []
+        } : undefined
+      }
+    }));
+
+    return connectionsWithNeeds;
   },
 
   // Check if a connection exists between two users

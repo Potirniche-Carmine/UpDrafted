@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAnyRole } from '@/utils/roles';
 import { db } from '@/database/db';
-import { users, athleteProfiles, coachProfiles, recruitingProfiles, connections } from '@/database/schema';
+import { users, athleteProfiles, coachProfiles, recruitingProfiles, connections, recruitingProfileNeeds, recruitingNeeds } from '@/database/schema';
 import { and, eq, or, not, ilike, isNull, exists, ne } from 'drizzle-orm';
 import { sanitizeText, sanitizeNumber } from '@/utils/sanitization';
 import { withRateLimit } from '@/utils/security';
@@ -214,8 +214,8 @@ async function handleDiscoverRequest(request: NextRequest) {
 
     // Base query to exclude:
     // 1. Current user
-    // 2. Users they're already connected to
-    // 3. Users they've sent requests to
+    // 2. Users they're already connected to 
+    // 3. Users they have outgoing pending requests to (but allow incoming pending requests)
     // 4. Athletes can't discover other athletes
     // 5. Demo profiles should never appear in discover
     // 6. Admin profiles should never appear in discover
@@ -225,14 +225,25 @@ async function handleDiscoverRequest(request: NextRequest) {
       not(exists(
         db.select()
           .from(connections)
-          .where(or(
-            and(
-              eq(connections.fromUserId, userId),
-              eq(connections.toUserId, users.id)
-            ),
-            and(
-              eq(connections.fromUserId, users.id),
-              eq(connections.toUserId, userId)
+          .where(and(
+            or(
+              // Exclude if connected (in either direction)
+              and(
+                eq(connections.fromUserId, userId),
+                eq(connections.toUserId, users.id),
+                eq(connections.status, 'connected')
+              ),
+              and(
+                eq(connections.fromUserId, users.id),
+                eq(connections.toUserId, userId),
+                eq(connections.status, 'connected')
+              ),
+              // Exclude if current user has outgoing pending request
+              and(
+                eq(connections.fromUserId, userId),
+                eq(connections.toUserId, users.id),
+                eq(connections.status, 'pending')
+              )
             )
           ))
       ))
@@ -352,7 +363,7 @@ async function handleDiscoverRequest(request: NextRequest) {
       ...roleFilterConditions
     ];
 
-    // Execute the search query using Drizzle's query builder with relations
+    // Execute the search query using Drizzle's query builder with left joins
     const results = await db
       .select({
         id: users.id,
@@ -361,6 +372,15 @@ async function handleDiscoverRequest(request: NextRequest) {
         coachProfile: coachProfiles,
         recruitingProfile: recruitingProfiles,
         hasPendingRequest: exists(
+          db.select()
+            .from(connections)
+            .where(and(
+              eq(connections.fromUserId, userId),
+              eq(connections.toUserId, users.id),
+              eq(connections.status, 'pending')
+            ))
+        ),
+        hasIncomingRequest: exists(
           db.select()
             .from(connections)
             .where(and(
@@ -396,6 +416,82 @@ async function handleDiscoverRequest(request: NextRequest) {
       .limit(pageSize)
       .offset(offset);
 
+    // Fetch recruiting needs for coaches and recruiters in parallel
+    const coachProfileIds = results
+      .filter(user => user.role === 'coach' && user.coachProfile)
+      .map(user => user.coachProfile!.id);
+
+    const recruiterProfileIds = results
+      .filter(user => user.role === 'recruiter' && user.recruitingProfile)
+      .map(user => user.recruitingProfile!.id);
+
+    // Fetch recruiting needs with error handling
+    let coachRecruitingNeeds: typeof recruitingNeeds.$inferSelect[] = [];
+    let recruiterRecruitingNeeds: typeof recruitingProfileNeeds.$inferSelect[] = [];
+
+    try {
+      // Fetch coach recruiting needs
+      if (coachProfileIds.length > 0) {
+        coachRecruitingNeeds = await db.query.recruitingNeeds.findMany({
+          where: or(...coachProfileIds.map(id => eq(recruitingNeeds.coachId, id)))
+        });
+      }
+
+      // Fetch recruiter recruiting needs
+      if (recruiterProfileIds.length > 0) {
+        recruiterRecruitingNeeds = await db.query.recruitingProfileNeeds.findMany({
+          where: or(...recruiterProfileIds.map(id => eq(recruitingProfileNeeds.recruitingProfileId, id)))
+        });
+      }
+    } catch (recruitingNeedsError) {
+      console.error('Error fetching recruiting needs:', recruitingNeedsError);
+      // Continue without recruiting needs data if fetch fails
+    }
+
+    // Create maps for quick lookup with safe data handling
+    const coachNeedsMap = new Map<number, {
+      studentClassifications: string[];
+      positions: string[];
+      scholarshipsAvailable: number | null;
+      recruitingPhilosophy: string | null;
+    }>();
+    coachRecruitingNeeds.forEach(need => {
+      if (need && typeof need.coachId === 'number') {
+        coachNeedsMap.set(need.coachId, {
+          studentClassifications: Array.isArray(need.studentClassifications) ? need.studentClassifications : [],
+          positions: Array.isArray(need.positions) ? need.positions : [],
+          scholarshipsAvailable: typeof need.scholarshipsAvailable === 'number' ? need.scholarshipsAvailable : null,
+          recruitingPhilosophy: typeof need.recruitingPhilosophy === 'string' ? need.recruitingPhilosophy : null
+        });
+      }
+    });
+
+    const recruiterNeedsMap = new Map<number, Array<{
+      id: number;
+      recruitingProfileId: number;
+      sport: string;
+      studentClassifications: string[];
+      positions: string[];
+      scholarshipsAvailable: number | null;
+      recruitingPhilosophy: string | null;
+    }>>();
+    recruiterRecruitingNeeds.forEach(need => {
+      if (need && typeof need.recruitingProfileId === 'number') {
+        if (!recruiterNeedsMap.has(need.recruitingProfileId)) {
+          recruiterNeedsMap.set(need.recruitingProfileId, []);
+        }
+        recruiterNeedsMap.get(need.recruitingProfileId)!.push({
+          id: need.id,
+          recruitingProfileId: need.recruitingProfileId,
+          sport: need.sport || '',
+          studentClassifications: Array.isArray(need.studentClassifications) ? need.studentClassifications : [],
+          positions: Array.isArray(need.positions) ? need.positions : [],
+          scholarshipsAvailable: typeof need.scholarshipsAvailable === 'number' ? need.scholarshipsAvailable : null,
+          recruitingPhilosophy: typeof need.recruitingPhilosophy === 'string' ? need.recruitingPhilosophy : null
+        });
+      }
+    });
+
     // Process results using a similar approach as the connections API
     const processedResults = results.map(user => {
       // Determine which profile to use
@@ -416,6 +512,12 @@ async function handleDiscoverRequest(request: NextRequest) {
         height?: string | null;
         weight?: string | null;
         positions?: string[] | null;
+        recruitingNeeds?: {
+          studentClassifications: string[];
+          positions: string[];
+          scholarshipsAvailable: number | null;
+          recruitingPhilosophy: string | null;
+        } | null;
       } = {
         fullName: null,
         organizationName: null,
@@ -428,46 +530,58 @@ async function handleDiscoverRequest(request: NextRequest) {
 
       // Set properties based on profile type
       if (userRole === 'athlete' && user.athleteProfile) {
+        const athleteProfile = user.athleteProfile;
         userProfileData = {
-          fullName: user.athleteProfile.fullName,
-          organizationName: user.athleteProfile.organizationName,
-          profileImage: user.athleteProfile.profileImageR3Key,
-          city: user.athleteProfile.city,
-          state: user.athleteProfile.state,
-          country: user.athleteProfile.country,
-          isVerified: user.athleteProfile.isVerified || false,
-          sport: user.athleteProfile.sport,
-          educationLevel: user.athleteProfile.educationLevel,
-          graduationYear: user.athleteProfile.graduationYear,
-          height: user.athleteProfile.height,
-          weight: user.athleteProfile.weight,
-          positions: user.athleteProfile.positions,
+          fullName: athleteProfile.fullName,
+          organizationName: athleteProfile.organizationName,
+          profileImage: athleteProfile.profileImageR3Key,
+          city: athleteProfile.city,
+          state: athleteProfile.state,
+          country: athleteProfile.country,
+          isVerified: athleteProfile.isVerified || false,
+          sport: athleteProfile.sport,
+          educationLevel: athleteProfile.educationLevel,
+          graduationYear: athleteProfile.graduationYear,
+          height: athleteProfile.height,
+          weight: athleteProfile.weight,
+          positions: athleteProfile.positions,
         };
       } else if (userRole === 'coach' && user.coachProfile) {
+        const coachProfile = user.coachProfile;
+        const coachNeeds = coachNeedsMap.get(coachProfile.id) || null;
+        
         userProfileData = {
-          fullName: user.coachProfile.fullName,
-          organizationName: user.coachProfile.organizationName,
-          profileImage: user.coachProfile.profileImageR3Key,
-          city: user.coachProfile.city,
-          state: user.coachProfile.state,
-          country: user.coachProfile.country,
-          isVerified: user.coachProfile.isVerified || false,
-          sport: user.coachProfile.sportCoaching,
-          title: user.coachProfile.title,
-          division: user.coachProfile.division,
+          fullName: coachProfile.fullName,
+          organizationName: coachProfile.organizationName,
+          profileImage: coachProfile.profileImageR3Key,
+          city: coachProfile.city,
+          state: coachProfile.state,
+          country: coachProfile.country,
+          isVerified: coachProfile.isVerified || false,
+          sport: coachProfile.sportCoaching,
+          title: coachProfile.title,
+          division: coachProfile.division,
+          recruitingNeeds: coachNeeds,
         };
       } else if (userRole === 'recruiter' && user.recruitingProfile) {
+        const recruitingProfile = user.recruitingProfile;
+        const profileNeeds = recruiterNeedsMap.get(recruitingProfile.id) || [];
+        
+        // Get needs for the main sport
+        const mainSportNeeds = profileNeeds.find(need => need.sport === recruitingProfile.sportRecruiting);
+        
         userProfileData = {
-          fullName: user.recruitingProfile.fullName,
-          organizationName: user.recruitingProfile.organizationName,
-          profileImage: user.recruitingProfile.profileImageR3Key,
-          city: user.recruitingProfile.city,
-          state: user.recruitingProfile.state,
-          country: user.recruitingProfile.country,
-          isVerified: user.recruitingProfile.isVerified || false,
-          sport: user.recruitingProfile.sportRecruiting,
-          title: user.recruitingProfile.title,
-          division: user.recruitingProfile.division,
+          fullName: recruitingProfile.fullName,
+          organizationName: recruitingProfile.organizationName,
+          profileImage: recruitingProfile.profileImageR3Key,
+          city: recruitingProfile.city,
+          state: recruitingProfile.state,
+          country: recruitingProfile.country,
+          isVerified: recruitingProfile.isVerified || false,
+          sport: recruitingProfile.sportRecruiting,
+          title: recruitingProfile.title,
+          division: recruitingProfile.division,
+          recruitingNeeds: mainSportNeeds || null,
         };
       }
 
@@ -490,7 +604,13 @@ async function handleDiscoverRequest(request: NextRequest) {
         height: userProfileData.height ? sanitizeText(userProfileData.height) : null,
         weight: userProfileData.weight ? sanitizeText(userProfileData.weight) : null,
         positions: userProfileData.positions || null,
-        hasPendingRequest: user.hasPendingRequest,
+        hasPendingRequest: user.hasPendingRequest || false,
+        hasIncomingRequest: user.hasIncomingRequest || false,
+        recruitingNeeds: userProfileData.recruitingNeeds ? {
+          studentClassifications: userProfileData.recruitingNeeds.studentClassifications || [],
+          positions: userProfileData.recruitingNeeds.positions || [],
+          scholarshipsAvailable: userProfileData.recruitingNeeds.scholarshipsAvailable || null,
+        } : null,
       };
     });
 

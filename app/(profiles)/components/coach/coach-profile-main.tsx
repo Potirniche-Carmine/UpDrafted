@@ -4,6 +4,7 @@ import React, { useState, useEffect, memo, useMemo, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import Image from "next/image";
 import Link from "next/link";
 import {
@@ -140,6 +141,7 @@ export function CoachProfile({
   const [isConnecting, setIsConnecting] = useState(false);
   const [currentConnectionStatus, setCurrentConnectionStatus] = useState(connectionStatus);
   const [isPreviewMode, setIsPreviewMode] = useState(false);
+  const [confirmDiscardOpen, setConfirmDiscardOpen] = useState(false);
     const { user } = useUser();
   const effectiveRole = user?.publicMetadata?.role as string;
   
@@ -399,12 +401,14 @@ export function CoachProfile({
 
   const discardChanges = () => {
     if (hasUnsavedChanges) {
-      const confirmed = window.confirm('You have unsaved changes. Are you sure you want to discard them?');
-      if (confirmed) {
-        setProfileData(data);
-        setHasUnsavedChanges(false);
-      }
+      setConfirmDiscardOpen(true);
     }
+  };
+
+  const handleConfirmDiscard = () => {
+    setProfileData(data);
+    setHasUnsavedChanges(false);
+    setConfirmDiscardOpen(false);
   };
 
   const handleRemoveImage = (imageType: 'profile' | 'organization') => {
@@ -464,14 +468,6 @@ export function CoachProfile({
       const result = await response.json();
       if (result.success) {
         setCurrentConnectionStatus("none");
-        // Use a more user-friendly notification instead of alert
-        const notification = document.createElement('div');
-        notification.className = 'fixed top-4 right-4 bg-green-500 text-white px-4 py-2 rounded-lg shadow-lg z-50';
-        notification.textContent = 'Connection request withdrawn successfully!';
-        document.body.appendChild(notification);
-        setTimeout(() => {
-          document.body.removeChild(notification);
-        }, 3000);
       } else {
         throw new Error(result.error || 'Failed to withdraw connection request');
       }
@@ -955,45 +951,53 @@ export function CoachProfile({
                   </div>
                 </CardHeader>
                 <CardContent>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                    <div className="text-center">
-                      <p className="text-sm text-muted-foreground mb-2">Student Classifications</p>
-                      <div className="flex flex-wrap justify-center gap-1">
-                        {profileData.recruitingNeeds?.studentClassifications && profileData.recruitingNeeds.studentClassifications.length > 0 ? (
-                          profileData.recruitingNeeds.studentClassifications.map((classification) => (
-                            <Badge key={classification} className="bg-purple-100 text-purple-800 text-sm">
-                              {getStudentClassificationDisplayName(classification as StudentClassification)}
-                            </Badge>
-                          ))
-                        ) : (
-                          <p className="text-xs text-muted-foreground italic">No classifications specified</p>
-                        )}
-                      </div>
-                    </div>
-
-                    <div className="text-center">
-                      <p className="text-sm text-muted-foreground mb-2">Positions Needed</p>
-                      <div className="flex flex-wrap justify-center gap-1">
-                        {profileData.recruitingNeeds?.positions && profileData.recruitingNeeds.positions.length > 0 ? (
-                          profileData.recruitingNeeds.positions.map((position) => (
-                            <Badge key={position} className="bg-blue-100 text-blue-800 text-sm">
-                              {position}
-                            </Badge>
-                          ))
-                        ) : (
-                          <p className="text-xs text-muted-foreground italic">No positions specified</p>
-                        )}
-                      </div>
-                    </div>
-
-                    {profileData.recruitingNeeds?.scholarshipsAvailable && (
-                      <div className="text-center">
-                        <p className="text-sm text-muted-foreground mb-2">Scholarships Available</p>
-                        <div className="bg-green-50 dark:bg-green-950 p-4 rounded-lg">
-                          <p className="font-bold text-green-600 text-2xl">{profileData.recruitingNeeds.scholarshipsAvailable}</p>
+                  <div className="space-y-4 mb-6">
+                    {/* Recruiting Overview */}
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                      {/* Student Classifications */}
+                      <div className="p-4 border rounded-lg bg-card">
+                        <p className="text-sm font-medium text-foreground mb-3">Student Classifications</p>
+                        <div className="flex flex-wrap gap-1">
+                          {profileData.recruitingNeeds?.studentClassifications && profileData.recruitingNeeds.studentClassifications.length > 0 ? (
+                            profileData.recruitingNeeds.studentClassifications.map((classification) => (
+                              <Badge key={classification} variant="outline" className="text-xs">
+                                {getStudentClassificationDisplayName(classification as StudentClassification)}
+                              </Badge>
+                            ))
+                          ) : (
+                            <p className="text-xs text-muted-foreground italic">No classifications specified</p>
+                          )}
                         </div>
                       </div>
-                    )}
+
+                      {/* Positions */}
+                      <div className="p-4 border rounded-lg bg-card">
+                        <p className="text-sm font-medium text-foreground mb-3">Positions Needed</p>
+                        <div className="flex flex-wrap gap-1">
+                          {profileData.recruitingNeeds?.positions && profileData.recruitingNeeds.positions.length > 0 ? (
+                            profileData.recruitingNeeds.positions.map((position) => (
+                              <Badge key={position} variant="outline" className="text-xs">
+                                {position}
+                              </Badge>
+                            ))
+                          ) : (
+                            <p className="text-xs text-muted-foreground italic">No positions specified</p>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Scholarships */}
+                      {profileData.recruitingNeeds?.scholarshipsAvailable && (
+                        <div className="p-4 border rounded-lg bg-card">
+                          <p className="text-sm font-medium text-foreground mb-3">Scholarships Available</p>
+                          <div className="flex items-center justify-center">
+                            <div className="bg-gradient-to-r from-[#01ae79]/20 to-[#01ae79]/10 border border-[#01ae79]/30 rounded-xl px-6 py-4 min-w-[80px] flex items-center justify-center">
+                              <span className="text-4xl font-bold text-[#01ae79]">{profileData.recruitingNeeds.scholarshipsAvailable}</span>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   </div>
 
                   {/* What We're Looking For section - uses recruitingPhilosophy */}
@@ -1154,6 +1158,26 @@ export function CoachProfile({
           </div>
         </div>
       </div>
+
+      {/* Confirm Discard Changes Dialog */}
+      <Dialog open={confirmDiscardOpen} onOpenChange={setConfirmDiscardOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Discard Changes?</DialogTitle>
+          </DialogHeader>
+          <p className="text-muted-foreground">
+            You have unsaved changes. Are you sure you want to discard them?
+          </p>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setConfirmDiscardOpen(false)}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={handleConfirmDiscard}>
+              Discard Changes
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 } 

@@ -199,13 +199,10 @@ export const CONFERENCES_BY_DIVISION: ConferencesByDivision = {
   ],
   
   'High School': [
-    // High schools typically don't have "conferences" in the same way
-    // But they may have leagues or districts
     'Local League/District'
   ],
   
   'Club Sports': [
-    'National Club Baseball Association (NCBA)',
     'National Intramural-Recreational Sports Association (NIRSA)',
     'College Club Sports',
     'Independent'

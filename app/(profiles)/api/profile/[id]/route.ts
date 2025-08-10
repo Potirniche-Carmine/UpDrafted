@@ -288,7 +288,7 @@ function sanitizeForViewing(profileData: Record<string, any>, profileType: strin
     // Remove any private measurables or stats if needed
   } else if (profileType === 'coach' || profileType === 'recruiter') {
     // Remove any sensitive coaching/recruiting information
-    delete sanitized.recruitingNeeds?.recruitingPhilosophy; // Keep this public for now
+    // Keep recruiting philosophy public as it's meant to be visible to athletes and other users
   }
 
   // Remove connection data for privacy

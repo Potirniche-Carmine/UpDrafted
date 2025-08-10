@@ -19,8 +19,8 @@ const roboto = Roboto({
 });
 
 export const metadata: Metadata = generateMetadata({
-  title: 'UpDrafted - Connect Student-Athletes with College Programs',
-  description: 'The premier platform connecting student-athletes with D1, D2, D3, and JUCO college programs. Streamline your recruitment process with verified profiles.',
+  title: 'UpDrafted',
+  description: 'The premier platform connecting student-athletes with D1, D2, D3, and JUCO college programs. Streamline your recruitment process with UpDrafted.',
   noIndex: false 
 });
 

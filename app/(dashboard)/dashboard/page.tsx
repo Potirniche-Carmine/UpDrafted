@@ -353,16 +353,12 @@ function DashboardContent({
 
   // Get content based on user role
   const userContent = getUserContent(userRole, handleViewProfile, profileNavigating);
-  
-  // Get user display name
-  const displayName = user.fullName || user.firstName || user.username || 'User';
 
   return (
     <div className="min-h-screen bg-background">
       <div className="container mx-auto py-6 px-4 md:px-6 space-y-8">
         {/* Header Section */}
         <DashboardHeader
-          displayName={displayName}
           welcomeText={userContent.welcomeText}
           searchText={userContent.searchText}
           searchHref={userContent.searchHref}

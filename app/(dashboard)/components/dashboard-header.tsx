@@ -5,14 +5,12 @@ import { Search } from "lucide-react";
 import Link from "next/link";
 
 interface DashboardHeaderProps {
-  displayName: string;
   welcomeText: string;
   searchText: string;
   searchHref: string;
 }
 
 export function DashboardHeader({
-  displayName,
   welcomeText,
   searchText,
   searchHref
@@ -22,7 +20,7 @@ export function DashboardHeader({
       {/* Header Section */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-3xl md:text-4xl font-bold text-foreground">Welcome back, {displayName}!</h1>
+          <h1 className="text-3xl md:text-4xl font-bold text-foreground">Welcome back to UpDrafted</h1>
           <p className="text-muted-foreground text-base md:text-lg">{welcomeText}</p>
         </div>
         
