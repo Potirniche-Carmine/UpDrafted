@@ -1,13 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/database/db';
 import { notifications } from '@/database/schema';
-import { validateClerkHeaders } from '@/utils/clerk-security';
 import { requireAnyRole } from '@/utils/roles';
 import { eq, desc, and } from 'drizzle-orm';
 import { profileOperations, notificationOperations } from '@/database/db-utils';
 import { withRateLimit } from '@/utils/security';
 import { createErrorResponse } from '@/utils/security';
-// Removed unused imports - getCachedWithType, setCachedWithType, createErrorResponse, createSuccessResponse
 
 type Operation = 'getNotifications' | 'markAsRead' | 'markAllAsRead' | 'getUnreadCount' | 'dismissAllNotifications';
 
@@ -42,17 +40,8 @@ function formatTimeAgo(date: Date): string {
 }
 
 export async function GET(request: NextRequest) {
-  // Validate security headers
-  const validation = validateClerkHeaders(request);  
-  if (!validation.isValid) {
-    return NextResponse.json({ 
-      success: false, 
-      error: 'Invalid security headers'
-    }, { status: 401 });
-  }
-
   try {
-    // Require authentication
+    // Require authentication (middleware already handled auth.protect())
     const auth = await requireAnyRole();
     if (auth instanceof NextResponse) return auth;
 
@@ -82,15 +71,6 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  // Validate security headers
-  const validation = validateClerkHeaders(request);  
-  if (!validation.isValid) {
-    return NextResponse.json({ 
-      success: false, 
-      error: 'Invalid security headers'
-    }, { status: 401 });
-  }
-
   try {
     const authResult = await requireAnyRole();
     
@@ -203,7 +183,7 @@ async function handleGetNotifications(userId: string, body: GetNotificationsRequ
       try {
         // Add timeout for profile fetching too
         const profileTimeout = new Promise<never>((_, reject) => {
-          setTimeout(() => reject(new Error('Profile fetch timeout')), 5000); // 5 second timeout
+          setTimeout(() => reject(new Error('Profile fetch timeout')), 8000); // Increased to 8 second timeout
         });
 
         const profilePromises = Array.from(actorUserIds).map(async (actorUserId) => {
@@ -211,8 +191,16 @@ async function handleGetNotifications(userId: string, body: GetNotificationsRequ
             const profile = await profileOperations.getUserProfileInfo(actorUserId);
             return { actorUserId, profile };
           } catch (error) {
-            console.error(`Error fetching profile for user ${actorUserId}:`, error);
-            return { actorUserId, profile: null };
+            console.warn(`Error fetching profile for user ${actorUserId}:`, error);
+            // Return fallback data instead of null
+            return { 
+              actorUserId, 
+              profile: {
+                fullName: 'Unknown User',
+                profileImageUrl: null,
+                role: 'user'
+              }
+            };
           }
         });
         
@@ -227,8 +215,15 @@ async function handleGetNotifications(userId: string, body: GetNotificationsRequ
           }
         });
       } catch (error) {
-        console.error('Error batch fetching actor profiles (continuing without profile data):', error);
-        // Continue without profile data rather than failing completely
+        console.warn('Error batch fetching actor profiles (using fallback data):', error);
+        // Provide fallback profile data for all actors
+        Array.from(actorUserIds).forEach(actorUserId => {
+          actorProfilesMap.set(actorUserId, {
+            fullName: 'Unknown User',
+            profileImageUrl: null,
+            role: 'user'
+          });
+        });
       }
     }
 
@@ -247,6 +242,13 @@ async function handleGetNotifications(userId: string, body: GetNotificationsRequ
               actorName: actorInfo.fullName,
               actorImageUrl: actorInfo.profileImageUrl,
               actorRole: actorInfo.role,
+            };
+          } else {
+            // Fallback data if profile wasn't found
+            enhancedData = {
+              actorName: 'Unknown User',
+              actorImageUrl: null,
+              actorRole: 'user',
             };
           }
         }

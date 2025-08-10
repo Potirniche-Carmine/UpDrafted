@@ -47,25 +47,44 @@ const useNotificationsStore = create(
           const response = await fetch('/api/notifications?operation=getUnreadCount', {
             method: 'GET',
             headers: {
-              'Authorization': `Bearer ${token}`
+              'Authorization': `Bearer ${token}`,
+              'Accept': 'application/json',
+              'Content-Type': 'application/json'
             }
           });
 
-          if (response.ok) {
-            const data = await response.json();
-            if (data.success) {
-              // Only update if the count actually changed
-              const currentCount = get().unreadCount;
-              if (currentCount !== data.unreadCount) {
-                set({ unreadCount: data.unreadCount, lastFetched: Date.now() });
-              } else {
-                // Still update lastFetched even if count is the same
-                set({ lastFetched: Date.now() });
-              }
+          if (!response.ok) {
+            // Handle different error types
+            if (response.status === 401) {
+              throw new Error('Authentication failed');
+            } else if (response.status === 403) {
+              throw new Error('Access forbidden');
+            } else if (response.status >= 500) {
+              throw new Error('Server error');
+            } else {
+              throw new Error(`HTTP ${response.status}`);
             }
+          }
+
+          const data = await response.json();
+          if (data.success) {
+            // Only update if the count actually changed
+            const currentCount = get().unreadCount;
+            if (currentCount !== data.unreadCount) {
+              set({ unreadCount: data.unreadCount, lastFetched: Date.now() });
+            } else {
+              // Still update lastFetched even if count is the same
+              set({ lastFetched: Date.now() });
+            }
+          } else {
+            console.warn('Failed to fetch unread count:', data.error);
           }
         } catch (error) {
           console.error('Failed to fetch unread notifications count:', error);
+          // Don't reset count on network errors to prevent flickering
+          if (error instanceof Error && error.message === 'Authentication failed') {
+            set({ unreadCount: 0 }); // Reset count only on auth errors
+          }
         } finally {
           set({ isFetching: false });
         }
@@ -101,8 +120,8 @@ export const useNotifications = () => {
   const lastFetchRef = useRef<number>(0);
 
   const fetchWithToken = useCallback(async (force = false) => {
-    // Don't fetch if Clerk isn't loaded yet
-    if (!isLoaded) {
+    // Don't fetch if Clerk isn't loaded yet or user isn't signed in
+    if (!isLoaded || !isSignedIn) {
       return;
     }
     
@@ -123,20 +142,25 @@ export const useNotifications = () => {
     
     lastFetchRef.current = now;
     
-    if (isSignedIn) {
-      setLocalIsFetching(true);
-      try {
-        const token = await getToken();
-        if (token) {
-          await fetchUnreadCount(token);
-        }
-      } catch (error) {
-        console.error('Error fetching notifications count with token:', error);
-      } finally {
-        setLocalIsFetching(false);
+    setLocalIsFetching(true);
+    try {
+      const token = await getToken();
+      if (!token) {
+        console.warn('No authentication token available');
+        return;
       }
+      await fetchUnreadCount(token);
+    } catch (error) {
+      console.error('Error fetching notifications count with token:', error);
+      // Reset state on auth errors to prevent stuck loading states
+      if (error instanceof Error && error.message.includes('auth')) {
+        setUnreadCount(0);
+        setHasCheckedOnStartup(false);
+      }
+    } finally {
+      setLocalIsFetching(false);
     }
-  }, [isLoaded, pathname, fetchUnreadCount, setUnreadCount, isSignedIn, getToken]);
+  }, [isLoaded, pathname, fetchUnreadCount, setUnreadCount, isSignedIn, getToken, setHasCheckedOnStartup]);
 
   // Check once on app startup/login
   useEffect(() => {
@@ -157,7 +181,7 @@ export const useNotifications = () => {
     if (!isLoaded) {
       return;
     }
-    
+
     // Clear any existing interval
     if (intervalRef.current) {
       clearInterval(intervalRef.current);
@@ -170,14 +194,14 @@ export const useNotifications = () => {
       return; // Don't set up polling when on notifications page
     }
 
-    // Only set up polling if not on notifications page and user is authenticated
+    // Only set up polling if user is authenticated
     if (isSignedIn) {
       // Always fetch once on page navigation (remove cooldown for page changes)
       fetchWithToken(true);
       
       // Set up interval for periodic polling
       intervalRef.current = setInterval(() => {
-        if (!document.hidden && !isOnNotificationsPage) {
+        if (!document.hidden && !isOnNotificationsPage && isSignedIn) {
           fetchWithToken();
         }
       }, POLLING_INTERVAL);
@@ -190,9 +214,7 @@ export const useNotifications = () => {
         intervalRef.current = null;
       }
     };
-  }, [isLoaded, pathname, fetchWithToken, isOnNotificationsPage, setUnreadCount, isSignedIn]);
-
-  // Handle page visibility changes (less aggressive)
+  }, [isLoaded, pathname, fetchWithToken, isOnNotificationsPage, setUnreadCount, isSignedIn]);  // Handle page visibility changes (less aggressive)
   useEffect(() => {
     const handleVisibilityChange = () => {
       if (document.hidden) {

@@ -1563,98 +1563,124 @@ export const notificationOperations = {
 
   // Helper function to create profile view notification (first time only)
   async createProfileViewNotification(viewedUserId: string, viewerUserId: string) {
-    // Check if viewer or viewed user is an admin - skip notifications for admin immunity
-    const [viewer, viewedUser] = await Promise.all([
-      userOperations.getUserWithProfile(viewerUserId),
-      userOperations.getUserWithProfile(viewedUserId)
-    ]);
+    try {
+      // Check if viewer or viewed user is an admin - skip notifications for admin immunity
+      const [viewer, viewedUser] = await Promise.all([
+        userOperations.getUserWithProfile(viewerUserId),
+        userOperations.getUserWithProfile(viewedUserId)
+      ]);
 
-    if (viewer?.role === 'admin' || viewedUser?.role === 'admin') {
-      return null; // Skip notification for admin immunity
-    }
-
-    const viewerInfo = await profileOperations.getUserProfileInfo(viewerUserId);
-    if (!viewerInfo) return null;
-
-    // Check if this viewer has EVER viewed this profile before (notification exists)
-    const existingNotification = await db.query.notifications.findFirst({
-      where: and(
-        eq(notifications.userId, viewedUserId),
-        eq(notifications.type, 'profileView'),
-        sql`${notifications.metadata}->>'actorUserId' = ${viewerUserId}`
-      )
-    });
-
-    // If a notification already exists, don't create a new one or update it
-    // Users can see recent activity on the /activity page
-    if (existingNotification) {
-      return null; // No notification needed - not first time
-    }
-
-    // Only create notification for first-time profile views
-    return await this.createNotification(
-      viewedUserId,
-      'profileView',
-      'Profile View',
-      'viewed your profile.',
-      {
-        actorUserId: viewerUserId,
-        viewerName: viewerInfo.fullName,
+      if (viewer?.role === 'admin' || viewedUser?.role === 'admin') {
+        return null; // Skip notification for admin immunity
       }
-    );
+
+      const viewerInfo = await profileOperations.getUserProfileInfo(viewerUserId);
+      if (!viewerInfo) return null;
+
+      // Check if this viewer has EVER viewed this profile before (notification exists)
+      try {
+        const existingNotification = await db.query.notifications.findFirst({
+          where: and(
+            eq(notifications.userId, viewedUserId),
+            eq(notifications.type, 'profileView'),
+            sql`${notifications.metadata}->>'actorUserId' = ${viewerUserId}`
+          )
+        });
+
+        // If a notification already exists, don't create a new one or update it
+        // Users can see recent activity on the /activity page
+        if (existingNotification) {
+          return null; // No notification needed - not first time
+        }
+      } catch (error) {
+        console.warn('Error checking for existing profile view notification, proceeding with creation:', error);
+        // Continue with creation if check fails
+      }
+
+      // Only create notification for first-time profile views
+      return await this.createNotification(
+        viewedUserId,
+        'profileView',
+        'Profile View',
+        'viewed your profile.',
+        {
+          actorUserId: viewerUserId,
+          viewerName: viewerInfo.fullName,
+        }
+      );
+    } catch (error) {
+      console.error('Error creating profile view notification:', error);
+      return null;
+    }
   },
 
   // Helper function to create connection notification
   async createConnectionNotification(toUserId: string, fromUserId: string, type: 'newConnection' | 'connectionAccepted', connectionId?: number) {
-    const fromUserInfo = await profileOperations.getUserProfileInfo(fromUserId);
-    if (!fromUserInfo) return null;
+    try {
+      const fromUserInfo = await profileOperations.getUserProfileInfo(fromUserId);
+      if (!fromUserInfo) return null;
 
-    // For new connection requests, check if notification already exists
-    if (type === 'newConnection') {
-      const existingNotification = await db.query.notifications.findFirst({
-        where: and(
-          eq(notifications.userId, toUserId),
-          eq(notifications.type, 'newConnection'),
-          sql`${notifications.metadata}->>'actorUserId' = ${fromUserId}`
-        )
-      });
+      // For new connection requests, check if notification already exists more robustly
+      if (type === 'newConnection') {
+        try {
+          const existingNotification = await db.query.notifications.findFirst({
+            where: and(
+              eq(notifications.userId, toUserId),
+              eq(notifications.type, 'newConnection'),
+              sql`${notifications.metadata}->>'actorUserId' = ${fromUserId}`
+            )
+          });
 
-      // If notification already exists, don't create a new one
-      if (existingNotification) {
-        return null;
+          // If notification already exists, don't create a new one
+          if (existingNotification) {
+            console.log(`Duplicate connection notification prevented for user ${toUserId} from ${fromUserId}`);
+            return null;
+          }
+        } catch (error) {
+          console.warn('Error checking for existing connection notification, proceeding with creation:', error);
+          // Continue with creation if check fails to avoid blocking legitimate notifications
+        }
       }
+
+      const title = type === 'newConnection' ? 'New Connection Request' : 'Connection Accepted';
+      const message = type === 'newConnection' ? 'sent you a connection request.' : 'accepted your connection request.';
+
+      return await this.createNotification(
+        toUserId,
+        type,
+        title,
+        message,
+        {
+          actorUserId: fromUserId,
+          connectionId,
+        }
+      );
+    } catch (error) {
+      console.error('Error creating connection notification:', error);
+      return null;
     }
-
-    const title = type === 'newConnection' ? 'New Connection Request' : 'Connection Accepted';
-    const message = type === 'newConnection' ? 'sent you a connection request.' : 'accepted your connection request.';
-
-    return await this.createNotification(
-      toUserId,
-      type,
-      title,
-      message,
-      {
-        actorUserId: fromUserId,
-        connectionId,
-      }
-    );
   },
 
   // Helper function to create message notification
   async createMessageNotification(recipientUserId: string, senderUserId: string, conversationId: number) {
-    const senderInfo = await profileOperations.getUserProfileInfo(senderUserId);
-    if (!senderInfo) return null;
+    try {
+      const senderInfo = await profileOperations.getUserProfileInfo(senderUserId);
+      if (!senderInfo) return null;
 
-    return await this.createNotification(
-      recipientUserId,
-      'newMessage',
-      'New Message',
-      'sent you a new message.',
-      {
-        actorUserId: senderUserId, // Changed from senderId to actorUserId for consistency
-        conversationId,
-      }
-    );
+      return await this.createNotification(
+        recipientUserId,
+        'newMessage',
+        'New Message',
+        'sent you a new message.',
+        {
+          actorUserId: senderUserId, // Changed from senderId to actorUserId for consistency
+          conversationId,
+        }
+      );
+    } catch (error) {
+      console.error('Error creating message notification:', error);
+      return null;
+    }
   },
 };
 

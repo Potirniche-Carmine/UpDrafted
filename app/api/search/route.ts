@@ -6,7 +6,6 @@ import { or, eq, ilike, sql, and, ne, isNull } from 'drizzle-orm';
 import { R2_PUBLIC_URL, constructR2Url } from '@/database/r2';
 import { withRateLimit } from '@/utils/security';
 import { getCachedWithType, setCachedWithType, createErrorResponse, createSuccessResponse } from '@/utils/security';
-import { validateClerkHeaders, logSecurityValidation } from '@/utils/clerk-security';
 
 // Force Node.js runtime
 export const runtime = 'nodejs';
@@ -32,12 +31,6 @@ export interface SearchResult {
 
 export async function GET(request: NextRequest) {
   try {
-    const validation = validateClerkHeaders(request);
-    if (!validation.isValid) {
-      logSecurityValidation(validation, '/api/search');
-      return createErrorResponse('Invalid security headers', 401);
-    }
-
     // SECURITY: Validate request size and URL length
     const url = new URL(request.url);
     const MAX_URL_LENGTH = 2048;

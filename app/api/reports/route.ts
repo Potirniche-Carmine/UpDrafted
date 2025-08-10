@@ -4,7 +4,6 @@ import { reportOperations, userOperations } from '@/database/db-utils';
 import { clerkClient } from '@clerk/nextjs/server';
 import { withRateLimit } from '@/utils/security';
 import { getCachedWithType, setCachedWithType, createErrorResponse, createSuccessResponse } from '@/utils/security';
-import { validateClerkHeaders, logSecurityValidation } from '@/utils/clerk-security';
 
 interface ReportData {
   id: number;
@@ -22,12 +21,6 @@ interface ReportsResponse {
 
 export async function POST(request: NextRequest) {
   try {
-    const validation = validateClerkHeaders(request);
-    if (!validation.isValid) {
-      logSecurityValidation(validation, '/api/reports');
-      return createErrorResponse('Invalid security headers', 401);
-    }
-
     // Verify authentication and get user info
     const authResult = await requireAnyRole();
     if (authResult instanceof NextResponse) return authResult;
@@ -110,12 +103,6 @@ export async function POST(request: NextRequest) {
 
 export async function GET(request: NextRequest) {
   try {
-    const validation = validateClerkHeaders(request);
-    if (!validation.isValid) {
-      logSecurityValidation(validation, '/api/reports');
-      return createErrorResponse('Invalid security headers', 401);
-    }
-
     // Verify authentication and get user info
     const auth = await requireAnyRole();
     if (auth instanceof NextResponse) return auth;

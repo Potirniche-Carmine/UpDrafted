@@ -1,15 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { validateClerkHeaders, logSecurityValidation } from '@/utils/clerk-security'
 import { requireAdmin } from '@/utils/roles'
 import { adminOperations } from '@/database/db-utils'
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
-    const validation = validateClerkHeaders(request);
-    if (!validation.isValid) {
-      logSecurityValidation(validation, '/api/admin/role-preferences');
-      return NextResponse.json({ error: 'Invalid security headers' }, { status: 401 });
-    }
     const result = await requireAdmin();
     if (result instanceof NextResponse) return result;
     
@@ -18,27 +12,20 @@ export async function GET(request: NextRequest) {
     const preferences = await adminOperations.getAdminRolePreferences(userId);
     
     return NextResponse.json({
+      success: true,
       preferences: preferences || {
         currentViewingRole: null,
-        verificationStatusOverride: false
+        verificationStatusOverride: null
       }
     });
   } catch (error) {
-    console.error('Error fetching admin role preferences:', error);
-    return NextResponse.json(
-      { error: 'Failed to fetch preferences' },
-      { status: 500 }
-    );
+    console.error('Error fetching admin preferences:', error);
+    return NextResponse.json({ error: 'Failed to fetch preferences' }, { status: 500 });
   }
 }
 
 export async function POST(request: NextRequest) {
   try {
-    const validation = validateClerkHeaders(request);
-    if (!validation.isValid) {
-      logSecurityValidation(validation, '/api/admin/role-preferences');
-      return NextResponse.json({ error: 'Invalid security headers' }, { status: 401 });
-    }
     const result = await requireAdmin();
     if (result instanceof NextResponse) return result;
     

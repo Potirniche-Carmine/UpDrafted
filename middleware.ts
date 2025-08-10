@@ -123,6 +123,8 @@ const securityMiddleware = async (request: NextRequest) => {
   response.headers.set('X-Frame-Options', 'DENY');
   response.headers.set('X-XSS-Protection', '1; mode=block');
   response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
+  response.headers.set('X-Permitted-Cross-Domain-Policies', 'none');
+  response.headers.set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
 
   return response;
 };
@@ -135,18 +137,39 @@ export default clerkMiddleware(async (auth, req) => {
     return NextResponse.next();
   }
 
-  // Protect all other API routes
+  // Protect all other API routes and apply security middleware
   if (req.nextUrl.pathname.startsWith('/api/')) {
+    // First apply Clerk protection
     await auth.protect();
     
-    // Apply security middleware for mutation operations
+    // Then apply our security middleware for mutation operations
     const securityResult = await securityMiddleware(req);
     if (securityResult.status !== 200) {
       return securityResult;
     }
+    
+    // Add additional security headers for API routes
+    const response = NextResponse.next();
+    response.headers.set('X-Content-Type-Options', 'nosniff');
+    response.headers.set('X-Frame-Options', 'DENY');
+    response.headers.set('X-XSS-Protection', '1; mode=block');
+    response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
+    response.headers.set('X-Permitted-Cross-Domain-Policies', 'none');
+    response.headers.set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+    
+    return response;
   }
 
-  return NextResponse.next();
+  // For non-API routes, just add basic security headers
+  const response = NextResponse.next();
+  response.headers.set('X-Content-Type-Options', 'nosniff');
+  response.headers.set('X-Frame-Options', 'DENY');
+  response.headers.set('X-XSS-Protection', '1; mode=block');
+  response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
+  response.headers.set('X-Permitted-Cross-Domain-Policies', 'none');
+  response.headers.set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+  
+  return response;
 });
 
 // Optimized matcher configuration

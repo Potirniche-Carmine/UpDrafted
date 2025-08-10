@@ -39,7 +39,7 @@ interface NavItem {
 // Professional notification badge component
 function NotificationBadge({ count, className = "" }: { count: number; className?: string }) {
   if (count === 0) return null;
-  
+
   return (
     <div className={`absolute -top-2 -right-2 z-10 ${className}`}>
       <div className="relative">
@@ -54,19 +54,19 @@ function NotificationBadge({ count, className = "" }: { count: number; className
 }
 
 // Professional navigation item with notification support
-function NavItem({ 
-  item, 
-  notificationCount = 0, 
+function NavItem({
+  item,
+  notificationCount = 0,
   className = "",
-  onClick 
-}: { 
-  item: NavItem; 
-  notificationCount?: number; 
+  onClick
+}: {
+  item: NavItem;
+  notificationCount?: number;
   className?: string;
   onClick?: () => void;
 }) {
   return (
-    <Link 
+    <Link
       href={item.href}
       onClick={onClick}
       className={`transition-colors flex items-center px-2 md:px-3 py-2 group rounded-lg text-muted-foreground hover:text-[#01ae79] hover:bg-[#01ae79]/5 dark:hover:bg-[#01ae79]/10 relative ${className}`}
@@ -83,7 +83,7 @@ function NavItem({
       </span>
     </Link>
   );
-}function ThemeToggle() {
+} function ThemeToggle() {
   const { setTheme } = useTheme();
 
   return (

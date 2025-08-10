@@ -5,7 +5,6 @@ import { users, athleteProfiles, coachProfiles, recruitingProfiles, connections,
 import { and, eq, or, not, ilike, isNull, exists, ne } from 'drizzle-orm';
 import { sanitizeText, sanitizeNumber } from '@/utils/sanitization';
 import { withRateLimit } from '@/utils/security';
-import { validateClerkHeaders, logSecurityValidation } from '@/utils/clerk-security';
 
 // Force Node.js runtime
 export const runtime = 'nodejs';
@@ -133,17 +132,7 @@ async function parseSearchParams(request: NextRequest) {
 
 async function handleDiscoverRequest(request: NextRequest) {
   try {
-    // Validate client security headers
-    const headerValidation = validateClerkHeaders(request);
-    if (!headerValidation.isValid) {
-      logSecurityValidation(headerValidation, '/api/discover');
-      return NextResponse.json(
-        { error: 'Invalid security headers', missingHeaders: headerValidation.missingHeaders },
-        { status: 401 }
-      );
-    }
-
-    // Security validations for different request methods
+    // Security validations for different request methods (middleware already handled auth.protect())
     if (request.method === 'POST') {
       // Validate POST request body size to prevent abuse
       const bodySize = parseInt(request.headers.get('content-length') || '0', 10);

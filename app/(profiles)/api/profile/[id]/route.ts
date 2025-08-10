@@ -10,7 +10,6 @@ import { EducationLevel } from '@/app/(onboarding)/lib/onboarding';
 import { withRateLimit } from '@/utils/security';
 import { PRESENT_DATE, parseDateWithErrorHandling, dateToStringWithErrorHandling, validateDateDataset } from '@/lib/date-utils';
 import { createClientErrorResponse, logErrorWithContext} from '@/utils/error-sanitization';
-import { validateClerkHeaders, logSecurityValidation } from '@/utils/clerk-security';
 
 // Force Node.js runtime to avoid expensive edge function costs
 export const runtime = 'nodejs';
@@ -302,12 +301,6 @@ export async function GET(
   { params }: ProfilePageParams
 ) {
   try {
-    const validation = validateClerkHeaders(request);
-    if (!validation.isValid) {
-      logSecurityValidation(validation, '/api/profile/[id]');
-      return NextResponse.json({ error: 'Invalid security headers' }, { status: 401 });
-    }
-
     // SECURITY: Validate request size and URL length to prevent DoS attacks
     const url = new URL(request.url);
     
@@ -861,12 +854,6 @@ export async function PUT(
   { params }: ProfilePageParams
 ) {
   try {
-    const validation = validateClerkHeaders(request);
-    if (!validation.isValid) {
-      logSecurityValidation(validation, '/api/profile/[id]');
-      return NextResponse.json({ error: 'Invalid security headers' }, { status: 401 });
-    }
-
     // SECURITY: Validate request size and URL length to prevent DoS attacks
     const url = new URL(request.url);
     
