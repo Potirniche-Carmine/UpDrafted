@@ -61,12 +61,12 @@ function NavItem({
   onClick 
 }: { 
   item: NavItem; 
-  notificationCount?: number;
+  notificationCount?: number; 
   className?: string;
   onClick?: () => void;
 }) {
   return (
-    <Link
+    <Link 
       href={item.href}
       onClick={onClick}
       className={`transition-colors flex items-center px-2 md:px-3 py-2 group rounded-lg text-muted-foreground hover:text-[#01ae79] hover:bg-[#01ae79]/5 dark:hover:bg-[#01ae79]/10 relative ${className}`}
@@ -74,16 +74,16 @@ function NavItem({
     >
       <div className="relative">
         {item.icon}
-        <NotificationBadge count={notificationCount} />
+        {item.key === 'notifications' && notificationCount > 0 && (
+          <NotificationBadge count={notificationCount} />
+        )}
       </div>
       <span className="ml-2 text-sm font-medium hidden xl:inline">
         {item.label}
       </span>
     </Link>
   );
-}
-
-function ThemeToggle() {
+}function ThemeToggle() {
   const { setTheme } = useTheme();
 
   return (

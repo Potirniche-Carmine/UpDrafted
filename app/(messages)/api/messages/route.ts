@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { messageOperations, connectionOperations, profileOperations } from '@/database/db-utils';
+import { messageOperations, connectionOperations, profileOperations, notificationOperations } from '@/database/db-utils';
 import { validateClerkHeaders } from '@/utils/clerk-security';
 import { requireAnyRole } from '@/utils/roles';
 import { decryptMessage } from '@/utils/encryption';
@@ -570,6 +570,18 @@ async function handleSendMessage(userId: string, body: SendMessageRequestBody) {
       userId,
       sanitizedMessage
     );
+    
+    // Create notification for the recipient
+    try {
+      await notificationOperations.createMessageNotification(
+        partnerId,
+        userId,
+        conversationIdNum
+      );
+    } catch (notificationError) {
+      // Log but don't fail the message send if notification creation fails
+      console.error('Failed to create message notification:', notificationError);
+    }
     
     const response = NextResponse.json({
       success: true,

@@ -152,7 +152,13 @@ async function handleGetNotifications(userId: string, body: GetNotificationsRequ
   try {
     const { limit = 20, offset = 0, unreadOnly = false } = body;
 
-    const query = db
+    // Add timeout protection for the main query
+    const queryTimeout = new Promise<never>((_, reject) => {
+      setTimeout(() => reject(new Error('Query timeout')), 10000); // 10 second timeout
+    });
+
+    // First get the notifications with timeout protection
+    const queryPromise = db
       .select({
         id: notifications.id,
         type: notifications.type,
@@ -173,68 +179,113 @@ async function handleGetNotifications(userId: string, body: GetNotificationsRequ
       .limit(limit)
       .offset(offset);
 
-    const userNotifications = await query;
+    const userNotifications = await Promise.race([queryPromise, queryTimeout]);
 
-    // Enhance notifications with additional data based on metadata
-    const enhancedNotifications = await Promise.all(
-      userNotifications.map(async (notification) => {
-        let enhancedData = {};
+    // Get unique actor user IDs to batch fetch profile info
+    const actorUserIds = new Set<string>();
+    userNotifications.forEach(notification => {
+      if (notification.metadata) {
+        const metadata = notification.metadata as Record<string, unknown>;
+        if (metadata.actorUserId && typeof metadata.actorUserId === 'string') {
+          actorUserIds.add(metadata.actorUserId);
+        }
+      }
+    });
 
-        if (notification.metadata) {
-          const metadata = notification.metadata as Record<string, unknown>;
+    // Batch fetch all actor profile info with individual error handling
+    const actorProfilesMap = new Map<string, {
+      fullName: string;
+      profileImageUrl?: string | null;
+      role: string;
+    }>();
+    
+    if (actorUserIds.size > 0) {
+      try {
+        // Add timeout for profile fetching too
+        const profileTimeout = new Promise<never>((_, reject) => {
+          setTimeout(() => reject(new Error('Profile fetch timeout')), 5000); // 5 second timeout
+        });
 
-          // For single message/connection notifications, get actor info
-          if (metadata.actorUserId) {
-            try {
-              const actorInfo = await profileOperations.getUserProfileInfo(metadata.actorUserId as string);
-              if (actorInfo) {
-                enhancedData = {
-                  actorName: actorInfo.fullName,
-                  actorImageUrl: actorInfo.profileImageUrl,
-                  actorRole: actorInfo.role,
-                };
-              }
-            } catch (error) {
-              console.error('Error fetching actor info:', error);
-            }
+        const profilePromises = Array.from(actorUserIds).map(async (actorUserId) => {
+          try {
+            const profile = await profileOperations.getUserProfileInfo(actorUserId);
+            return { actorUserId, profile };
+          } catch (error) {
+            console.error(`Error fetching profile for user ${actorUserId}:`, error);
+            return { actorUserId, profile: null };
           }
+        });
+        
+        const profileResults = await Promise.race([
+          Promise.all(profilePromises),
+          profileTimeout
+        ]);
+        
+        profileResults.forEach(({ actorUserId, profile }) => {
+          if (profile) {
+            actorProfilesMap.set(actorUserId, profile);
+          }
+        });
+      } catch (error) {
+        console.error('Error batch fetching actor profiles (continuing without profile data):', error);
+        // Continue without profile data rather than failing completely
+      }
+    }
 
-          // Add navigation links
-          if (notification.type === 'newMessage') {
-            if (metadata.conversationId) {
-              enhancedData = {
-                ...enhancedData,
-                link: `/messages?conversation=${metadata.conversationId}`,
-              };
-            } else {
-              enhancedData = {
-                ...enhancedData,
-                link: `/messages`,
-              };
-            }
-          } else if (notification.type === 'newConnection') {
+    // Enhance notifications with cached profile data
+    const enhancedNotifications = userNotifications.map((notification) => {
+      let enhancedData = {};
+
+      if (notification.metadata) {
+        const metadata = notification.metadata as Record<string, unknown>;
+
+        // Use cached actor info
+        if (metadata.actorUserId && typeof metadata.actorUserId === 'string') {
+          const actorInfo = actorProfilesMap.get(metadata.actorUserId);
+          if (actorInfo) {
             enhancedData = {
-              ...enhancedData,
-              link: '/connections?tab=requests',
+              actorName: actorInfo.fullName,
+              actorImageUrl: actorInfo.profileImageUrl,
+              actorRole: actorInfo.role,
             };
-          } else if (notification.type === 'profileView') {
-            // For profile view notifications, link to the viewer's profile
-            if (metadata.actorUserId) {
-              enhancedData = {
-                ...enhancedData,
-                link: `/profile/${metadata.actorUserId}`,
-              };
-            }
           }
         }
 
-        return {
-          ...notification,
-          ...enhancedData,
-          timestamp: formatTimeAgo(notification.createdAt),
-        };
-      })
-    );
+        // Add navigation links
+        if (notification.type === 'newMessage') {
+          if (metadata.conversationId) {
+            enhancedData = {
+              ...enhancedData,
+              link: `/messages?conversation=${metadata.conversationId}`,
+            };
+          } else {
+            enhancedData = {
+              ...enhancedData,
+              link: `/messages`,
+            };
+          }
+        } else if (notification.type === 'newConnection') {
+          enhancedData = {
+            ...enhancedData,
+            link: '/connections?tab=requests',
+          };
+        } else if (notification.type === 'profileView') {
+          // For profile view notifications, link to the viewer's profile
+          if (metadata.actorUserId) {
+            enhancedData = {
+              ...enhancedData,
+              link: `/profile/${metadata.actorUserId}`,
+            };
+          }
+        }
+      }
+
+      return {
+        ...notification,
+        ...enhancedData,
+        timestamp: formatTimeAgo(notification.createdAt),
+      };
+    });
 
     const response = NextResponse.json({
       success: true,
@@ -248,9 +299,15 @@ async function handleGetNotifications(userId: string, body: GetNotificationsRequ
     return response;
   } catch (error) {
     console.error('Error fetching notifications:', error);
+    
+    // Return a more specific error message
+    const errorMessage = error instanceof Error && error.message === 'Query timeout' 
+      ? 'Request timed out - please try again'
+      : 'Failed to fetch notifications';
+      
     return NextResponse.json({
       success: false,
-      error: 'Failed to fetch notifications'
+      error: errorMessage
     }, { status: 500 });
   }
 }

@@ -1609,6 +1609,22 @@ export const notificationOperations = {
     const fromUserInfo = await profileOperations.getUserProfileInfo(fromUserId);
     if (!fromUserInfo) return null;
 
+    // For new connection requests, check if notification already exists
+    if (type === 'newConnection') {
+      const existingNotification = await db.query.notifications.findFirst({
+        where: and(
+          eq(notifications.userId, toUserId),
+          eq(notifications.type, 'newConnection'),
+          sql`${notifications.metadata}->>'actorUserId' = ${fromUserId}`
+        )
+      });
+
+      // If notification already exists, don't create a new one
+      if (existingNotification) {
+        return null;
+      }
+    }
+
     const title = type === 'newConnection' ? 'New Connection Request' : 'Connection Accepted';
     const message = type === 'newConnection' ? 'sent you a connection request.' : 'accepted your connection request.';
 
@@ -1635,7 +1651,7 @@ export const notificationOperations = {
       'New Message',
       'sent you a new message.',
       {
-        senderId: senderUserId,
+        actorUserId: senderUserId, // Changed from senderId to actorUserId for consistency
         conversationId,
       }
     );

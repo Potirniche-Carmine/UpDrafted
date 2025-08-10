@@ -364,6 +364,8 @@ export const notifications = pgTable('notifications', {
   index('idx_notifications_is_read').on(table.isRead),
   index('idx_notifications_type').on(table.type),
   index('idx_notifications_created_at').on(table.createdAt),
+  // Composite index for the most common query pattern
+  index('idx_notifications_user_unread').on(table.userId, table.isRead, table.createdAt),
 ]);
 
 export const adminRolePreferences = pgTable('admin_role_preferences', {

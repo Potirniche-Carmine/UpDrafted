@@ -32,6 +32,11 @@ interface ConnectionData {
     height?: string;
     weight?: string;
     positions?: string[];
+    recruitingNeeds?: {
+      studentClassifications: string[];
+      positions: string[];
+      scholarshipsAvailable: number | null;
+    };
   };
 }
 
@@ -278,7 +283,7 @@ export async function GET(request: NextRequest) {
                 };
               }
             }
-            return null;
+            return undefined;
           })(),
         }
       };
