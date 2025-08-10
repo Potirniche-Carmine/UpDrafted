@@ -83,7 +83,9 @@ function NavItem({
       </span>
     </Link>
   );
-} function ThemeToggle() {
+}
+
+function ThemeToggle() {
   const { setTheme } = useTheme();
 
   return (
