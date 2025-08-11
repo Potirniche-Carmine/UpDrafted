@@ -418,7 +418,7 @@ export function CoachEditDialogs({
   };
 
   // Helper function to check if at least one program link exists
-  const hasAtLeastOneProgramLink = (updates: any) => {
+  const hasAtLeastOneProgramLink = (updates: Partial<Pick<CoachProfileData, 'instagramHandle' | 'twitterHandle' | 'programWebsite' | 'schoolWebsite'>>) => {
     const currentInstagram = profileData.instagramHandle;
     const currentTwitter = profileData.twitterHandle;
     const currentProgramWebsite = profileData.programWebsite;

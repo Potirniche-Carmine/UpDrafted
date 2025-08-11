@@ -28,6 +28,7 @@ const FIELD_LIMITS = {
   RECRUITING_PHILOSOPHY: 500,
   INSTAGRAM_HANDLE: 50,
   TWITTER_HANDLE: 50,
+  SOCIAL_MEDIA_HANDLE: 50,
   URL: 300,
   SHOWCASE_VIDEO_TITLE: 100
 };
@@ -441,7 +442,7 @@ export function RecruiterEditDialogs({
   };
 
   // Helper function to check if at least one program link exists
-  const hasAtLeastOneProgramLink = (updates: any) => {
+  const hasAtLeastOneProgramLink = (updates: Partial<Pick<RecruiterProfileData, 'instagramHandle' | 'twitterHandle' | 'programWebsite' | 'schoolWebsite'>>) => {
     const currentInstagram = profileData.instagramHandle;
     const currentTwitter = profileData.twitterHandle;
     const currentProgramWebsite = profileData.programWebsite;
