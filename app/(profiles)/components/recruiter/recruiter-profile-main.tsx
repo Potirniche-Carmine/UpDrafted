@@ -121,6 +121,96 @@ const SocialMediaSection = memo(({ socialMedia, isOwnProfile, onEdit }: {
 
 SocialMediaSection.displayName = "SocialMediaSection";
 
+// Program Social Media Section Component
+const ProgramSocialMediaSection = memo(({ socialMedia, isOwnProfile, onEdit }: { 
+  socialMedia?: { instagram?: string; twitter?: string };
+  isOwnProfile?: boolean;
+  onEdit?: () => void;
+}) => {
+  if (!socialMedia && !isOwnProfile) return null;
+
+  // Helper function to get responsive text size based on handle length
+  const getTextSizeClass = (handle: string) => {
+    const cleanHandle = handle.replace('@', '');
+    if (cleanHandle.length > 20) return 'text-xs';
+    if (cleanHandle.length > 15) return 'text-sm';
+    return 'text-sm';
+  };
+
+  // Helper function to truncate very long handles
+  const formatHandle = (handle: string) => {
+    const cleanHandle = handle.replace('@', '');
+    // Only truncate if extremely long (more than 30 characters)
+    if (cleanHandle.length > 30) {
+      return `@${cleanHandle.substring(0, 27)}...`;
+    }
+    return `@${cleanHandle}`;
+  };
+
+  return (
+    <div className="space-y-3">
+      {socialMedia?.instagram || socialMedia?.twitter ? (
+        <div className="flex items-center justify-between">
+          <p className="text-sm text-muted-foreground">Program Social Media</p>
+          {isOwnProfile && (
+            <Button
+              size="sm"
+              variant="ghost"
+              className="p-1 h-6 w-6"
+              onClick={onEdit}
+            >
+              <Edit className="w-3 h-3" />
+            </Button>
+          )}
+        </div>
+      ) : null}
+      
+      {socialMedia?.instagram || socialMedia?.twitter ? (
+        <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
+          {socialMedia.instagram && (
+            <a
+              href={`https://instagram.com/${socialMedia.instagram.replace('@', '')}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center justify-center gap-2 px-2 sm:px-3 py-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-lg hover:opacity-90 transition-opacity min-w-0"
+              title={`@${socialMedia.instagram.replace('@', '')}`}
+            >
+              <Instagram className="w-4 h-4 flex-shrink-0" />
+              <span className={`${getTextSizeClass(socialMedia.instagram)} font-medium break-words`}>
+                {formatHandle(socialMedia.instagram)}
+              </span>
+            </a>
+          )}
+          {socialMedia.twitter && (
+            <a
+              href={`https://twitter.com/${socialMedia.twitter.replace('@', '')}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center justify-center gap-2 px-2 sm:px-3 py-2 bg-blue-500 text-white rounded-lg hover:opacity-90 transition-opacity min-w-0"
+              title={`@${socialMedia.twitter.replace('@', '')}`}
+            >
+              <Twitter className="w-4 h-4 flex-shrink-0" />
+              <span className={`${getTextSizeClass(socialMedia.twitter)} font-medium break-words`}>
+                {formatHandle(socialMedia.twitter)}
+              </span>
+            </a>
+          )}
+        </div>
+      ) : isOwnProfile ? (
+        <div className="text-center py-4 border-2 border-dashed border-muted rounded-lg">
+          <p className="text-sm text-muted-foreground mb-2">No program social media added</p>
+          <Button variant="outline" size="sm" onClick={onEdit}>
+            <Plus className="w-3 h-3 mr-1" />
+            Add Social Media
+          </Button>
+        </div>
+      ) : null}
+    </div>
+  );
+});
+
+ProgramSocialMediaSection.displayName = "ProgramSocialMediaSection";
+
 // Sport-Specific Recruiting Needs Section Component
 const SportSpecificNeedsSection = ({ 
   sportSpecificNeeds, 
@@ -640,9 +730,9 @@ export function RecruiterProfile({
         setHasUnsavedChanges(false);
         
         // Update the original data to match saved data
-        setProfileData(result.profile);        
+        setProfileData(result.data);        
         // Update the page data reference so changes are permanent
-        Object.assign(data, result.profile);
+        Object.assign(data, result.data);
         
         // Ensure minimum loading time of 1.5 seconds for better UX
         const elapsedTime = Date.now() - startTime;
@@ -1067,6 +1157,16 @@ export function RecruiterProfile({
                     </Link>
                   </div>
                 )}
+
+                {/* Program Social Media Section */}
+                <ProgramSocialMediaSection 
+                  socialMedia={{
+                    instagram: profileData.programInstagram,
+                    twitter: profileData.programTwitter
+                  }} 
+                  isOwnProfile={effectiveIsOwnProfile}
+                  onEdit={() => handleEditSection('program-social-media')}
+                />
 
                 {!profileData.programWebsite && !profileData.schoolWebsite && effectiveIsOwnProfile && (
                   <div className="text-center py-4 border-2 border-dashed border-muted rounded-lg">

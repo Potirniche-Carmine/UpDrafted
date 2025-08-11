@@ -32,6 +32,10 @@ export interface RecruiterProfileData {
   instagramHandle?: string;
   twitterHandle?: string;
 
+  // Program Social Media
+  programInstagram?: string;
+  programTwitter?: string;
+
   // Video Showcase
   showcaseVideoTitle?: string;
   showcaseVideoUrl?: string;

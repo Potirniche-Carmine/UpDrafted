@@ -7,7 +7,7 @@ import { db } from '@/database/db';
 import { eq, and } from 'drizzle-orm';
 import { sanitizeProfileData } from '@/utils/sanitization';
 import { EducationLevel } from '@/app/(onboarding)/lib/onboarding';
-import { withRateLimit } from '@/utils/security';
+import { withRateLimit, invalidateCache } from '@/utils/security';
 import { PRESENT_DATE, parseDateWithErrorHandling, dateToStringWithErrorHandling, validateDateDataset } from '@/lib/date-utils';
 import { createClientErrorResponse, logErrorWithContext} from '@/utils/error-sanitization';
 
@@ -1299,6 +1299,8 @@ export async function PUT(
       if (sanitizedData.schoolWebsite !== undefined) profileUpdateData.schoolWebsite = sanitizedData.schoolWebsite as string;
       if (sanitizedData.instagramHandle !== undefined) profileUpdateData.instagramHandle = sanitizedData.instagramHandle as string;
       if (sanitizedData.twitterHandle !== undefined) profileUpdateData.twitterHandle = sanitizedData.twitterHandle as string;
+      if (sanitizedData.programInstagram !== undefined) profileUpdateData.programInstagram = sanitizedData.programInstagram as string;
+      if (sanitizedData.programTwitter !== undefined) profileUpdateData.programTwitter = sanitizedData.programTwitter as string;
       if (sanitizedData.showcaseVideoTitle !== undefined) profileUpdateData.showcaseVideoTitle = sanitizedData.showcaseVideoTitle as string;
       if (sanitizedData.showcaseVideoUrl !== undefined) profileUpdateData.showcaseVideoUrl = sanitizedData.showcaseVideoUrl as string;
       if (sanitizedData.showcaseVideoEmbedUrl !== undefined) profileUpdateData.showcaseVideoEmbedUrl = sanitizedData.showcaseVideoEmbedUrl as string;
@@ -1370,6 +1372,8 @@ export async function PUT(
       if (sanitizedData.schoolWebsite !== undefined) profileUpdateData.schoolWebsite = sanitizedData.schoolWebsite as string;
       if (sanitizedData.instagramHandle !== undefined) profileUpdateData.instagramHandle = sanitizedData.instagramHandle as string;
       if (sanitizedData.twitterHandle !== undefined) profileUpdateData.twitterHandle = sanitizedData.twitterHandle as string;
+      if (sanitizedData.programInstagram !== undefined) profileUpdateData.programInstagram = sanitizedData.programInstagram as string;
+      if (sanitizedData.programTwitter !== undefined) profileUpdateData.programTwitter = sanitizedData.programTwitter as string;
       if (sanitizedData.showcaseVideoTitle !== undefined) profileUpdateData.showcaseVideoTitle = sanitizedData.showcaseVideoTitle as string;
       if (sanitizedData.showcaseVideoUrl !== undefined) profileUpdateData.showcaseVideoUrl = sanitizedData.showcaseVideoUrl as string;
       if (sanitizedData.showcaseVideoEmbedUrl !== undefined) profileUpdateData.showcaseVideoEmbedUrl = sanitizedData.showcaseVideoEmbedUrl as string;
@@ -1443,6 +1447,9 @@ export async function PUT(
 
     // Transform the updated profile data to match the component interface
     const transformedProfile = transformProfileData(updatedProfile, profileType);
+
+    // Invalidate profile cache to ensure fresh data on next request
+    await invalidateCache(`profile:${profileUserId}`);
 
     return NextResponse.json({
       success: true,
