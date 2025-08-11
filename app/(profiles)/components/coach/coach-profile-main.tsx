@@ -844,15 +844,7 @@ export function CoachProfile({
                     )}
                   </div>
 
-                  {/* Social Media Links */}
-                  <SocialMediaSection 
-                    socialMedia={{
-                      instagram: profileData.instagramHandle,
-                      twitter: profileData.twitterHandle
-                    }} 
-                    isOwnProfile={effectiveIsOwnProfile}
-                    onEdit={() => handleEditSection('social-media')}
-                  />
+
                 </div>
               </CardContent>
             </Card>
@@ -982,6 +974,16 @@ export function CoachProfile({
                     </Button>
                   </div>
                 )}
+
+                {/* Social Media Links */}
+                <SocialMediaSection 
+                  socialMedia={{
+                    instagram: profileData.instagramHandle,
+                    twitter: profileData.twitterHandle
+                  }} 
+                  isOwnProfile={effectiveIsOwnProfile}
+                  onEdit={() => handleEditSection('social-media')}
+                />
               </CardContent>
             </Card>
 
