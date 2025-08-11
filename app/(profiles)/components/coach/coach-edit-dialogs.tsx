@@ -147,6 +147,12 @@ export function CoachEditDialogs({
           schoolWebsite: profileData.schoolWebsite || ''
         });
         break;
+      case 'program-social-media':
+        setEditData({
+          programInstagram: (profileData.programInstagram || '').replace('@', ''),
+          programTwitter: (profileData.programTwitter || '').replace('@', '')
+        });
+        break;
       case 'showcase-video':
         setEditData({
           showcaseVideoTitle: profileData.showcaseVideoTitle || '',
@@ -208,7 +214,7 @@ export function CoachEditDialogs({
     }
 
     // Social media handle validation
-    if (['instagram', 'twitter'].includes(field) && value) {
+    if (['instagram', 'twitter', 'programInstagram', 'programTwitter'].includes(field) && value) {
       const handle = value.toString().replace('@', '');
       if (!/^[a-zA-Z0-9._]+$/.test(handle)) {
         return 'Handle can only contain letters, numbers, periods, and underscores';
@@ -411,6 +417,36 @@ export function CoachEditDialogs({
     return hasStudentClassifications && hasPositions;
   };
 
+  // Helper function to check if at least one program link exists
+  const hasAtLeastOneProgramLink = (updates: Partial<Pick<CoachProfileData, 'instagramHandle' | 'twitterHandle' | 'programWebsite' | 'schoolWebsite'>>) => {
+    const currentInstagram = profileData.instagramHandle;
+    const currentTwitter = profileData.twitterHandle;
+    const currentProgramWebsite = profileData.programWebsite;
+    const currentSchoolWebsite = profileData.schoolWebsite;
+    
+    // For social media updates
+    if (dialogType === 'social-media') {
+      const newInstagram = updates.instagramHandle;
+      const newTwitter = updates.twitterHandle;
+      // Check if we're deleting both social media AND there are no websites
+      if (!newInstagram && !newTwitter && !currentProgramWebsite && !currentSchoolWebsite) {
+        return false;
+      }
+    }
+    
+    // For program links updates
+    if (dialogType === 'program-links') {
+      const newProgramWebsite = updates.programWebsite;
+      const newSchoolWebsite = updates.schoolWebsite;
+      // Check if we're deleting both websites AND there are no social media links
+      if (!newProgramWebsite && !newSchoolWebsite && !currentInstagram && !currentTwitter) {
+        return false;
+      }
+    }
+    
+    return true;
+  };
+
   const handleSave = () => {
     // Image uploads handle their own saving
     if (dialogType === 'profile-image' || dialogType === 'organization-logo') {
@@ -493,6 +529,7 @@ export function CoachEditDialogs({
           };
           break;
         case 'social-media':
+          console.log("Regular social media update: ", editData.instagram ? editData.instagram.replace('@', '') : undefined);
           updates = {
             instagramHandle: editData.instagram ? editData.instagram.replace('@', '') : undefined,
             twitterHandle: editData.twitter ? editData.twitter.replace('@', '') : undefined
@@ -504,6 +541,13 @@ export function CoachEditDialogs({
             schoolWebsite: editData.schoolWebsite || undefined
           };
           break;
+        case 'program-social-media':
+          console.log("Program Instagram: ", editData.programInstagram ? editData.programInstagram.replace('@', '') : undefined)
+          updates = {
+            programInstagram: editData.programInstagram ? editData.programInstagram.replace('@', '') : undefined,
+            programTwitter: editData.programTwitter ? editData.programTwitter.replace('@', '') : undefined
+          };
+          break;
         case 'showcase-video':
           updates = {
             showcaseVideoTitle: editData.showcaseVideoTitle || undefined,
@@ -513,6 +557,16 @@ export function CoachEditDialogs({
               undefined
           };
           break;
+      }
+
+      // Validate that at least one program link remains
+      if (dialogType === 'social-media' || dialogType === 'program-links') {
+        if (!hasAtLeastOneProgramLink(updates)) {
+          setValidationErrors({ 
+            general: 'You must have at least one program link (website or social media). Please add another link before removing this one.' 
+          });
+          return;
+        }
       }
 
       // SECURITY: Sanitize all user input to prevent XSS attacks
@@ -874,6 +928,45 @@ export function CoachEditDialogs({
           </div>
         );
 
+      case 'program-social-media':
+        return (
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="programInstagram">Program Instagram Handle</Label>
+              <div className="flex items-center">
+                <span className="text-muted-foreground mr-2">@</span>
+                <Input
+                  id="programInstagram"
+                  value={editData.programInstagram || ''}
+                  onChange={(e) => handleFieldChange('programInstagram', e.target.value.replace('@', ''))}
+                  placeholder="programhandle"
+                  className={validationErrors.programInstagram ? 'border-red-500' : ''}
+                  autoComplete="off"
+                  inputMode="text"
+                />
+              </div>
+              {validationErrors.programInstagram && <p className="text-red-500 text-sm">{validationErrors.programInstagram}</p>}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="programTwitter">Program Twitter Handle</Label>
+              <div className="flex items-center">
+                <span className="text-muted-foreground mr-2">@</span>
+                <Input
+                  id="programTwitter"
+                  value={editData.programTwitter || ''}
+                  onChange={(e) => handleFieldChange('programTwitter', e.target.value.replace('@', ''))}
+                  placeholder="programhandle"
+                  className={validationErrors.programTwitter ? 'border-red-500' : ''}
+                  autoComplete="off"
+                  inputMode="text"
+                />
+              </div>
+              {validationErrors.programTwitter && <p className="text-red-500 text-sm">{validationErrors.programTwitter}</p>}
+            </div>
+          </div>
+        );
+
       case 'showcase-video':
         return (
           <div className="space-y-4">
@@ -961,6 +1054,7 @@ export function CoachEditDialogs({
       case 'recruiting-needs': return 'Edit Recruiting Needs';
       case 'social-media': return 'Edit Social Media';
       case 'program-links': return 'Edit Program Links';
+      case 'program-social-media': return 'Edit Program Social Media';
       case 'showcase-video': return 'Edit Showcase Video';
       case 'profile-image': return 'Change Profile Picture';
       case 'organization-logo': return 'Change Organization Logo';

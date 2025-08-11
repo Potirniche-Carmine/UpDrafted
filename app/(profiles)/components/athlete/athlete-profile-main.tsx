@@ -610,7 +610,7 @@ export function AthleteProfile({
       const result = await response.json();
       if (result.success) {
         // Check if we should show verification dialog after successful save
-        const savedProfile = result.profile;
+        const savedProfile = result.data;
         const shouldShowTransferPortalVerification = 
           savedProfile &&
           (savedProfile.educationLevel === 'undergraduate' || savedProfile.educationLevel === 'graduate') &&
@@ -627,9 +627,9 @@ export function AthleteProfile({
         setHasUnsavedChanges(false);
         
         // Update the original data to match saved data
-        setProfileData(result.profile);       
+        setProfileData(result.data);       
         // Update the page data reference so changes are permanent
-        Object.assign(data, result.profile);
+        Object.assign(data, result.data);
         
         // Show verification dialog if conditions are met
         if (shouldShowTransferPortalVerification) {

@@ -282,6 +282,8 @@ export function sanitizeProfileData(data: Record<string, unknown>): Record<strin
       // Social media handles
       case 'instagramHandle':
       case 'twitterHandle':
+      case 'programInstagram':
+      case 'programTwitter':
         sanitized[key] = sanitizeSocialHandle(value as string);
         break;
         

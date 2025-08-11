@@ -337,6 +337,13 @@
       "when": 1754857372512,
       "tag": "0047_careless_nemesis",
       "breakpoints": true
+    },
+    {
+      "idx": 48,
+      "version": "7",
+      "when": 1754927392379,
+      "tag": "0048_panoramic_lifeguard",
+      "breakpoints": true
     }
   ]
 }

@@ -28,6 +28,7 @@ const FIELD_LIMITS = {
   RECRUITING_PHILOSOPHY: 500,
   INSTAGRAM_HANDLE: 50,
   TWITTER_HANDLE: 50,
+  SOCIAL_MEDIA_HANDLE: 50,
   URL: 300,
   SHOWCASE_VIDEO_TITLE: 100
 };
@@ -153,6 +154,12 @@ export function RecruiterEditDialogs({
           schoolWebsite: profileData.schoolWebsite || ''
         });
         break;
+      case 'program-social-media':
+        setEditData({
+          programInstagram: (profileData.programInstagram || '').replace('@', ''),
+          programTwitter: (profileData.programTwitter || '').replace('@', '')
+        });
+        break;
       case 'showcase-video':
         setEditData({
           showcaseVideoTitle: profileData.showcaseVideoTitle || '',
@@ -223,7 +230,7 @@ export function RecruiterEditDialogs({
     }
 
     // Social media handle validation
-    if (['instagram', 'twitter'].includes(field) && value) {
+    if (['instagram', 'twitter', 'programInstagram', 'programTwitter'].includes(field) && value) {
       const handle = value.toString().replace('@', '');
       if (!/^[a-zA-Z0-9._]+$/.test(handle)) {
         return 'Handle can only contain letters, numbers, periods, and underscores';
@@ -434,6 +441,36 @@ export function RecruiterEditDialogs({
     );
   };
 
+  // Helper function to check if at least one program link exists
+  const hasAtLeastOneProgramLink = (updates: Partial<Pick<RecruiterProfileData, 'instagramHandle' | 'twitterHandle' | 'programWebsite' | 'schoolWebsite'>>) => {
+    const currentInstagram = profileData.instagramHandle;
+    const currentTwitter = profileData.twitterHandle;
+    const currentProgramWebsite = profileData.programWebsite;
+    const currentSchoolWebsite = profileData.schoolWebsite;
+    
+    // For social media updates
+    if (dialogType === 'social-media') {
+      const newInstagram = updates.instagramHandle;
+      const newTwitter = updates.twitterHandle;
+      // Check if we're deleting both social media AND there are no websites
+      if (!newInstagram && !newTwitter && !currentProgramWebsite && !currentSchoolWebsite) {
+        return false;
+      }
+    }
+    
+    // For program links updates
+    if (dialogType === 'program-links') {
+      const newProgramWebsite = updates.programWebsite;
+      const newSchoolWebsite = updates.schoolWebsite;
+      // Check if we're deleting both websites AND there are no social media links
+      if (!newProgramWebsite && !newSchoolWebsite && !currentInstagram && !currentTwitter) {
+        return false;
+      }
+    }
+    
+    return true;
+  };
+
   const handleSave = () => {
     // Image uploads handle their own saving
     if (dialogType === 'profile-image' || dialogType === 'organization-logo') {
@@ -535,14 +572,20 @@ export function RecruiterEditDialogs({
         break;
       case 'social-media':
         updates = {
-          instagramHandle: editData.instagram ? editData.instagram.replace('@', '') : undefined,
-          twitterHandle: editData.twitter ? editData.twitter.replace('@', '') : undefined
+          instagramHandle: editData.instagram ? editData.instagram.replace('@', '') : null,
+          twitterHandle: editData.twitter ? editData.twitter.replace('@', '') : null
         };
         break;
       case 'program-links':
         updates = {
           programWebsite: editData.programWebsite || undefined,
           schoolWebsite: editData.schoolWebsite || undefined
+        };
+        break;
+      case 'program-social-media':
+        updates = {
+          programInstagram: editData.programInstagram ? editData.programInstagram.replace('@', '') : null,
+          programTwitter: editData.programTwitter ? editData.programTwitter.replace('@', '') : null
         };
         break;
       case 'showcase-video':
@@ -586,6 +629,16 @@ export function RecruiterEditDialogs({
           }
         };
         break;
+    }
+    
+    // Validate that at least one program link remains
+    if (dialogType === 'social-media' || dialogType === 'program-links') {
+      if (!hasAtLeastOneProgramLink(updates)) {
+        setValidationErrors({ 
+          general: 'You must have at least one program link (website or social media). Please add another link before removing this one.' 
+        });
+        return;
+      }
     }
     
     // SECURITY: Sanitize all user input to prevent XSS attacks
@@ -977,6 +1030,51 @@ export function RecruiterEditDialogs({
           </div>
         );
 
+      case 'program-social-media':
+        return (
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="programInstagram">Program Instagram Handle</Label>
+              <div className="flex items-center">
+                <span className="text-muted-foreground mr-2">@</span>
+                <Input
+                  id="programInstagram"
+                  value={editData.programInstagram || ''}
+                  onChange={(e) => handleFieldChange('programInstagram', e.target.value.replace('@', ''))}
+                  placeholder="programhandle"
+                  maxLength={FIELD_LIMITS.SOCIAL_MEDIA_HANDLE}
+                  autoComplete="off"
+                  inputMode="text"
+                  autoFocus={false}
+                />
+              </div>
+              {validationErrors.programInstagram && (
+                <p className="text-sm text-red-500 mt-1">{validationErrors.programInstagram}</p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="programTwitter">Program Twitter Handle</Label>
+              <div className="flex items-center">
+                <span className="text-muted-foreground mr-2">@</span>
+                <Input
+                  id="programTwitter"
+                  value={editData.programTwitter || ''}
+                  onChange={(e) => handleFieldChange('programTwitter', e.target.value.replace('@', ''))}
+                  placeholder="programhandle"
+                  maxLength={FIELD_LIMITS.SOCIAL_MEDIA_HANDLE}
+                  autoComplete="off"
+                  inputMode="text"
+                  autoFocus={false}
+                />
+              </div>
+              {validationErrors.programTwitter && (
+                <p className="text-sm text-red-500 mt-1">{validationErrors.programTwitter}</p>
+              )}
+            </div>
+          </div>
+        );
+
       case 'showcase-video':
         return (
           <div className="space-y-4">
@@ -1222,6 +1320,8 @@ export function RecruiterEditDialogs({
         return 'Edit Social Media';
       case 'program-links':
         return 'Edit Program Links';
+      case 'program-social-media':
+        return 'Edit Program Social Media';
       case 'showcase-video':
         return 'Edit Showcase Video';
       case 'profile-image':
