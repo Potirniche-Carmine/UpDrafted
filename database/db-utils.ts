@@ -914,13 +914,16 @@ export const onboardingOperations = {
       'graduate': 'university'
     };
     
+    const educationLevel = profileData.educationLevel || 'undergraduate';
+    const schoolClassification = educationLevelMap[educationLevel] || 'university';
+    
     const school = await schoolOperations.getOrCreateSchool(
-      profileData.organizationName!,
-      educationLevelMap[profileData.educationLevel!] || 'university'
+      profileData.organizationName || 'Unknown Institution',
+      schoolClassification
     );
 
     // Check if this is a high school athlete with a valid Hudl URL
-    const isHighSchool = profileData.educationLevel === 'high_school';
+    const isHighSchool = educationLevel === 'high_school';
     const hasValidHudlUrl = profileData.hudlUrl && profileData.hudlUrl.trim();
     
     // Auto-verify high school athletes with valid Hudl URLs
@@ -980,7 +983,7 @@ export const onboardingOperations = {
 
     // Get or create school (coaches are typically at universities)
     const school = await schoolOperations.getOrCreateSchool(
-      profileData.organizationName!,
+      profileData.organizationName || 'Unknown Institution',
       'university'
     );
 
@@ -1031,7 +1034,7 @@ export const onboardingOperations = {
 
     // Get or create school (recruiters are typically at universities)
     const school = await schoolOperations.getOrCreateSchool(
-      profileData.organizationName!,
+      profileData.organizationName || 'Unknown Institution',
       'university'
     );
 

@@ -152,9 +152,12 @@ export async function POST(request: NextRequest) {
             'graduate': 'university'
           };
           
+          const educationLevel = profileData.educationLevel || 'undergraduate';
+          const schoolClassification = educationLevelMap[educationLevel] || 'university';
+          
           const school = await schoolOperations.getOrCreateSchool(
-            profileData.organizationName!,
-            educationLevelMap[profileData.educationLevel!] || 'university'
+            profileData.organizationName || 'Unknown Institution',
+            schoolClassification
           );
 
           result = await adminOperations.createDemoAthleteProfile(userId, {
@@ -162,7 +165,7 @@ export async function POST(request: NextRequest) {
             sport: profileData.sport!,
             secondarySports: profileData.secondarySports,
             graduationYear: profileData.graduationYear!,
-            educationLevel: profileData.educationLevel!,
+            educationLevel: educationLevel as 'high_school' | 'undergraduate' | 'graduate' | 'associate',
             schoolId: school.id,
             city: profileData.city,
             country: profileData.country, // Country is required, no fallback
@@ -189,7 +192,7 @@ export async function POST(request: NextRequest) {
         } else if (role === 'coach') {
           // Get or create school for demo coach profile
           const school = await schoolOperations.getOrCreateSchool(
-            profileData.organizationName!,
+            profileData.organizationName || 'Unknown Institution',
             'university' // Coaches are typically at universities
           );
 
@@ -227,7 +230,7 @@ export async function POST(request: NextRequest) {
         } else if (role === 'recruiter') {
           // Get or create school for demo recruiter profile
           const school = await schoolOperations.getOrCreateSchool(
-            profileData.organizationName!,
+            profileData.organizationName || 'Unknown Institution',
             'university' // Recruiters are typically at universities
           );
 
