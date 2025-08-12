@@ -2245,13 +2245,15 @@ export const schoolOperations = {
 
   // Get or create school by name (for onboarding/profile updates)
   async getOrCreateSchool(name: string, classification: 'high_school' | 'college' | 'university' | 'professional' | 'other') {
+    const trimmedName = name.trim();
+    
     // First try to find existing school (case-insensitive exact match)
     const exactMatch = await db
       .select()
       .from(schools)
       .where(and(
         eq(schools.classification, classification),
-        sql`LOWER(${schools.name}) = ${name.toLowerCase()}`
+        sql`LOWER(${schools.name}) = ${trimmedName.toLowerCase()}`
       ))
       .limit(1);
 
@@ -2260,18 +2262,18 @@ export const schoolOperations = {
     }
 
     // Check for similar schools to prevent duplicates
-    const similarSchools = await this.findSimilarSchools(name, classification);
+    const similarSchools = await this.findSimilarSchools(trimmedName, classification);
     
     if (similarSchools.length > 0) {
       // Log potential duplicates for monitoring (but don't block creation)
-      console.warn(`Potential duplicate school detected. Creating new school "${name}" despite similar existing schools:`, 
+      console.warn(`Potential duplicate school detected. Creating new school "${trimmedName}" despite similar existing schools:`, 
         similarSchools.map(s => s.name)
       );
     }
 
     // Create new school if not found
     return await this.createSchool({
-      name: name.trim(),
+      name: trimmedName,
       classification,
     });
   },
