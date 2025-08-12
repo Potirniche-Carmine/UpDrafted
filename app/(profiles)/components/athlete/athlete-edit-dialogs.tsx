@@ -2135,7 +2135,7 @@ export function AthleteEditDialogs({
                           value={campForm.name}
                           onChange={e => setCampForm(f => ({ ...f, name: e.target.value }))}
                           maxLength={50}
-                          placeholder="Title"
+                          placeholder="Name of Camp / Name of Club Team"
                         />
                         {/* City, State/Country on the same line */}
                         <div className="flex flex-row gap-4 text-sm text-muted-foreground mb-1 flex-nowrap">
@@ -2366,7 +2366,7 @@ export function AthleteEditDialogs({
                       value={campForm.name}
                       onChange={e => setCampForm(f => ({ ...f, name: e.target.value }))}
                       maxLength={50}
-                      placeholder="Title"
+                      placeholder="Name of Camp / Name of Club Team"
                     />
                     {/* City, State/Country on the same line */}
                     <div className="flex flex-row gap-4 text-sm text-muted-foreground mb-1 flex-nowrap">
