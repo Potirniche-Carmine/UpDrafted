@@ -23,6 +23,7 @@ interface SchoolSelectorProps {
   description?: string;
   height?: string;
   educationLevel?: 'high_school' | 'undergraduate' | 'graduate' | 'associate';
+  onError?: (error: string | null) => void; // New prop for error handling
 }
 
 // Map education level to school classification
@@ -51,6 +52,7 @@ export function SchoolSelector({
   description,
   height = "h-11",
   educationLevel,
+  onError,
 }: SchoolSelectorProps) {
   const [inputValue, setInputValue] = useState(value);
   const [suggestions, setSuggestions] = useState<School[]>([]);
@@ -58,6 +60,7 @@ export function SchoolSelector({
   const [isLoading, setIsLoading] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState(-1);
   const [isSelectingSuggestion, setIsSelectingSuggestion] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const suggestionsRef = useRef<HTMLDivElement>(null);
 
@@ -76,6 +79,7 @@ export function SchoolSelector({
 
     const searchSchools = async () => {
       setIsLoading(true);
+      setErrorMessage(null);
       try {
         const classification = getSchoolClassification(educationLevel);
         const params = new URLSearchParams({
@@ -91,13 +95,20 @@ export function SchoolSelector({
           setShowSuggestions(results.length > 0);
           setSelectedIndex(-1);
         } else {
+          const errorData = await response.json();
+          const errorMsg = errorData.error || 'Failed to search schools. Please try again.';
+          setErrorMessage(errorMsg);
           setSuggestions([]);
           setShowSuggestions(false);
+          onError?.(errorMsg);
         }
       } catch (error) {
         console.error('Error searching schools:', error);
+        const errorMsg = 'Network error. Please check your connection and try again.';
+        setErrorMessage(errorMsg);
         setSuggestions([]);
         setShowSuggestions(false);
+        onError?.(errorMsg);
       } finally {
         setIsLoading(false);
       }
@@ -105,11 +116,16 @@ export function SchoolSelector({
 
     const debounceTimer = setTimeout(searchSchools, 300);
     return () => clearTimeout(debounceTimer);
-  }, [inputValue, educationLevel]);
+  }, [inputValue, educationLevel, onError]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newValue = e.target.value;
     setInputValue(newValue);
+    // Clear error message when user starts typing
+    if (errorMessage) {
+      setErrorMessage(null);
+      onError?.(null);
+    }
     // Don't call onValueChange here, wait for selection or blur
   };
 
@@ -247,6 +263,13 @@ export function SchoolSelector({
           </div>
         )}
       </div>
+      
+      {/* Error message */}
+      {errorMessage && (
+        <p className="text-sm text-red-500 mt-1">
+          {errorMessage}
+        </p>
+      )}
       
       {description && (
         <p className="text-xs text-muted-foreground">

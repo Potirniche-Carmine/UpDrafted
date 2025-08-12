@@ -223,7 +223,9 @@ export async function GET(request: NextRequest) {
           profileImage: otherUser.athleteProfile?.profileImageR3Key || 
                         otherUser.coachProfile?.profileImageR3Key || 
                         otherUser.recruitingProfile?.profileImageR3Key || null,
-          organizationName: '', // TODO: Add school information to connections query
+          organizationName: otherUser.athleteProfile?.school?.name || 
+                            otherUser.coachProfile?.school?.name || 
+                            otherUser.recruitingProfile?.school?.name || '',
           title: otherUser.coachProfile?.title || 
                  otherUser.recruitingProfile?.title || '',
           sport: otherUser.athleteProfile?.sport || 

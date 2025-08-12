@@ -601,6 +601,14 @@ export const connectionOperations = {
                 weight: true,
                 positions: true,
               },
+              with: {
+                school: {
+                  columns: {
+                    id: true,
+                    name: true,
+                  },
+                },
+              },
             },
             coachProfile: {
               columns: {
@@ -616,6 +624,12 @@ export const connectionOperations = {
               },
               with: {
                 recruitingNeeds: true,
+                school: {
+                  columns: {
+                    id: true,
+                    name: true,
+                  },
+                },
               },
             },
             recruitingProfile: {
@@ -629,6 +643,14 @@ export const connectionOperations = {
                 state: true,
                 division: true,
                 isVerified: true,
+              },
+              with: {
+                school: {
+                  columns: {
+                    id: true,
+                    name: true,
+                  },
+                },
               },
             },
           },
@@ -653,6 +675,14 @@ export const connectionOperations = {
                 weight: true,
                 positions: true,
               },
+              with: {
+                school: {
+                  columns: {
+                    id: true,
+                    name: true,
+                  },
+                },
+              },
             },
             coachProfile: {
               columns: {
@@ -668,6 +698,12 @@ export const connectionOperations = {
               },
               with: {
                 recruitingNeeds: true,
+                school: {
+                  columns: {
+                    id: true,
+                    name: true,
+                  },
+                },
               },
             },
             recruitingProfile: {
@@ -681,6 +717,14 @@ export const connectionOperations = {
                 state: true,
                 division: true,
                 isVerified: true,
+              },
+              with: {
+                school: {
+                  columns: {
+                    id: true,
+                    name: true,
+                  },
+                },
               },
             },
           },
@@ -2019,6 +2063,7 @@ export const schoolOperations = {
     if (!query.trim()) return [];
     
     const searchQuery = `%${query.toLowerCase()}%`;
+    const normalizedQuery = this.normalizeSchoolName(query);
     
     // Use the composite index when classification is provided for better performance
     if (classification) {
@@ -2032,12 +2077,22 @@ export const schoolOperations = {
         .where(
           and(
             eq(schools.classification, classification),
-            sql`LOWER(${schools.name}) LIKE ${searchQuery}`
+            or(
+              // Exact name match (highest priority)
+              sql`LOWER(${schools.name}) LIKE ${searchQuery}`,
+              // Normalized name match for better fuzzy matching
+              sql`LOWER(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(${schools.name}, 'university', 'u'), 'college', 'c'), 'state', 'st'), 'technology', 'tech'), 'institute', 'inst')) LIKE ${'%' + normalizedQuery + '%'}`
+            )
           )
         )
         .orderBy(
-          // Prioritize exact matches, then alphabetical
-          sql`CASE WHEN LOWER(${schools.name}) = ${query.toLowerCase()} THEN 0 ELSE 1 END`,
+          // Prioritize exact matches, then starts with, then contains
+          sql`CASE 
+            WHEN LOWER(${schools.name}) = ${query.toLowerCase()} THEN 0 
+            WHEN LOWER(${schools.name}) LIKE ${query.toLowerCase() + '%'} THEN 1 
+            WHEN LOWER(${schools.name}) LIKE ${searchQuery} THEN 2
+            ELSE 3 
+          END`,
           schools.name
         )
         .limit(limit);
@@ -2051,10 +2106,22 @@ export const schoolOperations = {
         classification: schools.classification,
       })
       .from(schools)
-      .where(sql`LOWER(${schools.name}) LIKE ${searchQuery}`)
+      .where(
+        or(
+          // Exact name match (highest priority)
+          sql`LOWER(${schools.name}) LIKE ${searchQuery}`,
+          // Normalized name match for better fuzzy matching
+          sql`LOWER(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(${schools.name}, 'university', 'u'), 'college', 'c'), 'state', 'st'), 'technology', 'tech'), 'institute', 'inst')) LIKE ${'%' + normalizedQuery + '%'}`
+        )
+      )
       .orderBy(
-        // Prioritize exact matches, then alphabetical
-        sql`CASE WHEN LOWER(${schools.name}) = ${query.toLowerCase()} THEN 0 ELSE 1 END`,
+        // Prioritize exact matches, then starts with, then contains
+        sql`CASE 
+          WHEN LOWER(${schools.name}) = ${query.toLowerCase()} THEN 0 
+          WHEN LOWER(${schools.name}) LIKE ${query.toLowerCase() + '%'} THEN 1 
+          WHEN LOWER(${schools.name}) LIKE ${searchQuery} THEN 2
+          ELSE 3 
+        END`,
         schools.name
       )
       .limit(limit);
@@ -2062,19 +2129,44 @@ export const schoolOperations = {
 
   // Create a new school
   async createSchool(schoolData: NewSchool) {
-    // Check if school already exists with similar name to prevent duplicates
+    // Check if school already exists with exact name and classification to prevent duplicates
     const existingSchool = await db
       .select()
       .from(schools)
-      .where(sql`LOWER(${schools.name}) = ${schoolData.name.toLowerCase()}`)
+      .where(and(
+        sql`LOWER(TRIM(${schools.name})) = ${schoolData.name.toLowerCase().trim()}`,
+        eq(schools.classification, schoolData.classification)
+      ))
       .limit(1);
 
     if (existingSchool.length > 0) {
       return existingSchool[0];
     }
 
-    const [school] = await db.insert(schools).values(schoolData).returning();
-    return school;
+    try {
+      const [school] = await db.insert(schools).values(schoolData).returning();
+      return school;
+    } catch (error) {
+      // Handle potential race condition where school was created between check and insert
+      if (error instanceof Error && (error.message.includes('duplicate') || error.message.includes('unique'))) {
+        // Try to fetch the school that was created by another process
+        const duplicateSchool = await db
+          .select()
+          .from(schools)
+          .where(and(
+            sql`LOWER(TRIM(${schools.name})) = ${schoolData.name.toLowerCase().trim()}`,
+            eq(schools.classification, schoolData.classification)
+          ))
+          .limit(1);
+        
+        if (duplicateSchool.length > 0) {
+          return duplicateSchool[0];
+        }
+      }
+      
+      // Re-throw error if it's not a duplicate key issue
+      throw error;
+    }
   },
 
   // Get school by ID
@@ -2084,17 +2176,94 @@ export const schoolOperations = {
     });
   },
 
-  // Get or create school by name (for onboarding/profile updates)
-  async getOrCreateSchool(name: string, classification: 'high_school' | 'college' | 'university' | 'professional' | 'other') {
-    // First try to find existing school (case-insensitive)
-    const existingSchool = await db
+  // Normalize school name for better matching
+  normalizeSchoolName(name: string): string {
+    return name
+      .toLowerCase()
+      .trim()
+      // Remove common variations and abbreviations
+      .replace(/\buniversity\b/g, 'u')
+      .replace(/\buniv\b/g, 'u')
+      .replace(/\bcollege\b/g, 'c')
+      .replace(/\bstate\b/g, 'st')
+      .replace(/\btechnology\b/g, 'tech')
+      .replace(/\btechnological\b/g, 'tech')
+      .replace(/\binstitute\b/g, 'inst')
+      .replace(/\binst\b/g, 'inst')
+      .replace(/\bacademy\b/g, 'acad')
+      .replace(/\bschool\b/g, 'sch')
+      .replace(/\bhigh\s+school\b/g, 'hs')
+      .replace(/\bmiddle\s+school\b/g, 'ms')
+      .replace(/\belementary\s+school\b/g, 'es')
+      // Remove common punctuation and normalize spacing
+      .replace(/[.,\-_()]/g, ' ')
+      .replace(/\s+/g, ' ')
+      .replace(/\s+$/, '')
+      .replace(/^\s+/, '');
+  },
+
+  // Find similar schools using fuzzy matching
+  async findSimilarSchools(name: string, classification: 'high_school' | 'college' | 'university' | 'professional' | 'other'): Promise<typeof schools.$inferSelect[]> {
+    const normalizedInput = this.normalizeSchoolName(name);
+    
+    // First try exact normalized match
+    let existingSchools = await db
       .select()
       .from(schools)
-      .where(sql`LOWER(${schools.name}) = ${name.toLowerCase()}`)
+      .where(and(
+        eq(schools.classification, classification),
+        sql`LOWER(TRIM(${schools.name})) = ${normalizedInput}`
+      ))
+      .limit(5);
+
+    if (existingSchools.length > 0) {
+      return existingSchools;
+    }
+
+    // Then try similarity search using LIKE with parts of the name
+    const nameParts = normalizedInput.split(' ').filter(part => part.length > 2);
+    if (nameParts.length > 0) {
+      const likeConditions = nameParts.map(part => 
+        sql`LOWER(${schools.name}) LIKE ${'%' + part + '%'}`
+      );
+      
+      existingSchools = await db
+        .select()
+        .from(schools)
+        .where(and(
+          eq(schools.classification, classification),
+          or(...likeConditions)
+        ))
+        .limit(5);
+    }
+
+    return existingSchools;
+  },
+
+  // Get or create school by name (for onboarding/profile updates)
+  async getOrCreateSchool(name: string, classification: 'high_school' | 'college' | 'university' | 'professional' | 'other') {
+    // First try to find existing school (case-insensitive exact match)
+    const exactMatch = await db
+      .select()
+      .from(schools)
+      .where(and(
+        eq(schools.classification, classification),
+        sql`LOWER(${schools.name}) = ${name.toLowerCase()}`
+      ))
       .limit(1);
 
-    if (existingSchool.length > 0) {
-      return existingSchool[0];
+    if (exactMatch.length > 0) {
+      return exactMatch[0];
+    }
+
+    // Check for similar schools to prevent duplicates
+    const similarSchools = await this.findSimilarSchools(name, classification);
+    
+    if (similarSchools.length > 0) {
+      // Log potential duplicates for monitoring (but don't block creation)
+      console.warn(`Potential duplicate school detected. Creating new school "${name}" despite similar existing schools:`, 
+        similarSchools.map(s => s.name)
+      );
     }
 
     // Create new school if not found
