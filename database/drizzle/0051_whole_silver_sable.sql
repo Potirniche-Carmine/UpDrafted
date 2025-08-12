@@ -1,0 +1,1 @@
+CREATE INDEX "idx_schools_classification_name" ON "schools" USING btree ("classification","name");

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAnyRole } from '@/utils/roles';
 import { db } from '@/database/db';
-import { users, athleteProfiles, coachProfiles, recruitingProfiles } from '@/database/schema';
+import { users, athleteProfiles, coachProfiles, recruitingProfiles, schools } from '@/database/schema';
 import { or, eq, ilike, sql, and, ne, isNull } from 'drizzle-orm';
 import { R2_PUBLIC_URL, constructR2Url } from '@/database/r2';
 import { withRateLimit } from '@/utils/security';
@@ -104,7 +104,7 @@ export async function GET(request: NextRequest) {
               role: users.role,
               sport: athleteProfiles.sport,
               profileImageR3Key: athleteProfiles.profileImageR3Key,
-              organizationName: athleteProfiles.organizationName,
+              organizationName: schools.name,
               city: athleteProfiles.city,
               state: athleteProfiles.state,
               isVerified: athleteProfiles.isVerified,
@@ -116,12 +116,13 @@ export async function GET(request: NextRequest) {
             })
             .from(athleteProfiles)
             .innerJoin(users, eq(users.id, athleteProfiles.userId))
+            .leftJoin(schools, eq(schools.id, athleteProfiles.schoolId))
             .where(
               and(
                 or(
                   ilike(athleteProfiles.fullName, searchTerm),
                   ilike(athleteProfiles.sport, searchTerm),
-                  ilike(athleteProfiles.organizationName, searchTerm),
+                  ilike(schools.name, searchTerm),
                   ilike(athleteProfiles.city, searchTerm),
                   ilike(athleteProfiles.state, searchTerm)
                 ),
@@ -149,7 +150,7 @@ export async function GET(request: NextRequest) {
             role: users.role,
             sport: coachProfiles.sportCoaching,
             profileImageR3Key: coachProfiles.profileImageR3Key,
-            organizationName: coachProfiles.organizationName,
+            organizationName: schools.name,
             city: coachProfiles.city,
             state: coachProfiles.state,
             isVerified: coachProfiles.isVerified,
@@ -158,12 +159,13 @@ export async function GET(request: NextRequest) {
           })
           .from(coachProfiles)
           .innerJoin(users, eq(users.id, coachProfiles.userId))
+          .leftJoin(schools, eq(schools.id, coachProfiles.schoolId))
           .where(
             and(
               or(
                 ilike(coachProfiles.fullName, searchTerm),
                 ilike(coachProfiles.sportCoaching, searchTerm),
-                ilike(coachProfiles.organizationName, searchTerm),
+                ilike(schools.name, searchTerm),
                 ilike(coachProfiles.city, searchTerm),
                 ilike(coachProfiles.state, searchTerm),
                 ilike(coachProfiles.title, searchTerm)
@@ -191,7 +193,7 @@ export async function GET(request: NextRequest) {
             role: users.role,
             sport: recruitingProfiles.sportRecruiting,
             profileImageR3Key: recruitingProfiles.profileImageR3Key,
-            organizationName: recruitingProfiles.organizationName,
+            organizationName: schools.name,
             city: recruitingProfiles.city,
             state: recruitingProfiles.state,
             isVerified: recruitingProfiles.isVerified,
@@ -200,12 +202,13 @@ export async function GET(request: NextRequest) {
           })
           .from(recruitingProfiles)
           .innerJoin(users, eq(users.id, recruitingProfiles.userId))
+          .leftJoin(schools, eq(schools.id, recruitingProfiles.schoolId))
           .where(
             and(
               or(
                 ilike(recruitingProfiles.fullName, searchTerm),
                 ilike(recruitingProfiles.sportRecruiting, searchTerm),
-                ilike(recruitingProfiles.organizationName, searchTerm),
+                ilike(schools.name, searchTerm),
                 ilike(recruitingProfiles.city, searchTerm),
                 ilike(recruitingProfiles.state, searchTerm),
                 ilike(recruitingProfiles.title, searchTerm)
@@ -304,12 +307,13 @@ export async function GET(request: NextRequest) {
             .select({ count: sql<number>`count(*)` })
             .from(athleteProfiles)
             .innerJoin(users, eq(users.id, athleteProfiles.userId))
+            .leftJoin(schools, eq(schools.id, athleteProfiles.schoolId))
             .where(
               and(
                 or(
                   ilike(athleteProfiles.fullName, searchTerm),
                   ilike(athleteProfiles.sport, searchTerm),
-                  ilike(athleteProfiles.organizationName, searchTerm),
+                  ilike(schools.name, searchTerm),
                   ilike(athleteProfiles.city, searchTerm),
                   ilike(athleteProfiles.state, searchTerm)
                 ),
@@ -331,12 +335,13 @@ export async function GET(request: NextRequest) {
           .select({ count: sql<number>`count(*)` })
           .from(coachProfiles)
           .innerJoin(users, eq(users.id, coachProfiles.userId))
+          .leftJoin(schools, eq(schools.id, coachProfiles.schoolId))
           .where(
             and(
               or(
                 ilike(coachProfiles.fullName, searchTerm),
                 ilike(coachProfiles.sportCoaching, searchTerm),
-                ilike(coachProfiles.organizationName, searchTerm),
+                ilike(schools.name, searchTerm),
                 ilike(coachProfiles.city, searchTerm),
                 ilike(coachProfiles.state, searchTerm),
                 ilike(coachProfiles.title, searchTerm)
@@ -358,12 +363,13 @@ export async function GET(request: NextRequest) {
           .select({ count: sql<number>`count(*)` })
           .from(recruitingProfiles)
           .innerJoin(users, eq(users.id, recruitingProfiles.userId))
+          .leftJoin(schools, eq(schools.id, recruitingProfiles.schoolId))
           .where(
             and(
               or(
                 ilike(recruitingProfiles.fullName, searchTerm),
                 ilike(recruitingProfiles.sportRecruiting, searchTerm),
-                ilike(recruitingProfiles.organizationName, searchTerm),
+                ilike(schools.name, searchTerm),
                 ilike(recruitingProfiles.city, searchTerm),
                 ilike(recruitingProfiles.state, searchTerm),
                 ilike(recruitingProfiles.title, searchTerm)

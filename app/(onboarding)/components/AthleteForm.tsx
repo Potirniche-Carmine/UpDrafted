@@ -23,6 +23,7 @@ import { FormValidator, FIELD_LIMITS } from "@/app/(onboarding)/lib/form-validat
 import { OnboardingData } from "../lib/types";
 import { EducationLevel } from "../lib/onboarding";
 import { ConferenceSelector } from "@/components/ui/conference-selector";
+import { SchoolSelector } from "@/components/ui/school-selector";
 
 interface AthleteFormProps {
   data: OnboardingData;
@@ -561,19 +562,19 @@ export default function AthleteForm({ data, onInputChange }: AthleteFormProps) {
       {/* School and Location Information */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="space-y-3">
-          <Label htmlFor="organizationName" className="text-base font-medium">{getSchoolLabel(data.educationLevel)} *</Label>
-          <Input
-            id="organizationName"
-            placeholder={`Your ${getSchoolLabel(data.educationLevel).toLowerCase()} name`}
+          <SchoolSelector
             value={data.organizationName}
-            onChange={(e) => validateAndUpdateField('organizationName', e.target.value)}
-            className={`h-11 bg-background ${validationErrors.organizationName ? 'border-red-500' : ''}`}
-            maxLength={FIELD_LIMITS.ORGANIZATION_NAME}
+            onValueChange={(value) => validateAndUpdateField('organizationName', value)}
+            placeholder={`Start typing ${getSchoolLabel(data.educationLevel).toLowerCase()}...`}
+            label={getSchoolLabel(data.educationLevel)}
+            required={true}
+            labelClassName="text-base font-medium"
+            description="Start typing to search - if your school isn't found, just type the full name"
+            educationLevel={data.educationLevel}
           />
           {validationErrors.organizationName && (
             <p className="text-sm text-red-500">{validationErrors.organizationName}</p>
           )}
-          <p className="text-xs text-muted-foreground">{data.organizationName.length}/{FIELD_LIMITS.ORGANIZATION_NAME} characters</p>
         </div>
         <div className="space-y-3">
           <Label htmlFor="intendedMajor" className="text-base font-medium">{getMajorLabel(data.educationLevel)} *</Label>

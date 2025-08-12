@@ -16,6 +16,7 @@ import { CoachProfileData } from './coach-profile-types';
 import { sanitizeProfileData } from '@/utils/sanitization';
 import { FileUpload } from '@/components/ui/file-upload';
 import { useRoleView } from '@/hooks/use-role-view';
+import { SchoolSelector } from "@/components/ui/school-selector";
 
 
 // Field validation limits
@@ -650,16 +651,15 @@ export function CoachEditDialogs({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="organizationName">School/Organization *</Label>
-              <Input
-                id="organizationName"
+              <SchoolSelector
                 value={editData.organizationName || ''}
-                onChange={(e) => handleFieldChange('organizationName', e.target.value)}
-                placeholder="Enter school or organization name"
-                className={validationErrors.organizationName ? 'border-red-500' : ''}
-                autoComplete="off"
-                inputMode="text"
-                
+                onValueChange={(value) => handleFieldChange('organizationName', value)}
+                placeholder="Start typing school name..."
+                label="School/Organization"
+                required={true}
+                labelClassName="text-sm font-medium"
+                description="Start typing to search - if your school isn't found, just type the full name"
+                educationLevel="undergraduate"
               />
               {validationErrors.organizationName && <p className="text-red-500 text-sm">{validationErrors.organizationName}</p>}
             </div>

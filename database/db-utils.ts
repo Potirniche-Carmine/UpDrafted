@@ -16,6 +16,7 @@ import {
   conversations,
   notifications,
   adminRolePreferences,
+  schools,
   type NewUser,
   type NewAthleteProfile,
   type NewAthleteMeasurable,
@@ -27,6 +28,7 @@ import {
   type NewRecruitingProfileNeeds,
   type NewReport,
   type NewAdminRolePreferences,
+  type NewSchool,
   athleteVideos,
 } from './schema';
 import { OnboardingProfileData } from '@/app/(onboarding)/lib/onboarding';
@@ -589,7 +591,6 @@ export const connectionOperations = {
               columns: {
                 fullName: true,
                 profileImageR3Key: true,
-                organizationName: true,
                 sport: true,
                 city: true,
                 state: true,
@@ -606,7 +607,6 @@ export const connectionOperations = {
                 id: true,
                 fullName: true,
                 profileImageR3Key: true,
-                organizationName: true,
                 title: true,
                 sportCoaching: true,
                 city: true,
@@ -623,7 +623,6 @@ export const connectionOperations = {
                 id: true,
                 fullName: true,
                 profileImageR3Key: true,
-                organizationName: true,
                 title: true,
                 sportRecruiting: true,
                 city: true,
@@ -644,7 +643,6 @@ export const connectionOperations = {
               columns: {
                 fullName: true,
                 profileImageR3Key: true,
-                organizationName: true,
                 sport: true,
                 city: true,
                 state: true,
@@ -661,7 +659,6 @@ export const connectionOperations = {
                 id: true,
                 fullName: true,
                 profileImageR3Key: true,
-                organizationName: true,
                 title: true,
                 sportCoaching: true,
                 city: true,
@@ -678,7 +675,6 @@ export const connectionOperations = {
                 id: true,
                 fullName: true,
                 profileImageR3Key: true,
-                organizationName: true,
                 title: true,
                 sportRecruiting: true,
                 city: true,
@@ -866,6 +862,19 @@ export const onboardingOperations = {
       role: 'athlete',
     });
 
+    // Get or create school
+    const educationLevelMap: { [key: string]: 'high_school' | 'college' | 'university' | 'professional' | 'other' } = {
+      'high_school': 'high_school',
+      'associate': 'college',
+      'undergraduate': 'university',
+      'graduate': 'university'
+    };
+    
+    const school = await schoolOperations.getOrCreateSchool(
+      profileData.organizationName!,
+      educationLevelMap[profileData.educationLevel!] || 'university'
+    );
+
     // Check if this is a high school athlete with a valid Hudl URL
     const isHighSchool = profileData.educationLevel === 'high_school';
     const hasValidHudlUrl = profileData.hudlUrl && profileData.hudlUrl.trim();
@@ -889,7 +898,7 @@ export const onboardingOperations = {
       secondarySports: profileData.secondarySports || [],
       graduationYear: profileData.graduationYear!,
       educationLevel: profileData.educationLevel!,
-      organizationName: profileData.organizationName!,
+      schoolId: school.id,
       city: profileData.city!,
       state: profileData.state!,
       country: profileData.country, // <-- Add this line
@@ -913,7 +922,7 @@ export const onboardingOperations = {
     
     const athleteProfile = await athleteOperations.createAthleteProfile(newProfile);
     
-    return { user, athleteProfile };
+    return { user, athleteProfile, school };
   },
 
   // Complete onboarding for coach
@@ -925,13 +934,19 @@ export const onboardingOperations = {
       role: 'coach'
     });
 
+    // Get or create school (coaches are typically at universities)
+    const school = await schoolOperations.getOrCreateSchool(
+      profileData.organizationName!,
+      'university'
+    );
+
     // Create coach profile
     const coachProfile = await coachOperations.createCoachProfile({
       userId,
       fullName: profileData.fullName,
       title: profileData.title!,
       sportCoaching: profileData.sportCoaching!,
-      organizationName: profileData.organizationName!,
+      schoolId: school.id,
       profileImageR3Key,
       organizationLogoR3Key,
       division: profileData.division!,
@@ -958,7 +973,7 @@ export const onboardingOperations = {
       });
     }
 
-    return { user, profile: coachProfile, recruitingNeeds };
+    return { user, profile: coachProfile, recruitingNeeds, school };
   },
 
   // Complete onboarding for recruiter
@@ -970,6 +985,12 @@ export const onboardingOperations = {
       role: 'recruiter'
     });
 
+    // Get or create school (recruiters are typically at universities)
+    const school = await schoolOperations.getOrCreateSchool(
+      profileData.organizationName!,
+      'university'
+    );
+
     // Create recruiter profile
     const recruiterProfile = await recruitingOperations.createRecruitingProfile({
       userId,
@@ -977,7 +998,7 @@ export const onboardingOperations = {
       title: profileData.title!,
       sportRecruiting: profileData.sportCoaching!,
       secondarySports: profileData.secondarySportsRecruiting || [],
-      organizationName: profileData.organizationName!,
+      schoolId: school.id,
       profileImageR3Key,
       organizationLogoR3Key,
       division: profileData.division!,
@@ -1010,7 +1031,7 @@ export const onboardingOperations = {
       }
     }
 
-    return { user, profile: recruiterProfile, recruitingProfileNeeds };
+    return { user, profile: recruiterProfile, recruitingProfileNeeds, school };
   }
 };
 
@@ -1722,6 +1743,7 @@ export const adminOperations = {
       ),
       with: {
         user: true,
+        school: true,
         measurables: true,
         videos: {
           orderBy: [asc(athleteVideos.sortOrder)],
@@ -1737,6 +1759,7 @@ export const adminOperations = {
       ),
       with: {
         user: true,
+        school: true,
         recruitingNeeds: true,
       }
     });
@@ -1986,5 +2009,134 @@ export const adminOperations = {
       ))
       .returning();
     return profile;
+  }
+};
+
+// School operations
+export const schoolOperations = {
+  // Search schools with autocomplete functionality
+  async searchSchools(query: string, limit = 15, classification?: 'high_school' | 'college' | 'university' | 'professional' | 'other') {
+    if (!query.trim()) return [];
+    
+    const searchQuery = `%${query.toLowerCase()}%`;
+    
+    // Use the composite index when classification is provided for better performance
+    if (classification) {
+      return await db
+        .select({
+          id: schools.id,
+          name: schools.name,
+          classification: schools.classification,
+        })
+        .from(schools)
+        .where(
+          and(
+            eq(schools.classification, classification),
+            sql`LOWER(${schools.name}) LIKE ${searchQuery}`
+          )
+        )
+        .orderBy(
+          // Prioritize exact matches, then alphabetical
+          sql`CASE WHEN LOWER(${schools.name}) = ${query.toLowerCase()} THEN 0 ELSE 1 END`,
+          schools.name
+        )
+        .limit(limit);
+    }
+    
+    // Fallback to general search without classification filter
+    return await db
+      .select({
+        id: schools.id,
+        name: schools.name,
+        classification: schools.classification,
+      })
+      .from(schools)
+      .where(sql`LOWER(${schools.name}) LIKE ${searchQuery}`)
+      .orderBy(
+        // Prioritize exact matches, then alphabetical
+        sql`CASE WHEN LOWER(${schools.name}) = ${query.toLowerCase()} THEN 0 ELSE 1 END`,
+        schools.name
+      )
+      .limit(limit);
+  },
+
+  // Create a new school
+  async createSchool(schoolData: NewSchool) {
+    // Check if school already exists with similar name to prevent duplicates
+    const existingSchool = await db
+      .select()
+      .from(schools)
+      .where(sql`LOWER(${schools.name}) = ${schoolData.name.toLowerCase()}`)
+      .limit(1);
+
+    if (existingSchool.length > 0) {
+      return existingSchool[0];
+    }
+
+    const [school] = await db.insert(schools).values(schoolData).returning();
+    return school;
+  },
+
+  // Get school by ID
+  async getSchoolById(schoolId: number) {
+    return await db.query.schools.findFirst({
+      where: eq(schools.id, schoolId)
+    });
+  },
+
+  // Get or create school by name (for onboarding/profile updates)
+  async getOrCreateSchool(name: string, classification: 'high_school' | 'college' | 'university' | 'professional' | 'other') {
+    // First try to find existing school (case-insensitive)
+    const existingSchool = await db
+      .select()
+      .from(schools)
+      .where(sql`LOWER(${schools.name}) = ${name.toLowerCase()}`)
+      .limit(1);
+
+    if (existingSchool.length > 0) {
+      return existingSchool[0];
+    }
+
+    // Create new school if not found
+    return await this.createSchool({
+      name: name.trim(),
+      classification,
+    });
+  },
+
+  // Get schools by classification
+  async getSchoolsByClassification(classification: 'high_school' | 'college' | 'university' | 'professional' | 'other', limit = 100) {
+    return await db
+      .select()
+      .from(schools)
+      .where(eq(schools.classification, classification))
+      .orderBy(schools.name)
+      .limit(limit);
+  },
+
+  // Get school name by ID (helper function)
+  async getSchoolName(schoolId: number | null, fallbackName?: string): Promise<string> {
+    if (!schoolId) {
+      return fallbackName || 'Unknown School';
+    }
+    
+    const school = await this.getSchoolById(schoolId);
+    return school?.name || fallbackName || 'Unknown School';
+  },
+
+  // Bulk get school names for multiple IDs (for performance)
+  async getSchoolNames(schoolIds: (number | null)[]): Promise<Map<number, string>> {
+    const validIds = schoolIds.filter((id): id is number => id !== null);
+    
+    if (validIds.length === 0) {
+      return new Map();
+    }
+
+    const schoolsData = await db
+      .select({ id: schools.id, name: schools.name })
+      .from(schools)
+      .where(sql`${schools.id} IN (${sql.join(validIds, sql`, `)})`);
+
+    return new Map(schoolsData.map(school => [school.id, school.name]));
   }
 };

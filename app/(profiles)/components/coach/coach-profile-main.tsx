@@ -170,7 +170,7 @@ const ProgramSocialMediaSection = memo(({ socialMedia, isOwnProfile, onEdit }: {
       ) : null}
       
       {hasValidSocialMedia ? (
-        <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
+        <div className="flex flex-col sm:flex-row justify-center gap-2 sm:gap-3">
           {socialMedia.instagram && (
             <a
               href={`https://instagram.com/${socialMedia.instagram.replace('@', '')}`}

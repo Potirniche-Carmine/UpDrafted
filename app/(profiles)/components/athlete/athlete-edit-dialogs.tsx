@@ -17,6 +17,7 @@ import { FileUpload } from '@/components/ui/file-upload';
 import { useRoleView } from '@/hooks/use-role-view';
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
 import { ConferenceSelector } from "@/components/ui/conference-selector";
+import { SchoolSelector } from "@/components/ui/school-selector";
 import { divisionHasConferences } from "@/lib/conference-data";
 import { 
   generateCampDateOptions, 
@@ -1319,16 +1320,15 @@ export function AthleteEditDialogs({
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="edit-organizationName">School/Organization *</Label>
-                <Input
-                  id="edit-organizationName"
-                  placeholder="University of California"
+                <SchoolSelector
                   value={editData.organizationName || ''}
-                  onChange={(e) => handleFieldChange('organizationName', e.target.value)}
-                  className={`h-12 ${validationErrors.organizationName ? 'border-red-500' : ''}`}
-                  maxLength={FIELD_LIMITS.ORGANIZATION_NAME}
-                  autoComplete="off"
-                  inputMode="text"
+                  onValueChange={(value) => handleFieldChange('organizationName', value)}
+                  placeholder="Start typing school name..."
+                  label="School/Organization"
+                  required={true}
+                  labelClassName="text-sm font-medium"
+                  description="Start typing to search - if your school isn't found, just type the full name"
+                  educationLevel={editData.educationLevel as EducationLevel}
                 />
                 {validationErrors.organizationName && (
                   <p className="text-sm text-red-500">{validationErrors.organizationName}</p>

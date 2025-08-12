@@ -114,6 +114,24 @@ export const validateField = (field: string, value: string | number, profileName
       }
       break;
     
+    case 'organizationName':
+      if (!value || (typeof value === 'string' && !value.trim())) {
+        return 'School/Organization is required';
+      }
+      if (typeof value === 'string' && value.length > FIELD_LIMITS.ORGANIZATION_NAME) {
+        return `School/Organization name must be ${FIELD_LIMITS.ORGANIZATION_NAME} characters or less`;
+      }
+      break;
+    
+    case 'city':
+      if (!value || (typeof value === 'string' && !value.trim())) {
+        return 'City is required';
+      }
+      if (typeof value === 'string' && value.length > FIELD_LIMITS.CITY) {
+        return `City must be ${FIELD_LIMITS.CITY} characters or less`;
+      }
+      break;
+
     case 'maxPrepsUrl':
       if (typeof value === 'string' && value.trim() && profileName) {
         // Use the enhanced MaxPreps validation
