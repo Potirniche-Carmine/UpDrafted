@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAnyRole } from '@/utils/roles';
 import { db } from '@/database/db';
-import { users, athleteProfiles, coachProfiles, recruitingProfiles, connections, recruitingProfileNeeds, recruitingNeeds } from '@/database/schema';
+import { users, athleteProfiles, coachProfiles, recruitingProfiles, connections, recruitingProfileNeeds, recruitingNeeds, schools } from '@/database/schema';
 import { and, eq, or, not, ilike, isNull, exists, ne } from 'drizzle-orm';
 import { sanitizeText, sanitizeNumber } from '@/utils/sanitization';
 import { withRateLimit } from '@/utils/security';
@@ -281,7 +281,7 @@ async function handleDiscoverRequest(request: NextRequest) {
           not(isNull(athleteProfiles.userId)),
           or(
             ilike(athleteProfiles.fullName, `%${query}%`),
-            ilike(athleteProfiles.organizationName, `%${query}%`),
+            ilike(schools.name, `%${query}%`),
             ilike(athleteProfiles.sport, `%${query}%`)
           )
         ),
@@ -289,7 +289,7 @@ async function handleDiscoverRequest(request: NextRequest) {
           not(isNull(coachProfiles.userId)),
           or(
             ilike(coachProfiles.fullName, `%${query}%`),
-            ilike(coachProfiles.organizationName, `%${query}%`),
+            ilike(schools.name, `%${query}%`),
             ilike(coachProfiles.sportCoaching, `%${query}%`),
             ilike(coachProfiles.title, `%${query}%`)
           )
@@ -298,7 +298,7 @@ async function handleDiscoverRequest(request: NextRequest) {
           not(isNull(recruitingProfiles.userId)),
           or(
             ilike(recruitingProfiles.fullName, `%${query}%`),
-            ilike(recruitingProfiles.organizationName, `%${query}%`),
+            ilike(schools.name, `%${query}%`),
             ilike(recruitingProfiles.sportRecruiting, `%${query}%`),
             ilike(recruitingProfiles.title, `%${query}%`)
           )
@@ -360,6 +360,7 @@ async function handleDiscoverRequest(request: NextRequest) {
         athleteProfile: athleteProfiles,
         coachProfile: coachProfiles,
         recruitingProfile: recruitingProfiles,
+        school: schools,
         hasPendingRequest: exists(
           db.select()
             .from(connections)
@@ -400,6 +401,11 @@ async function handleDiscoverRequest(request: NextRequest) {
           isNull(recruitingProfiles.isDemoProfile),
           eq(recruitingProfiles.isDemoProfile, false)
         )
+      ))
+      .leftJoin(schools, or(
+        eq(schools.id, athleteProfiles.schoolId),
+        eq(schools.id, coachProfiles.schoolId),
+        eq(schools.id, recruitingProfiles.schoolId)
       ))
       .where(allConditions.length > 0 ? and(...allConditions) : undefined)
       .limit(pageSize)
@@ -522,7 +528,7 @@ async function handleDiscoverRequest(request: NextRequest) {
         const athleteProfile = user.athleteProfile;
         userProfileData = {
           fullName: athleteProfile.fullName,
-          organizationName: athleteProfile.organizationName,
+          organizationName: user.school?.name || null,
           profileImage: athleteProfile.profileImageR3Key,
           city: athleteProfile.city,
           state: athleteProfile.state,
@@ -541,7 +547,7 @@ async function handleDiscoverRequest(request: NextRequest) {
         
         userProfileData = {
           fullName: coachProfile.fullName,
-          organizationName: coachProfile.organizationName,
+          organizationName: user.school?.name || null,
           profileImage: coachProfile.profileImageR3Key,
           city: coachProfile.city,
           state: coachProfile.state,
@@ -561,7 +567,7 @@ async function handleDiscoverRequest(request: NextRequest) {
         
         userProfileData = {
           fullName: recruitingProfile.fullName,
-          organizationName: recruitingProfile.organizationName,
+          organizationName: user.school?.name || null,
           profileImage: recruitingProfile.profileImageR3Key,
           city: recruitingProfile.city,
           state: recruitingProfile.state,

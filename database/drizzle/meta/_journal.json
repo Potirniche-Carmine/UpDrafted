@@ -344,6 +344,34 @@
       "when": 1754927392379,
       "tag": "0048_panoramic_lifeguard",
       "breakpoints": true
+    },
+    {
+      "idx": 49,
+      "version": "7",
+      "when": 1754953439226,
+      "tag": "0049_tidy_angel",
+      "breakpoints": true
+    },
+    {
+      "idx": 50,
+      "version": "7",
+      "when": 1754954469832,
+      "tag": "0050_confused_callisto",
+      "breakpoints": true
+    },
+    {
+      "idx": 51,
+      "version": "7",
+      "when": 1754954614127,
+      "tag": "0051_whole_silver_sable",
+      "breakpoints": true
+    },
+    {
+      "idx": 52,
+      "version": "7",
+      "when": 1754955909538,
+      "tag": "0052_dashing_iron_man",
+      "breakpoints": true
     }
   ]
 }

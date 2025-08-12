@@ -25,6 +25,20 @@ export const verificationTypeEnum = pgEnum('verification_type', ['general', 'tra
 export const educationLevelEnum = pgEnum('education_level', ['high_school', 'undergraduate', 'graduate', 'associate']);
 export const notificationTypeEnum = pgEnum('notification_type', ['profileView', 'newConnection', 'newMessage', 'systemUpdate', 'premiumFeature', 'connectionAccepted']);
 export const studentClassificationEnum = pgEnum('student_classification', ['high_school', 'university_transfers', 'juco_students', 'graduate_transfers', 'international_students']);
+export const schoolClassificationEnum = pgEnum('school_classification', ['high_school', 'college', 'university', 'professional', 'other']);
+
+export const schools = pgTable('schools', {
+  id: serial('id').primaryKey(),
+  name: text('name').notNull(),
+  classification: schoolClassificationEnum('classification').notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+}, (table) => [
+  index('idx_schools_name').on(table.name),
+  index('idx_schools_classification').on(table.classification),
+  index('idx_schools_name_lower').on(table.name),
+  index('idx_schools_classification_name').on(table.classification, table.name), // Composite index for filtered searches
+]);
 
 export const users = pgTable('users', {
   id: text('id').primaryKey(),
@@ -48,7 +62,7 @@ export const athleteProfiles = pgTable('athlete_profiles', {
   division: text('division'),
   conference: text('conference'),
   educationLevel: educationLevelEnum('education_level').notNull().default('high_school'),
-  organizationName: text('organization_name').notNull(),
+  schoolId: integer('school_id').notNull().references(() => schools.id),
   city: text('city').notNull(),
   country: text('country').notNull().default('United States'), // Added country (required)
   state: text('state'), // Made nullable
@@ -79,6 +93,7 @@ export const athleteProfiles = pgTable('athlete_profiles', {
   index('idx_athlete_profiles_sport').on(table.sport),
   index('idx_athlete_profiles_graduation_year').on(table.graduationYear),
   index('idx_athlete_profiles_education_level').on(table.educationLevel),
+  index('idx_athlete_profiles_school_id').on(table.schoolId),
   index('idx_athlete_profiles_is_demo').on(table.isDemoProfile),
   unique('athlete_profiles_user_id_unique').on(table.userId),
 ]);
@@ -134,7 +149,7 @@ export const coachProfiles = pgTable('coach_profiles', {
   fullName: text('full_name').notNull(),
   title: text('title').notNull(),
   sportCoaching: text('sport_coaching').notNull(),
-  organizationName: text('organization_name').notNull(),
+  schoolId: integer('school_id').notNull().references(() => schools.id),
   profileImageR3Key: text('profile_image_r3_key'),
   organizationLogoR3Key: text('organization_logo_r3_key'),
   division: text('division').notNull(),
@@ -158,6 +173,7 @@ export const coachProfiles = pgTable('coach_profiles', {
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
 }, (table) => [
   index('idx_coach_profiles_user_id').on(table.userId),
+  index('idx_coach_profiles_school_id').on(table.schoolId),
   index('idx_coach_profiles_is_demo').on(table.isDemoProfile),
   unique('coach_profiles_user_id_unique').on(table.userId),
 ]);
@@ -169,7 +185,7 @@ export const recruitingProfiles = pgTable('recruiting_profiles', {
   title: text('title').notNull(),
   sportRecruiting: text('sport_recruiting').notNull(),
   secondarySports: text('secondary_sports').array(),
-  organizationName: text('organization_name').notNull(),
+  schoolId: integer('school_id').notNull().references(() => schools.id),
   profileImageR3Key: text('profile_image_r3_key'),
   organizationLogoR3Key: text('organization_logo_r3_key'),
   division: text('division').notNull(),
@@ -193,6 +209,7 @@ export const recruitingProfiles = pgTable('recruiting_profiles', {
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
 }, (table) => [
   index('idx_recruiting_profiles_user_id').on(table.userId),
+  index('idx_recruiting_profiles_school_id').on(table.schoolId),
   index('idx_recruiting_profiles_is_demo').on(table.isDemoProfile),
   unique('recruiting_profiles_user_id_unique').on(table.userId),
 ]);
@@ -410,10 +427,20 @@ export const adminRolePreferencesRelations = relations(adminRolePreferences, ({ 
   }),
 }));
 
+export const schoolsRelations = relations(schools, ({ many }) => ({
+  athleteProfiles: many(athleteProfiles),
+  coachProfiles: many(coachProfiles),
+  recruitingProfiles: many(recruitingProfiles),
+}));
+
 export const athleteProfilesRelations = relations(athleteProfiles, ({ one, many }) => ({
   user: one(users, {
     fields: [athleteProfiles.userId],
     references: [users.id],
+  }),
+  school: one(schools, {
+    fields: [athleteProfiles.schoolId],
+    references: [schools.id],
   }),
   measurables: many(athleteMeasurables),
   videos: many(athleteVideos),
@@ -425,6 +452,10 @@ export const coachProfilesRelations = relations(coachProfiles, ({ one, many }) =
   user: one(users, {
     fields: [coachProfiles.userId],
     references: [users.id],
+  }),
+  school: one(schools, {
+    fields: [coachProfiles.schoolId],
+    references: [schools.id],
   }),
   recruitingNeeds: one(recruitingNeeds),
   conversations: many(conversations),
@@ -455,6 +486,10 @@ export const recruitingProfilesRelations = relations(recruitingProfiles, ({ one,
   user: one(users, {
     fields: [recruitingProfiles.userId],
     references: [users.id],
+  }),
+  school: one(schools, {
+    fields: [recruitingProfiles.schoolId],
+    references: [schools.id],
   }),
   recruitingNeeds: many(recruitingProfileNeeds),
 }));
@@ -575,3 +610,5 @@ export type Notification = typeof notifications.$inferSelect;
 export type NewNotification = typeof notifications.$inferInsert;
 export type AdminRolePreferences = typeof adminRolePreferences.$inferSelect;
 export type NewAdminRolePreferences = typeof adminRolePreferences.$inferInsert;
+export type School = typeof schools.$inferSelect;
+export type NewSchool = typeof schools.$inferInsert;

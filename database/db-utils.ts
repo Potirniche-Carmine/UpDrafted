@@ -16,6 +16,7 @@ import {
   conversations,
   notifications,
   adminRolePreferences,
+  schools,
   type NewUser,
   type NewAthleteProfile,
   type NewAthleteMeasurable,
@@ -27,6 +28,7 @@ import {
   type NewRecruitingProfileNeeds,
   type NewReport,
   type NewAdminRolePreferences,
+  type NewSchool,
   athleteVideos,
 } from './schema';
 import { OnboardingProfileData } from '@/app/(onboarding)/lib/onboarding';
@@ -589,7 +591,6 @@ export const connectionOperations = {
               columns: {
                 fullName: true,
                 profileImageR3Key: true,
-                organizationName: true,
                 sport: true,
                 city: true,
                 state: true,
@@ -600,13 +601,20 @@ export const connectionOperations = {
                 weight: true,
                 positions: true,
               },
+              with: {
+                school: {
+                  columns: {
+                    id: true,
+                    name: true,
+                  },
+                },
+              },
             },
             coachProfile: {
               columns: {
                 id: true,
                 fullName: true,
                 profileImageR3Key: true,
-                organizationName: true,
                 title: true,
                 sportCoaching: true,
                 city: true,
@@ -616,6 +624,12 @@ export const connectionOperations = {
               },
               with: {
                 recruitingNeeds: true,
+                school: {
+                  columns: {
+                    id: true,
+                    name: true,
+                  },
+                },
               },
             },
             recruitingProfile: {
@@ -623,13 +637,20 @@ export const connectionOperations = {
                 id: true,
                 fullName: true,
                 profileImageR3Key: true,
-                organizationName: true,
                 title: true,
                 sportRecruiting: true,
                 city: true,
                 state: true,
                 division: true,
                 isVerified: true,
+              },
+              with: {
+                school: {
+                  columns: {
+                    id: true,
+                    name: true,
+                  },
+                },
               },
             },
           },
@@ -644,7 +665,6 @@ export const connectionOperations = {
               columns: {
                 fullName: true,
                 profileImageR3Key: true,
-                organizationName: true,
                 sport: true,
                 city: true,
                 state: true,
@@ -655,13 +675,20 @@ export const connectionOperations = {
                 weight: true,
                 positions: true,
               },
+              with: {
+                school: {
+                  columns: {
+                    id: true,
+                    name: true,
+                  },
+                },
+              },
             },
             coachProfile: {
               columns: {
                 id: true,
                 fullName: true,
                 profileImageR3Key: true,
-                organizationName: true,
                 title: true,
                 sportCoaching: true,
                 city: true,
@@ -671,6 +698,12 @@ export const connectionOperations = {
               },
               with: {
                 recruitingNeeds: true,
+                school: {
+                  columns: {
+                    id: true,
+                    name: true,
+                  },
+                },
               },
             },
             recruitingProfile: {
@@ -678,13 +711,20 @@ export const connectionOperations = {
                 id: true,
                 fullName: true,
                 profileImageR3Key: true,
-                organizationName: true,
                 title: true,
                 sportRecruiting: true,
                 city: true,
                 state: true,
                 division: true,
                 isVerified: true,
+              },
+              with: {
+                school: {
+                  columns: {
+                    id: true,
+                    name: true,
+                  },
+                },
               },
             },
           },
@@ -866,8 +906,24 @@ export const onboardingOperations = {
       role: 'athlete',
     });
 
+    // Get or create school
+    const educationLevelMap: { [key: string]: 'high_school' | 'college' | 'university' | 'professional' | 'other' } = {
+      'high_school': 'high_school',
+      'associate': 'college',
+      'undergraduate': 'university',
+      'graduate': 'university'
+    };
+    
+    const educationLevel = profileData.educationLevel || 'undergraduate';
+    const schoolClassification = educationLevelMap[educationLevel] || 'university';
+    
+    const school = await schoolOperations.getOrCreateSchool(
+      profileData.organizationName || 'Unknown Institution',
+      schoolClassification
+    );
+
     // Check if this is a high school athlete with a valid Hudl URL
-    const isHighSchool = profileData.educationLevel === 'high_school';
+    const isHighSchool = educationLevel === 'high_school';
     const hasValidHudlUrl = profileData.hudlUrl && profileData.hudlUrl.trim();
     
     // Auto-verify high school athletes with valid Hudl URLs
@@ -889,7 +945,7 @@ export const onboardingOperations = {
       secondarySports: profileData.secondarySports || [],
       graduationYear: profileData.graduationYear!,
       educationLevel: profileData.educationLevel!,
-      organizationName: profileData.organizationName!,
+      schoolId: school.id,
       city: profileData.city!,
       state: profileData.state!,
       country: profileData.country, // <-- Add this line
@@ -913,7 +969,7 @@ export const onboardingOperations = {
     
     const athleteProfile = await athleteOperations.createAthleteProfile(newProfile);
     
-    return { user, athleteProfile };
+    return { user, athleteProfile, school };
   },
 
   // Complete onboarding for coach
@@ -925,13 +981,19 @@ export const onboardingOperations = {
       role: 'coach'
     });
 
+    // Get or create school (coaches are typically at universities)
+    const school = await schoolOperations.getOrCreateSchool(
+      profileData.organizationName || 'Unknown Institution',
+      'university'
+    );
+
     // Create coach profile
     const coachProfile = await coachOperations.createCoachProfile({
       userId,
       fullName: profileData.fullName,
       title: profileData.title!,
       sportCoaching: profileData.sportCoaching!,
-      organizationName: profileData.organizationName!,
+      schoolId: school.id,
       profileImageR3Key,
       organizationLogoR3Key,
       division: profileData.division!,
@@ -958,7 +1020,7 @@ export const onboardingOperations = {
       });
     }
 
-    return { user, profile: coachProfile, recruitingNeeds };
+    return { user, profile: coachProfile, recruitingNeeds, school };
   },
 
   // Complete onboarding for recruiter
@@ -970,6 +1032,12 @@ export const onboardingOperations = {
       role: 'recruiter'
     });
 
+    // Get or create school (recruiters are typically at universities)
+    const school = await schoolOperations.getOrCreateSchool(
+      profileData.organizationName || 'Unknown Institution',
+      'university'
+    );
+
     // Create recruiter profile
     const recruiterProfile = await recruitingOperations.createRecruitingProfile({
       userId,
@@ -977,7 +1045,7 @@ export const onboardingOperations = {
       title: profileData.title!,
       sportRecruiting: profileData.sportCoaching!,
       secondarySports: profileData.secondarySportsRecruiting || [],
-      organizationName: profileData.organizationName!,
+      schoolId: school.id,
       profileImageR3Key,
       organizationLogoR3Key,
       division: profileData.division!,
@@ -1010,7 +1078,7 @@ export const onboardingOperations = {
       }
     }
 
-    return { user, profile: recruiterProfile, recruitingProfileNeeds };
+    return { user, profile: recruiterProfile, recruitingProfileNeeds, school };
   }
 };
 
@@ -1722,6 +1790,7 @@ export const adminOperations = {
       ),
       with: {
         user: true,
+        school: true,
         measurables: true,
         videos: {
           orderBy: [asc(athleteVideos.sortOrder)],
@@ -1737,6 +1806,7 @@ export const adminOperations = {
       ),
       with: {
         user: true,
+        school: true,
         recruitingNeeds: true,
       }
     });
@@ -1986,5 +2056,261 @@ export const adminOperations = {
       ))
       .returning();
     return profile;
+  }
+};
+
+// School operations
+export const schoolOperations = {
+  // Search schools with autocomplete functionality
+  async searchSchools(query: string, limit = 15, classification?: 'high_school' | 'college' | 'university' | 'professional' | 'other') {
+    if (!query.trim()) return [];
+    
+    const searchQuery = `%${query.toLowerCase()}%`;
+    const normalizedQuery = this.normalizeSchoolName(query);
+    
+    // Use the composite index when classification is provided for better performance
+    if (classification) {
+      return await db
+        .select({
+          id: schools.id,
+          name: schools.name,
+          classification: schools.classification,
+        })
+        .from(schools)
+        .where(
+          and(
+            eq(schools.classification, classification),
+            or(
+              // Exact name match (highest priority)
+              sql`LOWER(${schools.name}) LIKE ${searchQuery}`,
+              // Normalized name match for better fuzzy matching
+              sql`LOWER(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(${schools.name}, 'university', 'u'), 'college', 'c'), 'state', 'st'), 'technology', 'tech'), 'institute', 'inst')) LIKE ${'%' + normalizedQuery + '%'}`
+            )
+          )
+        )
+        .orderBy(
+          // Prioritize exact matches, then starts with, then contains
+          sql`CASE 
+            WHEN LOWER(${schools.name}) = ${query.toLowerCase()} THEN 0 
+            WHEN LOWER(${schools.name}) LIKE ${query.toLowerCase() + '%'} THEN 1 
+            WHEN LOWER(${schools.name}) LIKE ${searchQuery} THEN 2
+            ELSE 3 
+          END`,
+          schools.name
+        )
+        .limit(limit);
+    }
+    
+    // Fallback to general search without classification filter
+    return await db
+      .select({
+        id: schools.id,
+        name: schools.name,
+        classification: schools.classification,
+      })
+      .from(schools)
+      .where(
+        or(
+          // Exact name match (highest priority)
+          sql`LOWER(${schools.name}) LIKE ${searchQuery}`,
+          // Normalized name match for better fuzzy matching
+          sql`LOWER(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(${schools.name}, 'university', 'u'), 'college', 'c'), 'state', 'st'), 'technology', 'tech'), 'institute', 'inst')) LIKE ${'%' + normalizedQuery + '%'}`
+        )
+      )
+      .orderBy(
+        // Prioritize exact matches, then starts with, then contains
+        sql`CASE 
+          WHEN LOWER(${schools.name}) = ${query.toLowerCase()} THEN 0 
+          WHEN LOWER(${schools.name}) LIKE ${query.toLowerCase() + '%'} THEN 1 
+          WHEN LOWER(${schools.name}) LIKE ${searchQuery} THEN 2
+          ELSE 3 
+        END`,
+        schools.name
+      )
+      .limit(limit);
+  },
+
+  // Create a new school
+  async createSchool(schoolData: NewSchool) {
+    // Check if school already exists with exact name and classification to prevent duplicates
+    const existingSchool = await db
+      .select()
+      .from(schools)
+      .where(and(
+        sql`LOWER(TRIM(${schools.name})) = ${schoolData.name.toLowerCase().trim()}`,
+        eq(schools.classification, schoolData.classification)
+      ))
+      .limit(1);
+
+    if (existingSchool.length > 0) {
+      return existingSchool[0];
+    }
+
+    try {
+      const [school] = await db.insert(schools).values(schoolData).returning();
+      return school;
+    } catch (error) {
+      // Handle potential race condition where school was created between check and insert
+      if (error instanceof Error && (error.message.includes('duplicate') || error.message.includes('unique'))) {
+        // Try to fetch the school that was created by another process
+        const duplicateSchool = await db
+          .select()
+          .from(schools)
+          .where(and(
+            sql`LOWER(TRIM(${schools.name})) = ${schoolData.name.toLowerCase().trim()}`,
+            eq(schools.classification, schoolData.classification)
+          ))
+          .limit(1);
+        
+        if (duplicateSchool.length > 0) {
+          return duplicateSchool[0];
+        }
+      }
+      
+      // Re-throw error if it's not a duplicate key issue
+      throw error;
+    }
+  },
+
+  // Get school by ID
+  async getSchoolById(schoolId: number) {
+    return await db.query.schools.findFirst({
+      where: eq(schools.id, schoolId)
+    });
+  },
+
+  // Normalize school name for better matching
+  normalizeSchoolName(name: string): string {
+    return name
+      .toLowerCase()
+      .trim()
+      // Remove common variations and abbreviations
+      .replace(/\buniversity\b/g, 'u')
+      .replace(/\buniv\b/g, 'u')
+      .replace(/\bcollege\b/g, 'c')
+      .replace(/\bstate\b/g, 'st')
+      .replace(/\btechnology\b/g, 'tech')
+      .replace(/\btechnological\b/g, 'tech')
+      .replace(/\binstitute\b/g, 'inst')
+      .replace(/\binst\b/g, 'inst')
+      .replace(/\bacademy\b/g, 'acad')
+      .replace(/\bschool\b/g, 'sch')
+      .replace(/\bhigh\s+school\b/g, 'hs')
+      .replace(/\bmiddle\s+school\b/g, 'ms')
+      .replace(/\belementary\s+school\b/g, 'es')
+      // Remove common punctuation and normalize spacing
+      .replace(/[.,\-_()]/g, ' ')
+      .replace(/\s+/g, ' ')
+      .replace(/\s+$/, '')
+      .replace(/^\s+/, '');
+  },
+
+  // Find similar schools using fuzzy matching
+  async findSimilarSchools(name: string, classification: 'high_school' | 'college' | 'university' | 'professional' | 'other'): Promise<typeof schools.$inferSelect[]> {
+    const normalizedInput = this.normalizeSchoolName(name);
+    
+    // First try exact normalized match
+    let existingSchools = await db
+      .select()
+      .from(schools)
+      .where(and(
+        eq(schools.classification, classification),
+        sql`LOWER(TRIM(${schools.name})) = ${normalizedInput}`
+      ))
+      .limit(5);
+
+    if (existingSchools.length > 0) {
+      return existingSchools;
+    }
+
+    // Then try similarity search using LIKE with parts of the name
+    const nameParts = normalizedInput.split(' ').filter(part => part.length > 2);
+    if (nameParts.length > 0) {
+      const likeConditions = nameParts.map(part => 
+        sql`LOWER(${schools.name}) LIKE ${'%' + part + '%'}`
+      );
+      
+      existingSchools = await db
+        .select()
+        .from(schools)
+        .where(and(
+          eq(schools.classification, classification),
+          or(...likeConditions)
+        ))
+        .limit(5);
+    }
+
+    return existingSchools;
+  },
+
+  // Get or create school by name (for onboarding/profile updates)
+  async getOrCreateSchool(name: string, classification: 'high_school' | 'college' | 'university' | 'professional' | 'other') {
+    const trimmedName = name.trim();
+    
+    // First try to find existing school (case-insensitive exact match)
+    const exactMatch = await db
+      .select()
+      .from(schools)
+      .where(and(
+        eq(schools.classification, classification),
+        sql`LOWER(${schools.name}) = ${trimmedName.toLowerCase()}`
+      ))
+      .limit(1);
+
+    if (exactMatch.length > 0) {
+      return exactMatch[0];
+    }
+
+    // Check for similar schools to prevent duplicates
+    const similarSchools = await this.findSimilarSchools(trimmedName, classification);
+    
+    if (similarSchools.length > 0) {
+      // Log potential duplicates for monitoring (but don't block creation)
+      console.warn(`Potential duplicate school detected. Creating new school "${trimmedName}" despite similar existing schools:`, 
+        similarSchools.map(s => s.name)
+      );
+    }
+
+    // Create new school if not found
+    return await this.createSchool({
+      name: trimmedName,
+      classification,
+    });
+  },
+
+  // Get schools by classification
+  async getSchoolsByClassification(classification: 'high_school' | 'college' | 'university' | 'professional' | 'other', limit = 100) {
+    return await db
+      .select()
+      .from(schools)
+      .where(eq(schools.classification, classification))
+      .orderBy(schools.name)
+      .limit(limit);
+  },
+
+  // Get school name by ID (helper function)
+  async getSchoolName(schoolId: number | null, fallbackName?: string): Promise<string> {
+    if (!schoolId) {
+      return fallbackName || 'Unknown School';
+    }
+    
+    const school = await this.getSchoolById(schoolId);
+    return school?.name || fallbackName || 'Unknown School';
+  },
+
+  // Bulk get school names for multiple IDs (for performance)
+  async getSchoolNames(schoolIds: (number | null)[]): Promise<Map<number, string>> {
+    const validIds = schoolIds.filter((id): id is number => id !== null);
+    
+    if (validIds.length === 0) {
+      return new Map();
+    }
+
+    const schoolsData = await db
+      .select({ id: schools.id, name: schools.name })
+      .from(schools)
+      .where(sql`${schools.id} IN (${sql.join(validIds, sql`, `)})`);
+
+    return new Map(schoolsData.map(school => [school.id, school.name]));
   }
 };

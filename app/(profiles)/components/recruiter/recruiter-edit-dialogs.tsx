@@ -16,6 +16,7 @@ import { RecruiterProfileData } from './recruiter-profile-types';
 import { sanitizeProfileData } from '@/utils/sanitization';
 import { FileUpload } from '@/components/ui/file-upload';
 import { useRoleView } from '@/hooks/use-role-view';
+import { SchoolSelector } from "@/components/ui/school-selector";
 
 // Field validation limits
 const FIELD_LIMITS = {
@@ -715,16 +716,15 @@ export function RecruiterEditDialogs({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="organizationName">Organization Name *</Label>
-              <Input
-                id="organizationName"
+              <SchoolSelector
                 value={editData.organizationName || ''}
-                onChange={(e) => handleFieldChange('organizationName', e.target.value)}
-                placeholder="e.g., University of State, State High School"
-                maxLength={FIELD_LIMITS.ORGANIZATION_NAME}
-                autoComplete="off"
-                inputMode="text"
-                autoFocus={false}
+                onValueChange={(value) => handleFieldChange('organizationName', value)}
+                placeholder="Start typing school name..."
+                label="Organization Name"
+                required={true}
+                labelClassName="text-sm font-medium"
+                description="Start typing to search - if your school isn't found, just type the full name"
+                educationLevel="undergraduate"
               />
               {validationErrors.organizationName && (
                 <p className="text-sm text-red-500 mt-1">{validationErrors.organizationName}</p>

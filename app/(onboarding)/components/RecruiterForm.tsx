@@ -24,6 +24,7 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { cn } from "@/lib/utils";
 import { FileUpload } from '@/components/ui/file-upload';
 import { ConferenceSelector } from "@/components/ui/conference-selector";
+import { SchoolSelector } from "@/components/ui/school-selector";
 
 interface RecruiterFormProps {
   data: OnboardingData;
@@ -443,19 +444,18 @@ export default function RecruiterForm({ data, onInputChange }: RecruiterFormProp
           <p className="text-xs text-muted-foreground">{data.title.length}/{FIELD_LIMITS.TITLE} characters</p>
         </div>
         <div className="space-y-3">
-          <Label htmlFor="organizationName" className="text-base font-medium">School/Organization *</Label>
-          <Input
-            id="organizationName"
-            placeholder="e.g., University of Texas"
+          <SchoolSelector
             value={data.organizationName}
-            onChange={(e) => validateAndUpdateField('organizationName', e.target.value)}
-            className={`h-11 bg-background ${validationErrors.organizationName ? 'border-red-500' : ''}`}
-            maxLength={FIELD_LIMITS.ORGANIZATION_NAME}
+            onValueChange={(value) => validateAndUpdateField('organizationName', value)}
+            placeholder="Start typing school/organization..."
+            label="School/Organization"
+            required={true}
+            labelClassName="text-base font-medium"
+            description="Start typing to search - if your school isn't found, just type the full name"
           />
           {validationErrors.organizationName && (
             <p className="text-sm text-red-500">{validationErrors.organizationName}</p>
           )}
-          <p className="text-xs text-muted-foreground">{data.organizationName.length}/{FIELD_LIMITS.ORGANIZATION_NAME} characters</p>
         </div>
       </div>
 

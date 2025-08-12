@@ -1004,7 +1004,7 @@ export async function PUT(
       if (sanitizedData.secondarySports !== undefined) profileUpdateData.secondarySports = sanitizedData.secondarySports as string[];
       if (sanitizedData.graduationYear !== undefined) profileUpdateData.graduationYear = sanitizedData.graduationYear as number;
       if (sanitizedData.educationLevel !== undefined) profileUpdateData.educationLevel = sanitizedData.educationLevel as EducationLevel;
-      if (sanitizedData.organizationName !== undefined) profileUpdateData.organizationName = sanitizedData.organizationName as string;
+      if (sanitizedData.schoolId !== undefined) profileUpdateData.schoolId = sanitizedData.schoolId as number;
       if (sanitizedData.city !== undefined) profileUpdateData.city = sanitizedData.city as string;
       if (sanitizedData.state !== undefined) profileUpdateData.state = sanitizedData.state as string;
       if (sanitizedData.division !== undefined) profileUpdateData.division = (sanitizedData.division as string) || null;
@@ -1289,7 +1289,7 @@ export async function PUT(
       if (sanitizedData.fullName !== undefined) profileUpdateData.fullName = sanitizedData.fullName as string;
       if (sanitizedData.title !== undefined) profileUpdateData.title = sanitizedData.title as string;
       if (sanitizedData.sportCoaching !== undefined) profileUpdateData.sportCoaching = sanitizedData.sportCoaching as string;
-      if (sanitizedData.organizationName !== undefined) profileUpdateData.organizationName = sanitizedData.organizationName as string;
+      if (sanitizedData.schoolId !== undefined) profileUpdateData.schoolId = sanitizedData.schoolId as number;
       if (sanitizedData.city !== undefined) profileUpdateData.city = sanitizedData.city as string;
       if (sanitizedData.state !== undefined) profileUpdateData.state = sanitizedData.state as string;
       if (sanitizedData.division !== undefined) profileUpdateData.division = sanitizedData.division as string;
@@ -1362,7 +1362,7 @@ export async function PUT(
       if (sanitizedData.title !== undefined) profileUpdateData.title = sanitizedData.title as string;
       if (sanitizedData.sportRecruiting !== undefined) profileUpdateData.sportRecruiting = sanitizedData.sportRecruiting as string;
       if (sanitizedData.secondarySports !== undefined) profileUpdateData.secondarySports = sanitizedData.secondarySports as string[];
-      if (sanitizedData.organizationName !== undefined) profileUpdateData.organizationName = sanitizedData.organizationName as string;
+      if (sanitizedData.schoolId !== undefined) profileUpdateData.schoolId = sanitizedData.schoolId as number;
       if (sanitizedData.city !== undefined) profileUpdateData.city = sanitizedData.city as string;
       if (sanitizedData.state !== undefined) profileUpdateData.state = sanitizedData.state as string;
       if (sanitizedData.division !== undefined) profileUpdateData.division = sanitizedData.division as string;

@@ -2,7 +2,7 @@ import { auth, createClerkClient } from '@clerk/nextjs/server'
 import { NextRequest, NextResponse } from 'next/server'
 import { validateRoleAssignment, validateRoleEscalation } from '@/utils/validation'
 import { uploadProfilePicture, uploadOrganizationLogo } from '@/database/r2'
-import { onboardingOperations, adminOperations } from '@/database/db-utils'
+import { onboardingOperations, adminOperations, schoolOperations } from '@/database/db-utils'
 import { convertFormDataToProfileData } from '@/app/(onboarding)/lib/onboarding'
 import { FormValidator } from '@/app/(onboarding)/lib/form-validation'
 import { recruitingNeedsOperations } from '@/database/db-utils'
@@ -144,13 +144,29 @@ export async function POST(request: NextRequest) {
       if (isAdmin) {
         // For admin users, create demo profiles instead of regular profiles
         if (role === 'athlete') {
+          // Get or create school for demo profile
+          const educationLevelMap: { [key: string]: 'high_school' | 'college' | 'university' | 'professional' | 'other' } = {
+            'high_school': 'high_school',
+            'associate': 'college', 
+            'undergraduate': 'university',
+            'graduate': 'university'
+          };
+          
+          const educationLevel = profileData.educationLevel || 'undergraduate';
+          const schoolClassification = educationLevelMap[educationLevel] || 'university';
+          
+          const school = await schoolOperations.getOrCreateSchool(
+            profileData.organizationName || 'Unknown Institution',
+            schoolClassification
+          );
+
           result = await adminOperations.createDemoAthleteProfile(userId, {
             fullName: profileData.fullName,
             sport: profileData.sport!,
             secondarySports: profileData.secondarySports,
             graduationYear: profileData.graduationYear!,
-            educationLevel: profileData.educationLevel!,
-            organizationName: profileData.organizationName!,
+            educationLevel: educationLevel as 'high_school' | 'undergraduate' | 'graduate' | 'associate',
+            schoolId: school.id,
             city: profileData.city,
             country: profileData.country, // Country is required, no fallback
             state: profileData.state || null,
@@ -174,11 +190,17 @@ export async function POST(request: NextRequest) {
           profileId = result.id
           
         } else if (role === 'coach') {
+          // Get or create school for demo coach profile
+          const school = await schoolOperations.getOrCreateSchool(
+            profileData.organizationName || 'Unknown Institution',
+            'university' // Coaches are typically at universities
+          );
+
           result = await adminOperations.createDemoCoachProfile(userId, {
             fullName: profileData.fullName,
             title: profileData.title!,
             sportCoaching: profileData.sportCoaching!,
-            organizationName: profileData.organizationName!,
+            schoolId: school.id,
             division: profileData.division!,
             conference: profileData.conference,
             city: profileData.city,
@@ -206,12 +228,18 @@ export async function POST(request: NextRequest) {
           }
           
         } else if (role === 'recruiter') {
+          // Get or create school for demo recruiter profile
+          const school = await schoolOperations.getOrCreateSchool(
+            profileData.organizationName || 'Unknown Institution',
+            'university' // Recruiters are typically at universities
+          );
+
           result = await adminOperations.createDemoRecruitingProfile(userId, {
             fullName: profileData.fullName,
             title: profileData.title!,
             sportRecruiting: profileData.sportCoaching!,
             secondarySports: profileData.secondarySportsRecruiting,
-            organizationName: profileData.organizationName!,
+            schoolId: school.id,
             division: profileData.division!,
             conference: profileData.conference,
             city: profileData.city,
