@@ -379,13 +379,13 @@ function HeightWeightFilter({
           value={[minHeight]}
           onValueChange={(value: number[]) => onHeightChange(value[0])}
           min={60} // 5'0"
-          max={84} // 7'0"
+          max={96} // 8'0"
           step={1}
           className="w-full"
         />
         <div className="flex justify-between text-xs text-muted-foreground">
           <span>5&apos;0&quot;</span>
-          <span>7&apos;0&quot;</span>
+          <span>8&apos;0&quot;</span>
         </div>
       </div>
       
@@ -397,13 +397,13 @@ function HeightWeightFilter({
           value={[minWeight]}
           onValueChange={(value: number[]) => onWeightChange(value[0])}
           min={100}
-          max={350}
+          max={500}
           step={5}
           className="w-full"
         />
         <div className="flex justify-between text-xs text-muted-foreground">
           <span>100 lbs</span>
-          <span>350 lbs</span>
+          <span>500 lbs</span>
         </div>
       </div>
     </div>
@@ -1576,8 +1576,8 @@ function App() {
         setPendingRequests(data.incoming || []);
         setSentRequests(data.outgoing || []);
       }
-    } catch {
-      // Error handling without console.error for production
+    } catch (error) {
+      console.error('Error loading connections:', error);
     } finally {
       setLoading(false);
       loadingRef.current = false;
@@ -1650,8 +1650,8 @@ function App() {
             setPendingRequests(data.incoming || []);
             setSentRequests(data.outgoing || []);
           }
-        } catch {
-          // Error handling without console.error for production
+        } catch (error) {
+          console.error('Error in initial connections load:', error);
         } finally {
           setLoading(false);
           loadingRef.current = false;

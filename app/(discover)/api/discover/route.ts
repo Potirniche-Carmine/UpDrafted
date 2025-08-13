@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireAnyRole } from '@/utils/roles';
 import { db } from '@/database/db';
 import { users, athleteProfiles, coachProfiles, recruitingProfiles, connections, recruitingProfileNeeds, recruitingNeeds, schools } from '@/database/schema';
-import { and, eq, or, not, ilike, isNull, exists, ne } from 'drizzle-orm';
+import { and, eq, or, not, ilike, isNull, exists, ne, sql } from 'drizzle-orm';
 import { sanitizeText, sanitizeNumber } from '@/utils/sanitization';
 import { withRateLimit } from '@/utils/security';
 
@@ -51,8 +51,8 @@ async function parseSearchParams(request: NextRequest) {
       positions: searchParams.getAll('positions').map(p => sanitizeText(p)).filter(Boolean),
       graduatingClasses: searchParams.getAll('graduatingClasses').map(gc => sanitizeText(gc)).filter(Boolean),
       conferences: searchParams.getAll('conferences').map(c => sanitizeText(c)).filter(Boolean),
-      minHeight: sanitizeNumber(searchParams.get('minHeight'), 60, 84),
-      minWeight: sanitizeNumber(searchParams.get('minWeight'), 100, 350)
+      minHeight: sanitizeNumber(searchParams.get('minHeight'), 60, 96),
+      minWeight: sanitizeNumber(searchParams.get('minWeight'), 100, 500)
     };
   } else {
     // POST request - parse from body
@@ -109,11 +109,11 @@ async function parseSearchParams(request: NextRequest) {
       if (body.conferences !== undefined && !Array.isArray(body.conferences)) {
         throw new RequestValidationError('Invalid conferences: must be an array of strings');
       }
-      if (body.minHeight !== undefined && sanitizeNumber(body.minHeight, 60, 84) === null) {
-        throw new RequestValidationError('Invalid minHeight: must be a number between 60 and 84 inches');
+      if (body.minHeight !== undefined && sanitizeNumber(body.minHeight, 60, 96) === null) {
+        throw new RequestValidationError('Invalid minHeight: must be a number between 60 and 96 inches');
       }
-      if (body.minWeight !== undefined && sanitizeNumber(body.minWeight, 100, 350) === null) {
-        throw new RequestValidationError('Invalid minWeight: must be a number between 100 and 350 pounds');
+      if (body.minWeight !== undefined && sanitizeNumber(body.minWeight, 100, 500) === null) {
+        throw new RequestValidationError('Invalid minWeight: must be a number between 100 and 500 pounds');
       }
 
       if (sportsArray.length > MAX_FILTER_ITEMS) {
@@ -452,16 +452,35 @@ async function handleDiscoverRequest(request: NextRequest) {
 
     // Height filter - only for athletes
     if (minHeight && minHeight > 60) {
-      // Note: Height filtering will require custom logic to parse height strings like "6'2"" 
-      // For now, we'll skip this filter - it can be implemented later with proper parsing
-      // filterConditions.push(...);
+      filterConditions.push(
+        and(
+          not(isNull(athleteProfiles.userId)),
+          // Parse height strings like "6'2"" and filter by total inches
+          sql`CASE 
+            WHEN ${athleteProfiles.height} ~ '^[0-9]+''[0-9]+"$' THEN
+              CAST(SUBSTRING(${athleteProfiles.height} FROM '^([0-9]+)') AS INTEGER) * 12 + 
+              CAST(SUBSTRING(${athleteProfiles.height} FROM '''([0-9]+)') AS INTEGER)
+            ELSE 0
+          END >= ${minHeight}`
+        )
+      );
     }
 
     // Weight filter - only for athletes  
     if (minWeight && minWeight > 100) {
-      // Note: Weight filtering will require custom logic to parse weight strings like "180 lbs"
-      // For now, we'll skip this filter - it can be implemented later with proper parsing
-      // filterConditions.push(...);
+      filterConditions.push(
+        and(
+          not(isNull(athleteProfiles.userId)),
+          // Parse weight strings like "180 lbs" and filter by numeric value
+          sql`CASE 
+            WHEN ${athleteProfiles.weight} ~ '^[0-9]+ lbs$' THEN
+              CAST(SUBSTRING(${athleteProfiles.weight} FROM '^([0-9]+)') AS INTEGER)
+            WHEN ${athleteProfiles.weight} ~ '^[0-9]+$' THEN
+              CAST(${athleteProfiles.weight} AS INTEGER)
+            ELSE 0
+          END >= ${minWeight}`
+        )
+      );
     }
 
     // Combine all conditions
