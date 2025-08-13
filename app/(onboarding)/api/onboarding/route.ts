@@ -208,8 +208,8 @@ export async function POST(request: NextRequest) {
             state: profileData.state || null,
             programWebsite: profileData.programWebsite,
             schoolWebsite: profileData.schoolWebsite,
-            instagramHandle: profileData.orgInstagramHandle,
-            twitterHandle: profileData.orgTwitterHandle,
+            instagramHandle: profileData.instagramHandle,
+            twitterHandle: profileData.twitterHandle,
             personalStatement: profileData.personalStatement,
             profileImageR3Key,
             organizationLogoR3Key
@@ -247,8 +247,8 @@ export async function POST(request: NextRequest) {
             state: profileData.state || null,
             programWebsite: profileData.programWebsite,
             schoolWebsite: profileData.schoolWebsite,
-            instagramHandle: profileData.orgInstagramHandle,
-            twitterHandle: profileData.orgTwitterHandle,
+            instagramHandle: profileData.instagramHandle,
+            twitterHandle: profileData.twitterHandle,
             personalStatement: profileData.personalStatement,
             profileImageR3Key,
             organizationLogoR3Key

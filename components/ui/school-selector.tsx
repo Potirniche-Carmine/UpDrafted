@@ -219,7 +219,7 @@ export function SchoolSelector({
             }}
             placeholder={placeholder}
             disabled={disabled}
-            className={cn(height, "pl-10 bg-background", !value && "border-red-300")}
+            className={cn(height, "pl-10 bg-background")}
             autoComplete="off"
             required={required}
           />
