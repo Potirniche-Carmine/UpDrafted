@@ -101,6 +101,7 @@ export const athleteOperations = {
       where: eq(athleteProfiles.userId, userId),
       with: {
         user: true,
+        school: true,
         measurables: true,
         videos: {
           orderBy: [asc(athleteVideos.sortOrder)],
@@ -294,6 +295,7 @@ export const coachOperations = {
       where: eq(coachProfiles.userId, userId),
       with: {
         user: true,
+        school: true,
         recruitingNeeds: true
       }
     });
@@ -361,6 +363,7 @@ export const recruitingOperations = {
       where: eq(recruitingProfiles.userId, userId),
       with: {
         user: true,
+        school: true,
       }
     });
 
@@ -2205,6 +2208,46 @@ export const schoolOperations = {
       .replace(/^\s+/, '');
   },
 
+  // Calculate Levenshtein distance for string similarity
+  levenshteinDistance(str1: string, str2: string): number {
+    const matrix = Array(str2.length + 1).fill(null).map(() => Array(str1.length + 1).fill(null));
+    
+    for (let i = 0; i <= str1.length; i++) {
+      matrix[0][i] = i;
+    }
+    
+    for (let j = 0; j <= str2.length; j++) {
+      matrix[j][0] = j;
+    }
+    
+    for (let j = 1; j <= str2.length; j++) {
+      for (let i = 1; i <= str1.length; i++) {
+        const indicator = str1[i - 1] === str2[j - 1] ? 0 : 1;
+        matrix[j][i] = Math.min(
+          matrix[j][i - 1] + 1, // deletion
+          matrix[j - 1][i] + 1, // insertion
+          matrix[j - 1][i - 1] + indicator // substitution
+        );
+      }
+    }
+    
+    return matrix[str2.length][str1.length];
+  },
+
+  // Calculate similarity percentage between two strings
+  calculateSimilarity(str1: string, str2: string): number {
+    const normalized1 = this.normalizeSchoolName(str1);
+    const normalized2 = this.normalizeSchoolName(str2);
+    
+    if (normalized1 === normalized2) return 100;
+    
+    const maxLength = Math.max(normalized1.length, normalized2.length);
+    if (maxLength === 0) return 100;
+    
+    const distance = this.levenshteinDistance(normalized1, normalized2);
+    return ((maxLength - distance) / maxLength) * 100;
+  },
+
   // Find similar schools using fuzzy matching
   async findSimilarSchools(name: string, classification: 'high_school' | 'college' | 'university' | 'professional' | 'other'): Promise<typeof schools.$inferSelect[]> {
     const normalizedInput = this.normalizeSchoolName(name);
@@ -2261,17 +2304,32 @@ export const schoolOperations = {
       return exactMatch[0];
     }
 
-    // Check for similar schools to prevent duplicates
+    // Check for highly similar schools (99%+ similarity) to prevent duplicates
     const similarSchools = await this.findSimilarSchools(trimmedName, classification);
     
-    if (similarSchools.length > 0) {
-      // Log potential duplicates for monitoring (but don't block creation)
-      console.warn(`Potential duplicate school detected. Creating new school "${trimmedName}" despite similar existing schools:`, 
-        similarSchools.map(s => s.name)
+    for (const school of similarSchools) {
+      const similarity = this.calculateSimilarity(trimmedName, school.name);
+      
+      // If similarity is 99% or higher, return the existing school instead of creating a duplicate
+      if (similarity >= 99) {
+        console.log(`Using existing similar school: "${school.name}" for input "${trimmedName}" (${similarity.toFixed(1)}% similar)`);
+        return school;
+      }
+    }
+
+    // Log potential duplicates for monitoring if similarity is between 80-98%
+    const potentialDuplicates = similarSchools.filter(school => {
+      const similarity = this.calculateSimilarity(trimmedName, school.name);
+      return similarity >= 80 && similarity < 99;
+    });
+    
+    if (potentialDuplicates.length > 0) {
+      console.warn(`Creating new school "${trimmedName}" despite similar existing schools:`, 
+        potentialDuplicates.map(s => `${s.name} (${this.calculateSimilarity(trimmedName, s.name).toFixed(1)}% similar)`)
       );
     }
 
-    // Create new school if not found
+    // Create new school if no high similarity match found
     return await this.createSchool({
       name: trimmedName,
       classification,

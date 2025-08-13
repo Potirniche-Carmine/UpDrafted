@@ -132,6 +132,12 @@ export const useNotifications = () => {
       return;
     }
     
+    // Don't fetch if user is in onboarding (they don't have notifications yet)
+    if (pathname?.startsWith('/onboarding')) {
+      setUnreadCount(0);
+      return;
+    }
+    
     // Check if we need to respect cooldown
     const now = Date.now();
     const timeSinceLastFetch = now - lastFetchRef.current;
@@ -287,8 +293,8 @@ export const useNotifications = () => {
   }, [fetchWithToken]);
 
   return { 
-    // Return 0 for unread count when on notifications page to hide banner
-    unreadCount: isOnNotificationsPage ? 0 : unreadCount, 
+    // Return 0 for unread count when on notifications page or onboarding to hide banner
+    unreadCount: (isOnNotificationsPage || pathname?.startsWith('/onboarding')) ? 0 : unreadCount, 
     isFetching: isFetching || localIsFetching, 
     refetch, 
     setUnreadCount,
