@@ -537,7 +537,7 @@ export default function RecruiterForm({ data, onInputChange }: RecruiterFormProp
               value={data.division}
               onValueChange={(value) => onInputChange('division', value)}
             >
-              <SelectTrigger className="h-11 bg-background flex-1">
+              <SelectTrigger className="!h-11 bg-background border-input w-full max-w-full flex-1 min-w-0">
                 <SelectValue placeholder="Select division" />
               </SelectTrigger>
               <SelectContent>
@@ -594,7 +594,7 @@ export default function RecruiterForm({ data, onInputChange }: RecruiterFormProp
               value={data.state}
               onValueChange={(value) => onInputChange('state', value)}
             >
-              <SelectTrigger className="h-11 bg-background" style={{ height: '2.75rem' }}>
+              <SelectTrigger className="!h-11 bg-background border-input w-full">
                 <SelectValue placeholder="Select state" />
               </SelectTrigger>
               <SelectContent>
