@@ -934,9 +934,9 @@ export function RecruiterProfile({
       )}
 
       <div className="container py-4 md:py-6 lg:py-8 px-4 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 md:gap-6 lg:gap-8 max-w-screen-2xl mx-auto">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-2 lg:gap-6 xl:gap-8 max-w-screen-2xl mx-auto">
           {/* Sidebar - Basic Info */}
-          <div className="space-y-4 md:space-y-6">
+          <div className="space-y-2 lg:space-y-6 xl:space-y-8">
             {/* Profile Card */}
             <Card className="overflow-hidden">
               <CardContent className="p-4 md:p-6">
@@ -1190,6 +1190,30 @@ export function RecruiterProfile({
               </CardContent>
             </Card>
 
+            {/* Personal Statement - Mobile Only */}
+            {profileData.personalStatement && (
+              <Card className="lg:hidden">
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <CardTitle>About Recruiter {profileData.fullName.split(' ')[0]}</CardTitle>
+                    {effectiveIsOwnProfile && (
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => handleEditSection('personal-statement')}
+                      >
+                        <Edit className="w-4 h-4 mr-1" />
+                        Edit
+                      </Button>
+                    )}
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-muted-foreground leading-relaxed">{profileData.personalStatement}</p>
+                </CardContent>
+              </Card>
+            )}
+
             {/* Verification Section - Show for own profile or admin viewing */}
             {(effectiveIsOwnProfile || (effectiveRole && (hasPendingVerification !== undefined || hasRejectedVerification !== undefined))) && !isPreviewMode && (
               <RecruiterVerificationSection
@@ -1206,10 +1230,10 @@ export function RecruiterProfile({
           </div>
 
           {/* Main Content */}
-          <div className="xl:col-span-2 space-y-4 md:space-y-6 min-w-0">
-            {/* About Recruiter Section - uses personalStatement from database */}
+          <div className="lg:col-span-2 space-y-2 lg:space-y-6 xl:space-y-8 min-w-0">
+            {/* About Recruiter Section - Desktop Only */}
             {profileData.personalStatement ? (
-              <Card>
+              <Card className="hidden lg:block">
                 <CardHeader>
                   <div className="flex items-center justify-between">
                     <CardTitle>About Recruiter {profileData.fullName.split(' ')[0]}</CardTitle>
@@ -1230,7 +1254,7 @@ export function RecruiterProfile({
                 </CardContent>
               </Card>
             ) : effectiveIsOwnProfile && (
-              <Card>
+              <Card className="hidden lg:block">
                 <CardHeader>
                   <div className="flex items-center justify-between">
                     <CardTitle>About Recruiter {profileData.fullName.split(' ')[0]}</CardTitle>
