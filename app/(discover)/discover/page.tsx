@@ -131,12 +131,8 @@ const getPositionsForSports = (selectedSports: FilterOption[]): FilterOption[] =
     .sort((a, b) => a.label.localeCompare(b.label));
 };
 
-// Get ordered divisions with High School first (most common)
-const getOrderedDivisions = () => {
-  // Put High School first for all users since it's most common
-  const highSchoolFirst = ['High School', ...DIVISIONS.filter(d => d !== 'High School')];
-  return highSchoolFirst;
-};
+// Ordered divisions with High School first (most common)
+const ORDERED_DIVISIONS = ['High School', ...DIVISIONS.filter(d => d !== 'High School')];
 
 // Multi-select filter component
 interface MultiSelectFilterProps {
@@ -441,7 +437,7 @@ function SearchPageContent() {
     , []);
 
   const divisionsOptions = useMemo(() =>
-    getOrderedDivisions().map(division => ({
+    ORDERED_DIVISIONS.map((division: string) => ({
       value: division,
       label: division
     }))

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireAnyRole } from '@/utils/roles';
 import { db } from '@/database/db';
 import { users, athleteProfiles, coachProfiles, recruitingProfiles, connections, recruitingProfileNeeds, recruitingNeeds, schools } from '@/database/schema';
-import { and, eq, or, not, ilike, isNull, exists, ne, sql } from 'drizzle-orm';
+import { and, eq, or, not, ilike, isNull, exists, ne } from 'drizzle-orm';
 import { sanitizeText, sanitizeNumber } from '@/utils/sanitization';
 import { withRateLimit } from '@/utils/security';
 import { parseHeightToInches, parseWeightToPounds } from '@/database/secure-filters';
@@ -466,15 +466,14 @@ async function handleDiscoverRequest(request: NextRequest) {
 
     // Weight filter - only for athletes  
     if (minWeight && minWeight > 100) {
-      // Use a safer approach - filter for patterns that might contain weight info
-      // and do exact parsing post-query to avoid SQL injection
+      // Use safer approach - basic pattern filtering, then post-query validation
       filterConditions.push(
         and(
           not(isNull(athleteProfiles.userId)),
+          // Basic check for numeric patterns without SQL injection risk
           or(
             ilike(athleteProfiles.weight, "% lbs"),
-            // Also match pure numbers
-            sql`${athleteProfiles.weight} ~ '^[0-9]+$'`
+            ilike(athleteProfiles.weight, "% pounds")
           )
         )
       );

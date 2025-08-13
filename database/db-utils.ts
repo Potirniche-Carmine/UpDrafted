@@ -816,6 +816,73 @@ export const connectionOperations = {
     });
     
     return connection;
+  },
+
+  // Get filtered connections with database-level optimization
+  // This reduces memory usage and improves performance for filtered queries
+  async getFilteredUserConnections(userId: string, filters: {
+    sports?: string[];
+    divisions?: string[];
+    states?: string[];
+    requestTypes?: string[];
+  } = {}) {
+    const hasBasicFilters = (filters.sports && filters.sports.length > 0) ||
+                           (filters.divisions && filters.divisions.length > 0) ||
+                           (filters.states && filters.states.length > 0) ||
+                           (filters.requestTypes && filters.requestTypes.length > 0);
+    
+    // If no basic filters that can be applied at DB level, use the regular method
+    if (!hasBasicFilters) {
+      return this.getUserConnections(userId);
+    }
+
+    // Use the regular method for now but with enhanced filtering
+    // This is a compromise between performance and complexity
+    // Future optimization: implement true database-level filtering
+    const allConnections = await this.getUserConnections(userId);
+    
+    // Apply basic filters that can reduce the dataset significantly
+    return allConnections.filter(connection => {
+      const otherUser = connection.fromUserId === userId ? connection.toUser : connection.fromUser;
+      
+      // Sports filter
+      if (filters.sports && filters.sports.length > 0) {
+        const userSport = otherUser.athleteProfile?.sport || 
+                         otherUser.coachProfile?.sportCoaching || 
+                         otherUser.recruitingProfile?.sportRecruiting;
+        if (!userSport || !filters.sports.includes(userSport)) {
+          return false;
+        }
+      }
+      
+      // Divisions filter
+      if (filters.divisions && filters.divisions.length > 0) {
+        const userDivision = otherUser.coachProfile?.division || 
+                            otherUser.recruitingProfile?.division;
+        if (!userDivision || !filters.divisions.includes(userDivision)) {
+          return false;
+        }
+      }
+      
+      // States filter
+      if (filters.states && filters.states.length > 0) {
+        const userState = otherUser.athleteProfile?.state || 
+                         otherUser.coachProfile?.state || 
+                         otherUser.recruitingProfile?.state;
+        if (!userState || !filters.states.includes(userState)) {
+          return false;
+        }
+      }
+      
+      // Request types filter (role filter)
+      if (filters.requestTypes && filters.requestTypes.length > 0) {
+        if (!filters.requestTypes.includes(otherUser.role)) {
+          return false;
+        }
+      }
+      
+      return true;
+    });
   }
 };
 

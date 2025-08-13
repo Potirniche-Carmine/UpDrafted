@@ -4,31 +4,46 @@ import { sanitizeText } from '@/utils/sanitization';
 export function parseHeightToInches(heightStr: string | null | undefined): number | null {
   if (!heightStr || typeof heightStr !== 'string') return null;
   
-  // Trim whitespace
+  // Trim whitespace and normalize
   const trimmed = heightStr.trim();
   
+  // More restrictive regex patterns for better security
   // Match format like "6'2"" - exactly digits, apostrophe, digits, quote
-  const heightMatch = trimmed.match(/^(\d{1,2})'(\d{1,2})"$/);
-  if (!heightMatch) return null;
+  const heightMatchWithInches = trimmed.match(/^(\d{1,2})'(\d{1,2})"$/);
+  if (heightMatchWithInches) {
+    const feet = parseInt(heightMatchWithInches[1], 10);
+    const inches = parseInt(heightMatchWithInches[2], 10);
+    
+    // Validate reasonable ranges
+    if (feet < 3 || feet > 8 || inches < 0 || inches > 11) return null;
+    
+    return feet * 12 + inches;
+  }
   
-  const feet = parseInt(heightMatch[1], 10);
-  const inches = parseInt(heightMatch[2], 10);
+  // Match format like "6'" - just feet
+  const heightMatchFeetOnly = trimmed.match(/^(\d{1,2})'$/);
+  if (heightMatchFeetOnly) {
+    const feet = parseInt(heightMatchFeetOnly[1], 10);
+    
+    // Validate reasonable ranges
+    if (feet < 3 || feet > 8) return null;
+    
+    return feet * 12;
+  }
   
-  // Validate reasonable ranges
-  if (feet < 3 || feet > 8 || inches < 0 || inches > 11) return null;
-  
-  return feet * 12 + inches;
+  return null;
 }
 
 // Safe weight parsing helper - returns weight in pounds or null
 export function parseWeightToPounds(weightStr: string | null | undefined): number | null {
   if (!weightStr || typeof weightStr !== 'string') return null;
   
-  // Trim whitespace
+  // Trim whitespace and normalize
   const trimmed = weightStr.trim();
   
-  // Match format like "180 lbs" or just "180"
-  const weightMatch = trimmed.match(/^(\d{1,3})( lbs)?$/);
+  // More specific regex - match number followed by optional weight unit
+  // This prevents extracting random numbers from complex strings
+  const weightMatch = trimmed.match(/^(\d{1,3})(?:\s*(?:lbs?|pounds?))?$/i);
   if (!weightMatch) return null;
   
   const weight = parseInt(weightMatch[1], 10);

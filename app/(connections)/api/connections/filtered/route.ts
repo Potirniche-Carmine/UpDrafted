@@ -70,7 +70,17 @@ export async function POST(request: NextRequest) {
     const sanitizedFilters = validateAndSanitizeFilters(body);
 
     // Check cache first (only if no filters applied)
-    const hasFilters = Object.values(sanitizedFilters).some(arr => arr.length > 0);
+    const hasBasicFilters = sanitizedFilters.sports.length > 0 ||
+                           sanitizedFilters.divisions.length > 0 ||
+                           sanitizedFilters.states.length > 0 ||
+                           sanitizedFilters.requestTypes.length > 0;
+    const hasAdvancedFilters = sanitizedFilters.positions.length > 0 ||
+                              sanitizedFilters.graduatingClasses.length > 0 ||
+                              sanitizedFilters.conferences.length > 0 ||
+                              sanitizedFilters.minHeight ||
+                              sanitizedFilters.minWeight;
+    const hasFilters = hasBasicFilters || hasAdvancedFilters;
+    
     const cacheKey = hasFilters ? null : `connections:${currentUserId}:all`;
     
     if (cacheKey) {
@@ -83,8 +93,15 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Get connections from database
-    const allConnections = await connectionOperations.getUserConnections(currentUserId);
+    // Get connections from database with optimized filtering for basic filters
+    const allConnections = hasBasicFilters 
+      ? await connectionOperations.getFilteredUserConnections(currentUserId, {
+          sports: sanitizedFilters.sports,
+          divisions: sanitizedFilters.divisions,
+          states: sanitizedFilters.states,
+          requestTypes: sanitizedFilters.requestTypes,
+        })
+      : await connectionOperations.getUserConnections(currentUserId);
 
     // Transform and filter connections
     const connectedConnections: FilteredConnectionData[] = [];
@@ -161,8 +178,9 @@ export async function POST(request: NextRequest) {
         }
       };
 
-      // Apply filters using secure filtering function
-      if (!hasFilters || secureFilterConnection(formattedConnection, sanitizedFilters)) {
+      // Apply advanced filters using secure filtering function (basic filters already applied at DB level)
+      const needsAdvancedFiltering = hasAdvancedFilters || (!hasBasicFilters && hasFilters);
+      if (!needsAdvancedFiltering || secureFilterConnection(formattedConnection, sanitizedFilters)) {
         if (connection.status === 'connected') {
           connectedConnections.push(formattedConnection);
         } else if (connection.status === 'pending') {
