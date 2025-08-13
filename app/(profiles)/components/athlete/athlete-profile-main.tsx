@@ -332,7 +332,7 @@ function CampExperienceCard({ experiences, isOwnProfile, onEdit }: {
   }
 
     return (
-    <Card className="mb-4 w-full max-w-xs mx-auto sm:max-w-full sm:mx-0 min-h-[260px]">
+    <Card className="w-full min-h-[260px]">
       <CardContent className="p-4">
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-3">
@@ -1032,11 +1032,11 @@ export function AthleteProfile({
       />
 
       <div className="container py-4 md:py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-2 lg:gap-6 xl:gap-8">
           {/* Sidebar - Basic Info */}
-          <div className="space-y-4 md:space-y-6">
+          <div className="space-y-2 lg:space-y-4 xl:space-y-6">
             {/* Profile Card */}
-            <Card className="w-full max-w-xs mx-auto sm:max-w-full sm:mx-0 min-h-[260px]">
+            <Card className="w-full min-h-[260px]">
               <CardContent className="p-4 md:p-6">
                 <div className="text-center">
                   <div className="relative w-24 h-24 md:w-32 md:h-32 mx-auto mb-4 flex-shrink-0">
@@ -1223,35 +1223,35 @@ export function AthleteProfile({
                 />
               </CardContent>
             </Card>
-            {/* Camp Experience / Club Card */}
-            <CampExperienceCard 
-              experiences={campExperience} 
-              isOwnProfile={effectiveIsOwnProfile}
-              onEdit={() => handleEditSection('camp-experience')}
-            />
-            {/* Academic Summary Card */}
-            <div className="w-full max-w-xs mx-auto sm:max-w-full sm:mx-0 min-h-[260px]">
-              <AcademicSummaryCard
-                gpa={safeProfileData.gpa}
-                satScore={safeProfileData.satScore}
-                actScore={safeProfileData.actScore}
-                intendedMajor={safeProfileData.intendedMajor}
-                educationLevel={safeProfileData.educationLevel}
-                isOwnProfile={effectiveIsOwnProfile}
-                onEditSection={handleEditSection}
-              />
-            </div>
-          </div>
 
-          {/* Main Content */}
-          <div className="lg:col-span-2 space-y-6 md:space-y-8">
-            {/* Personal Statement */}
-            {safeProfileData.personalStatement ? (
-              <Card>
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <CardTitle>About {safeProfileData.fullName.split(' ')[0]}</CardTitle>
-                    {effectiveIsOwnProfile && (
+            {/* Personal Statement - Mobile Only */}
+            <div className="lg:hidden">
+              {safeProfileData.personalStatement ? (
+                <Card className="w-full">
+                  <CardHeader>
+                    <div className="flex items-center justify-between">
+                      <CardTitle>About {safeProfileData.fullName.split(' ')[0]}</CardTitle>
+                      {effectiveIsOwnProfile && (
+                        <Button 
+                          size="sm" 
+                          variant="ghost"
+                          onClick={() => handleEditSection('personal-statement')}
+                        >
+                          <Edit className="w-4 h-4 mr-1" />
+                          Edit
+                        </Button>
+                      )}
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-muted-foreground leading-relaxed">{safeProfileData.personalStatement}</p>
+                  </CardContent>
+                </Card>
+              ) : effectiveIsOwnProfile && (
+                <Card className="w-full">
+                  <CardHeader>
+                    <div className="flex items-center justify-between">
+                      <CardTitle>About {safeProfileData.fullName.split(' ')[0]}</CardTitle>
                       <Button 
                         size="sm" 
                         variant="ghost"
@@ -1260,47 +1260,107 @@ export function AthleteProfile({
                         <Edit className="w-4 h-4 mr-1" />
                         Edit
                       </Button>
-                    )}
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-muted-foreground leading-relaxed">{safeProfileData.personalStatement}</p>
-                </CardContent>
-              </Card>
-            ) : effectiveIsOwnProfile && (
-              <Card>
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <CardTitle>About {safeProfileData.fullName.split(' ')[0]}</CardTitle>
-                    <Button 
-                      size="sm" 
-                      variant="ghost"
-                      onClick={() => handleEditSection('personal-statement')}
-                    >
-                      <Edit className="w-4 h-4 mr-1" />
-                      Edit
-                    </Button>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="bg-muted/50 rounded-lg p-6">
-                    <div className="text-center">
-                      <p className="font-medium text-muted-foreground mb-2">No Personal Statement Added</p>
-                      <p className="text-sm text-muted-foreground mb-4">
-                        Tell coaches and recruiters about yourself, your goals, and what makes you unique
-                      </p>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="bg-muted/50 rounded-lg p-6">
+                      <div className="text-center">
+                        <p className="font-medium text-muted-foreground mb-2">No Personal Statement Added</p>
+                        <p className="text-sm text-muted-foreground mb-4">
+                          Tell coaches and recruiters about yourself, your goals, and what makes you unique
+                        </p>
+                        <Button 
+                          variant="outline"
+                          onClick={() => handleEditSection('personal-statement')}
+                        >
+                          <Plus className="w-4 h-4 mr-2" />
+                          Add Personal Statement
+                        </Button>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+
+            {/* Camp Experience / Club Card */}
+            <CampExperienceCard 
+              experiences={campExperience} 
+              isOwnProfile={effectiveIsOwnProfile}
+              onEdit={() => handleEditSection('camp-experience')}
+            />
+            {/* Academic Summary Card */}
+            <AcademicSummaryCard
+              gpa={safeProfileData.gpa}
+              satScore={safeProfileData.satScore}
+              actScore={safeProfileData.actScore}
+              intendedMajor={safeProfileData.intendedMajor}
+              educationLevel={safeProfileData.educationLevel}
+              isOwnProfile={effectiveIsOwnProfile}
+              onEditSection={handleEditSection}
+            />
+          </div>
+
+          {/* Main Content */}
+          <div className="lg:col-span-2 space-y-2 lg:space-y-6 xl:space-y-8">
+            {/* Personal Statement - Desktop Only */}
+            <div className="hidden lg:block">
+              {safeProfileData.personalStatement ? (
+                <Card>
+                  <CardHeader>
+                    <div className="flex items-center justify-between">
+                      <CardTitle>About {safeProfileData.fullName.split(' ')[0]}</CardTitle>
+                      {effectiveIsOwnProfile && (
+                        <Button 
+                          size="sm" 
+                          variant="ghost"
+                          onClick={() => handleEditSection('personal-statement')}
+                        >
+                          <Edit className="w-4 h-4 mr-1" />
+                          Edit
+                        </Button>
+                      )}
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-muted-foreground leading-relaxed">{safeProfileData.personalStatement}</p>
+                  </CardContent>
+                </Card>
+              ) : effectiveIsOwnProfile && (
+                <Card>
+                  <CardHeader>
+                    <div className="flex items-center justify-between">
+                      <CardTitle>About {safeProfileData.fullName.split(' ')[0]}</CardTitle>
                       <Button 
-                        variant="outline"
+                        size="sm" 
+                        variant="ghost"
                         onClick={() => handleEditSection('personal-statement')}
                       >
-                        <Plus className="w-4 h-4 mr-2" />
-                        Add Personal Statement
+                        <Edit className="w-4 h-4 mr-1" />
+                        Edit
                       </Button>
                     </div>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
+                  </CardHeader>
+                  <CardContent>
+                    <div className="bg-muted/50 rounded-lg p-6">
+                      <div className="text-center">
+                        <p className="font-medium text-muted-foreground mb-2">No Personal Statement Added</p>
+                        <p className="text-sm text-muted-foreground mb-4">
+                          Tell coaches and recruiters about yourself, your goals, and what makes you unique
+                        </p>
+                        <Button 
+                          variant="outline"
+                          onClick={() => handleEditSection('personal-statement')}
+                        >
+                          <Plus className="w-4 h-4 mr-2" />
+                          Add Personal Statement
+                        </Button>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
 
             {/* Measurements - Combined with sport selector */}
             <MeasurablesSection

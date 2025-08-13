@@ -50,7 +50,7 @@ export function SchoolSelector({
   disabled = false,
   labelClassName = "text-sm font-medium",
   description,
-  height = "h-11",
+  height = "!h-11",
   educationLevel,
   onError,
 }: SchoolSelectorProps) {
@@ -69,9 +69,12 @@ export function SchoolSelector({
     setInputValue(value);
   }, [value]);
 
+  // Track if the user has started typing (to avoid API calls on initial load)
+  const [hasUserStartedTyping, setHasUserStartedTyping] = useState(false);
+
   // Search schools when input value changes
   useEffect(() => {
-    if (inputValue.length < 2) {
+    if (inputValue.length < 2 || !hasUserStartedTyping) {
       setSuggestions([]);
       setShowSuggestions(false);
       return;
@@ -116,11 +119,12 @@ export function SchoolSelector({
 
     const debounceTimer = setTimeout(searchSchools, 300);
     return () => clearTimeout(debounceTimer);
-  }, [inputValue, educationLevel, onError]);
+  }, [inputValue, educationLevel, onError, hasUserStartedTyping]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newValue = e.target.value;
     setInputValue(newValue);
+    setHasUserStartedTyping(true); // Mark that user has started typing
     // Clear error message when user starts typing
     if (errorMessage) {
       setErrorMessage(null);

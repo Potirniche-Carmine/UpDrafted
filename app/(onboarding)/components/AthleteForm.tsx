@@ -447,7 +447,7 @@ export default function AthleteForm({ data, onInputChange }: AthleteFormProps) {
           
           setValidationErrors(newErrors);
         }}>
-          <SelectTrigger className="h-11 bg-background">
+          <SelectTrigger className="!h-11 w-full bg-background">
             <SelectValue placeholder="Are you a high school or college athlete?" />
           </SelectTrigger>
           <SelectContent>
@@ -635,7 +635,7 @@ export default function AthleteForm({ data, onInputChange }: AthleteFormProps) {
         )}
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="space-y-3">
           <Label className="text-base font-medium">Height *</Label>
           <div className="flex gap-1.5">
@@ -687,7 +687,6 @@ export default function AthleteForm({ data, onInputChange }: AthleteFormProps) {
             </SelectContent>
           </Select>
         </div>
-        <div></div>
       </div>
 
       {/* Academic Information with conditional SAT/ACT */}

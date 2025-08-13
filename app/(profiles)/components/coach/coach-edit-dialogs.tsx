@@ -624,7 +624,7 @@ export function CoachEditDialogs({
             <div className="space-y-2">
               <Label htmlFor="sportCoaching">Sport *</Label>
               <Select value={editData.sportCoaching || ''} onValueChange={(value) => handleFieldChange('sportCoaching', value)}>
-                <SelectTrigger className={validationErrors.sportCoaching ? 'border-red-500' : ''}>
+                                <SelectTrigger className={`!h-11 w-full ${validationErrors.sportCoaching ? 'border-red-500' : ''}`}>
                   <SelectValue placeholder="Select sport" />
                 </SelectTrigger>
                 <SelectContent className="z-[70]">
@@ -639,7 +639,7 @@ export function CoachEditDialogs({
             <div className="space-y-2">
               <Label htmlFor="division">Division</Label>
               <Select value={editData.division || ''} onValueChange={(value) => handleFieldChange('division', value)}>
-                <SelectTrigger>
+                <SelectTrigger className="!h-11 w-full">
                   <SelectValue placeholder="Select division" />
                 </SelectTrigger>
                 <SelectContent className="z-[70]">
@@ -671,7 +671,7 @@ export function CoachEditDialogs({
                 value={String(editData.country || '')}
                 onValueChange={(value) => setEditData(prev => ({ ...prev, country: value }))}
               >
-                <SelectTrigger className="h-12" id="edit-country">
+                <SelectTrigger className="!h-11 w-full" id="edit-country">
                   <SelectValue placeholder="Select country" />
                 </SelectTrigger>
                 <SelectContent className="z-[70]">
@@ -681,14 +681,14 @@ export function CoachEditDialogs({
                 </SelectContent>
               </Select>
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="edit-city">City *</Label>
                 <Input
                   id="edit-city"
                   value={editData.city || ''}
                   onChange={(e) => handleFieldChange('city', e.target.value)}
-                  className="h-12"
+                  className="h-11 w-full"
                 />
                 {validationErrors.city && <p className="text-red-500 text-sm">{validationErrors.city}</p>}
               </div>
@@ -700,7 +700,7 @@ export function CoachEditDialogs({
                     value={String(editData.state || '')}
                     onValueChange={(value) => setEditData(prev => ({ ...prev, state: value }))}
                   >
-                    <SelectTrigger className="h-12" id="edit-state">
+                    <SelectTrigger className="!h-11 w-full" id="edit-state">
                       <SelectValue placeholder="Select state" />
                     </SelectTrigger>
                     <SelectContent className="z-[70]">
@@ -795,7 +795,7 @@ export function CoachEditDialogs({
                   ))}
                 </div>
                 <Select onValueChange={(value) => addPosition(value)}>
-                  <SelectTrigger className={`${(!editData.positions || editData.positions.length === 0) && validationErrors.positions ? 'border-red-300' : ''}`}>
+                  <SelectTrigger className={`!h-11 w-full ${(!editData.positions || editData.positions.length === 0) && validationErrors.positions ? 'border-red-300' : ''}`}>
                     <SelectValue placeholder="Select a position to add" />
                   </SelectTrigger>
                   <SelectContent className="z-[70]">
@@ -1067,7 +1067,7 @@ export function CoachEditDialogs({
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent 
-        className="max-w-2xl max-h-[90vh] sm:max-h-[80vh] overflow-y-auto w-[95vw] sm:w-full"
+        className="max-w-2xl max-h-[90vh] sm:max-h-[80vh] overflow-y-auto w-[95vw] sm:w-full flex flex-col"
         onOpenAutoFocus={e => e.preventDefault()}
       >
         <DialogHeader>
