@@ -1,6 +1,18 @@
 import { sanitizeText } from '@/utils/sanitization';
 
+/**
+ * This file contains secure filtering functions for client-side data processing.
+ * 
+ * For database queries, prefer using parameterized Drizzle queries with proper
+ * SQL operators like arrayOverlaps() for array filtering and sql`` templates
+ * for complex expressions to prevent SQL injection.
+ * 
+ * These functions are primarily used for post-fetch filtering in cases where
+ * database-level filtering isn't practical (e.g., connections filtering).
+ */
+
 // Safe height parsing helper - returns total inches or null
+// Note: This is for client-side filtering only. For database queries, use SQL expressions.
 export function parseHeightToInches(heightStr: string | null | undefined): number | null {
   if (!heightStr || typeof heightStr !== 'string') return null;
   
@@ -35,14 +47,15 @@ export function parseHeightToInches(heightStr: string | null | undefined): numbe
 }
 
 // Safe weight parsing helper - returns weight in pounds or null
+// Note: This is for client-side filtering only. For database queries, use SQL expressions.
 export function parseWeightToPounds(weightStr: string | null | undefined): number | null {
   if (!weightStr || typeof weightStr !== 'string') return null;
   
   // Trim whitespace and normalize
   const trimmed = weightStr.trim();
   
-  // More specific regex - match number followed by optional weight unit
-  // This prevents extracting random numbers from complex strings
+  // Simplified regex - match number followed by optional weight unit
+  // This prevents ReDoS attacks by avoiding nested quantifiers
   const weightMatch = trimmed.match(/^(\d{1,3})(?:\s*(?:lbs?|pounds?))?$/i);
   if (!weightMatch) return null;
   
@@ -186,8 +199,9 @@ export function secureFilterConnection(
       return false;
     }
     const userPositions = otherUser.positions
-      .filter((pos: unknown) => typeof pos === 'string')
-      .map((pos: string) => sanitizeText(pos));
+      .filter((pos: unknown) => typeof pos === 'string' && pos)
+      .map((pos: string) => sanitizeText(pos))
+      .filter(Boolean);
     
     if (!userPositions.some((pos: string) => filters.positions.includes(pos))) {
       return false;
@@ -197,7 +211,7 @@ export function secureFilterConnection(
   // Graduating classes filter - validate input and user role
   if (filters.graduatingClasses.length > 0 && otherUser.role === 'athlete') {
     const graduationYear = otherUser.graduationYear;
-    if (typeof graduationYear !== 'number' || graduationYear === null ||
+    if (typeof graduationYear !== 'number' || graduationYear === null || graduationYear === undefined ||
         !filters.graduatingClasses.includes(graduationYear.toString())) {
       return false;
     }

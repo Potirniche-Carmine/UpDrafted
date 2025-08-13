@@ -2,10 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireAnyRole } from '@/utils/roles';
 import { db } from '@/database/db';
 import { users, athleteProfiles, coachProfiles, recruitingProfiles, connections, recruitingProfileNeeds, recruitingNeeds, schools } from '@/database/schema';
-import { and, eq, or, not, ilike, isNull, exists, ne } from 'drizzle-orm';
+import { and, eq, or, not, ilike, isNull, exists, ne, arrayOverlaps, sql } from 'drizzle-orm';
 import { sanitizeText, sanitizeNumber } from '@/utils/sanitization';
 import { withRateLimit } from '@/utils/security';
-import { parseHeightToInches, parseWeightToPounds } from '@/database/secure-filters';
 
 // Force Node.js runtime
 export const runtime = 'nodejs';
@@ -332,33 +331,33 @@ async function handleDiscoverRequest(request: NextRequest) {
     // Always exclude demo profiles from discover results
     // This will be handled in the query where clause based on which tables are joined
 
-    // Search conditions with sanitized input
+    // Search conditions with parameterized queries to prevent SQL injection
     const searchConditions = query ? [
       or(
         and(
           not(isNull(athleteProfiles.userId)),
           or(
-            ilike(athleteProfiles.fullName, `%${query}%`),
-            ilike(schools.name, `%${query}%`),
-            ilike(athleteProfiles.sport, `%${query}%`)
+            ilike(athleteProfiles.fullName, sql`${'%' + query + '%'}`),
+            ilike(schools.name, sql`${'%' + query + '%'}`),
+            ilike(athleteProfiles.sport, sql`${'%' + query + '%'}`)
           )
         ),
         and(
           not(isNull(coachProfiles.userId)),
           or(
-            ilike(coachProfiles.fullName, `%${query}%`),
-            ilike(schools.name, `%${query}%`),
-            ilike(coachProfiles.sportCoaching, `%${query}%`),
-            ilike(coachProfiles.title, `%${query}%`)
+            ilike(coachProfiles.fullName, sql`${'%' + query + '%'}`),
+            ilike(schools.name, sql`${'%' + query + '%'}`),
+            ilike(coachProfiles.sportCoaching, sql`${'%' + query + '%'}`),
+            ilike(coachProfiles.title, sql`${'%' + query + '%'}`)
           )
         ),
         and(
           not(isNull(recruitingProfiles.userId)),
           or(
-            ilike(recruitingProfiles.fullName, `%${query}%`),
-            ilike(schools.name, `%${query}%`),
-            ilike(recruitingProfiles.sportRecruiting, `%${query}%`),
-            ilike(recruitingProfiles.title, `%${query}%`)
+            ilike(recruitingProfiles.fullName, sql`${'%' + query + '%'}`),
+            ilike(schools.name, sql`${'%' + query + '%'}`),
+            ilike(recruitingProfiles.sportRecruiting, sql`${'%' + query + '%'}`),
+            ilike(recruitingProfiles.title, sql`${'%' + query + '%'}`)
           )
         )
       )
@@ -418,12 +417,7 @@ async function handleDiscoverRequest(request: NextRequest) {
       filterConditions.push(
         and(
           not(isNull(athleteProfiles.userId)),
-          or(
-            // Check if any of the athlete's positions match the selected positions
-            ...positions.map((position: string) => 
-              ilike(athleteProfiles.positions, `%${position}%`)
-            )
-          )
+          arrayOverlaps(athleteProfiles.positions, positions)
         )
       );
     }
@@ -451,30 +445,39 @@ async function handleDiscoverRequest(request: NextRequest) {
       );
     }
 
-    // Height filter - only for athletes
+    // Height filter - only for athletes with proper database-level filtering
     if (minHeight && minHeight > 60) {
-      // Use a safer approach - filter for patterns that might contain height info
-      // and do exact parsing post-query to avoid SQL injection
+      // Convert height directly in database using SQL for better performance
       filterConditions.push(
         and(
           not(isNull(athleteProfiles.userId)),
-          // Basic format check without SQL injection risk
-          ilike(athleteProfiles.height, "%'%\"")
+          sql`(
+            CASE 
+              WHEN ${athleteProfiles.height} ~ '^[0-9]{1,2}''[0-9]{1,2}"$' THEN
+                CAST(SPLIT_PART(${athleteProfiles.height}, '''', 1) AS INTEGER) * 12 + 
+                CAST(REPLACE(SPLIT_PART(${athleteProfiles.height}, '''', 2), '"', '') AS INTEGER)
+              WHEN ${athleteProfiles.height} ~ '^[0-9]{1,2}''$' THEN
+                CAST(REPLACE(${athleteProfiles.height}, '''', '') AS INTEGER) * 12
+              ELSE NULL
+            END
+          ) >= ${minHeight}`
         )
       );
     }
 
-    // Weight filter - only for athletes  
+    // Weight filter - only for athletes with proper database-level filtering  
     if (minWeight && minWeight > 100) {
-      // Use safer approach - basic pattern filtering, then post-query validation
+      // Convert weight directly in database using SQL for better performance
       filterConditions.push(
         and(
           not(isNull(athleteProfiles.userId)),
-          // Basic check for numeric patterns without SQL injection risk
-          or(
-            ilike(athleteProfiles.weight, "% lbs"),
-            ilike(athleteProfiles.weight, "% pounds")
-          )
+          sql`(
+            CASE 
+              WHEN ${athleteProfiles.weight} ~ '^[0-9]{1,3}$' THEN
+                CAST(${athleteProfiles.weight} AS INTEGER)
+              ELSE NULL
+            END
+          ) >= ${minWeight}`
         )
       );
     }
@@ -623,7 +626,7 @@ async function handleDiscoverRequest(request: NextRequest) {
     });
 
     // Process results using a similar approach as the connections API
-    let processedResults = results.map(user => {
+    const processedResults = results.map(user => {
       // Determine which profile to use
       const userRole = user.role;
       let userProfileData: {
@@ -744,31 +747,8 @@ async function handleDiscoverRequest(request: NextRequest) {
       };
     });
 
-    // Apply post-query filtering for height and weight using safe parsing
-    if ((minHeight && minHeight > 60) || (minWeight && minWeight > 100)) {
-      processedResults = processedResults.filter(user => {
-        // Only filter athletes
-        if (user.role !== 'athlete') return true;
-
-        // Height filter
-        if (minHeight && minHeight > 60) {
-          const userHeightInches = parseHeightToInches(user.height);
-          if (userHeightInches === null || userHeightInches < minHeight) {
-            return false;
-          }
-        }
-
-        // Weight filter
-        if (minWeight && minWeight > 100) {
-          const userWeightPounds = parseWeightToPounds(user.weight);
-          if (userWeightPounds === null || userWeightPounds < minWeight) {
-            return false;
-          }
-        }
-
-        return true;
-      });
-    }
+    // Note: Height and weight filtering is now done at the database level for better performance
+    // No post-query filtering needed for these fields anymore
 
     // Set security headers
     const headers = new Headers({
