@@ -4,6 +4,7 @@ import { connectionOperations } from '@/database/db-utils';
 import { sanitizeText } from '@/utils/sanitization';
 import { withRateLimit } from '@/utils/security';
 import { getCachedWithType, setCachedWithType, createErrorResponse, createSuccessResponse } from '@/utils/security';
+import { validateAndSanitizeFilters, secureFilterConnection } from '@/database/secure-filters';
 
 export const runtime = 'nodejs';
 
@@ -51,107 +52,6 @@ interface FilteredConnectionsResponse {
   };
 }
 
-// Helper function to check if connection matches filters
-function matchesFilters(
-  connection: FilteredConnectionData,
-  filters: {
-    sports?: string[];
-    divisions?: string[];
-    countries?: string[];
-    states?: string[];
-    positions?: string[];
-    graduatingClasses?: string[];
-    conferences?: string[];
-    requestTypes?: string[];
-    minHeight?: number;
-    minWeight?: number;
-  }
-): boolean {
-  const { otherUser } = connection;
-
-  // Sports filter
-  if (filters.sports && filters.sports.length > 0) {
-    if (!otherUser.sport || !filters.sports.includes(otherUser.sport)) {
-      return false;
-    }
-  }
-
-  // Divisions filter
-  if (filters.divisions && filters.divisions.length > 0) {
-    if (!otherUser.division || !filters.divisions.includes(otherUser.division)) {
-      return false;
-    }
-  }
-
-  // Countries filter
-  if (filters.countries && filters.countries.length > 0) {
-    // For connections, we assume most are US-based unless specified
-    const userCountry = otherUser.country || 'United States';
-    if (!filters.countries.includes(userCountry)) {
-      return false;
-    }
-  }
-
-  // States filter (only if US is selected in countries)
-  if (filters.states && filters.states.length > 0) {
-    const userCountry = otherUser.country || 'United States';
-    if (userCountry === 'United States') {
-      if (!otherUser.state || !filters.states.includes(otherUser.state)) {
-        return false;
-      }
-    }
-  }
-
-  // Positions filter (only for athletes)
-  if (filters.positions && filters.positions.length > 0 && otherUser.role === 'athlete') {
-    if (!otherUser.positions || !otherUser.positions.some(pos => filters.positions!.includes(pos))) {
-      return false;
-    }
-  }
-
-  // Graduating classes filter (only for athletes)
-  if (filters.graduatingClasses && filters.graduatingClasses.length > 0 && otherUser.role === 'athlete') {
-    if (!otherUser.graduationYear || !filters.graduatingClasses.includes(otherUser.graduationYear.toString())) {
-      return false;
-    }
-  }
-
-  // Request types filter (filter by role)
-  if (filters.requestTypes && filters.requestTypes.length > 0) {
-    if (!filters.requestTypes.includes(otherUser.role)) {
-      return false;
-    }
-  }
-
-  // Height filter (only for athletes, admin only feature)
-  if (filters.minHeight && otherUser.role === 'athlete' && otherUser.height) {
-    // Parse height string like "6'2"" to inches
-    const heightMatch = otherUser.height.match(/(\d+)'(\d+)"/);
-    if (heightMatch) {
-      const feet = parseInt(heightMatch[1]);
-      const inches = parseInt(heightMatch[2]);
-      const totalInches = feet * 12 + inches;
-      if (totalInches < filters.minHeight) {
-        return false;
-      }
-    }
-  }
-
-  // Weight filter (only for athletes, admin only feature)
-  if (filters.minWeight && otherUser.role === 'athlete' && otherUser.weight) {
-    // Parse weight string like "185 lbs" to number
-    const weightMatch = otherUser.weight.match(/(\d+)/);
-    if (weightMatch) {
-      const weight = parseInt(weightMatch[1]);
-      if (weight < filters.minWeight) {
-        return false;
-      }
-    }
-  }
-
-  return true;
-}
-
 // Get filtered user's connections
 export async function POST(request: NextRequest) {
   try {
@@ -165,34 +65,9 @@ export async function POST(request: NextRequest) {
     const rateLimitCheck = await withRateLimit(request, 'connections', currentUserId, role);
     if (!rateLimitCheck.success) return rateLimitCheck.response;
 
-    // Parse filters from request body
+    // Parse filters from request body and validate/sanitize them
     const body = await request.json();
-    const {
-      sports = [],
-      divisions = [],
-      countries = [],
-      states = [],
-      positions = [],
-      graduatingClasses = [],
-      conferences = [],
-      requestTypes = [],
-      minHeight,
-      minWeight
-    } = body;
-
-    // Sanitize filter inputs
-    const sanitizedFilters = {
-      sports: sports.map((s: string) => sanitizeText(s)),
-      divisions: divisions.map((d: string) => sanitizeText(d)),
-      countries: countries.map((c: string) => sanitizeText(c)),
-      states: states.map((s: string) => sanitizeText(s)),
-      positions: positions.map((p: string) => sanitizeText(p)),
-      graduatingClasses: graduatingClasses.map((gc: string) => sanitizeText(gc)),
-      conferences: conferences.map((c: string) => sanitizeText(c)),
-      requestTypes: requestTypes.map((rt: string) => sanitizeText(rt)),
-      minHeight: typeof minHeight === 'number' ? minHeight : undefined,
-      minWeight: typeof minWeight === 'number' ? minWeight : undefined
-    };
+    const sanitizedFilters = validateAndSanitizeFilters(body);
 
     // Check cache first (only if no filters applied)
     const hasFilters = Object.values(sanitizedFilters).some(arr => arr.length > 0);
@@ -286,8 +161,8 @@ export async function POST(request: NextRequest) {
         }
       };
 
-      // Apply filters
-      if (!hasFilters || matchesFilters(formattedConnection, sanitizedFilters)) {
+      // Apply filters using secure filtering function
+      if (!hasFilters || secureFilterConnection(formattedConnection, sanitizedFilters)) {
         if (connection.status === 'connected') {
           connectedConnections.push(formattedConnection);
         } else if (connection.status === 'pending') {

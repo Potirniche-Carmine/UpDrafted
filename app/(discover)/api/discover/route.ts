@@ -5,6 +5,7 @@ import { users, athleteProfiles, coachProfiles, recruitingProfiles, connections,
 import { and, eq, or, not, ilike, isNull, exists, ne, sql } from 'drizzle-orm';
 import { sanitizeText, sanitizeNumber } from '@/utils/sanitization';
 import { withRateLimit } from '@/utils/security';
+import { parseHeightToInches, parseWeightToPounds } from '@/database/secure-filters';
 
 // Force Node.js runtime
 export const runtime = 'nodejs';
@@ -452,33 +453,29 @@ async function handleDiscoverRequest(request: NextRequest) {
 
     // Height filter - only for athletes
     if (minHeight && minHeight > 60) {
+      // Use a safer approach - filter for patterns that might contain height info
+      // and do exact parsing post-query to avoid SQL injection
       filterConditions.push(
         and(
           not(isNull(athleteProfiles.userId)),
-          // Parse height strings like "6'2"" and filter by total inches
-          sql`CASE 
-            WHEN ${athleteProfiles.height} ~ '^[0-9]+''[0-9]+"$' THEN
-              CAST(SUBSTRING(${athleteProfiles.height} FROM '^([0-9]+)') AS INTEGER) * 12 + 
-              CAST(SUBSTRING(${athleteProfiles.height} FROM '''([0-9]+)') AS INTEGER)
-            ELSE 0
-          END >= ${minHeight}`
+          // Basic format check without SQL injection risk
+          ilike(athleteProfiles.height, "%'%\"")
         )
       );
     }
 
     // Weight filter - only for athletes  
     if (minWeight && minWeight > 100) {
+      // Use a safer approach - filter for patterns that might contain weight info
+      // and do exact parsing post-query to avoid SQL injection
       filterConditions.push(
         and(
           not(isNull(athleteProfiles.userId)),
-          // Parse weight strings like "180 lbs" and filter by numeric value
-          sql`CASE 
-            WHEN ${athleteProfiles.weight} ~ '^[0-9]+ lbs$' THEN
-              CAST(SUBSTRING(${athleteProfiles.weight} FROM '^([0-9]+)') AS INTEGER)
-            WHEN ${athleteProfiles.weight} ~ '^[0-9]+$' THEN
-              CAST(${athleteProfiles.weight} AS INTEGER)
-            ELSE 0
-          END >= ${minWeight}`
+          or(
+            ilike(athleteProfiles.weight, "% lbs"),
+            // Also match pure numbers
+            sql`${athleteProfiles.weight} ~ '^[0-9]+$'`
+          )
         )
       );
     }
@@ -627,7 +624,7 @@ async function handleDiscoverRequest(request: NextRequest) {
     });
 
     // Process results using a similar approach as the connections API
-    const processedResults = results.map(user => {
+    let processedResults = results.map(user => {
       // Determine which profile to use
       const userRole = user.role;
       let userProfileData: {
@@ -747,6 +744,32 @@ async function handleDiscoverRequest(request: NextRequest) {
         } : null,
       };
     });
+
+    // Apply post-query filtering for height and weight using safe parsing
+    if ((minHeight && minHeight > 60) || (minWeight && minWeight > 100)) {
+      processedResults = processedResults.filter(user => {
+        // Only filter athletes
+        if (user.role !== 'athlete') return true;
+
+        // Height filter
+        if (minHeight && minHeight > 60) {
+          const userHeightInches = parseHeightToInches(user.height);
+          if (userHeightInches === null || userHeightInches < minHeight) {
+            return false;
+          }
+        }
+
+        // Weight filter
+        if (minWeight && minWeight > 100) {
+          const userWeightPounds = parseWeightToPounds(user.weight);
+          if (userWeightPounds === null || userWeightPounds < minWeight) {
+            return false;
+          }
+        }
+
+        return true;
+      });
+    }
 
     // Set security headers
     const headers = new Headers({
