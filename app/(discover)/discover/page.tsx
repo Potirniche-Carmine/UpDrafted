@@ -97,16 +97,16 @@ const getGraduationYearOptions = (): FilterOption[] => {
 
 // Get conferences for selected divisions
 const getConferencesForDivisions = (selectedDivisions: FilterOption[]): FilterOption[] => {
-  if (selectedDivisions.length === 0) {
-    // Return all conferences if no divisions selected
-    return Object.values(CONFERENCES_BY_DIVISION)
-      .flat()
-      .map(conf => ({ value: conf, label: conf }))
-      .sort((a, b) => a.label.localeCompare(b.label));
+  // Don't show conferences for High School division
+  const eligibleDivisions = selectedDivisions.filter(div => div.value !== 'High School');
+  
+  // If no eligible divisions are selected, return empty array (don't show all conferences)
+  if (eligibleDivisions.length === 0) {
+    return [];
   }
   
   const conferences = new Set<string>();
-  selectedDivisions.forEach(division => {
+  eligibleDivisions.forEach(division => {
     const divisionConfs = CONFERENCES_BY_DIVISION[division.value] || [];
     divisionConfs.forEach(conf => conferences.add(conf));
   });
@@ -352,6 +352,37 @@ function SearchPageContent() {
   const router = useRouter();
   const { user } = useUser();
   const effectiveRole = user?.publicMetadata?.role as string;
+  
+  // Dynamic title and subtitle based on user role
+  const getTitle = () => {
+    switch (effectiveRole) {
+      case 'athlete':
+        return 'Discover';
+      case 'coach':
+        return 'Discover';
+      case 'recruiter':
+        return 'Discover';
+      case 'admin':
+        return 'Discover';
+      default:
+        return 'Discover';
+    }
+  };
+
+  const getSubtitle = () => {
+    switch (effectiveRole) {
+      case 'athlete':
+        return 'Find your next coach or opportunity';
+      case 'coach':
+        return 'Find your next talent';
+      case 'recruiter':
+        return 'Find your next talent';
+      case 'admin':
+        return 'Find athletes, coaches & recruiters';
+      default:
+        return 'Find athletes, coaches & recruiters';
+    }
+  };
 
   // Set default tab based on user role
   const getDefaultTab = (userRole: string): TabValue => {
@@ -1063,10 +1094,10 @@ function SearchPageContent() {
               <div className="flex items-center justify-between mb-6">
                 <div>
                   <h1 className="text-3xl md:text-4xl font-bold text-foreground mb-1">
-                    Discover
+                    {getTitle()}
                   </h1>
                   <p className="text-base md:text-lg text-muted-foreground">
-                    Find athletes, coaches & recruiters
+                    {getSubtitle()}
                   </p>
                 </div>
 
@@ -1100,11 +1131,16 @@ function SearchPageContent() {
                 )}
               </div>
 
-              <div className="space-y-4">
+              <div className="space-y-4 min-h-[300px]">
                 {/* Sports Filter */}
                 <div>
                   <label className="block text-sm font-medium text-foreground mb-2">
                     Sports
+                    {(effectiveRole === 'coach' || effectiveRole === 'recruiter') && (
+                      <span className="ml-2 text-xs text-muted-foreground">
+                        💡 Select one sport to filter by positions
+                      </span>
+                    )}
                   </label>
                   <MultiSelectFilter
                     options={sportsOptions}
@@ -1159,8 +1195,8 @@ function SearchPageContent() {
                   </div>
                 )}
 
-                {/* Advanced Filters for Coaches/Recruiters viewing Athletes */}
-                {(effectiveRole === 'coach' || effectiveRole === 'recruiter') && (
+                {/* Advanced Filters for Coaches/Recruiters/Admins viewing Athletes */}
+                {(effectiveRole === 'coach' || effectiveRole === 'recruiter' || effectiveRole === 'admin') && (
                   <>
                     {/* Height/Weight Filters */}
                     <div className="border-t pt-4">
@@ -1170,6 +1206,20 @@ function SearchPageContent() {
                         minWeight={minWeight}
                         onHeightChange={setMinHeight}
                         onWeightChange={setMinWeight}
+                      />
+                    </div>
+
+                    {/* Graduating Class Filter */}
+                    <div>
+                      <label className="block text-sm font-medium text-foreground mb-2">
+                        Graduating Class
+                      </label>
+                      <MultiSelectFilter
+                        options={graduatingClassOptions}
+                        selected={selectedGraduatingClasses}
+                        onSelectionChange={setSelectedGraduatingClasses}
+                        placeholder="Select graduation years..."
+                        searchPlaceholder="Search years..."
                       />
                     </div>
 
@@ -1189,19 +1239,21 @@ function SearchPageContent() {
                       </div>
                     )}
 
-                    {/* Graduating Class Filter */}
-                    <div>
-                      <label className="block text-sm font-medium text-foreground mb-2">
-                        Graduating Class
-                      </label>
-                      <MultiSelectFilter
-                        options={graduatingClassOptions}
-                        selected={selectedGraduatingClasses}
-                        onSelectionChange={setSelectedGraduatingClasses}
-                        placeholder="Select graduation years..."
-                        searchPlaceholder="Search years..."
-                      />
-                    </div>
+                    {/* Conferences Filter - Only show if divisions are selected */}
+                    {selectedDivisions.length > 0 && conferencesOptions.length > 0 && (
+                      <div className="border-t pt-4">
+                        <label className="block text-sm font-medium text-foreground mb-2">
+                          Conferences
+                        </label>
+                        <MultiSelectFilter
+                          options={conferencesOptions}
+                          selected={selectedConferences}
+                          onSelectionChange={setSelectedConferences}
+                          placeholder="Select conferences..."
+                          searchPlaceholder="Search conferences..."
+                        />
+                      </div>
+                    )}
                   </>
                 )}
 
@@ -1244,10 +1296,10 @@ function SearchPageContent() {
             <div className="flex items-center justify-between mb-4">
               <div className="flex-1">
                 <h1 className="text-3xl md:text-4xl font-bold text-foreground mb-1">
-                  Discover
+                  {getTitle()}
                 </h1>
                 <p className="text-base md:text-lg text-muted-foreground">
-                  Find athletes, coaches & recruiters
+                  {getSubtitle()}
                 </p>
               </div>
 
@@ -1280,11 +1332,16 @@ function SearchPageContent() {
                   </Button>
                 </div>
 
-                <div className="space-y-4">
+                <div className="space-y-4 min-h-[400px]">
                   {/* Sports Filter */}
                   <div>
                     <label className="block text-sm font-medium text-foreground mb-2">
                       Sports
+                      {(effectiveRole === 'coach' || effectiveRole === 'recruiter') && (
+                        <span className="ml-2 text-xs text-muted-foreground">
+                          💡 Select one sport to filter by positions
+                        </span>
+                      )}
                     </label>
                     <MultiSelectFilter
                       options={sportsOptions}
@@ -1339,8 +1396,8 @@ function SearchPageContent() {
                     </div>
                   )}
 
-                  {/* Advanced Filters for Coaches/Recruiters viewing Athletes */}
-                  {(effectiveRole === 'coach' || effectiveRole === 'recruiter') && (
+                  {/* Advanced Filters for Coaches/Recruiters/Admins viewing Athletes */}
+                  {(effectiveRole === 'coach' || effectiveRole === 'recruiter' || effectiveRole === 'admin') && (
                     <>
                       {/* Height/Weight Filters */}
                       <div className="border-t pt-4">
@@ -1350,6 +1407,20 @@ function SearchPageContent() {
                           minWeight={minWeight}
                           onHeightChange={setMinHeight}
                           onWeightChange={setMinWeight}
+                        />
+                      </div>
+
+                      {/* Graduating Class Filter */}
+                      <div>
+                        <label className="block text-sm font-medium text-foreground mb-2">
+                          Graduating Class
+                        </label>
+                        <MultiSelectFilter
+                          options={graduatingClassOptions}
+                          selected={selectedGraduatingClasses}
+                          onSelectionChange={setSelectedGraduatingClasses}
+                          placeholder="Select graduation years..."
+                          searchPlaceholder="Search years..."
                         />
                       </div>
 
@@ -1369,19 +1440,21 @@ function SearchPageContent() {
                         </div>
                       )}
 
-                      {/* Graduating Class Filter */}
-                      <div>
-                        <label className="block text-sm font-medium text-foreground mb-2">
-                          Graduating Class
-                        </label>
-                        <MultiSelectFilter
-                          options={graduatingClassOptions}
-                          selected={selectedGraduatingClasses}
-                          onSelectionChange={setSelectedGraduatingClasses}
-                          placeholder="Select graduation years..."
-                          searchPlaceholder="Search years..."
-                        />
-                      </div>
+                      {/* Conferences Filter - Only show if divisions are selected */}
+                      {selectedDivisions.length > 0 && conferencesOptions.length > 0 && (
+                        <div className="border-t pt-4">
+                          <label className="block text-sm font-medium text-foreground mb-2">
+                            Conferences
+                          </label>
+                          <MultiSelectFilter
+                            options={conferencesOptions}
+                            selected={selectedConferences}
+                            onSelectionChange={setSelectedConferences}
+                            placeholder="Select conferences..."
+                            searchPlaceholder="Search conferences..."
+                          />
+                        </div>
+                      )}
                     </>
                   )}
 

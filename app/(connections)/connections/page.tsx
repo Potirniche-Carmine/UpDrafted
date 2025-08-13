@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useState, useMemo, useEffect, Suspense, useRef } from 'react';
-import { Users, Search, MessageSquare, Shield, CheckCircle, X, Clock, MapPin, User, UserCheck, Users2, Send, Building2, Target } from 'lucide-react';
+import React, { useState, useMemo, useEffect, Suspense, useRef, useCallback } from 'react';
+import { Users, Search, MessageSquare, Shield, CheckCircle, X, Clock, MapPin, User, UserCheck, Users2, Send, Building2, Target, Filter, ChevronDown } from 'lucide-react';
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -13,6 +13,26 @@ import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { AuthWrapper } from '../../../components/auth-wrapper';
 import { sanitizeText } from '@/utils/sanitization';
+import { useUser } from "@clerk/nextjs";
+import { getSportsList, DIVISIONS, US_STATES, COUNTRIES, getPositionsForSport } from '@/lib/sports-data';
+import { CONFERENCES_BY_DIVISION } from '@/lib/conference-data';
+import { Label } from "@/components/ui/label";
+import { Slider } from "@/components/ui/slider";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger
+} from "@/components/ui/popover";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import { Checkbox } from "@/components/ui/checkbox";
+import { cn } from "@/lib/utils";
 
 interface Connection {
   id: number;
@@ -95,9 +115,10 @@ interface SentRequestCardProps {
   isWithdrawing?: boolean;
 }
 
-interface FilterButtonsProps {
-  currentFilter: string;
-  onFilterChange: (filter: string) => void;
+// Filter option interface  
+interface FilterOption {
+  value: string;
+  label: string;
 }
 
 // Helper function to get role badge with descriptive text and improved styling
@@ -160,6 +181,234 @@ const getRoleBadge = (role: string, division?: string, educationLevel?: string) 
 
   return <Badge variant="outline" className={`text-xs font-medium px-2 py-0.5 border ${roleColor} whitespace-nowrap`}>{roleText}</Badge>;
 };
+
+// Helper functions from discover page
+const getGraduationYearOptions = (): FilterOption[] => {
+  const currentYear = new Date().getFullYear();
+  const years = [];
+  for (let i = 0; i <= 6; i++) {
+    years.push({
+      value: (currentYear + i).toString(),
+      label: `Class of ${currentYear + i}`
+    });
+  }
+  return years;
+};
+
+const getConferencesForDivisions = (selectedDivisions: FilterOption[]): FilterOption[] => {
+  // Don't show conferences for High School division
+  const eligibleDivisions = selectedDivisions.filter(div => div.value !== 'High School');
+  
+  // If no eligible divisions are selected, return empty array (don't show all conferences)
+  if (eligibleDivisions.length === 0) {
+    return [];
+  }
+  
+  const conferences = new Set<string>();
+  eligibleDivisions.forEach(division => {
+    const divisionConfs = CONFERENCES_BY_DIVISION[division.value] || [];
+    divisionConfs.forEach(conf => conferences.add(conf));
+  });
+  
+  return Array.from(conferences)
+    .map(conf => ({ value: conf, label: conf }))
+    .sort((a, b) => a.label.localeCompare(b.label));
+};
+
+const getPositionsForSports = (selectedSports: FilterOption[]): FilterOption[] => {
+  if (selectedSports.length === 0) return [];
+  
+  const positions = new Set<string>();
+  selectedSports.forEach(sport => {
+    const sportPositions = getPositionsForSport(sport.value);
+    sportPositions.forEach(pos => positions.add(pos));
+  });
+  
+  return Array.from(positions)
+    .map(pos => ({ value: pos, label: pos }))
+    .sort((a, b) => a.label.localeCompare(b.label));
+};
+
+const getOrderedDivisions = () => {
+  const highSchoolFirst = ['High School', ...DIVISIONS.filter(d => d !== 'High School')];
+  return highSchoolFirst;
+};
+
+// Multi-select filter component
+interface MultiSelectFilterProps {
+  options: FilterOption[];
+  selected: FilterOption[];
+  onSelectionChange: (selected: FilterOption[]) => void;
+  placeholder: string;
+  searchPlaceholder?: string;
+  className?: string;
+}
+
+function MultiSelectFilter({
+  options,
+  selected,
+  onSelectionChange,
+  placeholder,
+  searchPlaceholder = "Search...",
+  className
+}: MultiSelectFilterProps) {
+  const [open, setOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+
+  const filteredOptions = useMemo(() => {
+    if (!searchTerm) return options;
+    return options.filter(option =>
+      option.label.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  }, [options, searchTerm]);
+
+  const handleSelectAll = () => {
+    if (selected.length === options.length) {
+      onSelectionChange([]);
+    } else {
+      onSelectionChange(options);
+    }
+  };
+
+  const handleToggleOption = (option: FilterOption) => {
+    const isSelected = selected.some(s => s.value === option.value);
+    if (isSelected) {
+      onSelectionChange(selected.filter(s => s.value !== option.value));
+    } else {
+      onSelectionChange([...selected, option]);
+    }
+  };
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          variant="outline"
+          role="combobox"
+          aria-expanded={open}
+          className={cn("w-full justify-between text-left font-normal", className)}
+        >
+          <span className="truncate">
+            {selected.length === 0
+              ? placeholder
+              : selected.length === 1
+                ? selected[0].label
+                : `${selected.length} selected`
+            }
+          </span>
+          <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-[280px] sm:w-[var(--radix-popover-trigger-width)] max-w-[90vw] p-0" align="center" side="bottom" sideOffset={4}>
+        <Command>
+          <CommandInput
+            placeholder={searchPlaceholder}
+            value={searchTerm}
+            onValueChange={setSearchTerm}
+          />
+          <CommandList>
+            <CommandEmpty>No options found.</CommandEmpty>
+            <CommandGroup>
+              <CommandItem
+                onSelect={handleSelectAll}
+                className="cursor-pointer"
+              >
+                <Checkbox
+                  checked={selected.length === options.length}
+                  className="mr-2"
+                />
+                <span className="font-medium">
+                  {selected.length === options.length ? 'Deselect All' : 'Select All'}
+                </span>
+              </CommandItem>
+
+              {filteredOptions.map((option) => {
+                const isSelected = selected.some(s => s.value === option.value);
+                return (
+                  <CommandItem
+                    key={option.value}
+                    onSelect={() => handleToggleOption(option)}
+                    className="cursor-pointer"
+                  >
+                    <Checkbox
+                      checked={isSelected}
+                      className="mr-2"
+                    />
+                    <span>{option.label}</span>
+                  </CommandItem>
+                );
+              })}
+            </CommandGroup>
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
+// Height/Weight Range Filter Component (for admin users only)
+interface HeightWeightFilterProps {
+  minHeight: number;
+  minWeight: number;
+  onHeightChange: (height: number) => void;
+  onWeightChange: (weight: number) => void;
+  className?: string;
+}
+
+// Helper functions for height/weight conversion
+const inchesToFeetString = (totalInches: number): string => {
+  const feet = Math.floor(totalInches / 12);
+  const inches = totalInches % 12;
+  return inches > 0 ? `${feet}'${inches}"` : `${feet}'`;
+};
+
+function HeightWeightFilter({
+  minHeight,
+  minWeight,
+  onHeightChange,
+  onWeightChange,
+  className
+}: HeightWeightFilterProps) {
+  return (
+    <div className={cn("space-y-4", className)}>
+      <div className="space-y-2">
+        <Label className="text-sm font-medium text-foreground">
+          Minimum Height: {inchesToFeetString(minHeight)}
+        </Label>
+        <Slider
+          value={[minHeight]}
+          onValueChange={(value: number[]) => onHeightChange(value[0])}
+          min={60} // 5'0"
+          max={84} // 7'0"
+          step={1}
+          className="w-full"
+        />
+        <div className="flex justify-between text-xs text-muted-foreground">
+          <span>5&apos;0&quot;</span>
+          <span>7&apos;0&quot;</span>
+        </div>
+      </div>
+      
+      <div className="space-y-2">
+        <Label className="text-sm font-medium text-foreground">
+          Minimum Weight: {minWeight} lbs
+        </Label>
+        <Slider
+          value={[minWeight]}
+          onValueChange={(value: number[]) => onWeightChange(value[0])}
+          min={100}
+          max={350}
+          step={5}
+          className="w-full"
+        />
+        <div className="flex justify-between text-xs text-muted-foreground">
+          <span>100 lbs</span>
+          <span>350 lbs</span>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 const UserCard: React.FC<UserCardProps> = ({ connection, onRemoveConnection }) => {
   const router = useRouter();
@@ -838,37 +1087,389 @@ const SentRequestCard: React.FC<SentRequestCardProps> = ({ request, onWithdraw, 
   );
 };
 
-const FilterButtons: React.FC<FilterButtonsProps> = ({ currentFilter, onFilterChange }) => {
-  const filters = [
-    { id: 'all', label: 'All', icon: Users },
-    { id: 'athletes', label: 'Athletes', icon: User },
-    { id: 'coaches', label: 'Coaches', icon: UserCheck },
-    { id: 'recruiters', label: 'Recruiters', icon: Users2 }
-  ];
+// Advanced Filters Component
+interface AdvancedFiltersProps {
+  currentFilter: string;
+  onFilterChange: (filter: string) => void;
+  selectedSports: FilterOption[];
+  setSelectedSports: (sports: FilterOption[]) => void;
+  selectedDivisions: FilterOption[];
+  setSelectedDivisions: (divisions: FilterOption[]) => void;
+  selectedCountries: FilterOption[];
+  setSelectedCountries: (countries: FilterOption[]) => void;
+  selectedStates: FilterOption[];
+  setSelectedStates: (states: FilterOption[]) => void;
+  selectedPositions: FilterOption[];
+  setSelectedPositions: (positions: FilterOption[]) => void;
+  selectedGraduatingClasses: FilterOption[];
+  setSelectedGraduatingClasses: (classes: FilterOption[]) => void;
+  selectedConferences: FilterOption[];
+  setSelectedConferences: (conferences: FilterOption[]) => void;
+  selectedRequestTypes: FilterOption[];
+  setSelectedRequestTypes: (types: FilterOption[]) => void;
+  minHeight: number;
+  setMinHeight: (height: number) => void;
+  minWeight: number;
+  setMinWeight: (weight: number) => void;
+  userRole: string;
+  onApplyFilters: () => void;
+  onClearFilters: () => void;
+  activeTab: string;
+}
+
+const AdvancedFilters: React.FC<AdvancedFiltersProps> = ({
+  currentFilter,
+  onFilterChange,
+  selectedSports,
+  setSelectedSports,
+  selectedDivisions,
+  setSelectedDivisions,
+  selectedCountries,
+  setSelectedCountries,
+  selectedStates,
+  setSelectedStates,
+  selectedPositions,
+  setSelectedPositions,
+  selectedGraduatingClasses,
+  setSelectedGraduatingClasses,
+  selectedConferences,
+  setSelectedConferences,
+  selectedRequestTypes,
+  setSelectedRequestTypes,
+  minHeight,
+  setMinHeight,
+  minWeight,
+  setMinWeight,
+  userRole,
+  onApplyFilters,
+  onClearFilters,
+  activeTab
+}) => {
+  const [showAdvanced, setShowAdvanced] = useState(false);
+
+  // Basic role filters for connections - exclude athletes filter for athlete users
+  const basicFilters = useMemo(() => {
+    const allFilters = [
+      { id: 'all', label: 'All', icon: Users },
+      { id: 'athletes', label: 'Athletes', icon: User },
+      { id: 'coaches', label: 'Coaches', icon: UserCheck },
+      { id: 'recruiters', label: 'Recruiters', icon: Users2 }
+    ];
+    
+    // Remove athletes option if user is an athlete (they can't connect to other athletes)
+    if (userRole === 'athlete') {
+      return allFilters.filter(filter => filter.id !== 'athletes');
+    }
+    
+    return allFilters;
+  }, [userRole]);
+
+  // Request type filter options (for pending/sent requests) - exclude athletes for athlete users
+  const requestTypeOptions = useMemo(() => {
+    const allOptions = [
+      { value: 'athletes', label: 'Athletes' },
+      { value: 'coaches', label: 'Coaches' },
+      { value: 'recruiters', label: 'Recruiters' }
+    ];
+    
+    // Remove athletes option if user is an athlete
+    if (userRole === 'athlete') {
+      return allOptions.filter(option => option.value !== 'athletes');
+    }
+    
+    return allOptions;
+  }, [userRole]);
+
+  // Filter options
+  const sportsOptions = useMemo(() =>
+    getSportsList().map(sport => ({
+      value: sport,
+      label: sport
+    }))
+  , []);
+
+  const divisionsOptions = useMemo(() =>
+    getOrderedDivisions().map(division => ({
+      value: division,
+      label: division
+    }))
+  , []);
+
+  const statesOptions = useMemo(() =>
+    US_STATES.map(state => ({
+      value: state,
+      label: state
+    }))
+  , []);
+
+  const countryOptions = useMemo(() =>
+    COUNTRIES.map(country => ({
+      value: country,
+      label: country
+    }))
+  , []);
+
+  const showStatesFilter = useMemo(() =>
+    selectedCountries.some(country => country.value === 'United States')
+  , [selectedCountries]);
+
+  const positionsOptions = useMemo(() =>
+    getPositionsForSports(selectedSports)
+  , [selectedSports]);
+
+  const graduatingClassOptions = useMemo(() =>
+    getGraduationYearOptions()
+  , []);
+
+  const conferencesOptions = useMemo(() =>
+    getConferencesForDivisions(selectedDivisions)
+  , [selectedDivisions]);
+
+  // Check if user is admin to show all filters
+  const isAdmin = userRole === 'admin';
+
+  // Check if any advanced filters are applied
+  const hasAdvancedFilters = selectedSports.length > 0 || 
+    selectedDivisions.length > 0 || 
+    selectedCountries.length > 1 || // More than just United States
+    selectedStates.length > 0 ||
+    selectedPositions.length > 0 ||
+    selectedGraduatingClasses.length > 0 ||
+    selectedConferences.length > 0 ||
+    selectedRequestTypes.length > 0 ||
+    (isAdmin && (minHeight > 60 || minWeight > 100)); // Include height/weight for admin
 
   return (
-    <div className="flex flex-wrap gap-2 mb-6">
-      {filters.map((filter) => {
-        const Icon = filter.icon;
-        return (
-          <Button
-            key={filter.id}
-            variant={currentFilter === filter.id ? "default" : "outline"}
-            size="sm"
-            onClick={() => onFilterChange(filter.id)}
-            className={`h-9 ${currentFilter === filter.id ? 'bg-[#01ae79] hover:bg-[#01ae79]/90 text-white' : ''}`}
-          >
-            <Icon size={16} className="mr-2" />
-            {filter.label}
-          </Button>
-        );
-      })}
+    <div className="space-y-4 mb-6">
+      {/* Basic Role Filters */}
+      <div className="flex flex-wrap gap-2">
+        {basicFilters.map((filter) => {
+          const Icon = filter.icon;
+          return (
+            <Button
+              key={filter.id}
+              variant={currentFilter === filter.id ? "default" : "outline"}
+              size="sm"
+              onClick={() => onFilterChange(filter.id)}
+              className={`h-9 ${currentFilter === filter.id ? 'bg-[#01ae79] hover:bg-[#01ae79]/90 text-white' : ''}`}
+            >
+              <Icon size={16} className="mr-2" />
+              {filter.label}
+            </Button>
+          );
+        })}
+        
+        {/* Advanced Filters Toggle */}
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setShowAdvanced(!showAdvanced)}
+          className={`h-9 ${hasAdvancedFilters ? 'border-[#01ae79] text-[#01ae79]' : ''}`}
+        >
+          <Filter size={16} className="mr-2" />
+          Advanced {hasAdvancedFilters && <span className="ml-1 text-xs">({Object.values({
+            sports: selectedSports.length,
+            divisions: selectedDivisions.length,
+            countries: selectedCountries.length > 1 ? selectedCountries.length : 0,
+            states: selectedStates.length,
+            positions: selectedPositions.length,
+            classes: selectedGraduatingClasses.length,
+            conferences: selectedConferences.length,
+            requestTypes: selectedRequestTypes.length,
+            height: (userRole === 'coach' || userRole === 'recruiter' || isAdmin) && minHeight > 60 ? 1 : 0,
+            weight: (userRole === 'coach' || userRole === 'recruiter' || isAdmin) && minWeight > 100 ? 1 : 0
+          }).reduce((a, b) => a + b, 0)})</span>}
+        </Button>
+      </div>
+
+      {/* Advanced Filters Panel */}
+      {showAdvanced && (
+        <div className="border border-border rounded-lg p-4 space-y-4 bg-muted/30">
+          {/* Basic Filters Grid - Fixed layout to prevent shifts */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {/* Sports Filter */}
+            <div className="space-y-2">
+              <Label className="text-sm font-medium">
+                Sports
+                {(userRole === 'coach' || userRole === 'recruiter') && (
+                  <span className="ml-2 text-xs text-muted-foreground">
+                    💡 Select one sport to filter by positions
+                  </span>
+                )}
+              </Label>
+              <MultiSelectFilter
+                options={sportsOptions}
+                selected={selectedSports}
+                onSelectionChange={setSelectedSports}
+                placeholder="Select sports..."
+                searchPlaceholder="Search sports..."
+              />
+            </div>
+
+            {/* Divisions Filter */}
+            <div className="space-y-2">
+              <Label className="text-sm font-medium">Divisions</Label>
+              <MultiSelectFilter
+                options={divisionsOptions}
+                selected={selectedDivisions}
+                onSelectionChange={setSelectedDivisions}
+                placeholder="Select divisions..."
+                searchPlaceholder="Search divisions..."
+              />
+            </div>
+
+            {/* Countries Filter */}
+            <div className="space-y-2">
+              <Label className="text-sm font-medium">Countries</Label>
+              <MultiSelectFilter
+                options={countryOptions}
+                selected={selectedCountries}
+                onSelectionChange={setSelectedCountries}
+                placeholder="Select countries..."
+                searchPlaceholder="Search countries..."
+              />
+            </div>
+
+            {/* States Filter - Always reserve space to prevent layout shift */}
+            <div className="space-y-2">
+              <Label className="text-sm font-medium">
+                {showStatesFilter ? 'States (US)' : 'States'}
+              </Label>
+              {showStatesFilter ? (
+                <MultiSelectFilter
+                  options={statesOptions}
+                  selected={selectedStates}
+                  onSelectionChange={setSelectedStates}
+                  placeholder="Select states..."
+                  searchPlaceholder="Search states..."
+                />
+              ) : (
+                <div className="h-10 flex items-center px-3 py-2 border border-border rounded-md bg-muted/50 text-muted-foreground text-sm">
+                  Select United States to filter by states
+                </div>
+              )}
+            </div>
+
+            {/* Graduating Class Filter - Reserve space for coaches/recruiters */}
+            {(userRole === 'coach' || userRole === 'recruiter' || isAdmin) && (
+              <div className="space-y-2">
+                <Label className="text-sm font-medium">Graduating Class</Label>
+                <MultiSelectFilter
+                  options={graduatingClassOptions}
+                  selected={selectedGraduatingClasses}
+                  onSelectionChange={setSelectedGraduatingClasses}
+                  placeholder="Select graduation years..."
+                  searchPlaceholder="Search years..."
+                />
+              </div>
+            )}
+
+            {/* Request Type Filter - Reserve space for pending/sent requests tabs */}
+            {(activeTab === 'requests' || activeTab === 'sent-requests') && (
+              <div className="space-y-2">
+                <Label className="text-sm font-medium">Request Types</Label>
+                {requestTypeOptions.length > 0 ? (
+                  <MultiSelectFilter
+                    options={requestTypeOptions}
+                    selected={selectedRequestTypes}
+                    onSelectionChange={setSelectedRequestTypes}
+                    placeholder="Filter by user type..."
+                    searchPlaceholder="Search user types..."
+                  />
+                ) : (
+                  <div className="h-10 flex items-center px-3 py-2 border border-border rounded-md bg-muted/50 text-muted-foreground text-sm">
+                    No request type filters available
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Advanced Filters for Coaches/Recruiters - Fixed positioning */}
+          {(userRole === 'coach' || userRole === 'recruiter' || isAdmin) && (
+            <div className="space-y-4">
+              {/* Physical Requirements */}
+              <div className="border-t border-border pt-4">
+                <Label className="text-sm font-medium mb-4 block">Physical Requirements</Label>
+                <HeightWeightFilter
+                  minHeight={minHeight}
+                  minWeight={minWeight}
+                  onHeightChange={setMinHeight}
+                  onWeightChange={setMinWeight}
+                />
+              </div>
+
+              {/* Positions and Conferences in a separate grid to prevent layout shift */}
+              <div className="border-t border-border pt-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* Positions Filter - Always reserve space */}
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium">Positions</Label>
+                    {selectedSports.length > 0 && positionsOptions.length > 0 ? (
+                      <MultiSelectFilter
+                        options={positionsOptions}
+                        selected={selectedPositions}
+                        onSelectionChange={setSelectedPositions}
+                        placeholder="Select positions..."
+                        searchPlaceholder="Search positions..."
+                      />
+                    ) : (
+                      <div className="h-10 flex items-center px-3 py-2 border border-border rounded-md bg-muted/50 text-muted-foreground text-sm">
+                        {selectedSports.length === 0 ? 'Select sports to filter by positions' : 'No positions available'}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Conferences Filter - Always reserve space */}
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium">Conferences</Label>
+                    {selectedDivisions.length > 0 && conferencesOptions.length > 0 ? (
+                      <MultiSelectFilter
+                        options={conferencesOptions}
+                        selected={selectedConferences}
+                        onSelectionChange={setSelectedConferences}
+                        placeholder="Select conferences..."
+                        searchPlaceholder="Search conferences..."
+                      />
+                    ) : (
+                      <div className="h-10 flex items-center px-3 py-2 border border-border rounded-md bg-muted/50 text-muted-foreground text-sm">
+                        {selectedDivisions.length === 0 ? 'Select divisions to filter by conferences' : 'No conferences available'}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Action Buttons */}
+          <div className="flex gap-2 pt-2">
+            <Button
+              onClick={onApplyFilters}
+              size="sm"
+              className="bg-[#01ae79] hover:bg-[#01ae79]/90 text-white"
+            >
+              Apply Filters
+            </Button>
+            <Button
+              onClick={onClearFilters}
+              variant="outline"
+              size="sm"
+            >
+              Clear All
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
 
 function App() {
   const searchParams = useSearchParams();
+  const { user } = useUser();
+  const effectiveRole = user?.publicMetadata?.role as string;
+  
   const [searchTerm, setSearchTerm] = useState('');
   const [filter, setFilter] = useState('all');
   const [connections, setConnections] = useState<Connection[]>([]);
@@ -877,18 +1478,30 @@ function App() {
   const [loading, setLoading] = useState(true);
   const loadingRef = useRef(false); // Track if API call is in progress
 
+  // Advanced filter states
+  const [selectedSports, setSelectedSports] = useState<FilterOption[]>([]);
+  const [selectedDivisions, setSelectedDivisions] = useState<FilterOption[]>([]);
+  const [selectedCountries, setSelectedCountries] = useState<FilterOption[]>([
+    { value: 'United States', label: 'United States' } // Default to United States
+  ]);
+  const [selectedStates, setSelectedStates] = useState<FilterOption[]>([]);
+  const [selectedPositions, setSelectedPositions] = useState<FilterOption[]>([]);
+  const [selectedGraduatingClasses, setSelectedGraduatingClasses] = useState<FilterOption[]>([]);
+  const [selectedConferences, setSelectedConferences] = useState<FilterOption[]>([]);
+  const [selectedRequestTypes, setSelectedRequestTypes] = useState<FilterOption[]>([]);
+  
+  // Height/Weight filters (for admin users)
+  const [minHeight, setMinHeight] = useState<number>(60); // 5'0" in inches
+  const [minWeight, setMinWeight] = useState<number>(100); // 100 lbs
+
   // Dialog states for confirmation
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
   const [connectionToRemove, setConnectionToRemove] = useState<{id: number, userId: string} | null>(null);
 
   const activeTab = searchParams?.get('tab') || 'connections';
 
-  // Load connections data
-  useEffect(() => {
-    loadConnections();
-  }, []);
-
-  const loadConnections = async () => {
+  // Load connections data with useCallback to prevent dependency issues
+  const loadConnections = useCallback(async () => {
     // Prevent duplicate API calls due to React Strict Mode
     if (loadingRef.current) {
       return;
@@ -907,11 +1520,49 @@ function App() {
       };
       const token = await windowWithClerk.Clerk?.session?.getToken();
 
-      const response = await fetch('/api/connections', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-      });
+      // Check if any advanced filters are applied
+      const hasAdvancedFilters = selectedSports.length > 0 || 
+        selectedDivisions.length > 0 || 
+        selectedCountries.length > 1 || // More than just United States
+        selectedStates.length > 0 ||
+        selectedPositions.length > 0 ||
+        selectedGraduatingClasses.length > 0 ||
+        selectedConferences.length > 0 ||
+        selectedRequestTypes.length > 0 ||
+        minHeight > 60 ||
+        minWeight > 100;
+
+      let response: Response;
+
+      if (hasAdvancedFilters) {
+        // Use filtered API endpoint
+        response = await fetch('/api/connections/filtered', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            sports: selectedSports.map(sport => sanitizeText(sport.value)),
+            divisions: selectedDivisions.map(div => sanitizeText(div.value)),
+            countries: selectedCountries.map(country => sanitizeText(country.value)),
+            states: selectedStates.map(state => sanitizeText(state.value)),
+            positions: selectedPositions.map(pos => sanitizeText(pos.value)),
+            graduatingClasses: selectedGraduatingClasses.map(gc => sanitizeText(gc.value)),
+            conferences: selectedConferences.map(conf => sanitizeText(conf.value)),
+            requestTypes: selectedRequestTypes.map(rt => sanitizeText(rt.value)),
+            minHeight: minHeight > 60 ? minHeight : undefined,
+            minWeight: minWeight > 100 ? minWeight : undefined
+          })
+        });
+      } else {
+        // Use regular API endpoint without filters
+        response = await fetch('/api/connections', {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+        });
+      }
 
       if (!response.ok) {
         throw new Error('Failed to load connections');
@@ -931,7 +1582,85 @@ function App() {
       setLoading(false);
       loadingRef.current = false;
     }
-  };
+  }, [selectedSports, selectedDivisions, selectedCountries, selectedStates, selectedPositions, selectedGraduatingClasses, selectedConferences, selectedRequestTypes, minHeight, minWeight]);
+
+  // Filter application and clearing functions
+  const applyFilters = useCallback(() => {
+    loadConnections();
+  }, [loadConnections]);
+
+  const clearAllFilters = useCallback(() => {
+    setSelectedSports([]);
+    setSelectedDivisions([]);
+    setSelectedCountries([{ value: 'United States', label: 'United States' }]);
+    setSelectedStates([]);
+    setSelectedPositions([]);
+    setSelectedGraduatingClasses([]);
+    setSelectedConferences([]);
+    setSelectedRequestTypes([]);
+    setMinHeight(60);
+    setMinWeight(100);
+    setFilter('all');
+    loadConnections();
+  }, [loadConnections]);
+
+  // Initial load only - no automatic filter updates
+  useEffect(() => {
+    // Only load connections on initial mount, not on filter changes
+    if (!loadingRef.current) {
+      const initialLoad = async () => {
+        // Get auth token
+        const windowWithClerk = window as unknown as {
+          Clerk?: {
+            session?: {
+              getToken: () => Promise<string | null>;
+            };
+          };
+        };
+
+        if (!windowWithClerk?.Clerk?.session) {
+          setLoading(false);
+          return;
+        }
+
+        try {
+          loadingRef.current = true;
+          setLoading(true);
+
+          const token = await windowWithClerk.Clerk.session.getToken();
+          if (!token) {
+            throw new Error('No authentication token available');
+          }
+
+          // Use regular API endpoint for initial load (no filters)
+          const response = await fetch('/api/connections', {
+            headers: {
+              'Authorization': `Bearer ${token}`,
+            },
+          });
+
+          if (!response.ok) {
+            throw new Error('Failed to load connections');
+          }
+
+          const data = await response.json();
+          
+          if (data && (data.connected || data.incoming || data.outgoing)) {
+            setConnections(data.connected || []);
+            setPendingRequests(data.incoming || []);
+            setSentRequests(data.outgoing || []);
+          }
+        } catch {
+          // Error handling without console.error for production
+        } finally {
+          setLoading(false);
+          loadingRef.current = false;
+        }
+      };
+      
+      initialLoad();
+    }
+  }, []); // Empty dependency array - only run on mount
 
   const handleAcceptRequest = async (requestId: number) => {
     // Find the request to get the fromUserId
@@ -1195,7 +1924,10 @@ function App() {
         <div className="mb-8">
           <h1 className="text-3xl md:text-4xl font-bold tracking-tight">Connections</h1>
           <p className="text-base md:text-lg text-muted-foreground mt-2">
-            Manage your professional network of athletes, coaches, and recruiters
+            {effectiveRole === 'athlete' 
+              ? 'Manage your professional network of coaches and recruiters'
+              : 'Manage your professional network of athletes, coaches, and recruiters'
+            }
           </p>
         </div>
 
@@ -1290,7 +2022,34 @@ function App() {
           </div>
 
           <TabsContent value="connections" className="mt-6">
-            <FilterButtons currentFilter={filter} onFilterChange={setFilter} />
+            <AdvancedFilters
+              currentFilter={filter}
+              onFilterChange={setFilter}
+              selectedSports={selectedSports}
+              setSelectedSports={setSelectedSports}
+              selectedDivisions={selectedDivisions}
+              setSelectedDivisions={setSelectedDivisions}
+              selectedCountries={selectedCountries}
+              setSelectedCountries={setSelectedCountries}
+              selectedStates={selectedStates}
+              setSelectedStates={setSelectedStates}
+              selectedPositions={selectedPositions}
+              setSelectedPositions={setSelectedPositions}
+              selectedGraduatingClasses={selectedGraduatingClasses}
+              setSelectedGraduatingClasses={setSelectedGraduatingClasses}
+              selectedConferences={selectedConferences}
+              setSelectedConferences={setSelectedConferences}
+              selectedRequestTypes={selectedRequestTypes}
+              setSelectedRequestTypes={setSelectedRequestTypes}
+              minHeight={minHeight}
+              setMinHeight={setMinHeight}
+              minWeight={minWeight}
+              setMinWeight={setMinWeight}
+              userRole={effectiveRole || ''}
+              onApplyFilters={applyFilters}
+              onClearFilters={clearAllFilters}
+              activeTab={activeTab}
+            />
 
             {loading ? (
               <div className="text-center py-8">
@@ -1326,7 +2085,34 @@ function App() {
           </TabsContent>
 
           <TabsContent value="requests" className="mt-6">
-            <FilterButtons currentFilter={filter} onFilterChange={setFilter} />
+            <AdvancedFilters
+              currentFilter={filter}
+              onFilterChange={setFilter}
+              selectedSports={selectedSports}
+              setSelectedSports={setSelectedSports}
+              selectedDivisions={selectedDivisions}
+              setSelectedDivisions={setSelectedDivisions}
+              selectedCountries={selectedCountries}
+              setSelectedCountries={setSelectedCountries}
+              selectedStates={selectedStates}
+              setSelectedStates={setSelectedStates}
+              selectedPositions={selectedPositions}
+              setSelectedPositions={setSelectedPositions}
+              selectedGraduatingClasses={selectedGraduatingClasses}
+              setSelectedGraduatingClasses={setSelectedGraduatingClasses}
+              selectedConferences={selectedConferences}
+              setSelectedConferences={setSelectedConferences}
+              selectedRequestTypes={selectedRequestTypes}
+              setSelectedRequestTypes={setSelectedRequestTypes}
+              minHeight={minHeight}
+              setMinHeight={setMinHeight}
+              minWeight={minWeight}
+              setMinWeight={setMinWeight}
+              userRole={effectiveRole || ''}
+              onApplyFilters={applyFilters}
+              onClearFilters={clearAllFilters}
+              activeTab={activeTab}
+            />
 
             {loading ? (
               <div className="text-center py-8">
@@ -1363,7 +2149,34 @@ function App() {
           </TabsContent>
 
           <TabsContent value="sent-requests" className="mt-6">
-            <FilterButtons currentFilter={filter} onFilterChange={setFilter} />
+            <AdvancedFilters
+              currentFilter={filter}
+              onFilterChange={setFilter}
+              selectedSports={selectedSports}
+              setSelectedSports={setSelectedSports}
+              selectedDivisions={selectedDivisions}
+              setSelectedDivisions={setSelectedDivisions}
+              selectedCountries={selectedCountries}
+              setSelectedCountries={setSelectedCountries}
+              selectedStates={selectedStates}
+              setSelectedStates={setSelectedStates}
+              selectedPositions={selectedPositions}
+              setSelectedPositions={setSelectedPositions}
+              selectedGraduatingClasses={selectedGraduatingClasses}
+              setSelectedGraduatingClasses={setSelectedGraduatingClasses}
+              selectedConferences={selectedConferences}
+              setSelectedConferences={setSelectedConferences}
+              selectedRequestTypes={selectedRequestTypes}
+              setSelectedRequestTypes={setSelectedRequestTypes}
+              minHeight={minHeight}
+              setMinHeight={setMinHeight}
+              minWeight={minWeight}
+              setMinWeight={setMinWeight}
+              userRole={effectiveRole || ''}
+              onApplyFilters={applyFilters}
+              onClearFilters={clearAllFilters}
+              activeTab={activeTab}
+            />
 
             {loading ? (
               <div className="text-center py-8">

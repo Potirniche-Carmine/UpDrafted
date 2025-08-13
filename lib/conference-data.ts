@@ -193,7 +193,6 @@ export const CONFERENCES_BY_DIVISION: ConferencesByDivision = {
   ],
   
   'Community College': [
-    'California Community College Athletic Association (CCCAA)',
     'Northwest Athletic Conference (NWAC)',
     'Independent'
   ],
