@@ -1909,7 +1909,7 @@ function App() {
               </div>
             )}
           </TabsContent>
-                {/* DO NOT CHANGE THE 624PX AS IT WILL CREATE LAYOUT SHIFT I HAVE NO IDEA WHY IT NEEDS TO BE THAT BUT ITS THE ONLY WAY I HAVE FOUND TO FIX THE FUCKING ISSUE*/}
+                {/* The min-h-[624px] value is required to prevent a layout shift between tabs. The exact cause of this issue is currently unclear, but this value ensures consistent layout. Further investigation into the root cause is recommended for a more robust solution. */}
           <TabsContent value="sent-requests" className="mt-6 min-h-[624px] pb-8">
             <AdvancedFilters
               currentFilter={filter}
