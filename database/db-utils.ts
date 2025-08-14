@@ -2027,7 +2027,8 @@ export const adminOperations = {
     type: 'Camp' | 'Club';
     name: string;
     city: string;
-    stateCountry: string;
+    country: string;
+    state?: string;
     startDate: Date | string;
     endDate: Date | string;
     sport: string;
@@ -2059,7 +2060,8 @@ export const adminOperations = {
         type: 'Camp' | 'Club';
         name: string;
         city: string;
-        stateCountry: string;
+        country: string;
+        state?: string;
         startDate: Date | string;
         endDate: Date | string;
         sport: string;
@@ -2096,7 +2098,8 @@ export const adminOperations = {
           type: exp.type,
           name: exp.name,
           city: exp.city,
-          stateCountry: exp.stateCountry,
+          country: exp.country,
+          state: exp.state || null,
           startDate: startDateString,
           endDate: endDateString,
           sport: exp.sport,

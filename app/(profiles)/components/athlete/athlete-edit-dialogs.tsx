@@ -85,7 +85,7 @@ const CAMP_DATE_OPTIONS = generateCampDateOptions();
 // Add constant for video limit
 const VIDEO_LIMIT = 2;
 
-// Add countries list for country select
+// Add countries list for country select (same as onboarding forms)
 const COUNTRIES = [
   "United States",
   "Canada",
@@ -159,7 +159,8 @@ export interface AthleteProfileData {
       type: 'Camp' | 'Club',
       name: string,
       city: string;
-      stateCountry: string;
+      state: string;
+      country: string;
       startDate: Date | string;
       endDate: Date | string; // Uses special date for "Present"
       sport: string,
@@ -245,7 +246,8 @@ export function AthleteEditDialogs({
     type: 'Camp' | 'Club',
     name: string,
     city: string,
-    stateCountry: string,
+    state: string,
+    country: string,
     startDate: Date,
     endDate: Date, // Uses special date for "Present"
     sport: string,
@@ -256,7 +258,8 @@ export function AthleteEditDialogs({
     type: 'Camp' as 'Camp' | 'Club',
     name: '',
     city: '',
-    stateCountry: '',
+    state: '',
+    country: '',
     startDate: '' as string, // This will be the ISO string value for the select
     endDate: '' as string, // This will be the ISO string value for the select
     sport: '',
@@ -2138,21 +2141,50 @@ export function AthleteEditDialogs({
                           maxLength={50}
                           placeholder="Name of Camp / Name of Club Team"
                         />
-                        {/* City, State/Country on the same line */}
+                        {/* Location fields: Country, State (if US), and City */}
                         <div className="flex flex-row gap-4 text-sm text-muted-foreground mb-1 flex-nowrap">
+                          <Select
+                            value={campForm.country}
+                            onValueChange={value => setCampForm(f => ({ ...f, country: value, state: value === 'United States' ? f.state : '' }))}
+                          >
+                            <SelectTrigger className="w-40 !h-11">
+                              <SelectValue placeholder="Country" />
+                            </SelectTrigger>
+                            <SelectContent className="z-[9999]">
+                              {COUNTRIES.map(country => (
+                                <SelectItem key={country} value={country}>{country}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          {campForm.country === 'United States' && (
+                            <Select
+                              value={campForm.state}
+                              onValueChange={value => setCampForm(f => ({ ...f, state: value }))}
+                            >
+                              <SelectTrigger className="w-32 !h-11">
+                                <SelectValue placeholder="State" />
+                              </SelectTrigger>
+                              <SelectContent className="z-[9999]">
+                                {US_STATES.map(state => (
+                                  <SelectItem key={state} value={state}>{state}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          )}
                           <Input
                             className="w-32"
                             value={campForm.city}
-                            onChange={e => setCampForm(f => ({ ...f, city: toTitleCase(e.target.value) }))}
+                            onChange={e => {
+                              const value = e.target.value;
+                              // Allow spaces and apply title case to each word
+                              const titleCased = value.split(' ').map(word => 
+                                word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
+                              ).join(' ');
+                              setCampForm(f => ({ ...f, city: titleCased }));
+                            }}
                             maxLength={50}
                             placeholder="City"
-                          />
-                          <Input
-                            className="w-40"
-                            value={campForm.stateCountry}
-                            onChange={e => setCampForm(f => ({ ...f, stateCountry: toTitleCase(e.target.value) }))}
-                            maxLength={50}
-                            placeholder="State/Country"
+                            disabled={!campForm.country}
                           />
                         </div>
                         {/* Start Date and End Date on the same line */}
@@ -2204,8 +2236,14 @@ export function AthleteEditDialogs({
                         <div className="flex gap-2 mt-2">
                           <Button size="sm" onClick={() => {
                             // Validate
-                            if (!campForm.name.trim() || !campForm.city.trim() || !campForm.stateCountry.trim() || !campForm.startDate || !campForm.sport.trim() || !campForm.description.trim()) {
+                            if (!campForm.name.trim() || !campForm.city.trim() || !campForm.country.trim() || !campForm.startDate || !campForm.sport.trim() || !campForm.description.trim()) {
                               setCampFormError('All fields are required.');
+                              return;
+                            }
+                            
+                            // Additional validation for US state
+                            if (campForm.country === 'United States' && !campForm.state.trim()) {
+                              setCampFormError('State is required for United States.');
                               return;
                             }
                             
@@ -2225,7 +2263,8 @@ export function AthleteEditDialogs({
                               type: campForm.type,
                               name: campForm.name,
                               city: campForm.city,
-                              stateCountry: campForm.stateCountry,
+                              state: campForm.state,
+                              country: campForm.country,
                               startDate,
                               endDate,
                               sport: campForm.sport,
@@ -2241,12 +2280,12 @@ export function AthleteEditDialogs({
                             }
                             setTempCampExperience(updated);
                             setCampEditIndex(null);
-                            setCampForm({ type: 'Camp', name: '', city: '', stateCountry: '', startDate: '', endDate: '', sport: '', description: '' });
+                            setCampForm({ type: 'Camp', name: '', city: '', state: '', country: '', startDate: '', endDate: '', sport: '', description: '' });
                             setIsDirty(true);
                           }}>Save</Button>
                           <Button size="sm" variant="outline" onClick={() => {
                             setCampEditIndex(null);
-                            setCampForm({ type: 'Camp', name: '', city: '', stateCountry: '', startDate: '', endDate: '', sport: '', description: '' });
+                            setCampForm({ type: 'Camp', name: '', city: '', state: '', country: '', startDate: '', endDate: '', sport: '', description: '' });
                             setCampFormError(null);
                           }}>Cancel</Button>
                         </div>
@@ -2261,7 +2300,13 @@ export function AthleteEditDialogs({
                         {/* Title underneath badges */}
                         <div className="font-semibold text-base mb-1">{exp.name}</div>
                         <div className="flex flex-wrap gap-2 items-center text-xs text-muted-foreground mb- space-x-1">
-                          <span>{exp.city && exp.stateCountry ? `${exp.city}, ${exp.stateCountry}` : exp.city || exp.stateCountry}</span>
+                          <span>{
+                            exp.city && exp.country 
+                              ? exp.country === 'United States' && exp.state
+                                ? `${exp.city}, ${exp.state}`
+                                : `${exp.city}, ${exp.country}`
+                              : exp.city || exp.country
+                          }</span>
                           <span>{formatDateRange(exp.startDate, exp.endDate)}</span>
                         </div>
                         <div className="text-sm text-muted-foreground">{exp.description}</div>
@@ -2314,7 +2359,8 @@ export function AthleteEditDialogs({
                               type: exp.type,
                               name: exp.name,
                               city: exp.city,
-                              stateCountry: exp.stateCountry,
+                              state: exp.state,
+                              country: exp.country,
                               startDate: startDateValue,
                               endDate: endDateValue,
                               sport: exp.sport,
@@ -2331,7 +2377,7 @@ export function AthleteEditDialogs({
                             setIsDirty(true);
                             if (campEditIndex === idx) {
                               setCampEditIndex(null);
-                              setCampForm({ type: 'Camp', name: '', city: '', stateCountry: '', startDate: '', endDate: '', sport: '', description: '' });
+                              setCampForm({ type: 'Camp', name: '', city: '', state: '', country: '', startDate: '', endDate: '', sport: '', description: '' });
                             }
                           }}>Remove</Button>
                         </div>
@@ -2369,21 +2415,50 @@ export function AthleteEditDialogs({
                       maxLength={50}
                       placeholder="Name of Camp / Name of Club Team"
                     />
-                    {/* City, State/Country on the same line */}
+                    {/* Location fields: Country, State (if US), and City */}
                     <div className="flex flex-row gap-4 text-sm text-muted-foreground mb-1 flex-nowrap">
+                      <Select
+                        value={campForm.country}
+                        onValueChange={value => setCampForm(f => ({ ...f, country: value, state: value === 'United States' ? f.state : '' }))}
+                      >
+                        <SelectTrigger className="w-40 !h-11">
+                          <SelectValue placeholder="Country" />
+                        </SelectTrigger>
+                        <SelectContent className="z-[9999]">
+                          {COUNTRIES.map(country => (
+                            <SelectItem key={country} value={country}>{country}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      {campForm.country === 'United States' && (
+                        <Select
+                          value={campForm.state}
+                          onValueChange={value => setCampForm(f => ({ ...f, state: value }))}
+                        >
+                          <SelectTrigger className="w-32 !h-11">
+                            <SelectValue placeholder="State" />
+                          </SelectTrigger>
+                          <SelectContent className="z-[9999]">
+                            {US_STATES.map(state => (
+                              <SelectItem key={state} value={state}>{state}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      )}
                       <Input
                         className="w-32"
                         value={campForm.city}
-                        onChange={e => setCampForm(f => ({ ...f, city: toTitleCase(e.target.value) }))}
+                        onChange={e => {
+                          const value = e.target.value;
+                          // Allow spaces and apply title case to each word
+                          const titleCased = value.split(' ').map(word => 
+                            word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
+                          ).join(' ');
+                          setCampForm(f => ({ ...f, city: titleCased }));
+                        }}
                         maxLength={50}
                         placeholder="City"
-                      />
-                      <Input
-                        className="w-40"
-                        value={campForm.stateCountry}
-                        onChange={e => setCampForm(f => ({ ...f, stateCountry: toTitleCase(e.target.value) }))}
-                        maxLength={50}
-                        placeholder="State/Country"
+                        disabled={!campForm.country}
                       />
                     </div>
                     {/* Start Date and End Date on the same line */}
@@ -2435,8 +2510,14 @@ export function AthleteEditDialogs({
                     <div className="flex gap-2 mt-2">
                       <Button size="sm" onClick={() => {
                         // Validate
-                        if (!campForm.name.trim() || !campForm.city.trim() || !campForm.stateCountry.trim() || !campForm.startDate || !campForm.sport.trim() || !campForm.description.trim()) {
+                        if (!campForm.name.trim() || !campForm.city.trim() || !campForm.country.trim() || !campForm.startDate || !campForm.sport.trim() || !campForm.description.trim()) {
                           setCampFormError('All fields are required.');
+                          return;
+                        }
+                        
+                        // Additional validation for US state
+                        if (campForm.country === 'United States' && !campForm.state.trim()) {
+                          setCampFormError('State is required for United States.');
                           return;
                         }
                         
@@ -2456,7 +2537,8 @@ export function AthleteEditDialogs({
                           type: campForm.type,
                           name: campForm.name,
                           city: campForm.city,
-                          stateCountry: campForm.stateCountry,
+                          state: campForm.state,
+                          country: campForm.country,
                           startDate,
                           endDate,
                           sport: campForm.sport,
@@ -2465,12 +2547,12 @@ export function AthleteEditDialogs({
                         updated.push(newExperience);
                         setTempCampExperience(updated);
                         setCampEditIndex(null);
-                        setCampForm({ type: 'Camp', name: '', city: '', stateCountry: '', startDate: '', endDate: '', sport: '', description: '' });
+                        setCampForm({ type: 'Camp', name: '', city: '', state: '', country: '', startDate: '', endDate: '', sport: '', description: '' });
                         setIsDirty(true);
                       }}>Save</Button>
                       <Button size="sm" variant="outline" onClick={() => {
                         setCampEditIndex(null);
-                        setCampForm({ type: 'Camp', name: '', city: '', stateCountry: '', startDate: '', endDate: '', sport: '', description: '' });
+                        setCampForm({ type: 'Camp', name: '', city: '', state: '', country: '', startDate: '', endDate: '', sport: '', description: '' });
                         setCampFormError(null);
                       }}>Cancel</Button>
                     </div>
@@ -2481,7 +2563,7 @@ export function AthleteEditDialogs({
                   <div className="pt-2">
                     <Button size="sm" variant="outline" onClick={() => {
                       setCampEditIndex(tempCampExperience.length);
-                      setCampForm({ type: 'Camp', name: '', city: '', stateCountry: '', startDate: '', endDate: '', sport: '', description: '' });
+                      setCampForm({ type: 'Camp', name: '', city: '', state: '', country: '', startDate: '', endDate: '', sport: '', description: '' });
                       setCampFormError(null);
                     }}>
                       + Add New Experience
@@ -2494,7 +2576,7 @@ export function AthleteEditDialogs({
               <Button variant="outline" onClick={onClose}>Cancel</Button>
               <Button onClick={() => {
                 // Remove any empty new experience that was never saved
-                const cleaned = tempCampExperience.filter(exp => exp.name.trim() && exp.city.trim() && exp.stateCountry.trim() && exp.sport.trim() && exp.description.trim());
+                const cleaned = tempCampExperience.filter(exp => exp.name.trim() && exp.city.trim() && exp.country.trim() && exp.sport.trim() && exp.description.trim());
                 onSave({ campExperience: cleaned });
                 setIsDirty(false);
                 onClose();
@@ -2524,15 +2606,36 @@ export function AthleteEditDialogs({
     if (isOpen && dialogType === 'camp-experience' && !campExperienceInitializedRef.current) {
       setTempCampExperience(
         Array.isArray(profileData.campExperience) && profileData.campExperience.length > 0
-          ? profileData.campExperience.map(exp => ({
-              ...exp, // This preserves the id field if it exists
-              startDate: typeof exp.startDate === 'string' ? isoStringToDate(exp.startDate) : exp.startDate,
-              endDate: typeof exp.endDate === 'string' ? isoStringToDate(exp.endDate) : exp.endDate
-            }))
+          ? profileData.campExperience.map(exp => {
+              // Handle migration from old stateCountry format to new state/country format
+              let state = exp.state || '';
+              let country = exp.country || '';
+              
+              // If we have the old stateCountry format, try to parse it
+              if (!state && !country && (exp as any).stateCountry) {
+                const stateCountry = (exp as any).stateCountry;
+                // Check if it's a US state
+                if (US_STATES.includes(stateCountry)) {
+                  state = stateCountry;
+                  country = 'United States';
+                } else {
+                  // Assume it's a country
+                  country = stateCountry;
+                }
+              }
+              
+              return {
+                ...exp, // This preserves the id field if it exists
+                state,
+                country,
+                startDate: typeof exp.startDate === 'string' ? isoStringToDate(exp.startDate) : exp.startDate,
+                endDate: typeof exp.endDate === 'string' ? isoStringToDate(exp.endDate) : exp.endDate
+              };
+            })
           : []
       );
       setCampEditIndex(null);
-      setCampForm({ type: 'Camp', name: '', city: '', stateCountry: '', startDate: '', endDate: '', sport: '', description: '' });
+      setCampForm({ type: 'Camp', name: '', city: '', state: '', country: '', startDate: '', endDate: '', sport: '', description: '' });
       setCampFormError(null);
       setFilteredEndDateOptions([]);
       campExperienceInitializedRef.current = true;

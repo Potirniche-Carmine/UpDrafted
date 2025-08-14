@@ -317,7 +317,8 @@ function CampExperienceCard({ experiences, isOwnProfile, onEdit }: {
     type: 'Camp' | 'Club';
     name: string;
     city: string;
-    stateCountry: string;
+    state: string;
+    country: string;
     startDate: Date | string; // Allow both Date and string for flexibility
     endDate: Date | string; // Allow both Date and string for flexibility (uses special date for "Present")
     sport: string;
@@ -380,7 +381,8 @@ function CampExperienceCard({ experiences, isOwnProfile, onEdit }: {
                 type: 'Camp' | 'Club';
                 name: string;
                 city: string;
-                stateCountry: string;
+                state: string;
+                country: string;
                 startDate: Date | string; // Allow both Date and string for flexibility
                 endDate: Date | string; // Allow both Date and string for flexibility (uses special date for "Present")
                 sport: string;
@@ -394,7 +396,13 @@ function CampExperienceCard({ experiences, isOwnProfile, onEdit }: {
                   </div>
                   <div className="font-semibold text-base mb-1">{exp.name}</div>
                   <div className="flex flex-wrap gap-4 text-sm text-muted-foreground mb-1">
-                    <span className="flex items-center gap-1"><MapPin className="w-3 h-3" />{exp.city && exp.stateCountry ? `${exp.city}, ${exp.stateCountry}` : exp.city || exp.stateCountry}</span>
+                    <span className="flex items-center gap-1"><MapPin className="w-3 h-3" />{
+                      exp.city && exp.country 
+                        ? exp.country === 'United States' && exp.state
+                          ? `${exp.city}, ${exp.state}`
+                          : `${exp.city}, ${exp.country}`
+                        : exp.city || exp.country
+                    }</span>
                     <span>{formatDateRange(exp.startDate, exp.endDate)}</span>
                   </div>
                   <p className="text-sm text-foreground mt-1">{exp.description}</p>
@@ -1138,12 +1146,16 @@ export function AthleteProfile({
                       <div className="flex items-center justify-center gap-1 min-w-0">
                         <MapPin className="w-3 h-3 flex-shrink-0" />
                         <span className="text-center break-words whitespace-normal">
-                          {/* Only show comma if state exists and country is United States */}
-                          {safeProfileData.city}
-                          {safeProfileData.country === 'United States' && safeProfileData.state ? `, ${safeProfileData.state}` : ''}
+                          {safeProfileData.city && safeProfileData.country 
+                            ? safeProfileData.country === 'United States' && safeProfileData.state
+                              ? `${safeProfileData.city}, ${safeProfileData.state}`
+                              : `${safeProfileData.city}, ${safeProfileData.country}`
+                            : safeProfileData.city || safeProfileData.country
+                          }
                         </span>
                       </div>
-                      {safeProfileData.country && (
+                      {/* Only show country separately if it's not United States and we have a state */}
+                      {safeProfileData.country && safeProfileData.country !== 'United States' && safeProfileData.state && (
                         <div className="flex justify-center mt-1">
                           <span className="text-sm text-muted-foreground">
                             {safeProfileData.country}
