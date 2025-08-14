@@ -170,7 +170,7 @@ async function parseSearchParams(request: NextRequest) {
         positions: positionsArray.map((p: string) => sanitizeText(p)).filter(Boolean),
         graduatingClasses: graduatingClassesArray.map((gc: string) => sanitizeText(gc)).filter(Boolean),
         conferences: conferencesArray.map((c: string) => sanitizeText(c)).filter(Boolean),
-        minHeight: sanitizeNumber(body.minHeight, 60, 84),
+        minHeight: sanitizeNumber(body.minHeight, 60, 96),
         minWeight: sanitizeNumber(body.minWeight, 100, 350)
       };
     } catch (err) {
