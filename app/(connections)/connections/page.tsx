@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useState, useMemo, useEffect, Suspense, useRef } from 'react';
-import { Users, Search, MessageSquare, Shield, CheckCircle, X, Clock, MapPin, User, UserCheck, Users2, Send, Building2, Target } from 'lucide-react';
+import React, { useState, useMemo, useEffect, Suspense, useCallback } from 'react';
+import { Users, Search, MessageSquare, Shield, CheckCircle, X, Clock, MapPin, User, UserCheck, Users2, Send, Building2, Target, Filter, ChevronDown } from 'lucide-react';
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -9,10 +9,30 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useRouter } from 'next/navigation';
-import { useSearchParams } from 'next/navigation';
+
 import Link from 'next/link';
 import { AuthWrapper } from '../../../components/auth-wrapper';
 import { sanitizeText } from '@/utils/sanitization';
+import { useUser } from "@clerk/nextjs";
+import { getSportsList, DIVISIONS, US_STATES, COUNTRIES, getPositionsForSport } from '@/lib/sports-data';
+import { CONFERENCES_BY_DIVISION } from '@/lib/conference-data';
+import { Label } from "@/components/ui/label";
+import { Slider } from "@/components/ui/slider";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger
+} from "@/components/ui/popover";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import { Checkbox } from "@/components/ui/checkbox";
+import { cn } from "@/lib/utils";
 
 interface Connection {
   id: number;
@@ -95,9 +115,10 @@ interface SentRequestCardProps {
   isWithdrawing?: boolean;
 }
 
-interface FilterButtonsProps {
-  currentFilter: string;
-  onFilterChange: (filter: string) => void;
+// Filter option interface  
+interface FilterOption {
+  value: string;
+  label: string;
 }
 
 // Helper function to get role badge with descriptive text and improved styling
@@ -160,6 +181,234 @@ const getRoleBadge = (role: string, division?: string, educationLevel?: string) 
 
   return <Badge variant="outline" className={`text-xs font-medium px-2 py-0.5 border ${roleColor} whitespace-nowrap`}>{roleText}</Badge>;
 };
+
+// Helper functions from discover page
+const getGraduationYearOptions = (): FilterOption[] => {
+  const currentYear = new Date().getFullYear();
+  const years = [];
+  for (let i = 0; i <= 6; i++) {
+    years.push({
+      value: (currentYear + i).toString(),
+      label: `Class of ${currentYear + i}`
+    });
+  }
+  return years;
+};
+
+const getConferencesForDivisions = (selectedDivisions: FilterOption[]): FilterOption[] => {
+  // Don't show conferences for High School division
+  const eligibleDivisions = selectedDivisions.filter(div => div.value !== 'High School');
+  
+  // If no eligible divisions are selected, return empty array (don't show all conferences)
+  if (eligibleDivisions.length === 0) {
+    return [];
+  }
+  
+  const conferences = new Set<string>();
+  eligibleDivisions.forEach(division => {
+    const divisionConfs = CONFERENCES_BY_DIVISION[division.value] || [];
+    divisionConfs.forEach(conf => conferences.add(conf));
+  });
+  
+  return Array.from(conferences)
+    .map(conf => ({ value: conf, label: conf }))
+    .sort((a, b) => a.label.localeCompare(b.label));
+};
+
+const getPositionsForSports = (selectedSports: FilterOption[]): FilterOption[] => {
+  if (selectedSports.length === 0) return [];
+  
+  const positions = new Set<string>();
+  selectedSports.forEach(sport => {
+    const sportPositions = getPositionsForSport(sport.value);
+    sportPositions.forEach(pos => positions.add(pos));
+  });
+  
+  return Array.from(positions)
+    .map(pos => ({ value: pos, label: pos }))
+    .sort((a, b) => a.label.localeCompare(b.label));
+};
+
+const getOrderedDivisions = () => {
+  const highSchoolFirst = ['High School', ...DIVISIONS.filter(d => d !== 'High School')];
+  return highSchoolFirst;
+};
+
+// Multi-select filter component
+interface MultiSelectFilterProps {
+  options: FilterOption[];
+  selected: FilterOption[];
+  onSelectionChange: (selected: FilterOption[]) => void;
+  placeholder: string;
+  searchPlaceholder?: string;
+  className?: string;
+}
+
+function MultiSelectFilter({
+  options,
+  selected,
+  onSelectionChange,
+  placeholder,
+  searchPlaceholder = "Search...",
+  className
+}: MultiSelectFilterProps) {
+  const [open, setOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+
+  const filteredOptions = useMemo(() => {
+    if (!searchTerm) return options;
+    return options.filter(option =>
+      option.label.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  }, [options, searchTerm]);
+
+  const handleSelectAll = () => {
+    if (selected.length === options.length) {
+      onSelectionChange([]);
+    } else {
+      onSelectionChange(options);
+    }
+  };
+
+  const handleToggleOption = (option: FilterOption) => {
+    const isSelected = selected.some(s => s.value === option.value);
+    if (isSelected) {
+      onSelectionChange(selected.filter(s => s.value !== option.value));
+    } else {
+      onSelectionChange([...selected, option]);
+    }
+  };
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          variant="outline"
+          role="combobox"
+          aria-expanded={open}
+          className={cn("w-full justify-between text-left font-normal", className)}
+        >
+          <span className="truncate">
+            {selected.length === 0
+              ? placeholder
+              : selected.length === 1
+                ? selected[0].label
+                : `${selected.length} selected`
+            }
+          </span>
+          <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-[280px] sm:w-[var(--radix-popover-trigger-width)] max-w-[90vw] p-0" align="center" side="bottom" sideOffset={4}>
+        <Command>
+          <CommandInput
+            placeholder={searchPlaceholder}
+            value={searchTerm}
+            onValueChange={setSearchTerm}
+          />
+          <CommandList>
+            <CommandEmpty>No options found.</CommandEmpty>
+            <CommandGroup>
+              <CommandItem
+                onSelect={handleSelectAll}
+                className="cursor-pointer"
+              >
+                <Checkbox
+                  checked={selected.length === options.length}
+                  className="mr-2"
+                />
+                <span className="font-medium">
+                  {selected.length === options.length ? 'Deselect All' : 'Select All'}
+                </span>
+              </CommandItem>
+
+              {filteredOptions.map((option) => {
+                const isSelected = selected.some(s => s.value === option.value);
+                return (
+                  <CommandItem
+                    key={option.value}
+                    onSelect={() => handleToggleOption(option)}
+                    className="cursor-pointer"
+                  >
+                    <Checkbox
+                      checked={isSelected}
+                      className="mr-2"
+                    />
+                    <span>{option.label}</span>
+                  </CommandItem>
+                );
+              })}
+            </CommandGroup>
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
+// Height/Weight Range Filter Component (for admin users only)
+interface HeightWeightFilterProps {
+  minHeight: number;
+  minWeight: number;
+  onHeightChange: (height: number) => void;
+  onWeightChange: (weight: number) => void;
+  className?: string;
+}
+
+// Helper functions for height/weight conversion
+const inchesToFeetString = (totalInches: number): string => {
+  const feet = Math.floor(totalInches / 12);
+  const inches = totalInches % 12;
+  return inches > 0 ? `${feet}'${inches}"` : `${feet}'`;
+};
+
+function HeightWeightFilter({
+  minHeight,
+  minWeight,
+  onHeightChange,
+  onWeightChange,
+  className
+}: HeightWeightFilterProps) {
+  return (
+    <div className={cn("space-y-4", className)}>
+      <div className="space-y-2">
+        <Label className="text-sm font-medium text-foreground">
+          Minimum Height: {inchesToFeetString(minHeight)}
+        </Label>
+        <Slider
+          value={[minHeight]}
+          onValueChange={(value: number[]) => onHeightChange(value[0])}
+          min={60} // 5'0"
+          max={96} // 8'0"
+          step={1}
+          className="w-full"
+        />
+        <div className="flex justify-between text-xs text-muted-foreground">
+          <span>5&apos;0&quot;</span>
+          <span>8&apos;0&quot;</span>
+        </div>
+      </div>
+      
+      <div className="space-y-2">
+        <Label className="text-sm font-medium text-foreground">
+          Minimum Weight: {minWeight} lbs
+        </Label>
+        <Slider
+          value={[minWeight]}
+          onValueChange={(value: number[]) => onWeightChange(value[0])}
+          min={100}
+          max={500}
+          step={5}
+          className="w-full"
+        />
+        <div className="flex justify-between text-xs text-muted-foreground">
+          <span>100 lbs</span>
+          <span>500 lbs</span>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 const UserCard: React.FC<UserCardProps> = ({ connection, onRemoveConnection }) => {
   const router = useRouter();
@@ -838,354 +1087,596 @@ const SentRequestCard: React.FC<SentRequestCardProps> = ({ request, onWithdraw, 
   );
 };
 
-const FilterButtons: React.FC<FilterButtonsProps> = ({ currentFilter, onFilterChange }) => {
-  const filters = [
-    { id: 'all', label: 'All', icon: Users },
-    { id: 'athletes', label: 'Athletes', icon: User },
-    { id: 'coaches', label: 'Coaches', icon: UserCheck },
-    { id: 'recruiters', label: 'Recruiters', icon: Users2 }
-  ];
+// Advanced Filters Component
+interface AdvancedFiltersProps {
+  currentFilter: string;
+  onFilterChange: (filter: string) => void;
+  selectedSports: FilterOption[];
+  setSelectedSports: (sports: FilterOption[]) => void;
+  selectedDivisions: FilterOption[];
+  setSelectedDivisions: (divisions: FilterOption[]) => void;
+  selectedCountries: FilterOption[];
+  setSelectedCountries: (countries: FilterOption[]) => void;
+  selectedStates: FilterOption[];
+  setSelectedStates: (states: FilterOption[]) => void;
+  selectedPositions: FilterOption[];
+  setSelectedPositions: (positions: FilterOption[]) => void;
+  selectedGraduatingClasses: FilterOption[];
+  setSelectedGraduatingClasses: (classes: FilterOption[]) => void;
+  selectedConferences: FilterOption[];
+  setSelectedConferences: (conferences: FilterOption[]) => void;
+  selectedRequestTypes: FilterOption[];
+  setSelectedRequestTypes: (types: FilterOption[]) => void;
+  minHeight: number;
+  setMinHeight: (height: number) => void;
+  minWeight: number;
+  setMinWeight: (weight: number) => void;
+  userRole: string;
+  onApplyFilters: () => void;
+  onClearFilters: () => void;
+  activeTab: string;
+}
+
+const AdvancedFilters: React.FC<AdvancedFiltersProps> = ({
+  currentFilter,
+  onFilterChange,
+  selectedSports,
+  setSelectedSports,
+  selectedDivisions,
+  setSelectedDivisions,
+  selectedCountries,
+  setSelectedCountries,
+  selectedStates,
+  setSelectedStates,
+  selectedPositions,
+  setSelectedPositions,
+  selectedGraduatingClasses,
+  setSelectedGraduatingClasses,
+  selectedConferences,
+  setSelectedConferences,
+  selectedRequestTypes,
+  setSelectedRequestTypes,
+  minHeight,
+  setMinHeight,
+  minWeight,
+  setMinWeight,
+  userRole,
+  onApplyFilters,
+  onClearFilters,
+  activeTab
+}) => {
+  const [showAdvanced, setShowAdvanced] = useState(false);
+
+  // Basic role filters for connections - exclude athletes filter for athlete users
+  const basicFilters = useMemo(() => {
+    const allFilters = [
+      { id: 'all', label: 'All', icon: Users },
+      { id: 'athletes', label: 'Athletes', icon: User },
+      { id: 'coaches', label: 'Coaches', icon: UserCheck },
+      { id: 'recruiters', label: 'Recruiters', icon: Users2 }
+    ];
+    
+    // Remove athletes option if user is an athlete (they can't connect to other athletes)
+    if (userRole === 'athlete') {
+      return allFilters.filter(filter => filter.id !== 'athletes');
+    }
+    
+    return allFilters;
+  }, [userRole]);
+
+  // Request type filter options (for pending/sent requests) - exclude athletes for athlete users
+  const requestTypeOptions = useMemo(() => {
+    const allOptions = [
+      { value: 'athletes', label: 'Athletes' },
+      { value: 'coaches', label: 'Coaches' },
+      { value: 'recruiters', label: 'Recruiters' }
+    ];
+    
+    // Remove athletes option if user is an athlete
+    if (userRole === 'athlete') {
+      return allOptions.filter(option => option.value !== 'athletes');
+    }
+    
+    return allOptions;
+  }, [userRole]);
+
+  // Filter options
+  const sportsOptions = useMemo(() =>
+    getSportsList().map(sport => ({
+      value: sport,
+      label: sport
+    }))
+  , []);
+
+  const divisionsOptions = useMemo(() =>
+    getOrderedDivisions().map(division => ({
+      value: division,
+      label: division
+    }))
+  , []);
+
+  const statesOptions = useMemo(() =>
+    US_STATES.map(state => ({
+      value: state,
+      label: state
+    }))
+  , []);
+
+  const countryOptions = useMemo(() =>
+    COUNTRIES.map(country => ({
+      value: country,
+      label: country
+    }))
+  , []);
+
+  const showStatesFilter = useMemo(() =>
+    selectedCountries.some(country => country.value === 'United States')
+  , [selectedCountries]);
+
+  const positionsOptions = useMemo(() =>
+    getPositionsForSports(selectedSports)
+  , [selectedSports]);
+
+  const graduatingClassOptions = useMemo(() =>
+    getGraduationYearOptions()
+  , []);
+
+  const conferencesOptions = useMemo(() =>
+    getConferencesForDivisions(selectedDivisions)
+  , [selectedDivisions]);
+
+  // Check if user is admin to show all filters
+  const isAdmin = userRole === 'admin';
+
+  // Check if any advanced filters are applied
+  const hasAdvancedFilters = selectedSports.length > 0 || 
+    selectedDivisions.length > 0 || 
+    selectedCountries.length > 1 || // More than just United States
+    selectedStates.length > 0 ||
+    selectedPositions.length > 0 ||
+    selectedGraduatingClasses.length > 0 ||
+    selectedConferences.length > 0 ||
+    selectedRequestTypes.length > 0 ||
+    (isAdmin && (minHeight > 60 || minWeight > 100)); // Include height/weight for admin
 
   return (
-    <div className="flex flex-wrap gap-2 mb-6">
-      {filters.map((filter) => {
-        const Icon = filter.icon;
-        return (
-          <Button
-            key={filter.id}
-            variant={currentFilter === filter.id ? "default" : "outline"}
-            size="sm"
-            onClick={() => onFilterChange(filter.id)}
-            className={`h-9 ${currentFilter === filter.id ? 'bg-[#01ae79] hover:bg-[#01ae79]/90 text-white' : ''}`}
-          >
-            <Icon size={16} className="mr-2" />
-            {filter.label}
-          </Button>
-        );
-      })}
+    <div className="space-y-4 mb-6">
+      {/* Basic Role Filters */}
+      <div className="flex flex-wrap gap-2">
+        {basicFilters.map((filter) => {
+          const Icon = filter.icon;
+          return (
+            <Button
+              key={filter.id}
+              variant={currentFilter === filter.id ? "default" : "outline"}
+              size="sm"
+              onClick={() => onFilterChange(filter.id)}
+              className={`h-9 ${currentFilter === filter.id ? 'bg-[#01ae79] hover:bg-[#01ae79]/90 text-white' : ''}`}
+            >
+              <Icon size={16} className="mr-2" />
+              {filter.label}
+            </Button>
+          );
+        })}
+        
+        {/* Advanced Filters Toggle */}
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setShowAdvanced(!showAdvanced)}
+          className={`h-9 ${hasAdvancedFilters ? 'border-[#01ae79] text-[#01ae79]' : ''}`}
+        >
+          <Filter size={16} className="mr-2" />
+          Advanced {hasAdvancedFilters && <span className="ml-1 text-xs">({Object.values({
+            sports: selectedSports.length,
+            divisions: selectedDivisions.length,
+            countries: selectedCountries.length > 1 ? selectedCountries.length : 0,
+            states: selectedStates.length,
+            positions: selectedPositions.length,
+            classes: selectedGraduatingClasses.length,
+            conferences: selectedConferences.length,
+            requestTypes: selectedRequestTypes.length,
+            height: (userRole === 'coach' || userRole === 'recruiter' || isAdmin) && minHeight > 60 ? 1 : 0,
+            weight: (userRole === 'coach' || userRole === 'recruiter' || isAdmin) && minWeight > 100 ? 1 : 0
+          }).reduce((a, b) => a + b, 0)})</span>}
+        </Button>
+      </div>
+
+      {/* Advanced Filters Panel */}
+      {showAdvanced && (
+        <div className="border border-border rounded-lg p-4 space-y-4 bg-muted/30">
+          {/* Basic Filters Grid - Fixed layout to prevent shifts */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {/* Sports Filter */}
+            <div className="space-y-2">
+              <Label className="text-sm font-medium">
+                Sports
+                {(userRole === 'coach' || userRole === 'recruiter') && (
+                  <span className="ml-2 text-xs text-muted-foreground">
+                    💡 Select one sport to filter by positions
+                  </span>
+                )}
+              </Label>
+              <MultiSelectFilter
+                options={sportsOptions}
+                selected={selectedSports}
+                onSelectionChange={setSelectedSports}
+                placeholder="Select sports..."
+                searchPlaceholder="Search sports..."
+              />
+            </div>
+
+            {/* Divisions Filter */}
+            <div className="space-y-2">
+              <Label className="text-sm font-medium">Divisions</Label>
+              <MultiSelectFilter
+                options={divisionsOptions}
+                selected={selectedDivisions}
+                onSelectionChange={setSelectedDivisions}
+                placeholder="Select divisions..."
+                searchPlaceholder="Search divisions..."
+              />
+            </div>
+
+            {/* Countries Filter */}
+            <div className="space-y-2">
+              <Label className="text-sm font-medium">Countries</Label>
+              <MultiSelectFilter
+                options={countryOptions}
+                selected={selectedCountries}
+                onSelectionChange={setSelectedCountries}
+                placeholder="Select countries..."
+                searchPlaceholder="Search countries..."
+              />
+            </div>
+
+            {/* States Filter - Always reserve space to prevent layout shift */}
+            <div className="space-y-2">
+              <Label className="text-sm font-medium">
+                {showStatesFilter ? 'States (US)' : 'States'}
+              </Label>
+              {showStatesFilter ? (
+                <MultiSelectFilter
+                  options={statesOptions}
+                  selected={selectedStates}
+                  onSelectionChange={setSelectedStates}
+                  placeholder="Select states..."
+                  searchPlaceholder="Search states..."
+                />
+              ) : (
+                <div className="h-10 flex items-center px-3 py-2 border border-border rounded-md bg-muted/50 text-muted-foreground text-sm">
+                  Select United States to filter by states
+                </div>
+              )}
+            </div>
+
+            {/* Graduating Class Filter - Reserve space for coaches/recruiters */}
+            {(userRole === 'coach' || userRole === 'recruiter' || isAdmin) && (
+              <div className="space-y-2">
+                <Label className="text-sm font-medium">Graduating Class</Label>
+                <MultiSelectFilter
+                  options={graduatingClassOptions}
+                  selected={selectedGraduatingClasses}
+                  onSelectionChange={setSelectedGraduatingClasses}
+                  placeholder="Select graduation years..."
+                  searchPlaceholder="Search years..."
+                />
+              </div>
+            )}
+
+            {/* Request Type Filter - Reserve space for pending/sent requests tabs */}
+            {(activeTab === 'requests' || activeTab === 'sent-requests') ? (
+              <div className="space-y-2">
+                <Label className="text-sm font-medium">Request Types</Label>
+                {requestTypeOptions.length > 0 ? (
+                  <MultiSelectFilter
+                    options={requestTypeOptions}
+                    selected={selectedRequestTypes}
+                    onSelectionChange={setSelectedRequestTypes}
+                    placeholder="Filter by user type..."
+                    searchPlaceholder="Search user types..."
+                  />
+                ) : (
+                  <div className="h-10 flex items-center px-3 py-2 border border-border rounded-md bg-muted/50 text-muted-foreground text-sm">
+                    No request type filters available
+                  </div>
+                )}
+              </div>
+            ) : (
+              // Placeholder to maintain consistent spacing on connections tab
+              <div className="h-[60px]"></div>
+            )}
+          </div>
+
+          {/* Advanced Filters for Coaches/Recruiters - Fixed positioning */}
+          {(userRole === 'coach' || userRole === 'recruiter' || isAdmin) && (
+            <div className="space-y-4">
+              {/* Physical Requirements */}
+              <div className="border-t border-border pt-4">
+                <Label className="text-sm font-medium mb-4 block">Physical Requirements</Label>
+                <HeightWeightFilter
+                  minHeight={minHeight}
+                  minWeight={minWeight}
+                  onHeightChange={setMinHeight}
+                  onWeightChange={setMinWeight}
+                />
+              </div>
+
+              {/* Positions and Conferences in a separate grid to prevent layout shift */}
+              <div className="border-t border-border pt-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* Positions Filter - Always reserve space */}
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium">Positions</Label>
+                    {selectedSports.length > 0 && positionsOptions.length > 0 ? (
+                      <MultiSelectFilter
+                        options={positionsOptions}
+                        selected={selectedPositions}
+                        onSelectionChange={setSelectedPositions}
+                        placeholder="Select positions..."
+                        searchPlaceholder="Search positions..."
+                      />
+                    ) : (
+                      <div className="h-10 flex items-center px-3 py-2 border border-border rounded-md bg-muted/50 text-muted-foreground text-sm">
+                        {selectedSports.length === 0 ? 'Select sports to filter by positions' : 'No positions available'}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Conferences Filter - Always reserve space */}
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium">Conferences</Label>
+                    {selectedDivisions.length > 0 && conferencesOptions.length > 0 ? (
+                      <MultiSelectFilter
+                        options={conferencesOptions}
+                        selected={selectedConferences}
+                        onSelectionChange={setSelectedConferences}
+                        placeholder="Select conferences..."
+                        searchPlaceholder="Search conferences..."
+                      />
+                    ) : (
+                      <div className="h-10 flex items-center px-3 py-2 border border-border rounded-md bg-muted/50 text-muted-foreground text-sm">
+                        {selectedDivisions.length === 0 ? 'Select divisions to filter by conferences' : 'No conferences available'}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Action Buttons */}
+          <div className="flex gap-2 pt-2">
+            <Button
+              onClick={onApplyFilters}
+              size="sm"
+              className="bg-[#01ae79] hover:bg-[#01ae79]/90 text-white"
+            >
+              Apply Filters
+            </Button>
+            <Button
+              onClick={onClearFilters}
+              variant="outline"
+              size="sm"
+            >
+              Clear All
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
 
 function App() {
-  const searchParams = useSearchParams();
+  const { user } = useUser();
+  const effectiveRole = user?.publicMetadata?.role as string;
+  
   const [searchTerm, setSearchTerm] = useState('');
   const [filter, setFilter] = useState('all');
   const [connections, setConnections] = useState<Connection[]>([]);
   const [pendingRequests, setPendingRequests] = useState<PendingRequest[]>([]);
   const [sentRequests, setSentRequests] = useState<PendingRequest[]>([]);
   const [loading, setLoading] = useState(true);
-  const loadingRef = useRef(false); // Track if API call is in progress
 
-  // Dialog states for confirmation
-  const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
-  const [connectionToRemove, setConnectionToRemove] = useState<{id: number, userId: string} | null>(null);
+  // Advanced filter states
+  const [selectedSports, setSelectedSports] = useState<FilterOption[]>([]);
+  const [selectedDivisions, setSelectedDivisions] = useState<FilterOption[]>([]);
+  const [selectedCountries, setSelectedCountries] = useState<FilterOption[]>([
+    { value: 'United States', label: 'United States' } // Default to United States
+  ]);
+  const [selectedStates, setSelectedStates] = useState<FilterOption[]>([]);
+  const [selectedPositions, setSelectedPositions] = useState<FilterOption[]>([]);
+  const [selectedGraduatingClasses, setSelectedGraduatingClasses] = useState<FilterOption[]>([]);
+  const [selectedConferences, setSelectedConferences] = useState<FilterOption[]>([]);
+  const [selectedRequestTypes, setSelectedRequestTypes] = useState<FilterOption[]>([]);
+  
+  // Height/Weight filters (for admin users)
+  const [minHeight, setMinHeight] = useState(60); // 5'0"
+  const [minWeight, setMinWeight] = useState(100);
 
-  const activeTab = searchParams?.get('tab') || 'connections';
+  interface FilterData {
+    sports?: FilterOption[];
+    divisions?: FilterOption[];
+    states?: FilterOption[];
+    countries?: FilterOption[];
+    positions?: FilterOption[];
+    graduatingClasses?: FilterOption[];
+    conferences?: FilterOption[];
+    requestTypes?: FilterOption[];
+    minHeight?: number;
+    minWeight?: number;
+  }
 
-  // Load connections data
-  useEffect(() => {
-    loadConnections();
-  }, []);
-
-  const loadConnections = async () => {
-    // Prevent duplicate API calls due to React Strict Mode
-    if (loadingRef.current) {
-      return;
-    }
-
+  const fetchConnections = useCallback(async (filters: FilterData = {}) => {
+    setLoading(true);
     try {
-      loadingRef.current = true;
+      const queryParams = new URLSearchParams();
       
-      // Get auth token
-      const windowWithClerk = window as unknown as {
-        Clerk?: {
-          session?: {
-            getToken: () => Promise<string>;
-          };
-        };
-      };
-      const token = await windowWithClerk.Clerk?.session?.getToken();
-
-      const response = await fetch('/api/connections', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
+      Object.entries(filters).forEach(([key, value]) => {
+        if (Array.isArray(value) && value.length > 0) {
+          value.forEach((v: FilterOption) => queryParams.append(key, v.value));
+        } else if (typeof value === 'number' && value > 0) {
+           if (key === 'minHeight' && value > 60) {
+            queryParams.append(key, value.toString());
+          } else if (key === 'minWeight' && value > 100) {
+            queryParams.append(key, value.toString());
+          }
+        }
       });
 
+      const response = await fetch(`/api/connections?${queryParams.toString()}`);
       if (!response.ok) {
-        throw new Error('Failed to load connections');
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to fetch connections');
       }
-
       const data = await response.json();
-      
-      // The API returns the data directly, not wrapped in a success object
-      if (data && (data.connected || data.incoming || data.outgoing)) {
-        setConnections(data.connected || []);
-        setPendingRequests(data.incoming || []);
-        setSentRequests(data.outgoing || []);
-      }
-    } catch {
-      // Error handling without console.error for production
+      setConnections(data.connected || []);
+      setPendingRequests(data.incoming || []);
+      setSentRequests(data.outgoing || []);
+    } catch (err) {
+      console.error('Error fetching connections:', err);
     } finally {
       setLoading(false);
-      loadingRef.current = false;
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchConnections();
+  }, [fetchConnections]);
+
+  const handleApplyFilters = () => {
+    const filters = {
+      sports: selectedSports,
+      divisions: selectedDivisions,
+      states: selectedStates,
+      countries: selectedCountries,
+      positions: selectedPositions,
+      graduatingClasses: selectedGraduatingClasses,
+      conferences: selectedConferences,
+      requestTypes: selectedRequestTypes,
+      minHeight: minHeight,
+      minWeight: minWeight,
+    };
+    fetchConnections(filters);
+  };
+
+  const handleResetFilters = () => {
+    setSearchTerm('');
+    setSelectedSports([]);
+    setSelectedDivisions([]);
+    setSelectedStates([]);
+    setSelectedCountries([]);
+    setSelectedPositions([]);
+    setSelectedGraduatingClasses([]);
+    setSelectedConferences([]);
+    setSelectedRequestTypes([]);
+    setMinHeight(60);
+    setMinWeight(100);
+    fetchConnections(); // Fetch with no filters
+  };
+
+  const useFilteredConnections = (
+    source: (Connection | PendingRequest)[],
+  ) => {
+    return useMemo(() => {
+      if (!searchTerm) {
+        return source;
+      }
+      return source.filter(item => {
+        const { otherUser } = item;
+        const searchLower = searchTerm.toLowerCase();
+
+        // Client-side search term filter
+        return (
+          otherUser.fullName.toLowerCase().includes(searchLower) ||
+          (otherUser.organizationName && otherUser.organizationName.toLowerCase().includes(searchLower)) ||
+          (otherUser.sport && otherUser.sport.toLowerCase().includes(searchLower))
+        );
+      });
+    }, [source]);
+  };
+
+  const filteredConnections = useFilteredConnections(connections);
+  const filteredIncomingRequests = useFilteredConnections(pendingRequests);
+  const filteredOutgoingRequests = useFilteredConnections(sentRequests);
+
+  // Connection action handlers
+  const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState('connections');
+
+  const handleRemoveConnection = async (connectionId: number, targetUserId: string) => {
+    try {
+      const response = await fetch('/api/connections', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ connectionId, targetUserId })
+      });
+      
+      if (response.ok) {
+        fetchConnections();
+      }
+    } catch (error) {
+      console.error('Failed to remove connection:', error);
     }
   };
 
   const handleAcceptRequest = async (requestId: number) => {
-    // Find the request to get the fromUserId
-    const request = pendingRequests.find(r => r.id === requestId);
-    if (!request) {
-      return;
-    }
-
     try {
-      // Get auth token
-      const windowWithClerk = window as unknown as {
-        Clerk?: {
-          session?: {
-            getToken: () => Promise<string>;
-          };
-        };
-      };
-      const token = await windowWithClerk.Clerk?.session?.getToken();
-
       const response = await fetch('/api/connections', {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify({ connectionId: requestId }),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ connectionId: requestId })
       });
-
-      if (!response.ok) {
-        throw new Error('Failed to accept connection request');
+      
+      if (response.ok) {
+        fetchConnections();
       }
-
-      const result = await response.json();
-      if (result.success) {
-        // Remove from pending requests and add to connections
-        setPendingRequests(prev => prev.filter(r => r.id !== requestId));
-
-        // Create a connected connection object
-        const newConnection: Connection = {
-          id: result.connection.id,
-          status: 'connected',
-          initiatedBy: request.initiatedBy,
-          createdAt: request.createdAt,
-          notes: request.notes,
-          isInitiator: false, // This user didn't initiate, they accepted
-          otherUser: request.otherUser
-        };
-
-        setConnections(prev => [...prev, newConnection]);
-      } else {
-        throw new Error(result.error || 'Failed to accept connection request');
-      }
-    } catch {
-      alert('Failed to accept connection request. Please try again.');
+    } catch (error) {
+      console.error('Failed to accept request:', error);
     }
   };
 
   const handleDeclineRequest = async (requestId: number) => {
-    // Find the request to get the fromUserId
-    const request = pendingRequests.find(r => r.id === requestId);
-    if (!request) {
-      return;
-    }
-
     try {
-      // Get auth token
-      const windowWithClerk = window as unknown as {
-        Clerk?: {
-          session?: {
-            getToken: () => Promise<string>;
-          };
-        };
-      };
-      const token = await windowWithClerk.Clerk?.session?.getToken();
-
       const response = await fetch('/api/connections', {
         method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify({ targetUserId: request.otherUser.userId }),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ connectionId: requestId })
       });
-
-      if (!response.ok) {
-        throw new Error('Failed to decline connection request');
+      
+      if (response.ok) {
+        fetchConnections();
       }
-
-      const result = await response.json();
-      if (result.success) {
-        // Remove from pending requests
-        setPendingRequests(prev => prev.filter(r => r.id !== requestId));
-      } else {
-        throw new Error(result.error || 'Failed to decline connection request');
-      }
-    } catch {
-      alert('Failed to decline connection request. Please try again.');
+    } catch (error) {
+      console.error('Failed to decline request:', error);
     }
   };
 
   const handleWithdrawRequest = async (requestId: number, targetUserId: string) => {
     try {
-      // Get auth token
-      const windowWithClerk = window as unknown as {
-        Clerk?: {
-          session?: {
-            getToken: () => Promise<string>;
-          };
-        };
-      };
-      const token = await windowWithClerk.Clerk?.session?.getToken();
-
       const response = await fetch('/api/connections', {
         method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify({ targetUserId }),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ connectionId: requestId, targetUserId })
       });
-
-      if (!response.ok) {
-        throw new Error('Failed to withdraw connection request');
+      
+      if (response.ok) {
+        fetchConnections();
       }
-
-      const result = await response.json();
-      if (result.success) {
-        // Remove from local state
-        setSentRequests(prev => prev.filter(r => r.id !== requestId));
-      } else {
-        throw new Error(result.error || 'Failed to withdraw connection request');
-      }
-    } catch {
-      alert('Failed to withdraw connection request. Please try again.');
-    } finally {
-      // Request withdrawn
+    } catch (error) {
+      console.error('Failed to withdraw request:', error);
     }
   };
 
-  const handleRemoveConnection = async (connectionId: number, targetUserId: string) => {
-    setConnectionToRemove({id: connectionId, userId: targetUserId});
-    setConfirmDialogOpen(true);
+  // Alias for compatibility
+  const applyFilters = handleApplyFilters;
+  const clearAllFilters = handleResetFilters;
+  
+  const confirmRemoveConnection = () => {
+    setConfirmDialogOpen(false);
+    // Add actual remove logic here if needed
   };
-
-  const confirmRemoveConnection = async () => {
-    if (!connectionToRemove) return;
-    
-    try {
-      // Get auth token
-      const windowWithClerk = window as unknown as {
-        Clerk?: {
-          session?: {
-            getToken: () => Promise<string>;
-          };
-        };
-      };
-      const token = await windowWithClerk.Clerk?.session?.getToken();
-
-      const response = await fetch('/api/connections', {
-        method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify({ targetUserId: connectionToRemove.userId }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to remove connection');
-      }
-
-      const result = await response.json();
-      if (result.success) {
-        // Remove from local state
-        setConnections(prev => prev.filter(c => c.id !== connectionToRemove.id));
-      } else {
-        throw new Error(result.error || 'Failed to remove connection');
-      }
-    } catch {
-      alert('Failed to remove connection. Please try again.');
-    } finally {
-      setConfirmDialogOpen(false);
-      setConnectionToRemove(null);
-    }
-  };
-
-  const filteredConnections = useMemo(() => {
-    let filtered = connections;
-
-    if (filter !== 'all') {
-      filtered = filtered.filter(connection => {
-        if (filter === 'athletes') return connection.otherUser.role === 'athlete';
-        if (filter === 'coaches') return connection.otherUser.role === 'coach';
-        if (filter === 'recruiters') return connection.otherUser.role === 'recruiter';
-        return true;
-      });
-    }
-
-    if (searchTerm) {
-      filtered = filtered.filter(connection =>
-        connection.otherUser.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        connection.otherUser.organizationName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (connection.otherUser.sport && connection.otherUser.sport.toLowerCase().includes(searchTerm.toLowerCase()))
-      );
-    }
-
-    return filtered;
-  }, [connections, filter, searchTerm]);
-
-  const filteredPendingRequests = useMemo(() => {
-    let filtered = pendingRequests;
-
-    if (filter !== 'all') {
-      filtered = filtered.filter(request => {
-        if (filter === 'athletes') return request.otherUser.role === 'athlete';
-        if (filter === 'coaches') return request.otherUser.role === 'coach';
-        if (filter === 'recruiters') return request.otherUser.role === 'recruiter';
-        return true;
-      });
-    }
-
-    if (searchTerm) {
-      filtered = filtered.filter(request =>
-        request.otherUser.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        request.otherUser.organizationName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (request.otherUser.sport && request.otherUser.sport.toLowerCase().includes(searchTerm.toLowerCase()))
-      );
-    }
-
-    return filtered;
-  }, [pendingRequests, filter, searchTerm]);
-
-  const filteredSentRequests = useMemo(() => {
-    let filtered = sentRequests;
-
-    if (filter !== 'all') {
-      filtered = filtered.filter(request => {
-        if (filter === 'athletes') return request.otherUser.role === 'athlete';
-        if (filter === 'coaches') return request.otherUser.role === 'coach';
-        if (filter === 'recruiters') return request.otherUser.role === 'recruiter';
-        return true;
-      });
-    }
-
-    if (searchTerm) {
-      filtered = filtered.filter(request =>
-        request.otherUser.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        request.otherUser.organizationName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (request.otherUser.sport && request.otherUser.sport.toLowerCase().includes(searchTerm.toLowerCase()))
-      );
-    }
-
-    return filtered;
-  }, [sentRequests, filter, searchTerm]);
 
   // Show page layout first, then load data (like messages page)
   return (
@@ -1195,7 +1686,10 @@ function App() {
         <div className="mb-8">
           <h1 className="text-3xl md:text-4xl font-bold tracking-tight">Connections</h1>
           <p className="text-base md:text-lg text-muted-foreground mt-2">
-            Manage your professional network of athletes, coaches, and recruiters
+            {effectiveRole === 'athlete' 
+              ? 'Manage your professional network of coaches and recruiters'
+              : 'Manage your professional network of athletes, coaches, and recruiters'
+            }
           </p>
         </div>
 
@@ -1212,7 +1706,7 @@ function App() {
         </div>
 
         {/* Tabs */}
-        <Tabs defaultValue={activeTab} className="space-y-6">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
           <div className='relative'>
             <TabsList className="inline-flex h-12 items-center justify-center rounded-xl bg-muted/30 p-1 text-muted-foreground w-full max-w-2xl mx-auto backdrop-blur-sm border border-border/50">
               <TabsTrigger
@@ -1289,8 +1783,35 @@ function App() {
             </TabsList>
           </div>
 
-          <TabsContent value="connections" className="mt-6">
-            <FilterButtons currentFilter={filter} onFilterChange={setFilter} />
+          <TabsContent value="connections" className="mt-6 min-h-[600px] pb-8">
+            <AdvancedFilters
+              currentFilter={filter}
+              onFilterChange={setFilter}
+              selectedSports={selectedSports}
+              setSelectedSports={setSelectedSports}
+              selectedDivisions={selectedDivisions}
+              setSelectedDivisions={setSelectedDivisions}
+              selectedCountries={selectedCountries}
+              setSelectedCountries={setSelectedCountries}
+              selectedStates={selectedStates}
+              setSelectedStates={setSelectedStates}
+              selectedPositions={selectedPositions}
+              setSelectedPositions={setSelectedPositions}
+              selectedGraduatingClasses={selectedGraduatingClasses}
+              setSelectedGraduatingClasses={setSelectedGraduatingClasses}
+              selectedConferences={selectedConferences}
+              setSelectedConferences={setSelectedConferences}
+              selectedRequestTypes={selectedRequestTypes}
+              setSelectedRequestTypes={setSelectedRequestTypes}
+              minHeight={minHeight}
+              setMinHeight={setMinHeight}
+              minWeight={minWeight}
+              setMinWeight={setMinWeight}
+              userRole={effectiveRole || ''}
+              onApplyFilters={applyFilters}
+              onClearFilters={clearAllFilters}
+              activeTab={activeTab}
+            />
 
             {loading ? (
               <div className="text-center py-8">
@@ -1314,7 +1835,7 @@ function App() {
               </div>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                {filteredConnections.map(connection => (
+                {filteredConnections.filter((item): item is Connection => 'status' in item && item.status !== 'pending').map((connection: Connection) => (
                   <UserCard
                     key={connection.id}
                     connection={connection}
@@ -1325,15 +1846,42 @@ function App() {
             )}
           </TabsContent>
 
-          <TabsContent value="requests" className="mt-6">
-            <FilterButtons currentFilter={filter} onFilterChange={setFilter} />
+          <TabsContent value="requests" className="mt-6 min-h-[600px] pb-8">
+            <AdvancedFilters
+              currentFilter={filter}
+              onFilterChange={setFilter}
+              selectedSports={selectedSports}
+              setSelectedSports={setSelectedSports}
+              selectedDivisions={selectedDivisions}
+              setSelectedDivisions={setSelectedDivisions}
+              selectedCountries={selectedCountries}
+              setSelectedCountries={setSelectedCountries}
+              selectedStates={selectedStates}
+              setSelectedStates={setSelectedStates}
+              selectedPositions={selectedPositions}
+              setSelectedPositions={setSelectedPositions}
+              selectedGraduatingClasses={selectedGraduatingClasses}
+              setSelectedGraduatingClasses={setSelectedGraduatingClasses}
+              selectedConferences={selectedConferences}
+              setSelectedConferences={setSelectedConferences}
+              selectedRequestTypes={selectedRequestTypes}
+              setSelectedRequestTypes={setSelectedRequestTypes}
+              minHeight={minHeight}
+              setMinHeight={setMinHeight}
+              minWeight={minWeight}
+              setMinWeight={setMinWeight}
+              userRole={effectiveRole || ''}
+              onApplyFilters={applyFilters}
+              onClearFilters={clearAllFilters}
+              activeTab={activeTab}
+            />
 
             {loading ? (
               <div className="text-center py-8">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#01ae79] mx-auto"></div>
                 <p className="mt-4 text-muted-foreground text-sm">Loading requests...</p>
               </div>
-            ) : filteredPendingRequests.length === 0 ? (
+            ) : filteredIncomingRequests.length === 0 ? (
               <div className="text-center py-8">
                 <div className="w-24 h-24 bg-gradient-to-br from-red-50 to-red-100 dark:from-red-900/20 dark:to-red-800/20 rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm">
                   <Clock className="w-12 h-12 text-red-500" />
@@ -1341,7 +1889,7 @@ function App() {
                 <h3 className="text-lg font-semibold text-foreground mb-2">
                   {searchTerm || filter !== 'all' ? 'No pending requests found' : 'No pending requests'}
                 </h3>
-                <p className="text-muted-foreground">
+                <p className="text-muted-foreground max-w-md mx-auto">
                   {searchTerm || filter !== 'all'
                     ? 'Try adjusting your search terms or filters'
                     : 'You\'ll see connection requests from other users here'
@@ -1350,7 +1898,7 @@ function App() {
               </div>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                {filteredPendingRequests.map(request => (
+                {filteredIncomingRequests.filter((item): item is PendingRequest => 'status' in item && item.status === 'pending').map((request: PendingRequest) => (
                   <PendingRequestCard
                     key={request.id}
                     request={request}
@@ -1361,33 +1909,60 @@ function App() {
               </div>
             )}
           </TabsContent>
-
-          <TabsContent value="sent-requests" className="mt-6">
-            <FilterButtons currentFilter={filter} onFilterChange={setFilter} />
+                {/* The min-h-[624px] value is required to prevent a layout shift between tabs. The exact cause of this issue is currently unclear, but this value ensures consistent layout. Further investigation into the root cause is recommended for a more robust solution. */}
+          <TabsContent value="sent-requests" className="mt-6 min-h-[624px] pb-8">
+            <AdvancedFilters
+              currentFilter={filter}
+              onFilterChange={setFilter}
+              selectedSports={selectedSports}
+              setSelectedSports={setSelectedSports}
+              selectedDivisions={selectedDivisions}
+              setSelectedDivisions={setSelectedDivisions}
+              selectedCountries={selectedCountries}
+              setSelectedCountries={setSelectedCountries}
+              selectedStates={selectedStates}
+              setSelectedStates={setSelectedStates}
+              selectedPositions={selectedPositions}
+              setSelectedPositions={setSelectedPositions}
+              selectedGraduatingClasses={selectedGraduatingClasses}
+              setSelectedGraduatingClasses={setSelectedGraduatingClasses}
+              selectedConferences={selectedConferences}
+              setSelectedConferences={setSelectedConferences}
+              selectedRequestTypes={selectedRequestTypes}
+              setSelectedRequestTypes={setSelectedRequestTypes}
+              minHeight={minHeight}
+              setMinHeight={setMinHeight}
+              minWeight={minWeight}
+              setMinWeight={setMinWeight}
+              userRole={effectiveRole || ''}
+              onApplyFilters={applyFilters}
+              onClearFilters={clearAllFilters}
+              activeTab={activeTab}
+            />
 
             {loading ? (
               <div className="text-center py-8">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#01ae79] mx-auto"></div>
                 <p className="mt-4 text-muted-foreground text-sm">Loading sent requests...</p>
               </div>
-            ) : filteredSentRequests.length === 0 ? (
-              <div className="text-center py-8">
+            ) : filteredOutgoingRequests.length === 0 ? (
+              <div className="text-center py-8 mb-8">
                 <div className="w-24 h-24 bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm">
                   <Send className="w-12 h-12 text-blue-500" />
                 </div>
                 <h3 className="text-lg font-semibold text-foreground mb-2">
                   {searchTerm || filter !== 'all' ? 'No sent requests found' : 'No sent requests'}
                 </h3>
-                <p className="text-muted-foreground">
+                <p className="text-muted-foreground max-w-md mx-auto">
                   {searchTerm || filter !== 'all'
                     ? 'Try adjusting your search terms or filters'
-                    : 'You\'ll see sent requests here'
+                    : 'You\'ll see sent connection requests to other users here'
                   }
                 </p>
               </div>
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                {filteredSentRequests.map(request => (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+                {filteredOutgoingRequests.filter((item): item is PendingRequest => 'status' in item && item.status === 'pending').map((request: PendingRequest) => (
                   <SentRequestCard
                     key={request.id}
                     request={request}

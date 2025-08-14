@@ -2,9 +2,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireAnyRole } from '@/utils/roles';
 import { db } from '@/database/db';
 import { users, athleteProfiles, coachProfiles, recruitingProfiles, connections, recruitingProfileNeeds, recruitingNeeds, schools } from '@/database/schema';
-import { and, eq, or, not, ilike, isNull, exists, ne } from 'drizzle-orm';
+import { and, eq, or, not, ilike, isNull, exists, ne, arrayOverlaps, sql } from 'drizzle-orm';
 import { sanitizeText, sanitizeNumber } from '@/utils/sanitization';
 import { withRateLimit } from '@/utils/security';
+import { createHeightFilter, createWeightFilter } from '@/database/db-utils';
 
 // Force Node.js runtime
 export const runtime = 'nodejs';
@@ -27,7 +28,7 @@ const MAX_BODY_SIZE = 1024 * 10; // 10KB limit for POST request bodies
 const MAX_QUERY_PARAMS = 300;
 // Per-array caps for POST bodies
 const MAX_FILTER_ITEMS = 200;
-const ALLOWED_BODY_KEYS = new Set(['query', 'page', 'pageSize', 'role', 'sports', 'divisions', 'states']);
+const ALLOWED_BODY_KEYS = new Set(['query', 'page', 'pageSize', 'role', 'sports', 'divisions', 'countries', 'states', 'positions', 'graduatingClasses', 'conferences', 'minHeight', 'minWeight']);
 
 // Helper function to parse search parameters from either GET query params or POST body
 async function parseSearchParams(request: NextRequest) {
@@ -46,7 +47,13 @@ async function parseSearchParams(request: NextRequest) {
       requestedRole: searchParams.get('role') as 'athlete' | 'coach' | 'recruiter' | null,
       sports: searchParams.getAll('sports').map(s => sanitizeText(s)).filter(Boolean),
       divisions: searchParams.getAll('divisions').map(d => sanitizeText(d)).filter(Boolean),
-      states: searchParams.getAll('states').map(s => sanitizeText(s)).filter(Boolean)
+      countries: searchParams.getAll('countries').map(c => sanitizeText(c)).filter(Boolean),
+      states: searchParams.getAll('states').map(s => sanitizeText(s)).filter(Boolean),
+      positions: searchParams.getAll('positions').map(p => sanitizeText(p)).filter(Boolean),
+      graduatingClasses: searchParams.getAll('graduatingClasses').map(gc => sanitizeText(gc)).filter(Boolean),
+      conferences: searchParams.getAll('conferences').map(c => sanitizeText(c)).filter(Boolean),
+      minHeight: sanitizeNumber(searchParams.get('minHeight'), 60, 96),
+      minWeight: sanitizeNumber(searchParams.get('minWeight'), 100, 500)
     };
   } else {
     // POST request - parse from body
@@ -76,7 +83,11 @@ async function parseSearchParams(request: NextRequest) {
 
       const sportsArray = Array.isArray(body.sports) ? body.sports : [];
       const divisionsArray = Array.isArray(body.divisions) ? body.divisions : [];
+      const countriesArray = Array.isArray(body.countries) ? body.countries : [];
       const statesArray = Array.isArray(body.states) ? body.states : [];
+      const positionsArray = Array.isArray(body.positions) ? body.positions : [];
+      const graduatingClassesArray = Array.isArray(body.graduatingClasses) ? body.graduatingClasses : [];
+      const conferencesArray = Array.isArray(body.conferences) ? body.conferences : [];
 
       if (body.sports !== undefined && !Array.isArray(body.sports)) {
         throw new RequestValidationError('Invalid sports: must be an array of strings');
@@ -84,8 +95,26 @@ async function parseSearchParams(request: NextRequest) {
       if (body.divisions !== undefined && !Array.isArray(body.divisions)) {
         throw new RequestValidationError('Invalid divisions: must be an array of strings');
       }
+      if (body.countries !== undefined && !Array.isArray(body.countries)) {
+        throw new RequestValidationError('Invalid countries: must be an array of strings');
+      }
       if (body.states !== undefined && !Array.isArray(body.states)) {
         throw new RequestValidationError('Invalid states: must be an array of strings');
+      }
+      if (body.positions !== undefined && !Array.isArray(body.positions)) {
+        throw new RequestValidationError('Invalid positions: must be an array of strings');
+      }
+      if (body.graduatingClasses !== undefined && !Array.isArray(body.graduatingClasses)) {
+        throw new RequestValidationError('Invalid graduatingClasses: must be an array of strings');
+      }
+      if (body.conferences !== undefined && !Array.isArray(body.conferences)) {
+        throw new RequestValidationError('Invalid conferences: must be an array of strings');
+      }
+      if (body.minHeight !== undefined && sanitizeNumber(body.minHeight, 60, 96) === null) {
+        throw new RequestValidationError('Invalid minHeight: must be a number between 60 and 96 inches');
+      }
+      if (body.minWeight !== undefined && sanitizeNumber(body.minWeight, 100, 500) === null) {
+        throw new RequestValidationError('Invalid minWeight: must be a number between 100 and 500 pounds');
       }
 
       if (sportsArray.length > MAX_FILTER_ITEMS) {
@@ -94,8 +123,20 @@ async function parseSearchParams(request: NextRequest) {
       if (divisionsArray.length > MAX_FILTER_ITEMS) {
         throw new RequestValidationError(`Too many divisions selected. Max ${MAX_FILTER_ITEMS}.`);
       }
+      if (countriesArray.length > MAX_FILTER_ITEMS) {
+        throw new RequestValidationError(`Too many countries selected. Max ${MAX_FILTER_ITEMS}.`);
+      }
       if (statesArray.length > MAX_FILTER_ITEMS) {
         throw new RequestValidationError(`Too many states selected. Max ${MAX_FILTER_ITEMS}.`);
+      }
+      if (positionsArray.length > MAX_FILTER_ITEMS) {
+        throw new RequestValidationError(`Too many positions selected. Max ${MAX_FILTER_ITEMS}.`);
+      }
+      if (graduatingClassesArray.length > MAX_FILTER_ITEMS) {
+        throw new RequestValidationError(`Too many graduating classes selected. Max ${MAX_FILTER_ITEMS}.`);
+      }
+      if (conferencesArray.length > MAX_FILTER_ITEMS) {
+        throw new RequestValidationError(`Too many conferences selected. Max ${MAX_FILTER_ITEMS}.`);
       }
 
       // Total param count check to match the spirit of GET validation
@@ -104,9 +145,14 @@ async function parseSearchParams(request: NextRequest) {
         (body.page !== undefined ? 1 : 0) +
         (body.pageSize !== undefined ? 1 : 0) +
         (body.role ? 1 : 0) +
+        (body.minHeight !== undefined ? 1 : 0) +
+        (body.minWeight !== undefined ? 1 : 0) +
         sportsArray.length +
         divisionsArray.length +
-        statesArray.length;
+        statesArray.length +
+        positionsArray.length +
+        graduatingClassesArray.length +
+        conferencesArray.length;
 
       if (totalParamCount > MAX_QUERY_PARAMS) {
         throw new RequestValidationError('Too many parameters selected. Please reduce the number of filters.');
@@ -119,7 +165,13 @@ async function parseSearchParams(request: NextRequest) {
         requestedRole: body.role ? sanitizeText(String(body.role)) as 'athlete' | 'coach' | 'recruiter' : null,
         sports: sportsArray.map((s: string) => sanitizeText(s)).filter(Boolean),
         divisions: divisionsArray.map((d: string) => sanitizeText(d)).filter(Boolean),
-        states: statesArray.map((s: string) => sanitizeText(s)).filter(Boolean)
+        countries: countriesArray.map((c: string) => sanitizeText(c)).filter(Boolean),
+        states: statesArray.map((s: string) => sanitizeText(s)).filter(Boolean),
+        positions: positionsArray.map((p: string) => sanitizeText(p)).filter(Boolean),
+        graduatingClasses: graduatingClassesArray.map((gc: string) => sanitizeText(gc)).filter(Boolean),
+        conferences: conferencesArray.map((c: string) => sanitizeText(c)).filter(Boolean),
+        minHeight: sanitizeNumber(body.minHeight, 60, 96),
+        minWeight: sanitizeNumber(body.minWeight, 100, 500)
       };
     } catch (err) {
       if (err instanceof RequestValidationError) {
@@ -188,7 +240,13 @@ async function handleDiscoverRequest(request: NextRequest) {
       requestedRole,
       sports,
       divisions,
-      states
+      countries,
+      states,
+      positions,
+      graduatingClasses,
+      conferences,
+      minHeight,
+      minWeight
     } = await parseSearchParams(request);
 
     // Validate role if specified
@@ -274,37 +332,40 @@ async function handleDiscoverRequest(request: NextRequest) {
     // Always exclude demo profiles from discover results
     // This will be handled in the query where clause based on which tables are joined
 
-    // Search conditions with sanitized input
-    const searchConditions = query ? [
-      or(
-        and(
-          not(isNull(athleteProfiles.userId)),
-          or(
-            ilike(athleteProfiles.fullName, `%${query}%`),
-            ilike(schools.name, `%${query}%`),
-            ilike(athleteProfiles.sport, `%${query}%`)
-          )
-        ),
-        and(
-          not(isNull(coachProfiles.userId)),
-          or(
-            ilike(coachProfiles.fullName, `%${query}%`),
-            ilike(schools.name, `%${query}%`),
-            ilike(coachProfiles.sportCoaching, `%${query}%`),
-            ilike(coachProfiles.title, `%${query}%`)
-          )
-        ),
-        and(
-          not(isNull(recruitingProfiles.userId)),
-          or(
-            ilike(recruitingProfiles.fullName, `%${query}%`),
-            ilike(schools.name, `%${query}%`),
-            ilike(recruitingProfiles.sportRecruiting, `%${query}%`),
-            ilike(recruitingProfiles.title, `%${query}%`)
+    // Search conditions with parameterized queries to prevent SQL injection
+    const searchConditions = query ? (() => {
+      const searchTerm = sql`${'%' + query.toLowerCase() + '%'}`;
+      return [
+        or(
+          and(
+            not(isNull(athleteProfiles.userId)),
+            or(
+              ilike(athleteProfiles.fullName, searchTerm),
+              ilike(schools.name, searchTerm),
+              ilike(athleteProfiles.sport, searchTerm)
+            )
+          ),
+          and(
+            not(isNull(coachProfiles.userId)),
+            or(
+              ilike(coachProfiles.fullName, searchTerm),
+              ilike(schools.name, searchTerm),
+              ilike(coachProfiles.sportCoaching, searchTerm),
+              ilike(coachProfiles.title, searchTerm)
+            )
+          ),
+          and(
+            not(isNull(recruitingProfiles.userId)),
+            or(
+              ilike(recruitingProfiles.fullName, searchTerm),
+              ilike(schools.name, searchTerm),
+              ilike(recruitingProfiles.sportRecruiting, searchTerm),
+              ilike(recruitingProfiles.title, searchTerm)
+            )
           )
         )
-      )
-    ] : [];
+      ];
+    })() : [];
 
     // Filter conditions - Fixed logic
     const filterConditions = [];
@@ -340,6 +401,72 @@ async function handleDiscoverRequest(request: NextRequest) {
           and(not(isNull(athleteProfiles.userId)), or(...states.map((state: string) => eq(athleteProfiles.state, state)))),
           and(not(isNull(coachProfiles.userId)), or(...states.map((state: string) => eq(coachProfiles.state, state)))),
           and(not(isNull(recruitingProfiles.userId)), or(...states.map((state: string) => eq(recruitingProfiles.state, state))))
+        )
+      );
+    }
+
+    // Countries filter - users must match at least one selected country
+    if (countries.length > 0) {
+      filterConditions.push(
+        or(
+          and(not(isNull(athleteProfiles.userId)), or(...countries.map((country: string) => eq(athleteProfiles.country, country)))),
+          and(not(isNull(coachProfiles.userId)), or(...countries.map((country: string) => eq(coachProfiles.country, country)))),
+          and(not(isNull(recruitingProfiles.userId)), or(...countries.map((country: string) => eq(recruitingProfiles.country, country))))
+        )
+      );
+    }
+
+    // Positions filter - only for athletes, must match at least one selected position
+    if (positions.length > 0) {
+      filterConditions.push(
+        and(
+          not(isNull(athleteProfiles.userId)),
+          arrayOverlaps(athleteProfiles.positions, positions)
+        )
+      );
+    }
+
+    // Graduating classes filter - only for athletes
+    if (graduatingClasses.length > 0) {
+      const graduationYears = graduatingClasses.map((gc: string) => parseInt(gc, 10)).filter((year: number) => !isNaN(year));
+      if (graduationYears.length > 0) {
+        filterConditions.push(
+          and(
+            not(isNull(athleteProfiles.userId)),
+            or(...graduationYears.map((year: number) => eq(athleteProfiles.graduationYear, year)))
+          )
+        );
+      }
+    }
+
+    // Conferences filter - only for coaches and recruiters
+    if (conferences.length > 0) {
+      filterConditions.push(
+        or(
+          and(not(isNull(coachProfiles.userId)), or(...conferences.map((conf: string) => eq(coachProfiles.conference, conf)))),
+          and(not(isNull(recruitingProfiles.userId)), or(...conferences.map((conf: string) => eq(recruitingProfiles.conference, conf))))
+        )
+      );
+    }
+
+    // Height filter - only for athletes with proper database-level filtering
+    // Note: createHeightFilter uses secure parameterization with ${minHeight}
+    if (minHeight && minHeight > 60) {
+      filterConditions.push(
+        and(
+          not(isNull(athleteProfiles.userId)),
+          createHeightFilter(minHeight)
+        )
+      );
+    }
+
+    // Weight filter - only for athletes with proper database-level filtering
+    // Note: createWeightFilter uses secure parameterization with ${minWeight}
+    if (minWeight && minWeight > 100) {
+      filterConditions.push(
+        and(
+          not(isNull(athleteProfiles.userId)),
+          createWeightFilter(minWeight)
         )
       );
     }
@@ -608,6 +735,9 @@ async function handleDiscoverRequest(request: NextRequest) {
         } : null,
       };
     });
+
+    // Note: Height and weight filtering is now done at the database level for better performance
+    // No post-query filtering needed for these fields anymore
 
     // Set security headers
     const headers = new Headers({

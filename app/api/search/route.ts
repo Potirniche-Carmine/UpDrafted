@@ -81,7 +81,7 @@ export async function GET(request: NextRequest) {
       return createSuccessResponse(cachedResults, rateLimitCheck.headers);
     }
 
-    const searchTerm = `%${query.toLowerCase()}%`;
+    const searchTerm = sql`${'%' + query.toLowerCase() + '%'}`;
     const results: SearchResult[] = [];
     let totalResults = 0;
 

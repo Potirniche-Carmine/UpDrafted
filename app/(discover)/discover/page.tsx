@@ -14,7 +14,10 @@ import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { sanitizeText } from '@/utils/sanitization';
 import { createSecureHeaders } from '@/utils/clerk-security';
-import { getSportsList, DIVISIONS, US_STATES } from '@/lib/sports-data';
+import { getSportsList, DIVISIONS, US_STATES, COUNTRIES, getPositionsForSport } from '@/lib/sports-data';
+import { CONFERENCES_BY_DIVISION } from '@/lib/conference-data';
+import { Label } from "@/components/ui/label";
+import { Slider } from "@/components/ui/slider";
 import {
   Popover,
   PopoverContent,
@@ -72,15 +75,64 @@ interface DiscoverResponse {
 
 type TabValue = 'all' | 'athletes' | 'coaches' | 'recruiters';
 
-// Get ordered divisions based on user role
-const getOrderedDivisions = (userRole: string) => {
-  if (userRole === 'coach' || userRole === 'recruiter') {
-    // Put High School first for coaches and recruiters
-    const highSchoolFirst = ['High School', ...DIVISIONS.filter(d => d !== 'High School')];
-    return highSchoolFirst;
-  }
-  return DIVISIONS;
+// Helper functions for height/weight conversion
+const inchesToFeetString = (totalInches: number): string => {
+  const feet = Math.floor(totalInches / 12);
+  const inches = totalInches % 12;
+  return inches > 0 ? `${feet}'${inches}"` : `${feet}'`;
 };
+
+// Generate graduation year options
+const getGraduationYearOptions = (): FilterOption[] => {
+  const currentYear = new Date().getFullYear();
+  const years = [];
+  for (let i = 0; i <= 6; i++) {
+    years.push({
+      value: (currentYear + i).toString(),
+      label: `Class of ${currentYear + i}`
+    });
+  }
+  return years;
+};
+
+// Get conferences for selected divisions
+const getConferencesForDivisions = (selectedDivisions: FilterOption[]): FilterOption[] => {
+  // Don't show conferences for High School division
+  const eligibleDivisions = selectedDivisions.filter(div => div.value !== 'High School');
+  
+  // If no eligible divisions are selected, return empty array (don't show all conferences)
+  if (eligibleDivisions.length === 0) {
+    return [];
+  }
+  
+  const conferences = new Set<string>();
+  eligibleDivisions.forEach(division => {
+    const divisionConfs = CONFERENCES_BY_DIVISION[division.value] || [];
+    divisionConfs.forEach(conf => conferences.add(conf));
+  });
+  
+  return Array.from(conferences)
+    .map(conf => ({ value: conf, label: conf }))
+    .sort((a, b) => a.label.localeCompare(b.label));
+};
+
+// Get positions for selected sports
+const getPositionsForSports = (selectedSports: FilterOption[]): FilterOption[] => {
+  if (selectedSports.length === 0) return [];
+  
+  const positions = new Set<string>();
+  selectedSports.forEach(sport => {
+    const sportPositions = getPositionsForSport(sport.value);
+    sportPositions.forEach(pos => positions.add(pos));
+  });
+  
+  return Array.from(positions)
+    .map(pos => ({ value: pos, label: pos }))
+    .sort((a, b) => a.label.localeCompare(b.label));
+};
+
+// Ordered divisions with High School first (most common)
+const ORDERED_DIVISIONS = ['High School', ...DIVISIONS.filter(d => d !== 'High School')];
 
 // Multi-select filter component
 interface MultiSelectFilterProps {
@@ -196,6 +248,63 @@ function MultiSelectFilter({
   );
 }
 
+// Height/Weight Range Filter Component
+interface HeightWeightFilterProps {
+  minHeight: number;
+  minWeight: number;
+  onHeightChange: (height: number) => void;
+  onWeightChange: (weight: number) => void;
+  className?: string;
+}
+
+function HeightWeightFilter({
+  minHeight,
+  minWeight,
+  onHeightChange,
+  onWeightChange,
+  className
+}: HeightWeightFilterProps) {
+  return (
+    <div className={cn("space-y-4", className)}>
+      <div className="space-y-2">
+        <Label className="text-sm font-medium text-foreground">
+          Minimum Height: {inchesToFeetString(minHeight)}
+        </Label>
+        <Slider
+          value={[minHeight]}
+          onValueChange={(value: number[]) => onHeightChange(value[0])}
+          min={60} // 5'0"
+          max={96} // 8'0"
+          step={1}
+          className="w-full"
+        />
+        <div className="flex justify-between text-xs text-muted-foreground">
+          <span>5&apos;0&quot;</span>
+          <span>8&apos;0&quot;</span>
+        </div>
+      </div>
+      
+      <div className="space-y-2">
+        <Label className="text-sm font-medium text-foreground">
+          Minimum Weight: {minWeight} lbs
+        </Label>
+        <Slider
+          value={[minWeight]}
+          onValueChange={(value: number[]) => onWeightChange(value[0])}
+          min={100}
+          max={500}
+          step={5}
+          className="w-full"
+        />
+        <div className="flex justify-between text-xs text-muted-foreground">
+          <span>100 lbs</span>
+          <span>500 lbs</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // Get available tabs based on user role
 const getAvailableTabs = (userRole: string) => {
   switch (userRole) {
@@ -239,6 +348,37 @@ function SearchPageContent() {
   const router = useRouter();
   const { user } = useUser();
   const effectiveRole = user?.publicMetadata?.role as string;
+  
+  // Dynamic title and subtitle based on user role
+  const getTitle = () => {
+    switch (effectiveRole) {
+      case 'athlete':
+        return 'Discover';
+      case 'coach':
+        return 'Discover';
+      case 'recruiter':
+        return 'Discover';
+      case 'admin':
+        return 'Discover';
+      default:
+        return 'Discover';
+    }
+  };
+
+  const getSubtitle = () => {
+    switch (effectiveRole) {
+      case 'athlete':
+        return 'Find your next coach or opportunity';
+      case 'coach':
+        return 'Find your next talent';
+      case 'recruiter':
+        return 'Find your next talent';
+      case 'admin':
+        return 'Find athletes, coaches & recruiters';
+      default:
+        return 'Find athletes, coaches & recruiters';
+    }
+  };
 
   // Set default tab based on user role
   const getDefaultTab = (userRole: string): TabValue => {
@@ -255,7 +395,17 @@ function SearchPageContent() {
   // Filter states
   const [selectedSports, setSelectedSports] = useState<FilterOption[]>([]);
   const [selectedDivisions, setSelectedDivisions] = useState<FilterOption[]>([]);
+  const [selectedCountries, setSelectedCountries] = useState<FilterOption[]>([
+    { value: 'United States', label: 'United States' } // Default to United States
+  ]);
   const [selectedStates, setSelectedStates] = useState<FilterOption[]>([]);
+  
+  // Advanced filter states
+  const [selectedPositions, setSelectedPositions] = useState<FilterOption[]>([]);
+  const [selectedGraduatingClasses, setSelectedGraduatingClasses] = useState<FilterOption[]>([]);
+  const [selectedConferences, setSelectedConferences] = useState<FilterOption[]>([]);
+  const [minHeight, setMinHeight] = useState<number>(60); // 5'0" in inches
+  const [minWeight, setMinWeight] = useState<number>(100); // 100 lbs
 
   // Data and loading states
   const [loading, setLoading] = useState(false);
@@ -287,11 +437,11 @@ function SearchPageContent() {
     , []);
 
   const divisionsOptions = useMemo(() =>
-    getOrderedDivisions(effectiveRole).map(division => ({
+    ORDERED_DIVISIONS.map((division: string) => ({
       value: division,
       label: division
     }))
-    , [effectiveRole]);
+    , []);
 
   const statesOptions = useMemo(() =>
     US_STATES.map(state => ({
@@ -299,6 +449,32 @@ function SearchPageContent() {
       label: state
     }))
     , []);
+
+  // Country options
+  const countryOptions = useMemo(() =>
+    COUNTRIES.map(country => ({
+      value: country,
+      label: country
+    }))
+    , []);
+
+  // Check if United States is selected to show states
+  const showStatesFilter = useMemo(() =>
+    selectedCountries.some(country => country.value === 'United States')
+    , [selectedCountries]);
+
+  // Advanced filter options
+  const positionsOptions = useMemo(() =>
+    getPositionsForSports(selectedSports)
+    , [selectedSports]);
+
+  const graduatingClassOptions = useMemo(() =>
+    getGraduationYearOptions()
+    , []);
+
+  const conferencesOptions = useMemo(() =>
+    getConferencesForDivisions(selectedDivisions)
+    , [selectedDivisions]);
 
   // Load users function - only called when discover button is clicked
   const loadUsers = useCallback(async (pageNum: number, isNewSearch = false) => {
@@ -328,7 +504,13 @@ function SearchPageContent() {
         pageSize: '10', // Show 10 profiles per load
         sports: selectedSports.map(sport => sanitizeText(sport.value)),
         divisions: selectedDivisions.map(div => sanitizeText(div.value)),
-        states: selectedStates.map(state => sanitizeText(state.value))
+        countries: selectedCountries.map(country => sanitizeText(country.value)),
+        states: showStatesFilter ? selectedStates.map(state => sanitizeText(state.value)) : [],
+        positions: selectedPositions.map(pos => sanitizeText(pos.value)),
+        graduatingClasses: selectedGraduatingClasses.map(gc => sanitizeText(gc.value)),
+        conferences: selectedConferences.map(conf => sanitizeText(conf.value)),
+        minHeight: minHeight.toString(),
+        minWeight: minWeight.toString()
       };
 
       // Calculate approximate URL length if we were to use GET
@@ -339,7 +521,15 @@ function SearchPageContent() {
 
       searchParams.sports.forEach(sport => params.append('sports', sport));
       searchParams.divisions.forEach(div => params.append('divisions', div));
-      searchParams.states.forEach(state => params.append('states', state));
+      searchParams.countries.forEach(country => params.append('countries', country));
+      if (showStatesFilter) {
+        searchParams.states.forEach(state => params.append('states', state));
+      }
+      searchParams.positions.forEach(pos => params.append('positions', pos));
+      searchParams.graduatingClasses.forEach(gc => params.append('graduatingClasses', gc));
+      searchParams.conferences.forEach(conf => params.append('conferences', conf));
+      if (minHeight > 60) params.append('minHeight', searchParams.minHeight);
+      if (minWeight > 100) params.append('minWeight', searchParams.minWeight);
 
       const baseUrl = '/api/discover';
       const estimatedUrlLength = baseUrl.length + params.toString().length + 1; // +1 for '?'
@@ -359,7 +549,13 @@ function SearchPageContent() {
             pageSize: 10,
             sports: selectedSports.map(sport => sanitizeText(sport.value)),
             divisions: selectedDivisions.map(div => sanitizeText(div.value)),
-            states: selectedStates.map(state => sanitizeText(state.value))
+            countries: selectedCountries.map(country => sanitizeText(country.value)),
+            states: showStatesFilter ? selectedStates.map(state => sanitizeText(state.value)) : [],
+            positions: selectedPositions.map(pos => sanitizeText(pos.value)),
+            graduatingClasses: selectedGraduatingClasses.map(gc => sanitizeText(gc.value)),
+            conferences: selectedConferences.map(conf => sanitizeText(conf.value)),
+            minHeight: minHeight > 60 ? minHeight : undefined,
+            minWeight: minWeight > 100 ? minWeight : undefined
           })
         });
 
@@ -411,7 +607,7 @@ function SearchPageContent() {
       setLoading(false);
       setInitialLoading(false);
     }
-  }, [selectedSports, selectedDivisions, selectedStates]);
+  }, [selectedSports, selectedDivisions, selectedCountries, selectedStates, selectedPositions, selectedGraduatingClasses, selectedConferences, minHeight, minWeight, showStatesFilter]);
 
   // Store all results from the search
   const [allUsers, setAllUsers] = useState<DiscoverUser[]>([]);
@@ -424,7 +620,13 @@ function SearchPageContent() {
     const searchState = {
       selectedSports,
       selectedDivisions,
+      selectedCountries,
       selectedStates,
+      selectedPositions,
+      selectedGraduatingClasses,
+      selectedConferences,
+      minHeight,
+      minWeight,
       activeTab,
       hasSearched,
       timestamp: Date.now()
@@ -435,7 +637,7 @@ function SearchPageContent() {
     } catch (error) {
       console.warn('Failed to save search state to cache:', error);
     }
-  }, [selectedSports, selectedDivisions, selectedStates, activeTab, hasSearched]);
+  }, [selectedSports, selectedDivisions, selectedCountries, selectedStates, selectedPositions, selectedGraduatingClasses, selectedConferences, minHeight, minWeight, activeTab, hasSearched]);
 
   // Load search state from cache (filters only)
   const loadSearchState = useCallback(() => {
@@ -448,7 +650,13 @@ function SearchPageContent() {
         if (isRecent) {
           setSelectedSports(parsed.selectedSports || []);
           setSelectedDivisions(parsed.selectedDivisions || []);
+          setSelectedCountries(parsed.selectedCountries || [{ value: 'United States', label: 'United States' }]);
           setSelectedStates(parsed.selectedStates || []);
+          setSelectedPositions(parsed.selectedPositions || []);
+          setSelectedGraduatingClasses(parsed.selectedGraduatingClasses || []);
+          setSelectedConferences(parsed.selectedConferences || []);
+          setMinHeight(parsed.minHeight || 60);
+          setMinWeight(parsed.minWeight || 100);
           setActiveTab(parsed.activeTab || getDefaultTab(effectiveRole));
           setHasSearched(parsed.hasSearched || false);
           return true; // Successfully loaded cache, but need to search fresh
@@ -482,16 +690,24 @@ function SearchPageContent() {
 
   // Show discover button when filters change (only if filters are applied)
   useEffect(() => {
-    const hasFiltersApplied = selectedSports.length > 0 || selectedDivisions.length > 0 || selectedStates.length > 0;
+    const hasFiltersApplied = selectedSports.length > 0 || 
+                             selectedDivisions.length > 0 || 
+                             selectedCountries.length > 1 || // More than just United States
+                             selectedStates.length > 0 ||
+                             selectedPositions.length > 0 ||
+                             selectedGraduatingClasses.length > 0 ||
+                             selectedConferences.length > 0 ||
+                             minHeight > 60 ||
+                             minWeight > 100;
     setShowDiscoverButton(hasFiltersApplied && hasSearched);
-  }, [selectedSports, selectedDivisions, selectedStates, hasSearched]);
+  }, [selectedSports, selectedDivisions, selectedCountries, selectedStates, selectedPositions, selectedGraduatingClasses, selectedConferences, minHeight, minWeight, hasSearched]);
 
   // Save search state whenever important data changes
   useEffect(() => {
     if (hasSearched && allUsers.length > 0) {
       saveSearchState();
     }
-  }, [selectedSports, selectedDivisions, selectedStates, allUsers, activeTab, page, hasSearched, saveSearchState]);
+  }, [selectedSports, selectedDivisions, selectedStates, selectedPositions, selectedGraduatingClasses, selectedConferences, minHeight, minWeight, allUsers, activeTab, page, hasSearched, saveSearchState]);
 
   // Filter displayed users based on active tab
   const displayedUsers = useMemo(() => {
@@ -522,7 +738,13 @@ function SearchPageContent() {
   const clearFilters = () => {
     setSelectedSports([]);
     setSelectedDivisions([]);
+    setSelectedCountries([{ value: 'United States', label: 'United States' }]); // Reset to default
     setSelectedStates([]);
+    setSelectedPositions([]);
+    setSelectedGraduatingClasses([]);
+    setSelectedConferences([]);
+    setMinHeight(60);
+    setMinWeight(100);
     setShowMobileFilters(false);
     setShowDiscoverButton(false);
     setError(null);
@@ -848,7 +1070,15 @@ function SearchPageContent() {
   );
 
   // Active filters count
-  const activeFiltersCount = selectedSports.length + selectedDivisions.length + selectedStates.length;
+  const activeFiltersCount = selectedSports.length + 
+                           selectedDivisions.length + 
+                           (selectedCountries.length > 1 ? selectedCountries.length : 0) + // Only count if more than United States
+                           selectedStates.length +
+                           selectedPositions.length +
+                           selectedGraduatingClasses.length +
+                           selectedConferences.length +
+                           (minHeight > 60 ? 1 : 0) +
+                           (minWeight > 100 ? 1 : 0);
 
   return (
     <div className="bg-background p-4 md:p-6">
@@ -860,10 +1090,10 @@ function SearchPageContent() {
               <div className="flex items-center justify-between mb-6">
                 <div>
                   <h1 className="text-3xl md:text-4xl font-bold text-foreground mb-1">
-                    Discover
+                    {getTitle()}
                   </h1>
                   <p className="text-base md:text-lg text-muted-foreground">
-                    Find athletes, coaches & recruiters
+                    {getSubtitle()}
                   </p>
                 </div>
 
@@ -897,11 +1127,16 @@ function SearchPageContent() {
                 )}
               </div>
 
-              <div className="space-y-4">
+              <div className="space-y-4 min-h-[300px]">
                 {/* Sports Filter */}
                 <div>
                   <label className="block text-sm font-medium text-foreground mb-2">
                     Sports
+                    {(effectiveRole === 'coach' || effectiveRole === 'recruiter') && (
+                      <span className="ml-2 text-xs text-muted-foreground">
+                        💡 Select one sport to filter by positions
+                      </span>
+                    )}
                   </label>
                   <MultiSelectFilter
                     options={sportsOptions}
@@ -926,19 +1161,118 @@ function SearchPageContent() {
                   />
                 </div>
 
-                {/* States Filter */}
+                {/* Country Filter */}
                 <div>
                   <label className="block text-sm font-medium text-foreground mb-2">
-                    Location
+                    Country
                   </label>
                   <MultiSelectFilter
-                    options={statesOptions}
-                    selected={selectedStates}
-                    onSelectionChange={setSelectedStates}
-                    placeholder="Select states..."
-                    searchPlaceholder="Search states..."
+                    options={countryOptions}
+                    selected={selectedCountries}
+                    onSelectionChange={setSelectedCountries}
+                    placeholder="Select countries..."
+                    searchPlaceholder="Search countries..."
                   />
                 </div>
+
+                {/* States Filter - Only show if United States is selected */}
+                {showStatesFilter && (
+                  <div>
+                    <label className="block text-sm font-medium text-foreground mb-2">
+                      US States
+                    </label>
+                    <MultiSelectFilter
+                      options={statesOptions}
+                      selected={selectedStates}
+                      onSelectionChange={setSelectedStates}
+                      placeholder="Select states..."
+                      searchPlaceholder="Search states..."
+                    />
+                  </div>
+                )}
+
+                {/* Advanced Filters for Coaches/Recruiters/Admins viewing Athletes */}
+                {(effectiveRole === 'coach' || effectiveRole === 'recruiter' || effectiveRole === 'admin') && (
+                  <>
+                    {/* Height/Weight Filters */}
+                    <div className="border-t pt-4">
+                      <h3 className="text-sm font-medium text-foreground mb-3">Physical Requirements</h3>
+                      <HeightWeightFilter
+                        minHeight={minHeight}
+                        minWeight={minWeight}
+                        onHeightChange={setMinHeight}
+                        onWeightChange={setMinWeight}
+                      />
+                    </div>
+
+                    {/* Graduating Class Filter */}
+                    <div>
+                      <label className="block text-sm font-medium text-foreground mb-2">
+                        Graduating Class
+                      </label>
+                      <MultiSelectFilter
+                        options={graduatingClassOptions}
+                        selected={selectedGraduatingClasses}
+                        onSelectionChange={setSelectedGraduatingClasses}
+                        placeholder="Select graduation years..."
+                        searchPlaceholder="Search years..."
+                      />
+                    </div>
+
+                    {/* Positions Filter - Only show if sports are selected */}
+                    {selectedSports.length > 0 && positionsOptions.length > 0 && (
+                      <div>
+                        <label className="block text-sm font-medium text-foreground mb-2">
+                          Positions
+                        </label>
+                        <MultiSelectFilter
+                          options={positionsOptions}
+                          selected={selectedPositions}
+                          onSelectionChange={setSelectedPositions}
+                          placeholder="Select positions..."
+                          searchPlaceholder="Search positions..."
+                        />
+                      </div>
+                    )}
+
+                    {/* Conferences Filter - Only show if divisions are selected */}
+                    {selectedDivisions.length > 0 && conferencesOptions.length > 0 && (
+                      <div className="border-t pt-4">
+                        <label className="block text-sm font-medium text-foreground mb-2">
+                          Conferences
+                        </label>
+                        <MultiSelectFilter
+                          options={conferencesOptions}
+                          selected={selectedConferences}
+                          onSelectionChange={setSelectedConferences}
+                          placeholder="Select conferences..."
+                          searchPlaceholder="Search conferences..."
+                        />
+                      </div>
+                    )}
+                  </>
+                )}
+
+                {/* Advanced Filters for Athletes viewing Coaches/Recruiters */}
+                {effectiveRole === 'athlete' && (
+                  <>
+                    {/* Conferences Filter - Only show if divisions are selected */}
+                    {selectedDivisions.length > 0 && conferencesOptions.length > 0 && (
+                      <div className="border-t pt-4">
+                        <label className="block text-sm font-medium text-foreground mb-2">
+                          Conferences
+                        </label>
+                        <MultiSelectFilter
+                          options={conferencesOptions}
+                          selected={selectedConferences}
+                          onSelectionChange={setSelectedConferences}
+                          placeholder="Select conferences..."
+                          searchPlaceholder="Search conferences..."
+                        />
+                      </div>
+                    )}
+                  </>
+                )}
 
                 {showDiscoverButton && (
                   <Button
@@ -958,10 +1292,10 @@ function SearchPageContent() {
             <div className="flex items-center justify-between mb-4">
               <div className="flex-1">
                 <h1 className="text-3xl md:text-4xl font-bold text-foreground mb-1">
-                  Discover
+                  {getTitle()}
                 </h1>
                 <p className="text-base md:text-lg text-muted-foreground">
-                  Find athletes, coaches & recruiters
+                  {getSubtitle()}
                 </p>
               </div>
 
@@ -994,11 +1328,16 @@ function SearchPageContent() {
                   </Button>
                 </div>
 
-                <div className="space-y-4">
+                <div className="space-y-4 min-h-[400px]">
                   {/* Sports Filter */}
                   <div>
                     <label className="block text-sm font-medium text-foreground mb-2">
                       Sports
+                      {(effectiveRole === 'coach' || effectiveRole === 'recruiter') && (
+                        <span className="ml-2 text-xs text-muted-foreground">
+                          💡 Select one sport to filter by positions
+                        </span>
+                      )}
                     </label>
                     <MultiSelectFilter
                       options={sportsOptions}
@@ -1023,19 +1362,118 @@ function SearchPageContent() {
                     />
                   </div>
 
-                  {/* States Filter */}
+                  {/* Country Filter */}
                   <div>
                     <label className="block text-sm font-medium text-foreground mb-2">
-                      Location
+                      Country
                     </label>
                     <MultiSelectFilter
-                      options={statesOptions}
-                      selected={selectedStates}
-                      onSelectionChange={setSelectedStates}
-                      placeholder="Select states..."
-                      searchPlaceholder="Search states..."
+                      options={countryOptions}
+                      selected={selectedCountries}
+                      onSelectionChange={setSelectedCountries}
+                      placeholder="Select countries..."
+                      searchPlaceholder="Search countries..."
                     />
                   </div>
+
+                  {/* States Filter - Only show if United States is selected */}
+                  {showStatesFilter && (
+                    <div>
+                      <label className="block text-sm font-medium text-foreground mb-2">
+                        US States
+                      </label>
+                      <MultiSelectFilter
+                        options={statesOptions}
+                        selected={selectedStates}
+                        onSelectionChange={setSelectedStates}
+                        placeholder="Select states..."
+                        searchPlaceholder="Search states..."
+                      />
+                    </div>
+                  )}
+
+                  {/* Advanced Filters for Coaches/Recruiters/Admins viewing Athletes */}
+                  {(effectiveRole === 'coach' || effectiveRole === 'recruiter' || effectiveRole === 'admin') && (
+                    <>
+                      {/* Height/Weight Filters */}
+                      <div className="border-t pt-4">
+                        <h3 className="text-sm font-medium text-foreground mb-3">Physical Requirements</h3>
+                        <HeightWeightFilter
+                          minHeight={minHeight}
+                          minWeight={minWeight}
+                          onHeightChange={setMinHeight}
+                          onWeightChange={setMinWeight}
+                        />
+                      </div>
+
+                      {/* Graduating Class Filter */}
+                      <div>
+                        <label className="block text-sm font-medium text-foreground mb-2">
+                          Graduating Class
+                        </label>
+                        <MultiSelectFilter
+                          options={graduatingClassOptions}
+                          selected={selectedGraduatingClasses}
+                          onSelectionChange={setSelectedGraduatingClasses}
+                          placeholder="Select graduation years..."
+                          searchPlaceholder="Search years..."
+                        />
+                      </div>
+
+                      {/* Positions Filter - Only show if sports are selected */}
+                      {selectedSports.length > 0 && positionsOptions.length > 0 && (
+                        <div>
+                          <label className="block text-sm font-medium text-foreground mb-2">
+                            Positions
+                          </label>
+                          <MultiSelectFilter
+                            options={positionsOptions}
+                            selected={selectedPositions}
+                            onSelectionChange={setSelectedPositions}
+                            placeholder="Select positions..."
+                            searchPlaceholder="Search positions..."
+                          />
+                        </div>
+                      )}
+
+                      {/* Conferences Filter - Only show if divisions are selected */}
+                      {selectedDivisions.length > 0 && conferencesOptions.length > 0 && (
+                        <div className="border-t pt-4">
+                          <label className="block text-sm font-medium text-foreground mb-2">
+                            Conferences
+                          </label>
+                          <MultiSelectFilter
+                            options={conferencesOptions}
+                            selected={selectedConferences}
+                            onSelectionChange={setSelectedConferences}
+                            placeholder="Select conferences..."
+                            searchPlaceholder="Search conferences..."
+                          />
+                        </div>
+                      )}
+                    </>
+                  )}
+
+                  {/* Advanced Filters for Athletes viewing Coaches/Recruiters */}
+                  {effectiveRole === 'athlete' && (
+                    <>
+                      {/* Conferences Filter - Only show if divisions are selected */}
+                      {selectedDivisions.length > 0 && conferencesOptions.length > 0 && (
+                        <div className="border-t pt-4">
+                          <label className="block text-sm font-medium text-foreground mb-2">
+                            Conferences
+                          </label>
+                          <MultiSelectFilter
+                            options={conferencesOptions}
+                            selected={selectedConferences}
+                            onSelectionChange={setSelectedConferences}
+                            placeholder="Select conferences..."
+                            searchPlaceholder="Search conferences..."
+                          />
+                        </div>
+                      )}
+                    </>
+                  )}
 
                   <div className="flex gap-3 pt-4">
                     <Button

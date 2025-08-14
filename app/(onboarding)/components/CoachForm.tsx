@@ -398,7 +398,7 @@ export default function CoachForm({ data, onInputChange }: CoachFormProps) {
           )}
           <p className="text-xs text-muted-foreground">{data.title.length}/{FIELD_LIMITS.TITLE} characters</p>
         </div>
-        <div className="space-y-3">
+        <div className="space-y-4">
           <SchoolSelector
             value={data.organizationName}
             onValueChange={(value) => validateAndUpdateField('organizationName', value)}
@@ -446,12 +446,12 @@ export default function CoachForm({ data, onInputChange }: CoachFormProps) {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="space-y-3">
           <Label htmlFor="division" className="text-base font-medium">Division *</Label>
-          <div className="flex gap-1">
+          <div className="flex gap-1 w-full max-w-full">
             <Select
               value={data.division}
               onValueChange={(value) => onInputChange('division', value)}
             >
-              <SelectTrigger className="h-11 bg-background flex-1">
+              <SelectTrigger className="!h-11 bg-background border-input flex-1 min-w-0">
                 <SelectValue placeholder="Select division" />
               </SelectTrigger>
               <SelectContent>
@@ -508,7 +508,7 @@ export default function CoachForm({ data, onInputChange }: CoachFormProps) {
               value={data.state}
               onValueChange={(value) => onInputChange('state', value)}
             >
-              <SelectTrigger className="h-11 bg-background" style={{ height: '2.75rem' }}>
+              <SelectTrigger className="!h-11 bg-background border-input w-full">
                 <SelectValue placeholder="Select state" />
               </SelectTrigger>
               <SelectContent>

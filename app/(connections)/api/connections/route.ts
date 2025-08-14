@@ -173,7 +173,7 @@ export async function POST(request: NextRequest) {
 // Get user's connections
 export async function GET(request: NextRequest) {
   try {
-    // Verify authentication (middleware already handled auth.protect())
+    // Verify authentication
     const authResult = await requireAnyRole();
     if (authResult instanceof NextResponse) return authResult;
 
@@ -183,27 +183,62 @@ export async function GET(request: NextRequest) {
     const rateLimitCheck = await withRateLimit(request, 'connections', currentUserId, role);
     if (!rateLimitCheck.success) return rateLimitCheck.response;
 
-    // Try cache first
-    const cacheKey = `connections:${currentUserId}:all`;
-    const cachedConnections = await getCachedWithType<ConnectionsResponse>(cacheKey);
+    // Parse filters from query parameters
+    const { searchParams } = new URL(request.url);
+    const sports = searchParams.getAll('sports');
+    const divisions = searchParams.getAll('divisions');
+    const states = searchParams.getAll('states');
+    const countries = searchParams.getAll('countries');
+    const positions = searchParams.getAll('positions');
+    const graduatingClasses = searchParams.getAll('graduatingClasses');
+    const conferences = searchParams.getAll('conferences');
+    const requestTypes = searchParams.getAll('requestTypes');
+    const minHeight = searchParams.get('minHeight') ? parseInt(searchParams.get('minHeight')!, 10) : undefined;
+    const minWeight = searchParams.get('minWeight') ? parseInt(searchParams.get('minWeight')!, 10) : undefined;
+
+    const filters = {
+      sports: sports.length > 0 ? sports : undefined,
+      divisions: divisions.length > 0 ? divisions : undefined,
+      states: states.length > 0 ? states : undefined,
+      countries: countries.length > 0 ? countries : undefined,
+      positions: positions.length > 0 ? positions : undefined,
+      graduatingClasses: graduatingClasses.length > 0 ? graduatingClasses : undefined,
+      conferences: conferences.length > 0 ? conferences : undefined,
+      requestTypes: requestTypes.length > 0 ? requestTypes : undefined,
+      minHeight,
+      minWeight,
+    };
     
-    if (cachedConnections) {
-      return createSuccessResponse({
-        success: true,
-        ...cachedConnections
-      }, rateLimitCheck.headers);
+    const hasFilters = Object.values(filters).some(v => v !== undefined && (!Array.isArray(v) || v.length > 0));
+
+    // Generate a more specific cache key if filters are applied
+    const cacheKey = hasFilters 
+      ? `connections:${currentUserId}:${JSON.stringify(filters)}`
+      : `connections:${currentUserId}:all`;
+
+    if (hasFilters) {
+      // When filters are applied, we bypass the main cache for now
+      // to ensure fresh, filtered data is always served.
+      // Caching for filtered results can be complex and might be added later.
+    } else {
+      const cachedConnections = await getCachedWithType<ConnectionsResponse>(cacheKey);
+      if (cachedConnections) {
+        return createSuccessResponse({
+          success: true,
+          ...cachedConnections
+        }, rateLimitCheck.headers);
+      }
     }
 
-    // Get connections based on user type - now using the new user-based approach
-    const allConnections = await connectionOperations.getUserConnections(currentUserId);
+    // Get connections using the appropriate db-util function
+    const allConnections = await connectionOperations.getFilteredUserConnections(currentUserId, filters);
 
-    // Separate connected vs pending, and incoming vs outgoing pending
+    // Process connections (same logic as before)
     const connectedConnections: ConnectionData[] = [];
     const incomingPendingRequests: ConnectionData[] = [];
     const outgoingPendingRequests: ConnectionData[] = [];
 
     allConnections.forEach(connection => {
-      // Determine which user is the "other" user
       const isFromUser = connection.fromUserId === currentUserId;
       const otherUser = isFromUser ? connection.toUser : connection.fromUser;
       
@@ -214,7 +249,6 @@ export async function GET(request: NextRequest) {
         createdAt: connection.createdAt,
         notes: connection.notes ? sanitizeText(connection.notes) : null,
         isInitiator: isFromUser,
-        // Include other user's safe profile data
         otherUser: {
           userId: otherUser.id,
           fullName: otherUser.athleteProfile?.fullName || 
@@ -245,11 +279,9 @@ export async function GET(request: NextRequest) {
                      otherUser.coachProfile?.isVerified || 
                      otherUser.recruitingProfile?.isVerified || false,
           role: otherUser.role,
-          // Add athlete-specific fields
           height: otherUser.athleteProfile?.height || undefined,
           weight: otherUser.athleteProfile?.weight || undefined,
           positions: otherUser.athleteProfile?.positions || undefined,
-          // Add recruiting needs for coaches and recruiters
           recruitingNeeds: (() => {
             if (otherUser.role === 'coach' && otherUser.coachProfile?.recruitingNeeds) {
               return {
@@ -258,7 +290,6 @@ export async function GET(request: NextRequest) {
                 scholarshipsAvailable: otherUser.coachProfile.recruitingNeeds.scholarshipsAvailable || null,
               };
             } else if (otherUser.role === 'recruiter' && otherUser.recruitingProfile?.recruitingNeeds) {
-              // Get recruiting needs for the main sport
               const mainSportNeeds = otherUser.recruitingProfile.recruitingNeeds.find(
                 need => need.sport === otherUser.recruitingProfile?.sportRecruiting
               );
@@ -297,8 +328,10 @@ export async function GET(request: NextRequest) {
       }
     };
 
-    // Cache the result
-    await setCachedWithType(cacheKey, result, 'userConnections');
+    // Cache the result only if no filters were applied
+    if (!hasFilters) {
+      await setCachedWithType(cacheKey, result, 'userConnections');
+    }
 
     return createSuccessResponse({
       success: true,

@@ -1,5 +1,6 @@
 import { eq, and, desc, or, asc, sql, count, lt } from 'drizzle-orm';
 import { db } from './db';
+import { parseHeightToInches, parseWeightToPounds } from '@/lib/parsing-utils';
 import { 
   users, 
   athleteProfiles, 
@@ -816,6 +817,140 @@ export const connectionOperations = {
     });
     
     return connection;
+  },
+
+  // Get filtered connections with database-level optimization
+  async getFilteredUserConnections(userId: string, filters: {
+    sports?: string[];
+    divisions?: string[];
+    states?: string[];
+    countries?: string[];
+    positions?: string[];
+    graduatingClasses?: string[];
+    conferences?: string[];
+    requestTypes?: string[];
+    minHeight?: number;
+    minWeight?: number;
+  } = {}) {
+    const {
+      sports,
+      divisions,
+      states,
+      countries,
+      positions,
+      graduatingClasses,
+      conferences,
+      requestTypes,
+      minHeight,
+      minWeight,
+    } = filters;
+
+    const hasFilters = sports?.length || divisions?.length || states?.length || countries?.length || positions?.length || graduatingClasses?.length || conferences?.length || requestTypes?.length || (minHeight && minHeight > 60) || (minWeight && minWeight > 100);
+
+    // If no filters, use the regular getUserConnections
+    if (!hasFilters) {
+      return this.getUserConnections(userId);
+    }
+
+    // For simplicity, get all connections and filter them
+    // This could be optimized in the future with more complex DB queries
+    const allConnections = await this.getUserConnections(userId);
+    
+    // Apply filters on the server side
+    return allConnections.filter(connection => {
+      const otherUser = connection.fromUserId === userId ? connection.toUser : connection.fromUser;
+      
+      // Sports filter
+      if (sports && sports.length > 0) {
+        const userSport = otherUser.athleteProfile?.sport || 
+                         otherUser.coachProfile?.sportCoaching || 
+                         otherUser.recruitingProfile?.sportRecruiting;
+        if (!userSport || !sports.includes(userSport)) {
+          return false;
+        }
+      }
+      
+      // Divisions filter
+      if (divisions && divisions.length > 0) {
+        const userDivision = otherUser.coachProfile?.division || 
+                            otherUser.recruitingProfile?.division;
+        if (!userDivision || !divisions.includes(userDivision)) {
+          return false;
+        }
+      }
+      
+      // States filter
+      if (states && states.length > 0) {
+        const userState = otherUser.athleteProfile?.state || 
+                         otherUser.coachProfile?.state || 
+                         otherUser.recruitingProfile?.state;
+        if (!userState || !states.includes(userState)) {
+          return false;
+        }
+      }
+
+      // Countries filter - use default for now since country field isn't in all profiles
+      if (countries && countries.length > 0) {
+        // Default to United States since not all profiles have country field
+        const userCountry = 'United States';
+        if (!countries.includes(userCountry)) {
+          return false;
+        }
+      }
+
+      // Positions filter
+      if (positions && positions.length > 0) {
+        if (!otherUser.athleteProfile?.positions) {
+          return false;
+        }
+        const hasMatchingPosition = otherUser.athleteProfile.positions.some(pos => 
+          positions.includes(pos)
+        );
+        if (!hasMatchingPosition) {
+          return false;
+        }
+      }
+
+      // Graduating classes filter
+      if (graduatingClasses && graduatingClasses.length > 0) {
+        const graduationYear = otherUser.athleteProfile?.graduationYear;
+        if (!graduationYear || !graduatingClasses.includes(graduationYear.toString())) {
+          return false;
+        }
+      }
+
+      // Conferences filter - skip for now since conference field isn't in all profiles
+      if (conferences && conferences.length > 0) {
+        // Conference filtering not implemented yet since field doesn't exist in current schema
+        // This would need to be added to the profile schemas first
+        return true; // Allow all for now
+      }
+
+      // Request types filter (role filter)
+      if (requestTypes && requestTypes.length > 0) {
+        if (!requestTypes.includes(otherUser.role)) {
+          return false;
+        }
+      }
+
+      // Height filter
+      if (minHeight && otherUser.athleteProfile?.height) {
+        const heightInches = parseHeightToInches(otherUser.athleteProfile.height);
+        if (!heightInches || heightInches < minHeight) {
+          return false;
+        }
+      }
+
+      // Weight filter
+      if (minWeight && otherUser.athleteProfile?.weight) {
+        const weightPounds = parseWeightToPounds(otherUser.athleteProfile.weight);
+        if (!weightPounds || weightPounds < minWeight) {
+          return false;
+        }
+      }
+      
+      return true;
+    });
   }
 };
 
@@ -2147,7 +2282,7 @@ export const schoolOperations = {
 
     if (existingSchool.length > 0) {
       return existingSchool[0];
-    }
+       }
 
     try {
       const [school] = await db.insert(schools).values(schoolData).returning();
@@ -2372,3 +2507,48 @@ export const schoolOperations = {
     return new Map(schoolsData.map(school => [school.id, school.name]));
   }
 };
+
+/**
+ * Creates a secure, parameterized SQL condition for filtering athlete height.
+ * This function generates a CASE statement to parse height strings (e.g., "6'2\"")
+ * into total inches for comparison.
+ *
+ * @param minHeight - The minimum height in inches.
+ * @returns A Drizzle SQL object for the height condition.
+ */
+export function createHeightFilter(minHeight: number) {
+  return sql`(
+    CASE
+      -- Match "feet'inches\"" format (e.g., 6'2")
+      WHEN athlete_profiles.height ~ '^[0-9]{1,2}''[0-9]{1,2}"$'
+      THEN (
+        CAST(SPLIT_PART(athlete_profiles.height, '''', 1) AS INTEGER) * 12 +
+        CAST(REPLACE(SPLIT_PART(athlete_profiles.height, '''', 2), '"', '') AS INTEGER)
+      )
+      -- Match "feet'" format (e.g., 6')
+      WHEN athlete_profiles.height ~ '^[0-9]{1,2}''$'
+      THEN (
+        CAST(REPLACE(athlete_profiles.height, '''', '') AS INTEGER) * 12
+      )
+      ELSE NULL
+    END
+  ) >= ${minHeight}`;
+}
+
+/**
+ * Creates a secure, parameterized SQL condition for filtering athlete weight.
+ * This function generates a CASE statement to parse weight strings into pounds.
+ *
+ * @param minWeight - The minimum weight in pounds.
+ * @returns A Drizzle SQL object for the weight condition.
+ */
+export function createWeightFilter(minWeight: number) {
+  return sql`(
+    CASE
+      -- Match numeric weight string (e.g., "180")
+      WHEN athlete_profiles.weight ~ '^[0-9]{1,3}$'
+      THEN CAST(athlete_profiles.weight AS INTEGER)
+      ELSE NULL
+    END
+  ) >= ${minWeight}`;
+}

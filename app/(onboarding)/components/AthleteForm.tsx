@@ -447,7 +447,7 @@ export default function AthleteForm({ data, onInputChange }: AthleteFormProps) {
           
           setValidationErrors(newErrors);
         }}>
-          <SelectTrigger className="h-11 bg-background">
+          <SelectTrigger className="!h-11 w-full bg-background">
             <SelectValue placeholder="Are you a high school or college athlete?" />
           </SelectTrigger>
           <SelectContent>
@@ -530,7 +530,7 @@ export default function AthleteForm({ data, onInputChange }: AthleteFormProps) {
           <div className="space-y-3">
             <Label htmlFor="division" className="text-base font-medium">Division *</Label>
             <Select value={data.division} onValueChange={(value) => onInputChange('division', value)}>
-              <SelectTrigger className="h-11 bg-background">
+              <SelectTrigger className="!h-11 bg-background border-input w-full">
                 <SelectValue placeholder="Select your division" />
               </SelectTrigger>
               <SelectContent>
@@ -622,7 +622,7 @@ export default function AthleteForm({ data, onInputChange }: AthleteFormProps) {
           <div className="space-y-3">
             <Label htmlFor="state" className="text-base font-medium">State *</Label>
             <Select value={data.state} onValueChange={(value) => onInputChange('state', value)}>
-              <SelectTrigger className="h-11 bg-background w-full" style={{ height: '2.75rem' }}>
+              <SelectTrigger className="!h-11 bg-background border-input w-full">
                 <SelectValue placeholder="Select state" />
               </SelectTrigger>
               <SelectContent>
@@ -635,12 +635,12 @@ export default function AthleteForm({ data, onInputChange }: AthleteFormProps) {
         )}
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="space-y-3">
           <Label className="text-base font-medium">Height *</Label>
           <div className="flex gap-1.5">
             <Select value={data.heightFeet} onValueChange={(value) => onInputChange('heightFeet', value)}>
-              <SelectTrigger className="h-11 bg-background w-full" style={{ height: '2.75rem' }}>
+              <SelectTrigger className="!h-11 bg-background w-full">
                 <SelectValue placeholder="Feet" />
               </SelectTrigger>
               <SelectContent>
@@ -650,7 +650,7 @@ export default function AthleteForm({ data, onInputChange }: AthleteFormProps) {
               </SelectContent>
             </Select>
             <Select value={data.heightInches} onValueChange={(value) => onInputChange('heightInches', value)}>
-              <SelectTrigger className="h-11 bg-background w-full" style={{ height: '2.75rem' }}>
+              <SelectTrigger className="!h-11 bg-background w-full">
                 <SelectValue placeholder="In" />
               </SelectTrigger>
               <SelectContent>
@@ -678,7 +678,7 @@ export default function AthleteForm({ data, onInputChange }: AthleteFormProps) {
         <div className="space-y-3">
           <Label htmlFor="gender" className="text-base font-medium">Gender</Label>
           <Select value={data.gender} onValueChange={(value) => onInputChange('gender', value)}>
-            <SelectTrigger className="h-11 bg-background w-full" style={{ height: '2.75rem' }}>
+            <SelectTrigger className="!h-11 bg-background w-full">
               <SelectValue placeholder="Gender" />
             </SelectTrigger>
             <SelectContent>
@@ -687,7 +687,6 @@ export default function AthleteForm({ data, onInputChange }: AthleteFormProps) {
             </SelectContent>
           </Select>
         </div>
-        <div></div>
       </div>
 
       {/* Academic Information with conditional SAT/ACT */}
@@ -695,7 +694,7 @@ export default function AthleteForm({ data, onInputChange }: AthleteFormProps) {
         <div className="space-y-3">
           <Label htmlFor="graduationYear" className="text-base font-medium">Graduation Year *</Label>
           <Select value={data.graduationYear?.toString() || ''} onValueChange={(value) => validateAndUpdateField('graduationYear', parseInt(value))}>
-            <SelectTrigger className={`h-11 bg-background w-full ${validationErrors.graduationYear ? 'border-red-500' : ''}`} style={{ height: '2.75rem' }}>
+            <SelectTrigger className={`!h-11 bg-background w-full ${validationErrors.graduationYear ? 'border-red-500' : ''}`}>
               <SelectValue placeholder="Year" />
             </SelectTrigger>
             <SelectContent>
