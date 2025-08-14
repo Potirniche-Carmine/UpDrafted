@@ -699,7 +699,7 @@ export function RecruiterEditDialogs({
                 value={editData.sportRecruiting || ''} 
                 onValueChange={(value) => handleFieldChange('sportRecruiting', value)}
               >
-                <SelectTrigger>
+                <SelectTrigger className="!h-11 w-full">
                   <SelectValue placeholder="Select sport" />
                 </SelectTrigger>
                 <SelectContent className="z-[70]">
@@ -738,7 +738,7 @@ export function RecruiterEditDialogs({
                 value={String(editData.country || '')}
                 onValueChange={(value) => setEditData(prev => ({ ...prev, country: value }))}
               >
-                <SelectTrigger className="h-12" id="edit-country">
+                <SelectTrigger className="!h-11 w-full" id="edit-country">
                   <SelectValue placeholder="Select country" />
                 </SelectTrigger>
                 <SelectContent className="z-[70]">
@@ -755,7 +755,7 @@ export function RecruiterEditDialogs({
                   id="edit-city"
                   value={editData.city || ''}
                   onChange={(e) => handleFieldChange('city', e.target.value)}
-                  className="h-12"
+                  className="h-11 w-full"
                 />
               </div>
               {/* Only show State * if country is United States or not selected */}
@@ -766,7 +766,7 @@ export function RecruiterEditDialogs({
                     value={String(editData.state || '')}
                     onValueChange={(value) => setEditData(prev => ({ ...prev, state: value }))}
                   >
-                    <SelectTrigger className="h-12" id="edit-state">
+                    <SelectTrigger className="!h-11 w-full" id="edit-state">
                       <SelectValue placeholder="Select state" />
                     </SelectTrigger>
                     <SelectContent className="z-[70]">
@@ -785,7 +785,7 @@ export function RecruiterEditDialogs({
                 value={editData.division || ''} 
                 onValueChange={(value) => handleFieldChange('division', value)}
               >
-                <SelectTrigger>
+                <SelectTrigger className="!h-11 w-full">
                   <SelectValue placeholder="Select division" />
                 </SelectTrigger>
                 <SelectContent className="z-[70]">
@@ -880,7 +880,7 @@ export function RecruiterEditDialogs({
               </Label>
               <div className="mt-2">
                 <Select onValueChange={addPosition}>
-                  <SelectTrigger className={`${(!editData.positions || editData.positions.length === 0) && validationErrors.positions ? 'border-red-300' : ''}`}>
+                  <SelectTrigger className={`!h-11 w-full ${(!editData.positions || editData.positions.length === 0) && validationErrors.positions ? 'border-red-300' : ''}`}>
                     <SelectValue placeholder="Add position" />
                   </SelectTrigger>
                   <SelectContent className="z-[70]">
@@ -1181,7 +1181,7 @@ export function RecruiterEditDialogs({
                   handleFieldChange('positions', []);
                 }}
               >
-                <SelectTrigger className="h-11 bg-background">
+                <SelectTrigger className="!h-11 w-full bg-background">
                   <SelectValue placeholder="Select a sport to add" />
                 </SelectTrigger>
                 <SelectContent className="z-[70]">
@@ -1340,7 +1340,7 @@ export function RecruiterEditDialogs({
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent 
-        className="max-w-2xl max-h-[90vh] sm:max-h-[80vh] overflow-y-auto w-[95vw] sm:w-full"
+        className="max-w-2xl max-h-[90vh] sm:max-h-[80vh] overflow-y-auto w-[95vw] sm:w-full flex flex-col"
         onOpenAutoFocus={e => e.preventDefault()}
       >
         <DialogHeader>

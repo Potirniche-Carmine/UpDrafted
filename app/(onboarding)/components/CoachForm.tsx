@@ -270,28 +270,28 @@ export default function CoachForm({ data, onInputChange }: CoachFormProps) {
           delete newErrors.schoolWebsite;
         }
         break;
-      case 'orgInstagramHandle':
+      case 'instagramHandle':
         if (value) {
           const igResult = FormValidator.validateSocialHandle(value as string, 'instagram');
           if (igResult.isValid) {
-            delete newErrors.orgInstagramHandle;
+            delete newErrors.instagramHandle;
           } else {
-            newErrors.orgInstagramHandle = igResult.error!;
+            newErrors.instagramHandle = igResult.error!;
           }
         } else {
-          delete newErrors.orgInstagramHandle;
+          delete newErrors.instagramHandle;
         }
         break;
-      case 'orgTwitterHandle':
+      case 'twitterHandle':
         if (value) {
           const twitterResult = FormValidator.validateSocialHandle(value as string, 'twitter');
           if (twitterResult.isValid) {
-            delete newErrors.orgTwitterHandle;
+            delete newErrors.twitterHandle;
           } else {
-            newErrors.orgTwitterHandle = twitterResult.error!;
+            newErrors.twitterHandle = twitterResult.error!;
           }
         } else {
-          delete newErrors.orgTwitterHandle;
+          delete newErrors.twitterHandle;
         }
         break;
       case 'personalStatement':
@@ -398,7 +398,7 @@ export default function CoachForm({ data, onInputChange }: CoachFormProps) {
           )}
           <p className="text-xs text-muted-foreground">{data.title.length}/{FIELD_LIMITS.TITLE} characters</p>
         </div>
-        <div className="space-y-3">
+        <div className="space-y-4">
           <SchoolSelector
             value={data.organizationName}
             onValueChange={(value) => validateAndUpdateField('organizationName', value)}
@@ -446,12 +446,12 @@ export default function CoachForm({ data, onInputChange }: CoachFormProps) {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="space-y-3">
           <Label htmlFor="division" className="text-base font-medium">Division *</Label>
-          <div className="flex gap-1">
+          <div className="flex gap-1 w-full max-w-full">
             <Select
               value={data.division}
               onValueChange={(value) => onInputChange('division', value)}
             >
-              <SelectTrigger className="h-11 bg-background flex-1">
+              <SelectTrigger className="!h-11 bg-background border-input flex-1 min-w-0">
                 <SelectValue placeholder="Select division" />
               </SelectTrigger>
               <SelectContent>
@@ -508,7 +508,7 @@ export default function CoachForm({ data, onInputChange }: CoachFormProps) {
               value={data.state}
               onValueChange={(value) => onInputChange('state', value)}
             >
-              <SelectTrigger className="h-11 bg-background" style={{ height: '2.75rem' }}>
+              <SelectTrigger className="!h-11 bg-background border-input w-full">
                 <SelectValue placeholder="Select state" />
               </SelectTrigger>
               <SelectContent>
@@ -521,12 +521,70 @@ export default function CoachForm({ data, onInputChange }: CoachFormProps) {
         )}
       </div>
 
+      {/* About Section */}
+      <div className="space-y-3">
+        <Label htmlFor="personalStatement" className="text-base font-medium">About Yourself *</Label>
+        <Textarea
+          id="personalStatement"
+          placeholder="Tell athletes about yourself, your coaching experience, and what makes your program special. This will be displayed on your profile to help athletes understand your background and coaching philosophy."
+          value={data.personalStatement}
+          onChange={(e) => validateAndUpdateField('personalStatement', e.target.value)}
+          className={`min-h-32 bg-background resize-none ${validationErrors.personalStatement ? 'border-red-500' : ''}`}
+          maxLength={FIELD_LIMITS.PERSONAL_STATEMENT}
+        />
+        {validationErrors.personalStatement && (
+          <p className="text-sm text-red-500">{validationErrors.personalStatement}</p>
+        )}
+        <p className="text-xs text-muted-foreground">{data.personalStatement.length}/{FIELD_LIMITS.PERSONAL_STATEMENT} characters</p>
+      </div>
+
+      {/* Personal Social Media */}
+      <div className="space-y-6">
+        <div className="space-y-2">
+          <Label className="text-base font-medium">Personal Social Media</Label>
+          <p className="text-sm text-muted-foreground">
+            Add your personal social media handles to help athletes connect with you. <span className="text-[#01ae79] font-medium">(Highly encouraged)</span>
+          </p>
+        </div>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="space-y-3">
+            <Label htmlFor="instagramHandle" className="text-sm font-medium">Personal Instagram</Label>
+            <SocialInput
+              id="instagramHandle"
+              placeholder="yourname"
+              value={data.instagramHandle}
+              onChange={(e) => validateAndUpdateField('instagramHandle', e.target.value)}
+              className={`h-11 bg-background ${validationErrors.instagramHandle ? 'border-red-500' : ''}`}
+              maxLength={30}
+            />
+            {validationErrors.instagramHandle && (
+              <p className="text-sm text-red-500">{validationErrors.instagramHandle}</p>
+            )}
+          </div>
+          <div className="space-y-3">
+            <Label htmlFor="twitterHandle" className="text-sm font-medium">Personal Twitter</Label>
+            <SocialInput
+              id="twitterHandle"
+              placeholder="yourname"
+              value={data.twitterHandle}
+              onChange={(e) => validateAndUpdateField('twitterHandle', e.target.value)}
+              className={`h-11 bg-background ${validationErrors.twitterHandle ? 'border-red-500' : ''}`}
+              maxLength={15}
+            />
+            {validationErrors.twitterHandle && (
+              <p className="text-sm text-red-500">{validationErrors.twitterHandle}</p>
+            )}
+          </div>
+        </div>
+      </div>
+
       {/* Online Presence */}
       <div className="space-y-6">
         <div className="space-y-2">
           <Label className="text-base font-medium">Online Presence *</Label>
           <p className="text-sm text-muted-foreground">
-            Provide at least one of the following to help athletes learn more about your program.
+            Provide at least one website link to help athletes learn more about your program.
           </p>
         </div>
         
@@ -559,52 +617,7 @@ export default function CoachForm({ data, onInputChange }: CoachFormProps) {
               <p className="text-sm text-red-500">{validationErrors.schoolWebsite}</p>
             )}
           </div>
-          <div className="space-y-3">
-            <Label htmlFor="orgInstagramHandle" className="text-sm font-medium">Program Instagram</Label>
-            <SocialInput
-              id="orgInstagramHandle"
-              placeholder="universityfootball"
-              value={data.orgInstagramHandle}
-              onChange={(e) => validateAndUpdateField('orgInstagramHandle', e.target.value)}
-              className={`h-11 bg-background ${validationErrors.orgInstagramHandle ? 'border-red-500' : ''}`}
-              maxLength={30}
-            />
-            {validationErrors.orgInstagramHandle && (
-              <p className="text-sm text-red-500">{validationErrors.orgInstagramHandle}</p>
-            )}
-          </div>
-          <div className="space-y-3">
-            <Label htmlFor="orgTwitterHandle" className="text-sm font-medium">Program Twitter</Label>
-            <SocialInput
-              id="orgTwitterHandle"
-              placeholder="UniversityFB"
-              value={data.orgTwitterHandle}
-              onChange={(e) => validateAndUpdateField('orgTwitterHandle', e.target.value)}
-              className={`h-11 bg-background ${validationErrors.orgTwitterHandle ? 'border-red-500' : ''}`}
-              maxLength={15}
-            />
-            {validationErrors.orgTwitterHandle && (
-              <p className="text-sm text-red-500">{validationErrors.orgTwitterHandle}</p>
-            )}
-          </div>
         </div>
-      </div>
-
-      {/* About Section */}
-      <div className="space-y-3">
-        <Label htmlFor="personalStatement" className="text-base font-medium">About Yourself *</Label>
-        <Textarea
-          id="personalStatement"
-          placeholder="Tell athletes about yourself, your coaching experience, and what makes your program special. This will be displayed on your profile to help athletes understand your background and coaching philosophy."
-          value={data.personalStatement}
-          onChange={(e) => validateAndUpdateField('personalStatement', e.target.value)}
-          className={`min-h-32 bg-background resize-none ${validationErrors.personalStatement ? 'border-red-500' : ''}`}
-          maxLength={FIELD_LIMITS.PERSONAL_STATEMENT}
-        />
-        {validationErrors.personalStatement && (
-          <p className="text-sm text-red-500">{validationErrors.personalStatement}</p>
-        )}
-        <p className="text-xs text-muted-foreground">{data.personalStatement.length}/{FIELD_LIMITS.PERSONAL_STATEMENT} characters</p>
       </div>
 
       {/* Recruiting Needs */}

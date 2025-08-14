@@ -750,9 +750,9 @@ export function CoachProfile({
       />
 
       <div className="container py-4 md:py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-2 lg:gap-6 xl:gap-8">
           {/* Sidebar - Basic Info */}
-          <div className="space-y-4 md:space-y-6">
+          <div className="space-y-2 lg:space-y-4 xl:space-y-6">
             {/* Profile Card */}
             <Card>
               <CardContent className="p-4 md:p-6">
@@ -858,6 +858,65 @@ export function CoachProfile({
                 </div>
               </CardContent>
             </Card>
+
+            {/* Personal Statement - Mobile Only */}
+            <div className="lg:hidden">
+              {profileData.personalStatement ? (
+                <Card>
+                  <CardHeader>
+                    <div className="flex items-center justify-between">
+                      <CardTitle>About Coach {profileData.fullName.split(' ')[0]}</CardTitle>
+                      {effectiveIsOwnProfile && (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => handleEditSection('personal-statement')}
+                        >
+                          <Edit className="w-4 h-4 mr-1" />
+                          Edit
+                        </Button>
+                      )}
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-muted-foreground leading-relaxed">{profileData.personalStatement}</p>
+                  </CardContent>
+                </Card>
+              ) : effectiveIsOwnProfile && (
+                <Card>
+                  <CardHeader>
+                    <div className="flex items-center justify-between">
+                      <CardTitle>About Coach {profileData.fullName.split(' ')[0]}</CardTitle>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => handleEditSection('personal-statement')}
+                      >
+                        <Edit className="w-4 h-4 mr-1" />
+                        Edit
+                      </Button>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="bg-muted/50 rounded-lg p-6">
+                      <div className="text-center">
+                        <p className="font-medium text-muted-foreground mb-2">No Information Added</p>
+                        <p className="text-sm text-muted-foreground mb-4">
+                          Share your personal story, coaching journey, and what drives your passion
+                        </p>
+                        <Button 
+                          variant="outline"
+                          onClick={() => handleEditSection('personal-statement')}
+                        >
+                          <Plus className="w-4 h-4 mr-2" />
+                          Add About Section
+                        </Button>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
 
             {/* Coach Level Banner */}
             <CoachLevelBanner
@@ -1002,14 +1061,35 @@ export function CoachProfile({
           </div>
 
           {/* Main Content */}
-          <div className="lg:col-span-2 space-y-6">
-            {/* About Coach Section - uses personalStatement from database */}
-            {profileData.personalStatement ? (
-              <Card>
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <CardTitle>About Coach {profileData.fullName.split(' ')[0]}</CardTitle>
-                    {effectiveIsOwnProfile && (
+          <div className="lg:col-span-2 space-y-2 lg:space-y-6 xl:space-y-8">
+            {/* About Coach Section - Desktop Only */}
+            <div className="hidden lg:block">
+              {profileData.personalStatement ? (
+                <Card>
+                  <CardHeader>
+                    <div className="flex items-center justify-between">
+                      <CardTitle>About Coach {profileData.fullName.split(' ')[0]}</CardTitle>
+                      {effectiveIsOwnProfile && (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => handleEditSection('personal-statement')}
+                        >
+                          <Edit className="w-4 h-4 mr-1" />
+                          Edit
+                        </Button>
+                      )}
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-muted-foreground leading-relaxed">{profileData.personalStatement}</p>
+                  </CardContent>
+                </Card>
+              ) : effectiveIsOwnProfile && (
+                <Card>
+                  <CardHeader>
+                    <div className="flex items-center justify-between">
+                      <CardTitle>About Coach {profileData.fullName.split(' ')[0]}</CardTitle>
                       <Button
                         size="sm"
                         variant="ghost"
@@ -1018,47 +1098,28 @@ export function CoachProfile({
                         <Edit className="w-4 h-4 mr-1" />
                         Edit
                       </Button>
-                    )}
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-muted-foreground leading-relaxed">{profileData.personalStatement}</p>
-                </CardContent>
-              </Card>
-            ) : effectiveIsOwnProfile && (
-              <Card>
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <CardTitle>About Coach {profileData.fullName.split(' ')[0]}</CardTitle>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => handleEditSection('personal-statement')}
-                    >
-                      <Edit className="w-4 h-4 mr-1" />
-                      Edit
-                    </Button>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="bg-muted/50 rounded-lg p-6">
-                    <div className="text-center">
-                      <p className="font-medium text-muted-foreground mb-2">No Information Added</p>
-                      <p className="text-sm text-muted-foreground mb-4">
-                        Share your personal story, coaching journey, and what drives your passion
-                      </p>
-                      <Button 
-                        variant="outline"
-                        onClick={() => handleEditSection('personal-statement')}
-                      >
-                        <Plus className="w-4 h-4 mr-2" />
-                        Add About Section
-                      </Button>
                     </div>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
+                  </CardHeader>
+                  <CardContent>
+                    <div className="bg-muted/50 rounded-lg p-6">
+                      <div className="text-center">
+                        <p className="font-medium text-muted-foreground mb-2">No Information Added</p>
+                        <p className="text-sm text-muted-foreground mb-4">
+                          Share your personal story, coaching journey, and what drives your passion
+                        </p>
+                        <Button 
+                          variant="outline"
+                          onClick={() => handleEditSection('personal-statement')}
+                        >
+                          <Plus className="w-4 h-4 mr-2" />
+                          Add About Section
+                        </Button>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
 
             {/* Current Recruiting Needs */}
             {profileData.recruitingNeeds ? (

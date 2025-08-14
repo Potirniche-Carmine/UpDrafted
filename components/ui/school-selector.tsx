@@ -50,7 +50,7 @@ export function SchoolSelector({
   disabled = false,
   labelClassName = "text-sm font-medium",
   description,
-  height = "h-11",
+  height = "!h-11",
   educationLevel,
   onError,
 }: SchoolSelectorProps) {
@@ -69,9 +69,12 @@ export function SchoolSelector({
     setInputValue(value);
   }, [value]);
 
+  // Track if the user has started typing (to avoid API calls on initial load)
+  const [hasUserStartedTyping, setHasUserStartedTyping] = useState(false);
+
   // Search schools when input value changes
   useEffect(() => {
-    if (inputValue.length < 2) {
+    if (inputValue.length < 2 || !hasUserStartedTyping) {
       setSuggestions([]);
       setShowSuggestions(false);
       return;
@@ -116,11 +119,12 @@ export function SchoolSelector({
 
     const debounceTimer = setTimeout(searchSchools, 300);
     return () => clearTimeout(debounceTimer);
-  }, [inputValue, educationLevel, onError]);
+  }, [inputValue, educationLevel, onError, hasUserStartedTyping]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newValue = e.target.value;
     setInputValue(newValue);
+    setHasUserStartedTyping(true); // Mark that user has started typing
     // Clear error message when user starts typing
     if (errorMessage) {
       setErrorMessage(null);
@@ -204,7 +208,7 @@ export function SchoolSelector({
       )}
       
       <div className="relative">
-        <div className="relative">
+        <div className="relative py-1">
           <Building2 className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input
             ref={inputRef}
@@ -219,7 +223,7 @@ export function SchoolSelector({
             }}
             placeholder={placeholder}
             disabled={disabled}
-            className={cn(height, "pl-10 bg-background", !value && "border-red-300")}
+            className={cn(height, "pl-10 bg-background")}
             autoComplete="off"
             required={required}
           />

@@ -1116,7 +1116,7 @@ export function AthleteEditDialogs({
                   id="edit-fullName"
                   value={editData.fullName || ''}
                   onChange={(e) => handleFieldChange('fullName', e.target.value)}
-                  className={`h-12 ${validationErrors.fullName ? 'border-red-500' : ''}`}
+                  className={`h-11 w-full ${validationErrors.fullName ? 'border-red-500' : ''}`}
                   maxLength={FIELD_LIMITS.FULL_NAME}
                   autoComplete="off"
                   inputMode="text"
@@ -1135,7 +1135,7 @@ export function AthleteEditDialogs({
                     setEditData(prev => ({ ...prev, sport: value, positions: [] }));
                   }}
                 >
-                  <SelectTrigger className="h-12" id="edit-sport">
+                  <SelectTrigger className="!h-11 w-full" id="edit-sport">
                     <SelectValue placeholder="Select sport" />
                   </SelectTrigger>
                   <SelectContent className="z-[70]">
@@ -1154,7 +1154,7 @@ export function AthleteEditDialogs({
                     setEditData(prev => ({ ...prev, educationLevel: value }));
                   }}
                 >
-                  <SelectTrigger className="h-12" id="edit-educationLevel">
+                  <SelectTrigger className="!h-11 w-full" id="edit-educationLevel">
                     <SelectValue placeholder="Select education level" />
                   </SelectTrigger>
                   <SelectContent className="z-[70]">
@@ -1180,7 +1180,7 @@ export function AthleteEditDialogs({
                         }));
                       }}
                     >
-                      <SelectTrigger className="h-12" id="edit-division">
+                      <SelectTrigger className="!h-11 w-full" id="edit-division">
                         <SelectValue placeholder="Select division" />
                       </SelectTrigger>
                       <SelectContent className="z-[70]">
@@ -1214,7 +1214,7 @@ export function AthleteEditDialogs({
                 <Label htmlFor="edit-secondarySports">Secondary Sports</Label>
                 <div className="space-y-2">
                   <Select onValueChange={addSecondarySport}>
-                    <SelectTrigger className="h-12" id="edit-secondarySports">
+                    <SelectTrigger className="!h-11 w-full" id="edit-secondarySports">
                       <SelectValue placeholder="Add secondary sport (optional)" />
                     </SelectTrigger>
                     <SelectContent className="z-[70]">
@@ -1270,7 +1270,7 @@ export function AthleteEditDialogs({
                   value={String(editData.country || '')}
                   onValueChange={(value) => setEditData(prev => ({ ...prev, country: value }))}
                 >
-                  <SelectTrigger className="h-12" id="edit-country">
+                  <SelectTrigger className="!h-11 w-full" id="edit-country">
                     <SelectValue placeholder="Select country" />
                   </SelectTrigger>
                   <SelectContent className="z-[70]">
@@ -1280,7 +1280,8 @@ export function AthleteEditDialogs({
                   </SelectContent>
                 </Select>
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              
+              <div className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="edit-city">City *</Label>
                   <Input
@@ -1288,7 +1289,7 @@ export function AthleteEditDialogs({
                     placeholder="Los Angeles"
                     value={editData.city || ''}
                     onChange={(e) => handleFieldChange('city', e.target.value)}
-                    className={`h-12 ${validationErrors.city ? 'border-red-500' : ''}`}
+                    className={`h-11 w-full ${validationErrors.city ? 'border-red-500' : ''}`}
                     maxLength={FIELD_LIMITS.CITY}
                     autoComplete="off"
                     inputMode="text"
@@ -1306,7 +1307,7 @@ export function AthleteEditDialogs({
                       value={String(editData.state || '')}
                       onValueChange={(value) => setEditData(prev => ({ ...prev, state: value }))}
                     >
-                      <SelectTrigger className="h-12" id="edit-state">
+                      <SelectTrigger className="!h-11 w-full" id="edit-state">
                         <SelectValue placeholder="Select state" />
                       </SelectTrigger>
                       <SelectContent className="z-[70]">
@@ -1341,7 +1342,7 @@ export function AthleteEditDialogs({
                   value={editData.graduationYear?.toString() || ''}
                   onValueChange={(value) => setEditData(prev => ({ ...prev, graduationYear: parseInt(value) }))}
                 >
-                  <SelectTrigger className="h-12" id="edit-graduationYear">
+                  <SelectTrigger className="!h-11 w-full" id="edit-graduationYear">
                     <SelectValue placeholder="Select year" />
                   </SelectTrigger>
                   <SelectContent className="z-[70]">
@@ -1360,7 +1361,7 @@ export function AthleteEditDialogs({
                       value={editData.heightFeet as string || ''}
                       onValueChange={(value) => setEditData(prev => ({ ...prev, heightFeet: value }))}
                     >
-                      <SelectTrigger className={`h-12 ${!editData.heightFeet ? 'border-red-300' : ''}`}>
+                      <SelectTrigger className={`!h-11 ${!editData.heightFeet ? 'border-red-300' : ''}`}>
                         <SelectValue placeholder="Feet" />
                       </SelectTrigger>
                       <SelectContent className="z-[70]">
@@ -1373,7 +1374,7 @@ export function AthleteEditDialogs({
                       value={editData.heightInches as string || ''}
                       onValueChange={(value) => setEditData(prev => ({ ...prev, heightInches: value }))}
                     >
-                      <SelectTrigger className={`h-12 ${!editData.heightInches ? 'border-red-300' : ''}`}>
+                      <SelectTrigger className={`!h-11 ${!editData.heightInches ? 'border-red-300' : ''}`}>
                         <SelectValue placeholder="In" />
                       </SelectTrigger>
                       <SelectContent className="z-[70]">
@@ -1394,7 +1395,7 @@ export function AthleteEditDialogs({
                     placeholder="185"
                     value={editData.weight || ''}
                     onChange={(e) => handleFieldChange('weight', e.target.value)}
-                    className={`h-12 ${validationErrors.weight ? 'border-red-500' : ''}`}
+                    className={`h-11 w-full ${validationErrors.weight ? 'border-red-500' : ''}`}
                     autoComplete="off"
                     inputMode="numeric"
                     
@@ -1428,7 +1429,7 @@ export function AthleteEditDialogs({
                   placeholder="3.85"
                   value={String(editData.gpa || '')}
                   onChange={(e) => handleFieldChange('gpa', e.target.value)}
-                  className={`h-12 ${validationErrors.gpa ? 'border-red-500' : ''}`}
+                  className={`h-11 w-full ${validationErrors.gpa ? 'border-red-500' : ''}`}
                   autoComplete="off"
                   inputMode="decimal"
                   
@@ -1439,7 +1440,7 @@ export function AthleteEditDialogs({
                 <p className="text-xs text-muted-foreground">Max 5.0</p>
               </div>
               
-              <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="edit-satScore">SAT Score</Label>
                   <Input
@@ -1450,7 +1451,7 @@ export function AthleteEditDialogs({
                     placeholder="1420"
                     value={String(editData.satScore || '')}
                     onChange={(e) => handleFieldChange('satScore', e.target.value ? parseInt(e.target.value) : '')}
-                    className="h-12"
+                    className="h-11 w-full"
                     autoComplete="off"
                     inputMode="numeric"
                     
@@ -1467,7 +1468,7 @@ export function AthleteEditDialogs({
                     placeholder="32"
                     value={String(editData.actScore || '')}
                     onChange={(e) => handleFieldChange('actScore', e.target.value ? parseInt(e.target.value) : '')}
-                    className="h-12"
+                    className="h-11 w-full"
                     autoComplete="off"
                     inputMode="numeric"
                     
@@ -1485,7 +1486,7 @@ export function AthleteEditDialogs({
                   placeholder="e.g., Business Administration"
                   value={String(editData.intendedMajor || '')}
                   onChange={(e) => handleFieldChange('intendedMajor', e.target.value)}
-                  className="h-12"
+                  className="h-11 w-full"
                   maxLength={FIELD_LIMITS.INTENDED_MAJOR}
                   autoComplete="off"
                   inputMode="text"
@@ -1509,10 +1510,10 @@ export function AthleteEditDialogs({
                 <Textarea
                   id="edit-personalStatement"
                   placeholder="Tell coaches and recruiters about yourself, your goals, and what makes you unique..."
-                  rows={6}
+                  rows={10}
                   value={editData.personalStatement || ''}
                   onChange={(e) => handleFieldChange('personalStatement', e.target.value)}
-                  className={`min-h-12 ${validationErrors.personalStatement ? 'border-red-500' : ''}`}
+                  className={`min-h-12 w-full ${validationErrors.personalStatement ? 'border-red-500' : ''}`}
                   maxLength={FIELD_LIMITS.PERSONAL_STATEMENT}
                 />
                 {validationErrors.personalStatement && (
@@ -1866,7 +1867,7 @@ export function AthleteEditDialogs({
                     }
                   }}
                 >
-                  <SelectTrigger className={`h-12 ${validationErrors.label ? 'border-red-500' : ''}`} id="edit-measurableType">
+                  <SelectTrigger className={`!h-11 w-full ${validationErrors.label ? 'border-red-500' : ''}`} id="edit-measurableType">
                     <SelectValue placeholder="Choose a metric" />
                   </SelectTrigger>
                   <SelectContent className="z-[70]">
@@ -1899,7 +1900,7 @@ export function AthleteEditDialogs({
                         });
                       }
                     }}
-                    className={`h-12 ${validationErrors.label ? 'border-red-500' : ''}`}
+                    className={`h-12 w-full ${validationErrors.label ? 'border-red-500' : ''}`}
                     maxLength={50}
                     autoComplete="off"
                     inputMode="text"
@@ -1928,7 +1929,7 @@ export function AthleteEditDialogs({
                       });
                     }
                   }}
-                  className={`h-12 ${validationErrors.value ? 'border-red-500' : ''}`}
+                  className={`h-12 w-full ${validationErrors.value ? 'border-red-500' : ''}`}
                   maxLength={20}
                   autoComplete="off"
                   inputMode="text"
@@ -1947,7 +1948,7 @@ export function AthleteEditDialogs({
                       value={editData.month || ''}
                       onValueChange={(value) => setEditData(prev => ({ ...prev, month: value }))}
                     >
-                      <SelectTrigger className="h-12" id="edit-measurementMonth">
+                      <SelectTrigger className="!h-11 w-full" id="edit-measurementMonth">
                         <SelectValue placeholder="Select month" />
                       </SelectTrigger>
                       <SelectContent className="z-[70]">
@@ -1963,7 +1964,7 @@ export function AthleteEditDialogs({
                       value={editData.year || ''}
                       onValueChange={(value) => setEditData(prev => ({ ...prev, year: value }))}
                     >
-                      <SelectTrigger className="h-12" id="edit-measurementYear">
+                      <SelectTrigger className="!h-11 w-full" id="edit-measurementYear">
                         <SelectValue placeholder="Select year" />
                       </SelectTrigger>
                       <SelectContent className="z-[70]">
@@ -2113,7 +2114,7 @@ export function AthleteEditDialogs({
                         <div className="flex flex-wrap gap-2 items-center mb-2">
                           {/* Type dropdown */}
                           <Select value={campForm.type} onValueChange={v => setCampForm(f => ({ ...f, type: v as 'Camp' | 'Club' }))}>
-                            <SelectTrigger className="w-24"><SelectValue /></SelectTrigger>
+                            <SelectTrigger className="w-24 !h-11"><SelectValue /></SelectTrigger>
                             <SelectContent className="z-[9999]">
                               <SelectItem value="Camp">Camp</SelectItem>
                               <SelectItem value="Club">Club</SelectItem>
@@ -2121,7 +2122,7 @@ export function AthleteEditDialogs({
                           </Select>
                           {/* Sport dropdown */}
                           <Select value={campForm.sport} onValueChange={v => setCampForm(f => ({ ...f, sport: v }))}>
-                            <SelectTrigger className="w-32"><SelectValue placeholder="Sport" /></SelectTrigger>
+                            <SelectTrigger className="w-32 !h-11"><SelectValue placeholder="Sport" /></SelectTrigger>
                             <SelectContent className="z-[9999]">
                               {getSportsList().map(sport => (
                                 <SelectItem key={sport} value={sport}>{sport}</SelectItem>
@@ -2162,7 +2163,7 @@ export function AthleteEditDialogs({
                               value={campForm.startDate}
                               onValueChange={value => setCampForm(f => ({ ...f, startDate: value }))}
                             >
-                              <SelectTrigger className="h-8">
+                              <SelectTrigger className="!h-11">
                                 <SelectValue placeholder="Select start date" />
                               </SelectTrigger>
                               <SelectContent className="z-[9999]">
@@ -2179,7 +2180,7 @@ export function AthleteEditDialogs({
                               onValueChange={value => setCampForm(f => ({ ...f, endDate: value }))}
                               disabled={!campForm.startDate}
                             >
-                              <SelectTrigger className={`h-8 ${!campForm.startDate ? 'opacity-50 cursor-not-allowed' : ''}`}>
+                              <SelectTrigger className={`!h-11 ${!campForm.startDate ? 'opacity-50 cursor-not-allowed' : ''}`}>
                                 <SelectValue placeholder={campForm.startDate ? "Select end date" : "Select start date first"} />
                               </SelectTrigger>
                               <SelectContent className="z-[9999]">
@@ -2344,7 +2345,7 @@ export function AthleteEditDialogs({
                     <div className="flex flex-wrap gap-2 items-center mb-2">
                       {/* Type dropdown */}
                       <Select value={campForm.type} onValueChange={v => setCampForm(f => ({ ...f, type: v as 'Camp' | 'Club' }))}>
-                        <SelectTrigger className="w-24"><SelectValue /></SelectTrigger>
+                        <SelectTrigger className="w-24 !h-11"><SelectValue /></SelectTrigger>
                         <SelectContent className="z-[9999]">
                           <SelectItem value="Camp">Camp</SelectItem>
                           <SelectItem value="Club">Club</SelectItem>
@@ -2352,7 +2353,7 @@ export function AthleteEditDialogs({
                       </Select>
                       {/* Sport dropdown */}
                       <Select value={campForm.sport} onValueChange={v => setCampForm(f => ({ ...f, sport: v }))}>
-                        <SelectTrigger className="w-32"><SelectValue placeholder="Sport" /></SelectTrigger>
+                        <SelectTrigger className="w-32 !h-11"><SelectValue placeholder="Sport" /></SelectTrigger>
                         <SelectContent className="z-[9999]">
                           {getSportsList().map(sport => (
                             <SelectItem key={sport} value={sport}>{sport}</SelectItem>
@@ -2393,7 +2394,7 @@ export function AthleteEditDialogs({
                           value={campForm.startDate}
                           onValueChange={value => setCampForm(f => ({ ...f, startDate: value }))}
                         >
-                          <SelectTrigger className="h-8">
+                          <SelectTrigger className="!h-11 w-full">
                             <SelectValue placeholder="Select start date" />
                           </SelectTrigger>
                           <SelectContent className="z-[9999]">
@@ -2410,7 +2411,7 @@ export function AthleteEditDialogs({
                           onValueChange={value => setCampForm(f => ({ ...f, endDate: value }))}
                           disabled={!campForm.startDate}
                         >
-                          <SelectTrigger className={`h-8 ${!campForm.startDate ? 'opacity-50 cursor-not-allowed' : ''}`}>
+                          <SelectTrigger className={`!h-11 w-full ${!campForm.startDate ? 'opacity-50 cursor-not-allowed' : ''}`}>
                             <SelectValue placeholder={campForm.startDate ? "Select end date" : "Select start date first"} />
                           </SelectTrigger>
                           <SelectContent className="z-[9999]">
@@ -2584,7 +2585,7 @@ export function AthleteEditDialogs({
         }
       }}>
         <DialogContent 
-          className={`${dialogType === 'basic-info' ? "sm:max-w-2xl max-w-lg" : "sm:max-w-md max-w-lg"} z-[60]`}
+          className={`${dialogType === 'basic-info' ? "sm:max-w-2xl max-w-lg" : "sm:max-w-md max-w-lg"} z-[60] max-h-[95vh] flex flex-col`}
           onOpenAutoFocus={e => e.preventDefault()}
         >
           {getDialogContent()}

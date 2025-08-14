@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/database/db';
 import { notifications } from '@/database/schema';
-import { requireAnyRole } from '@/utils/roles';
+import { auth } from '@clerk/nextjs/server';
 import { eq, desc, and } from 'drizzle-orm';
 import { profileOperations, notificationOperations } from '@/database/db-utils';
 import { withRateLimit } from '@/utils/security';
@@ -41,11 +41,24 @@ function formatTimeAgo(date: Date): string {
 
 export async function GET(request: NextRequest) {
   try {
-    // Require authentication (middleware already handled auth.protect())
-    const auth = await requireAnyRole();
-    if (auth instanceof NextResponse) return auth;
+    // Check if user is authenticated
+    const { userId, sessionClaims } = await auth();
+    
+    if (!userId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
 
-    const { userId, role } = auth;
+    const userRole = sessionClaims?.metadata?.role as string;
+    
+    // If user doesn't have a valid role (likely in onboarding), return empty state
+    if (!userRole || !['admin', 'athlete', 'coach', 'recruiter'].includes(userRole)) {
+      return NextResponse.json({ 
+        success: true,
+        unreadCount: 0
+      });
+    }
+
+    const role = userRole as 'admin' | 'athlete' | 'coach' | 'recruiter';
 
     // Apply rate limiting
     const rateLimitCheck = await withRateLimit(request, 'general', userId, role);
@@ -72,13 +85,23 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const authResult = await requireAnyRole();
+    // Check if user is authenticated
+    const { userId, sessionClaims } = await auth();
     
-    if (authResult instanceof NextResponse) {
-      return authResult;
+    if (!userId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { userId, role } = authResult;
+    const userRole = sessionClaims?.metadata?.role as string;
+    
+    // If user doesn't have a valid role (likely in onboarding), return access forbidden
+    if (!userRole || !['admin', 'athlete', 'coach', 'recruiter'].includes(userRole)) {
+      return NextResponse.json({ 
+        error: 'Access forbidden - Valid role required' 
+      }, { status: 403 });
+    }
+
+    const role = userRole as 'admin' | 'athlete' | 'coach' | 'recruiter';
     
     // Apply rate limiting for notifications operations
     const rateLimitCheck = await withRateLimit(request, 'general', userId, role);

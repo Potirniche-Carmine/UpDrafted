@@ -201,7 +201,7 @@ export default function OnboardingForm({ role, onBack }: OnboardingFormProps) {
         data.division && 
         data.city && 
         (data.country === 'United States' ? data.state : true) &&
-        (data.orgInstagramHandle || data.orgTwitterHandle || data.programWebsite || data.schoolWebsite) &&
+        (data.programWebsite || data.schoolWebsite) &&
         data.personalStatement
       );
 
@@ -222,7 +222,7 @@ export default function OnboardingForm({ role, onBack }: OnboardingFormProps) {
         data.division && 
         data.city && 
         (data.country === 'United States' ? data.state : true) &&
-        (data.orgInstagramHandle || data.orgTwitterHandle || data.programWebsite || data.schoolWebsite) &&
+        (data.programWebsite || data.schoolWebsite) &&
         data.personalStatement
       );
 
@@ -281,8 +281,8 @@ export default function OnboardingForm({ role, onBack }: OnboardingFormProps) {
       if (!data.division) missing.push("Division");
       if (!data.city) missing.push("City");
       if (data.country === 'United States' && !data.state) missing.push("State");
-      if (!data.orgInstagramHandle && !data.orgTwitterHandle && !data.programWebsite && !data.schoolWebsite) {
-        missing.push("At least one contact method (social media or website)");
+      if (!data.programWebsite && !data.schoolWebsite) {
+        missing.push("At least one website link (Program Website or School Website)");
       }
       if (!data.personalStatement) missing.push("Personal statement");
       
@@ -299,8 +299,8 @@ export default function OnboardingForm({ role, onBack }: OnboardingFormProps) {
       if (!data.division) missing.push("Division");
       if (!data.city) missing.push("City");
       if (data.country === 'United States' && !data.state) missing.push("State");
-      if (!data.orgInstagramHandle && !data.orgTwitterHandle && !data.programWebsite && !data.schoolWebsite) {
-        missing.push("At least one contact method (social media or website)");
+      if (!data.programWebsite && !data.schoolWebsite) {
+        missing.push("At least one website link (Program Website or School Website)");
       }
       if (!data.personalStatement) missing.push("Personal statement");
       
@@ -378,13 +378,32 @@ export default function OnboardingForm({ role, onBack }: OnboardingFormProps) {
 
             {/* Show missing fields if form cannot be submitted */}
             {!canSubmit() && (
-              <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
-                <h4 className="font-medium text-red-800 mb-2">Please complete the following required fields:</h4>
-                <ul className="list-disc list-inside text-sm text-red-700 space-y-1">
-                  {getMissingFields().map((field, index) => (
-                    <li key={index}>{field}</li>
-                  ))}
-                </ul>
+              <div className="p-6 border border-border bg-card rounded-lg shadow-sm">
+                <div className="flex items-start gap-3">
+                  <div className="flex-shrink-0">
+                    <div className="w-5 h-5 rounded-full bg-yellow-100 dark:bg-yellow-900/20 flex items-center justify-center">
+                      <svg className="w-3 h-3 text-yellow-600 dark:text-yellow-500" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M8.485 3.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 3.495zM10 6a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 0110 6zm0 9a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" />
+                      </svg>
+                    </div>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h4 className="text-sm font-medium text-foreground mb-2">
+                      Complete Required Fields
+                    </h4>
+                    <p className="text-sm text-muted-foreground mb-3">
+                      Please fill out the following fields to create your profile:
+                    </p>
+                    <div className="space-y-2">
+                      {getMissingFields().map((field, index) => (
+                        <div key={index} className="flex items-center gap-2 text-sm">
+                          <div className="w-1.5 h-1.5 rounded-full bg-yellow-500 flex-shrink-0" />
+                          <span className="text-foreground">{field}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
               </div>
             )}
 

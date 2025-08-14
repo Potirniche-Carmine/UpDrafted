@@ -4,10 +4,12 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Plus, Check } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { Plus, Check, ChevronDown } from "lucide-react";
 import { getConferencesForDivision, divisionHasConferences } from "@/lib/conference-data";
+import { cn } from "@/lib/utils";
 
 interface ConferenceSelectorProps {
   division: string;
@@ -38,6 +40,8 @@ export function ConferenceSelector({
 }: ConferenceSelectorProps) {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [newConferenceName, setNewConferenceName] = useState("");
+  const [open, setOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
 
   // Don't show for high school or if no division selected
   if (!division || !divisionHasConferences(division)) {
@@ -46,6 +50,11 @@ export function ConferenceSelector({
 
   const conferences = getConferencesForDivision(division);
   const hasCustomValue = value && !conferences.includes(value);
+
+  // Filter conferences based on search term
+  const filteredConferences = conferences.filter(conference =>
+    conference.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   const handleAddConference = () => {
     if (!newConferenceName.trim()) return;
@@ -57,6 +66,12 @@ export function ConferenceSelector({
     setNewConferenceName("");
   };
 
+  const handleSelectConference = (selectedConference: string) => {
+    onValueChange(selectedConference);
+    setOpen(false);
+    setSearchTerm("");
+  };
+
   return (
     <>
       {label && (
@@ -64,31 +79,63 @@ export function ConferenceSelector({
           {label} {required && '*'}
         </Label>
       )}
-      <div className="flex gap-1">
-        <Select
-          value={value}
-          onValueChange={onValueChange}
-          disabled={disabled}
-        >
-          <SelectTrigger className={`${height} bg-background flex-1`}>
-            <SelectValue placeholder={placeholder} />
-          </SelectTrigger>
-          <SelectContent className={`max-h-[150px] overflow-y-auto ${inDialog ? "z-[70]" : ""}`}>
-            {conferences.map((conference) => (
-              <SelectItem key={conference} value={conference}>
-                {conference}
-              </SelectItem>
-            ))}
-            {hasCustomValue && (
-              <SelectItem value={value}>
-                <div className="flex items-center gap-2">
-                  <Check className="w-4 h-4 text-green-600" />
-                  {value} (Custom)
-                </div>
-              </SelectItem>
-            )}
-          </SelectContent>
-        </Select>
+      <div className="flex gap-1 w-full max-w-full">
+        <Popover open={open} onOpenChange={setOpen}>
+          <PopoverTrigger asChild>
+            <Button
+              variant="outline"
+              role="combobox"
+              aria-expanded={open}
+              className={cn("flex-1 min-w-0 justify-between text-left font-normal bg-background border-input", height)}
+              disabled={disabled}
+            >
+              <span className="truncate">
+                {value || placeholder}
+              </span>
+              <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className={`w-[var(--radix-popover-trigger-width)] max-w-[90vw] p-0 ${inDialog ? "z-[70]" : ""}`} align="start" side="bottom" sideOffset={4}>
+            <Command>
+              <CommandInput
+                placeholder="Search conferences..."
+                value={searchTerm}
+                onValueChange={setSearchTerm}
+              />
+              <CommandList>
+                <CommandEmpty>No conferences found.</CommandEmpty>
+                <CommandGroup>
+                  {filteredConferences.map((conference) => (
+                    <CommandItem
+                      key={conference}
+                      onSelect={() => handleSelectConference(conference)}
+                      className="cursor-pointer"
+                    >
+                      <Check
+                        className={cn(
+                          "mr-2 h-4 w-4",
+                          value === conference ? "opacity-100" : "opacity-0"
+                        )}
+                      />
+                      {conference}
+                    </CommandItem>
+                  ))}
+                  {hasCustomValue && (
+                    <CommandItem
+                      onSelect={() => handleSelectConference(value)}
+                      className="cursor-pointer"
+                    >
+                      <Check className="mr-2 h-4 w-4 opacity-100" />
+                      <div className="flex items-center gap-2">
+                        {value} (Custom)
+                      </div>
+                    </CommandItem>
+                  )}
+                </CommandGroup>
+              </CommandList>
+            </Command>
+          </PopoverContent>
+        </Popover>
 
         <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
           <DialogTrigger asChild>
@@ -96,7 +143,7 @@ export function ConferenceSelector({
               type="button"
               variant="outline"
               size="icon"
-              className={`${height} w-9 h-9 shrink-0`}
+              className={cn("w-9 shrink-0 bg-background border-input hover:bg-accent hover:text-accent-foreground", height)}
               disabled={disabled}
             >
               <Plus className="w-3 h-3" />

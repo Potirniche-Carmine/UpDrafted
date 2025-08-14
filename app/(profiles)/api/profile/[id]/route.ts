@@ -25,6 +25,11 @@ interface ProfilePageParams {
 function transformProfileData(profileData: Record<string, any>, profileType: string): Record<string, any> {
   const transformed = { ...profileData };
 
+  // Map school name to organizationName for all profile types
+  if (profileData.school?.name) {
+    transformed.organizationName = profileData.school.name;
+  }
+
   if (profileType === 'athlete') {
     // Preserve userId for client-side API calls
     if (profileData.userId) {

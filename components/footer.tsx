@@ -36,8 +36,8 @@ export function Footer() {
     { href: "/privacy-policy", label: "Privacy Policy" },
   ];
   const socialLinks = [
-    { href: "https://x.com/UpDraftedapp", label: "X", icon: <TwitterXIcon /> },
-    { href: "https://instagram.com", label: "Instagram", icon: <InstagramIcon /> },
+    { href: "https://x.com/UpDrafted_us", label: "X", icon: <TwitterXIcon /> },
+    { href: "https://www.instagram.com/updrafted.us", label: "Instagram", icon: <InstagramIcon /> },
     { href: "https://facebook.com", label: "Facebook", icon: <FacebookIcon /> },
   ];
 
