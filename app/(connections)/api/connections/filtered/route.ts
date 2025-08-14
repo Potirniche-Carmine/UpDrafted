@@ -92,9 +92,22 @@ function validateAndSanitizeFilters(filters: RawFilterInput): ValidatedFilters {
   };
 
   const validateNumber = (num: unknown, min: number, max: number): number | undefined => {
-    if (typeof num !== 'number') return undefined;
-    if (num < min || num > max) return undefined;
-    return Math.floor(num);
+    // Handle string inputs that can be converted to numbers
+    let numValue: number;
+    
+    if (typeof num === 'number') {
+      numValue = num;
+    } else if (typeof num === 'string') {
+      const parsed = parseFloat(num);
+      if (isNaN(parsed)) return undefined;
+      numValue = parsed;
+    } else {
+      return undefined;
+    }
+    
+    // Validate range
+    if (numValue < min || numValue > max || !isFinite(numValue)) return undefined;
+    return Math.floor(numValue);
   };
 
   return {
@@ -111,96 +124,6 @@ function validateAndSanitizeFilters(filters: RawFilterInput): ValidatedFilters {
   };
 }
 
-// Secure connection filtering function
-function secureFilterConnection(connection: FilteredConnectionData, filters: ValidatedFilters): boolean {
-  const { otherUser } = connection;
-
-  // Sports filter
-  if (filters.sports.length > 0) {
-    const userSport = sanitizeText(otherUser.sport || '');
-    if (!userSport || !filters.sports.includes(userSport)) {
-      return false;
-    }
-  }
-
-  // Divisions filter
-  if (filters.divisions.length > 0) {
-    const userDivision = sanitizeText(otherUser.division || '');
-    if (!userDivision || !filters.divisions.includes(userDivision)) {
-      return false;
-    }
-  }
-
-  // Countries filter
-  if (filters.countries.length > 0) {
-    const userCountry = sanitizeText(otherUser.country || 'United States');
-    if (!filters.countries.includes(userCountry)) {
-      return false;
-    }
-  }
-
-  // States filter
-  if (filters.states.length > 0) {
-    const userCountry = sanitizeText(otherUser.country || 'United States');
-    if (userCountry === 'United States') {
-      const userState = sanitizeText(otherUser.state || '');
-      if (!userState || !filters.states.includes(userState)) {
-        return false;
-      }
-    }
-  }
-
-  // Positions filter
-  if (filters.positions.length > 0 && otherUser.role === 'athlete') {
-    if (!Array.isArray(otherUser.positions)) {
-      return false;
-    }
-    const userPositions = otherUser.positions
-      .filter((pos: unknown) => typeof pos === 'string' && pos)
-      .map((pos: string) => sanitizeText(pos))
-      .filter(Boolean);
-    
-    if (!userPositions.some((pos: string) => filters.positions.includes(pos))) {
-      return false;
-    }
-  }
-
-  // Graduating classes filter
-  if (filters.graduatingClasses.length > 0 && otherUser.role === 'athlete') {
-    const graduationYear = otherUser.graduationYear;
-    if (typeof graduationYear !== 'number' || graduationYear === null || graduationYear === undefined ||
-        !filters.graduatingClasses.includes(graduationYear.toString())) {
-      return false;
-    }
-  }
-
-  // Request types filter
-  if (filters.requestTypes.length > 0) {
-    const userRole = sanitizeText(otherUser.role || '');
-    if (!userRole || !filters.requestTypes.includes(userRole)) {
-      return false;
-    }
-  }
-
-  // Height filter
-  if (filters.minHeight && otherUser.role === 'athlete') {
-    const userHeightInches = parseHeightToInches(otherUser.height);
-    if (userHeightInches === null || userHeightInches < filters.minHeight) {
-      return false;
-    }
-  }
-
-  // Weight filter
-  if (filters.minWeight && otherUser.role === 'athlete') {
-    const userWeightPounds = parseWeightToPounds(otherUser.weight);
-    if (userWeightPounds === null || userWeightPounds < filters.minWeight) {
-      return false;
-    }
-  }
-
-  return true;
-}
-
 // Get filtered user's connections
 export async function POST(request: NextRequest) {
   try {
@@ -215,7 +138,24 @@ export async function POST(request: NextRequest) {
     if (!rateLimitCheck.success) return rateLimitCheck.response;
 
     // Parse filters from request body and validate/sanitize them
-    const body = await request.json();
+    let body: unknown;
+    try {
+      body = await request.json();
+    } catch {
+      return NextResponse.json(
+        { error: 'Invalid JSON in request body' },
+        { status: 400 }
+      );
+    }
+
+    // Validate that body is an object
+    if (!body || typeof body !== 'object' || Array.isArray(body)) {
+      return NextResponse.json(
+        { error: 'Request body must be a JSON object' },
+        { status: 400 }
+      );
+    }
+
     const sanitizedFilters = validateAndSanitizeFilters(body);
 
     // Check cache first (only if no filters applied)
@@ -252,7 +192,26 @@ export async function POST(request: NextRequest) {
         })
       : await connectionOperations.getUserConnections(currentUserId);
 
-    // Transform and filter connections
+    // Early exit if no connections
+    if (allConnections.length === 0) {
+      const emptyResponse = {
+        connected: [],
+        incoming: [],
+        outgoing: [],
+        counts: { connected: 0, incoming: 0, outgoing: 0 }
+      };
+      
+      if (cacheKey) {
+        await setCachedWithType(cacheKey, emptyResponse, 'userConnections');
+      }
+      
+      return createSuccessResponse({
+        success: true,
+        ...emptyResponse
+      }, rateLimitCheck.headers);
+    }
+
+    // Transform and filter connections efficiently
     const connectedConnections: FilteredConnectionData[] = [];
     const incomingPendingRequests: FilteredConnectionData[] = [];
     const outgoingPendingRequests: FilteredConnectionData[] = [];
@@ -261,6 +220,44 @@ export async function POST(request: NextRequest) {
       // Determine which user is the "other" user
       const isFromUser = connection.fromUserId === currentUserId;
       const otherUser = isFromUser ? connection.toUser : connection.fromUser;
+      
+      // Early filtering for advanced filters to avoid unnecessary object creation
+      if (hasAdvancedFilters) {
+        // Quick rejection based on advanced filters
+        if (sanitizedFilters.positions.length > 0 && otherUser.role === 'athlete') {
+          const userPositions = otherUser.athleteProfile?.positions || [];
+          if (!userPositions.some((pos: string) => sanitizedFilters.positions.includes(pos))) {
+            return; // Skip this connection
+          }
+        }
+        
+        if (sanitizedFilters.graduatingClasses.length > 0 && otherUser.role === 'athlete') {
+          const userGradYear = otherUser.athleteProfile?.graduationYear?.toString();
+          if (!userGradYear || !sanitizedFilters.graduatingClasses.includes(userGradYear)) {
+            return; // Skip this connection
+          }
+        }
+        
+        if (sanitizedFilters.conferences.length > 0 && 
+            (otherUser.role === 'coach' || otherUser.role === 'recruiter')) {
+          // Conference filtering is not yet available in the current schema
+          // Skip this filter for now
+        }
+        
+        if (sanitizedFilters.minHeight && otherUser.role === 'athlete') {
+          const userHeightInches = parseHeightToInches(otherUser.athleteProfile?.height);
+          if (userHeightInches === null || userHeightInches < sanitizedFilters.minHeight) {
+            return; // Skip this connection
+          }
+        }
+        
+        if (sanitizedFilters.minWeight && otherUser.role === 'athlete') {
+          const userWeightPounds = parseWeightToPounds(otherUser.athleteProfile?.weight);
+          if (userWeightPounds === null || userWeightPounds < sanitizedFilters.minWeight) {
+            return; // Skip this connection
+          }
+        }
+      }
       
       const formattedConnection: FilteredConnectionData = {
         id: connection.id,
@@ -327,17 +324,14 @@ export async function POST(request: NextRequest) {
         }
       };
 
-      // Apply advanced filters using secure filtering function (basic filters already applied at DB level)
-      const needsAdvancedFiltering = hasAdvancedFilters || (!hasBasicFilters && hasFilters);
-      if (!needsAdvancedFiltering || secureFilterConnection(formattedConnection, sanitizedFilters)) {
-        if (connection.status === 'connected') {
-          connectedConnections.push(formattedConnection);
-        } else if (connection.status === 'pending') {
-          if (isFromUser) {
-            outgoingPendingRequests.push(formattedConnection);
-          } else {
-            incomingPendingRequests.push(formattedConnection);
-          }
+      // Advanced filters already applied above, so add to appropriate array
+      if (connection.status === 'connected') {
+        connectedConnections.push(formattedConnection);
+      } else if (connection.status === 'pending') {
+        if (isFromUser) {
+          outgoingPendingRequests.push(formattedConnection);
+        } else {
+          incomingPendingRequests.push(formattedConnection);
         }
       }
     });

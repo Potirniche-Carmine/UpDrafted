@@ -450,6 +450,7 @@ async function handleDiscoverRequest(request: NextRequest) {
     }
 
     // Height filter - only for athletes with proper database-level filtering
+    // Note: createHeightFilter uses secure parameterization with ${minHeight}
     if (minHeight && minHeight > 60) {
       filterConditions.push(
         and(
@@ -460,6 +461,7 @@ async function handleDiscoverRequest(request: NextRequest) {
     }
 
     // Weight filter - only for athletes with proper database-level filtering
+    // Note: createWeightFilter uses secure parameterization with ${minWeight}
     if (minWeight && minWeight > 100) {
       filterConditions.push(
         and(
