@@ -290,13 +290,8 @@ export async function GET(request: NextRequest) {
                 scholarshipsAvailable: otherUser.coachProfile.recruitingNeeds.scholarshipsAvailable || null,
               };
             } else if (otherUser.role === 'recruiter' && otherUser.recruitingProfile?.recruitingNeeds) {
-              const mainSportNeeds = (otherUser.recruitingProfile.recruitingNeeds as {
-                sport: string;
-                studentClassifications: string[];
-                positions: string[];
-                scholarshipsAvailable: number | null;
-              const mainSportNeeds = (otherUser.recruitingProfile.recruitingNeeds as RecruitingNeed[]).find(
-                (need) => need.sport === otherUser.recruitingProfile?.sportRecruiting
+              const mainSportNeeds = otherUser.recruitingProfile.recruitingNeeds.find(
+                need => need.sport === otherUser.recruitingProfile?.sportRecruiting
               );
               if (mainSportNeeds) {
                 return {

@@ -333,36 +333,39 @@ async function handleDiscoverRequest(request: NextRequest) {
     // This will be handled in the query where clause based on which tables are joined
 
     // Search conditions with parameterized queries to prevent SQL injection
-    const searchConditions = query ? [
-      or(
-        and(
-          not(isNull(athleteProfiles.userId)),
-          or(
-            ilike(athleteProfiles.fullName, sql`${'%' + query + '%'}`),
-            ilike(schools.name, sql`${'%' + query + '%'}`),
-            ilike(athleteProfiles.sport, sql`${'%' + query + '%'}`)
-          )
-        ),
-        and(
-          not(isNull(coachProfiles.userId)),
-          or(
-            ilike(coachProfiles.fullName, sql`${'%' + query + '%'}`),
-            ilike(schools.name, sql`${'%' + query + '%'}`),
-            ilike(coachProfiles.sportCoaching, sql`${'%' + query + '%'}`),
-            ilike(coachProfiles.title, sql`${'%' + query + '%'}`)
-          )
-        ),
-        and(
-          not(isNull(recruitingProfiles.userId)),
-          or(
-            ilike(recruitingProfiles.fullName, sql`${'%' + query + '%'}`),
-            ilike(schools.name, sql`${'%' + query + '%'}`),
-            ilike(recruitingProfiles.sportRecruiting, sql`${'%' + query + '%'}`),
-            ilike(recruitingProfiles.title, sql`${'%' + query + '%'}`)
+    const searchConditions = query ? (() => {
+      const searchTerm = sql`${'%' + query.toLowerCase() + '%'}`;
+      return [
+        or(
+          and(
+            not(isNull(athleteProfiles.userId)),
+            or(
+              ilike(athleteProfiles.fullName, searchTerm),
+              ilike(schools.name, searchTerm),
+              ilike(athleteProfiles.sport, searchTerm)
+            )
+          ),
+          and(
+            not(isNull(coachProfiles.userId)),
+            or(
+              ilike(coachProfiles.fullName, searchTerm),
+              ilike(schools.name, searchTerm),
+              ilike(coachProfiles.sportCoaching, searchTerm),
+              ilike(coachProfiles.title, searchTerm)
+            )
+          ),
+          and(
+            not(isNull(recruitingProfiles.userId)),
+            or(
+              ilike(recruitingProfiles.fullName, searchTerm),
+              ilike(schools.name, searchTerm),
+              ilike(recruitingProfiles.sportRecruiting, searchTerm),
+              ilike(recruitingProfiles.title, searchTerm)
+            )
           )
         )
-      )
-    ] : [];
+      ];
+    })() : [];
 
     // Filter conditions - Fixed logic
     const filterConditions = [];

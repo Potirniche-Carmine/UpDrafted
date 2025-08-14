@@ -23,11 +23,7 @@ export function parseHeightToInches(heightStr: string | null | undefined): numbe
   if (!heightMatch) return null;
 
   const feet = parseInt(heightMatch[1], 10);
-  const heightMatch = trimmed.match(/^(\d{1,2})'(\d{0,2})"?$/);
-  if (!heightMatch) return null;
-
-  const feet = parseInt(heightMatch[1], 10);
-  const inches = heightMatch[2] && heightMatch[2].length > 0 ? parseInt(heightMatch[2], 10) : 0;
+  const inches = heightMatch[2] ? parseInt(heightMatch[2], 10) : 0;
 
   // Validate reasonable ranges
   if (feet < 3 || feet > 8 || inches < 0 || inches > 11) return null;
