@@ -845,7 +845,7 @@ export const connectionOperations = {
       minWeight,
     } = filters;
 
-    const hasFilters = sports?.length || divisions?.length || states?.length || countries?.length || positions?.length || graduatingClasses?.length || conferences?.length || requestTypes?.length || minHeight || minWeight;
+    const hasFilters = sports?.length || divisions?.length || states?.length || countries?.length || positions?.length || graduatingClasses?.length || conferences?.length || requestTypes?.length || (minHeight && minHeight > 60) || (minWeight && minWeight > 100);
 
     // If no filters, use the regular getUserConnections
     if (!hasFilters) {
