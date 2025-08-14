@@ -4,7 +4,7 @@ import { connectionOperations } from '@/database/db-utils';
 import { sanitizeText } from '@/utils/sanitization';
 import { withRateLimit } from '@/utils/security';
 import { getCachedWithType, setCachedWithType, createErrorResponse, createSuccessResponse } from '@/utils/security';
-import { validateAndSanitizeFilters, secureFilterConnection } from '@/database/secure-filters';
+import { parseHeightToInches, parseWeightToPounds } from '@/lib/parsing-utils';
 
 export const runtime = 'nodejs';
 
@@ -50,6 +50,155 @@ interface FilteredConnectionsResponse {
     incoming: number; 
     outgoing: number; 
   };
+}
+
+interface RawFilterInput {
+  sports?: unknown;
+  divisions?: unknown;
+  countries?: unknown;
+  states?: unknown;
+  positions?: unknown;
+  graduatingClasses?: unknown;
+  conferences?: unknown;
+  requestTypes?: unknown;
+  minHeight?: unknown;
+  minWeight?: unknown;
+}
+
+interface ValidatedFilters {
+  sports: string[];
+  divisions: string[];
+  countries: string[];
+  states: string[];
+  positions: string[];
+  graduatingClasses: string[];
+  conferences: string[];
+  requestTypes: string[];
+  minHeight: number | undefined;
+  minWeight: number | undefined;
+}
+
+// Validate and sanitize filter input
+function validateAndSanitizeFilters(filters: RawFilterInput): ValidatedFilters {
+  const validateArray = (arr: unknown, maxLength = 50): string[] => {
+    if (!Array.isArray(arr)) return [];
+    return arr
+      .slice(0, maxLength)
+      .map((item: unknown) => {
+        if (typeof item !== 'string') return '';
+        return sanitizeText(item);
+      })
+      .filter(Boolean);
+  };
+
+  const validateNumber = (num: unknown, min: number, max: number): number | undefined => {
+    if (typeof num !== 'number') return undefined;
+    if (num < min || num > max) return undefined;
+    return Math.floor(num);
+  };
+
+  return {
+    sports: validateArray(filters.sports),
+    divisions: validateArray(filters.divisions),
+    countries: validateArray(filters.countries),
+    states: validateArray(filters.states),
+    positions: validateArray(filters.positions),
+    graduatingClasses: validateArray(filters.graduatingClasses),
+    conferences: validateArray(filters.conferences),
+    requestTypes: validateArray(filters.requestTypes),
+    minHeight: validateNumber(filters.minHeight, 60, 96),
+    minWeight: validateNumber(filters.minWeight, 100, 500),
+  };
+}
+
+// Secure connection filtering function
+function secureFilterConnection(connection: FilteredConnectionData, filters: ValidatedFilters): boolean {
+  const { otherUser } = connection;
+
+  // Sports filter
+  if (filters.sports.length > 0) {
+    const userSport = sanitizeText(otherUser.sport || '');
+    if (!userSport || !filters.sports.includes(userSport)) {
+      return false;
+    }
+  }
+
+  // Divisions filter
+  if (filters.divisions.length > 0) {
+    const userDivision = sanitizeText(otherUser.division || '');
+    if (!userDivision || !filters.divisions.includes(userDivision)) {
+      return false;
+    }
+  }
+
+  // Countries filter
+  if (filters.countries.length > 0) {
+    const userCountry = sanitizeText(otherUser.country || 'United States');
+    if (!filters.countries.includes(userCountry)) {
+      return false;
+    }
+  }
+
+  // States filter
+  if (filters.states.length > 0) {
+    const userCountry = sanitizeText(otherUser.country || 'United States');
+    if (userCountry === 'United States') {
+      const userState = sanitizeText(otherUser.state || '');
+      if (!userState || !filters.states.includes(userState)) {
+        return false;
+      }
+    }
+  }
+
+  // Positions filter
+  if (filters.positions.length > 0 && otherUser.role === 'athlete') {
+    if (!Array.isArray(otherUser.positions)) {
+      return false;
+    }
+    const userPositions = otherUser.positions
+      .filter((pos: unknown) => typeof pos === 'string' && pos)
+      .map((pos: string) => sanitizeText(pos))
+      .filter(Boolean);
+    
+    if (!userPositions.some((pos: string) => filters.positions.includes(pos))) {
+      return false;
+    }
+  }
+
+  // Graduating classes filter
+  if (filters.graduatingClasses.length > 0 && otherUser.role === 'athlete') {
+    const graduationYear = otherUser.graduationYear;
+    if (typeof graduationYear !== 'number' || graduationYear === null || graduationYear === undefined ||
+        !filters.graduatingClasses.includes(graduationYear.toString())) {
+      return false;
+    }
+  }
+
+  // Request types filter
+  if (filters.requestTypes.length > 0) {
+    const userRole = sanitizeText(otherUser.role || '');
+    if (!userRole || !filters.requestTypes.includes(userRole)) {
+      return false;
+    }
+  }
+
+  // Height filter
+  if (filters.minHeight && otherUser.role === 'athlete') {
+    const userHeightInches = parseHeightToInches(otherUser.height);
+    if (userHeightInches === null || userHeightInches < filters.minHeight) {
+      return false;
+    }
+  }
+
+  // Weight filter
+  if (filters.minWeight && otherUser.role === 'athlete') {
+    const userWeightPounds = parseWeightToPounds(otherUser.weight);
+    if (userWeightPounds === null || userWeightPounds < filters.minWeight) {
+      return false;
+    }
+  }
+
+  return true;
 }
 
 // Get filtered user's connections

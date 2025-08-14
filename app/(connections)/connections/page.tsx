@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo, useEffect, Suspense, useRef, useCallback } from 'react';
+import React, { useState, useMemo, useEffect, Suspense, useCallback } from 'react';
 import { Users, Search, MessageSquare, Shield, CheckCircle, X, Clock, MapPin, User, UserCheck, Users2, Send, Building2, Target, Filter, ChevronDown } from 'lucide-react';
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -9,7 +9,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useRouter } from 'next/navigation';
-import { useSearchParams } from 'next/navigation';
+
 import Link from 'next/link';
 import { AuthWrapper } from '../../../components/auth-wrapper';
 import { sanitizeText } from '@/utils/sanitization';
@@ -1365,7 +1365,7 @@ const AdvancedFilters: React.FC<AdvancedFiltersProps> = ({
             )}
 
             {/* Request Type Filter - Reserve space for pending/sent requests tabs */}
-            {(activeTab === 'requests' || activeTab === 'sent-requests') && (
+            {(activeTab === 'requests' || activeTab === 'sent-requests') ? (
               <div className="space-y-2">
                 <Label className="text-sm font-medium">Request Types</Label>
                 {requestTypeOptions.length > 0 ? (
@@ -1382,6 +1382,9 @@ const AdvancedFilters: React.FC<AdvancedFiltersProps> = ({
                   </div>
                 )}
               </div>
+            ) : (
+              // Placeholder to maintain consistent spacing on connections tab
+              <div className="h-[60px]"></div>
             )}
           </div>
 
@@ -1466,7 +1469,6 @@ const AdvancedFilters: React.FC<AdvancedFiltersProps> = ({
 };
 
 function App() {
-  const searchParams = useSearchParams();
   const { user } = useUser();
   const effectiveRole = user?.publicMetadata?.role as string;
   
@@ -1476,7 +1478,6 @@ function App() {
   const [pendingRequests, setPendingRequests] = useState<PendingRequest[]>([]);
   const [sentRequests, setSentRequests] = useState<PendingRequest[]>([]);
   const [loading, setLoading] = useState(true);
-  const loadingRef = useRef(false); // Track if API call is in progress
 
   // Advanced filter states
   const [selectedSports, setSelectedSports] = useState<FilterOption[]>([]);
@@ -1491,430 +1492,191 @@ function App() {
   const [selectedRequestTypes, setSelectedRequestTypes] = useState<FilterOption[]>([]);
   
   // Height/Weight filters (for admin users)
-  const [minHeight, setMinHeight] = useState<number>(60); // 5'0" in inches
-  const [minWeight, setMinWeight] = useState<number>(100); // 100 lbs
+  const [minHeight, setMinHeight] = useState(60); // 5'0"
+  const [minWeight, setMinWeight] = useState(100);
 
-  // Dialog states for confirmation
-  const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
-  const [connectionToRemove, setConnectionToRemove] = useState<{id: number, userId: string} | null>(null);
+  interface FilterData {
+    sports?: FilterOption[];
+    divisions?: FilterOption[];
+    states?: FilterOption[];
+    countries?: FilterOption[];
+    positions?: FilterOption[];
+    graduatingClasses?: FilterOption[];
+    conferences?: FilterOption[];
+    requestTypes?: FilterOption[];
+    minHeight?: number;
+    minWeight?: number;
+  }
 
-  const activeTab = searchParams?.get('tab') || 'connections';
-
-  // Load connections data with useCallback to prevent dependency issues
-  const loadConnections = useCallback(async () => {
-    // Prevent duplicate API calls due to React Strict Mode
-    if (loadingRef.current) {
-      return;
-    }
-
+  const fetchConnections = useCallback(async (filters: FilterData = {}) => {
+    setLoading(true);
     try {
-      loadingRef.current = true;
+      const queryParams = new URLSearchParams();
       
-      // Get auth token
-      const windowWithClerk = window as unknown as {
-        Clerk?: {
-          session?: {
-            getToken: () => Promise<string>;
-          };
-        };
-      };
-      const token = await windowWithClerk.Clerk?.session?.getToken();
+      Object.entries(filters).forEach(([key, value]) => {
+        if (Array.isArray(value) && value.length > 0) {
+          value.forEach((v: FilterOption) => queryParams.append(key, v.value));
+        } else if (typeof value === 'number' && value > 0) {
+           if (key === 'minHeight' && value > 60) {
+            queryParams.append(key, value.toString());
+          } else if (key === 'minWeight' && value > 100) {
+            queryParams.append(key, value.toString());
+          }
+        }
+      });
 
-      // Check if any advanced filters are applied
-      const hasAdvancedFilters = selectedSports.length > 0 || 
-        selectedDivisions.length > 0 || 
-        selectedCountries.length > 1 || // More than just United States
-        selectedStates.length > 0 ||
-        selectedPositions.length > 0 ||
-        selectedGraduatingClasses.length > 0 ||
-        selectedConferences.length > 0 ||
-        selectedRequestTypes.length > 0 ||
-        minHeight > 60 ||
-        minWeight > 100;
-
-      let response: Response;
-
-      if (hasAdvancedFilters) {
-        // Use filtered API endpoint
-        response = await fetch('/api/connections/filtered', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`,
-          },
-          body: JSON.stringify({
-            sports: selectedSports.map(sport => sanitizeText(sport.value)),
-            divisions: selectedDivisions.map(div => sanitizeText(div.value)),
-            countries: selectedCountries.map(country => sanitizeText(country.value)),
-            states: selectedStates.map(state => sanitizeText(state.value)),
-            positions: selectedPositions.map(pos => sanitizeText(pos.value)),
-            graduatingClasses: selectedGraduatingClasses.map(gc => sanitizeText(gc.value)),
-            conferences: selectedConferences.map(conf => sanitizeText(conf.value)),
-            requestTypes: selectedRequestTypes.map(rt => sanitizeText(rt.value)),
-            minHeight: minHeight > 60 ? minHeight : undefined,
-            minWeight: minWeight > 100 ? minWeight : undefined
-          })
-        });
-      } else {
-        // Use regular API endpoint without filters
-        response = await fetch('/api/connections', {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-          },
-        });
-      }
-
+      const response = await fetch(`/api/connections?${queryParams.toString()}`);
       if (!response.ok) {
-        throw new Error('Failed to load connections');
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to fetch connections');
       }
-
       const data = await response.json();
-      
-      // The API returns the data directly, not wrapped in a success object
-      if (data && (data.connected || data.incoming || data.outgoing)) {
-        setConnections(data.connected || []);
-        setPendingRequests(data.incoming || []);
-        setSentRequests(data.outgoing || []);
-      }
-    } catch (error) {
-      console.error('Error loading connections:', error);
+      setConnections(data.connected || []);
+      setPendingRequests(data.incoming || []);
+      setSentRequests(data.outgoing || []);
+    } catch (err) {
+      console.error('Error fetching connections:', err);
     } finally {
       setLoading(false);
-      loadingRef.current = false;
     }
-  }, [selectedSports, selectedDivisions, selectedCountries, selectedStates, selectedPositions, selectedGraduatingClasses, selectedConferences, selectedRequestTypes, minHeight, minWeight]);
+  }, []);
 
-  // Filter application and clearing functions
-  const applyFilters = useCallback(() => {
-    loadConnections();
-  }, [loadConnections]);
+  useEffect(() => {
+    fetchConnections();
+  }, [fetchConnections]);
 
-  const clearAllFilters = useCallback(() => {
+  const handleApplyFilters = () => {
+    const filters = {
+      sports: selectedSports,
+      divisions: selectedDivisions,
+      states: selectedStates,
+      countries: selectedCountries,
+      positions: selectedPositions,
+      graduatingClasses: selectedGraduatingClasses,
+      conferences: selectedConferences,
+      requestTypes: selectedRequestTypes,
+      minHeight: minHeight,
+      minWeight: minWeight,
+    };
+    fetchConnections(filters);
+  };
+
+  const handleResetFilters = () => {
+    setSearchTerm('');
     setSelectedSports([]);
     setSelectedDivisions([]);
-    setSelectedCountries([{ value: 'United States', label: 'United States' }]);
     setSelectedStates([]);
+    setSelectedCountries([]);
     setSelectedPositions([]);
     setSelectedGraduatingClasses([]);
     setSelectedConferences([]);
     setSelectedRequestTypes([]);
     setMinHeight(60);
     setMinWeight(100);
-    setFilter('all');
-    loadConnections();
-  }, [loadConnections]);
+    fetchConnections(); // Fetch with no filters
+  };
 
-  // Initial load only - no automatic filter updates
-  useEffect(() => {
-    // Only load connections on initial mount, not on filter changes
-    if (!loadingRef.current) {
-      const initialLoad = async () => {
-        // Get auth token
-        const windowWithClerk = window as unknown as {
-          Clerk?: {
-            session?: {
-              getToken: () => Promise<string | null>;
-            };
-          };
-        };
+  const useFilteredConnections = (
+    source: (Connection | PendingRequest)[],
+  ) => {
+    return useMemo(() => {
+      if (!searchTerm) {
+        return source;
+      }
+      return source.filter(item => {
+        const { otherUser } = item;
+        const searchLower = searchTerm.toLowerCase();
 
-        if (!windowWithClerk?.Clerk?.session) {
-          setLoading(false);
-          return;
-        }
+        // Client-side search term filter
+        return (
+          otherUser.fullName.toLowerCase().includes(searchLower) ||
+          (otherUser.organizationName && otherUser.organizationName.toLowerCase().includes(searchLower)) ||
+          (otherUser.sport && otherUser.sport.toLowerCase().includes(searchLower))
+        );
+      });
+    }, [source]);
+  };
 
-        try {
-          loadingRef.current = true;
-          setLoading(true);
+  const filteredConnections = useFilteredConnections(connections);
+  const filteredIncomingRequests = useFilteredConnections(pendingRequests);
+  const filteredOutgoingRequests = useFilteredConnections(sentRequests);
 
-          const token = await windowWithClerk.Clerk.session.getToken();
-          if (!token) {
-            throw new Error('No authentication token available');
-          }
+  // Connection action handlers
+  const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState('connections');
 
-          // Use regular API endpoint for initial load (no filters)
-          const response = await fetch('/api/connections', {
-            headers: {
-              'Authorization': `Bearer ${token}`,
-            },
-          });
-
-          if (!response.ok) {
-            throw new Error('Failed to load connections');
-          }
-
-          const data = await response.json();
-          
-          if (data && (data.connected || data.incoming || data.outgoing)) {
-            setConnections(data.connected || []);
-            setPendingRequests(data.incoming || []);
-            setSentRequests(data.outgoing || []);
-          }
-        } catch (error) {
-          console.error('Error in initial connections load:', error);
-        } finally {
-          setLoading(false);
-          loadingRef.current = false;
-        }
-      };
+  const handleRemoveConnection = async (connectionId: number, targetUserId: string) => {
+    try {
+      const response = await fetch('/api/connections', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ connectionId, targetUserId })
+      });
       
-      initialLoad();
+      if (response.ok) {
+        fetchConnections();
+      }
+    } catch (error) {
+      console.error('Failed to remove connection:', error);
     }
-  }, []); // Empty dependency array - only run on mount
+  };
 
   const handleAcceptRequest = async (requestId: number) => {
-    // Find the request to get the fromUserId
-    const request = pendingRequests.find(r => r.id === requestId);
-    if (!request) {
-      return;
-    }
-
     try {
-      // Get auth token
-      const windowWithClerk = window as unknown as {
-        Clerk?: {
-          session?: {
-            getToken: () => Promise<string>;
-          };
-        };
-      };
-      const token = await windowWithClerk.Clerk?.session?.getToken();
-
       const response = await fetch('/api/connections', {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify({ connectionId: requestId }),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ connectionId: requestId })
       });
-
-      if (!response.ok) {
-        throw new Error('Failed to accept connection request');
+      
+      if (response.ok) {
+        fetchConnections();
       }
-
-      const result = await response.json();
-      if (result.success) {
-        // Remove from pending requests and add to connections
-        setPendingRequests(prev => prev.filter(r => r.id !== requestId));
-
-        // Create a connected connection object
-        const newConnection: Connection = {
-          id: result.connection.id,
-          status: 'connected',
-          initiatedBy: request.initiatedBy,
-          createdAt: request.createdAt,
-          notes: request.notes,
-          isInitiator: false, // This user didn't initiate, they accepted
-          otherUser: request.otherUser
-        };
-
-        setConnections(prev => [...prev, newConnection]);
-      } else {
-        throw new Error(result.error || 'Failed to accept connection request');
-      }
-    } catch {
-      alert('Failed to accept connection request. Please try again.');
+    } catch (error) {
+      console.error('Failed to accept request:', error);
     }
   };
 
   const handleDeclineRequest = async (requestId: number) => {
-    // Find the request to get the fromUserId
-    const request = pendingRequests.find(r => r.id === requestId);
-    if (!request) {
-      return;
-    }
-
     try {
-      // Get auth token
-      const windowWithClerk = window as unknown as {
-        Clerk?: {
-          session?: {
-            getToken: () => Promise<string>;
-          };
-        };
-      };
-      const token = await windowWithClerk.Clerk?.session?.getToken();
-
       const response = await fetch('/api/connections', {
         method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify({ targetUserId: request.otherUser.userId }),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ connectionId: requestId })
       });
-
-      if (!response.ok) {
-        throw new Error('Failed to decline connection request');
+      
+      if (response.ok) {
+        fetchConnections();
       }
-
-      const result = await response.json();
-      if (result.success) {
-        // Remove from pending requests
-        setPendingRequests(prev => prev.filter(r => r.id !== requestId));
-      } else {
-        throw new Error(result.error || 'Failed to decline connection request');
-      }
-    } catch {
-      alert('Failed to decline connection request. Please try again.');
+    } catch (error) {
+      console.error('Failed to decline request:', error);
     }
   };
 
   const handleWithdrawRequest = async (requestId: number, targetUserId: string) => {
     try {
-      // Get auth token
-      const windowWithClerk = window as unknown as {
-        Clerk?: {
-          session?: {
-            getToken: () => Promise<string>;
-          };
-        };
-      };
-      const token = await windowWithClerk.Clerk?.session?.getToken();
-
       const response = await fetch('/api/connections', {
         method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify({ targetUserId }),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ connectionId: requestId, targetUserId })
       });
-
-      if (!response.ok) {
-        throw new Error('Failed to withdraw connection request');
+      
+      if (response.ok) {
+        fetchConnections();
       }
-
-      const result = await response.json();
-      if (result.success) {
-        // Remove from local state
-        setSentRequests(prev => prev.filter(r => r.id !== requestId));
-      } else {
-        throw new Error(result.error || 'Failed to withdraw connection request');
-      }
-    } catch {
-      alert('Failed to withdraw connection request. Please try again.');
-    } finally {
-      // Request withdrawn
+    } catch (error) {
+      console.error('Failed to withdraw request:', error);
     }
   };
 
-  const handleRemoveConnection = async (connectionId: number, targetUserId: string) => {
-    setConnectionToRemove({id: connectionId, userId: targetUserId});
-    setConfirmDialogOpen(true);
+  // Alias for compatibility
+  const applyFilters = handleApplyFilters;
+  const clearAllFilters = handleResetFilters;
+  
+  const confirmRemoveConnection = () => {
+    setConfirmDialogOpen(false);
+    // Add actual remove logic here if needed
   };
-
-  const confirmRemoveConnection = async () => {
-    if (!connectionToRemove) return;
-    
-    try {
-      // Get auth token
-      const windowWithClerk = window as unknown as {
-        Clerk?: {
-          session?: {
-            getToken: () => Promise<string>;
-          };
-        };
-      };
-      const token = await windowWithClerk.Clerk?.session?.getToken();
-
-      const response = await fetch('/api/connections', {
-        method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify({ targetUserId: connectionToRemove.userId }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to remove connection');
-      }
-
-      const result = await response.json();
-      if (result.success) {
-        // Remove from local state
-        setConnections(prev => prev.filter(c => c.id !== connectionToRemove.id));
-      } else {
-        throw new Error(result.error || 'Failed to remove connection');
-      }
-    } catch {
-      alert('Failed to remove connection. Please try again.');
-    } finally {
-      setConfirmDialogOpen(false);
-      setConnectionToRemove(null);
-    }
-  };
-
-  const filteredConnections = useMemo(() => {
-    let filtered = connections;
-
-    if (filter !== 'all') {
-      filtered = filtered.filter(connection => {
-        if (filter === 'athletes') return connection.otherUser.role === 'athlete';
-        if (filter === 'coaches') return connection.otherUser.role === 'coach';
-        if (filter === 'recruiters') return connection.otherUser.role === 'recruiter';
-        return true;
-      });
-    }
-
-    if (searchTerm) {
-      filtered = filtered.filter(connection =>
-        connection.otherUser.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        connection.otherUser.organizationName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (connection.otherUser.sport && connection.otherUser.sport.toLowerCase().includes(searchTerm.toLowerCase()))
-      );
-    }
-
-    return filtered;
-  }, [connections, filter, searchTerm]);
-
-  const filteredPendingRequests = useMemo(() => {
-    let filtered = pendingRequests;
-
-    if (filter !== 'all') {
-      filtered = filtered.filter(request => {
-        if (filter === 'athletes') return request.otherUser.role === 'athlete';
-        if (filter === 'coaches') return request.otherUser.role === 'coach';
-        if (filter === 'recruiters') return request.otherUser.role === 'recruiter';
-        return true;
-      });
-    }
-
-    if (searchTerm) {
-      filtered = filtered.filter(request =>
-        request.otherUser.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        request.otherUser.organizationName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (request.otherUser.sport && request.otherUser.sport.toLowerCase().includes(searchTerm.toLowerCase()))
-      );
-    }
-
-    return filtered;
-  }, [pendingRequests, filter, searchTerm]);
-
-  const filteredSentRequests = useMemo(() => {
-    let filtered = sentRequests;
-
-    if (filter !== 'all') {
-      filtered = filtered.filter(request => {
-        if (filter === 'athletes') return request.otherUser.role === 'athlete';
-        if (filter === 'coaches') return request.otherUser.role === 'coach';
-        if (filter === 'recruiters') return request.otherUser.role === 'recruiter';
-        return true;
-      });
-    }
-
-    if (searchTerm) {
-      filtered = filtered.filter(request =>
-        request.otherUser.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        request.otherUser.organizationName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (request.otherUser.sport && request.otherUser.sport.toLowerCase().includes(searchTerm.toLowerCase()))
-      );
-    }
-
-    return filtered;
-  }, [sentRequests, filter, searchTerm]);
 
   // Show page layout first, then load data (like messages page)
   return (
@@ -1944,7 +1706,7 @@ function App() {
         </div>
 
         {/* Tabs */}
-        <Tabs defaultValue={activeTab} className="space-y-6">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
           <div className='relative'>
             <TabsList className="inline-flex h-12 items-center justify-center rounded-xl bg-muted/30 p-1 text-muted-foreground w-full max-w-2xl mx-auto backdrop-blur-sm border border-border/50">
               <TabsTrigger
@@ -2021,7 +1783,7 @@ function App() {
             </TabsList>
           </div>
 
-          <TabsContent value="connections" className="mt-6">
+          <TabsContent value="connections" className="mt-6 min-h-[600px] pb-8">
             <AdvancedFilters
               currentFilter={filter}
               onFilterChange={setFilter}
@@ -2073,7 +1835,7 @@ function App() {
               </div>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                {filteredConnections.map(connection => (
+                {filteredConnections.filter((item): item is Connection => 'status' in item && item.status !== 'pending').map((connection: Connection) => (
                   <UserCard
                     key={connection.id}
                     connection={connection}
@@ -2084,7 +1846,7 @@ function App() {
             )}
           </TabsContent>
 
-          <TabsContent value="requests" className="mt-6">
+          <TabsContent value="requests" className="mt-6 min-h-[600px] pb-8">
             <AdvancedFilters
               currentFilter={filter}
               onFilterChange={setFilter}
@@ -2119,7 +1881,7 @@ function App() {
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#01ae79] mx-auto"></div>
                 <p className="mt-4 text-muted-foreground text-sm">Loading requests...</p>
               </div>
-            ) : filteredPendingRequests.length === 0 ? (
+            ) : filteredIncomingRequests.length === 0 ? (
               <div className="text-center py-8">
                 <div className="w-24 h-24 bg-gradient-to-br from-red-50 to-red-100 dark:from-red-900/20 dark:to-red-800/20 rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm">
                   <Clock className="w-12 h-12 text-red-500" />
@@ -2127,7 +1889,7 @@ function App() {
                 <h3 className="text-lg font-semibold text-foreground mb-2">
                   {searchTerm || filter !== 'all' ? 'No pending requests found' : 'No pending requests'}
                 </h3>
-                <p className="text-muted-foreground">
+                <p className="text-muted-foreground max-w-md mx-auto">
                   {searchTerm || filter !== 'all'
                     ? 'Try adjusting your search terms or filters'
                     : 'You\'ll see connection requests from other users here'
@@ -2136,7 +1898,7 @@ function App() {
               </div>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                {filteredPendingRequests.map(request => (
+                {filteredIncomingRequests.filter((item): item is PendingRequest => 'status' in item && item.status === 'pending').map((request: PendingRequest) => (
                   <PendingRequestCard
                     key={request.id}
                     request={request}
@@ -2147,8 +1909,8 @@ function App() {
               </div>
             )}
           </TabsContent>
-
-          <TabsContent value="sent-requests" className="mt-6">
+                {/* DO NOT CHANGE THE 624PX AS IT WILL CREATE LAYOUT SHIFT I HAVE NO IDEA WHY IT NEEDS TO BE THAT BUT ITS THE ONLY WAY I HAVE FOUND TO FIX THE FUCKING ISSUE*/}
+          <TabsContent value="sent-requests" className="mt-6 min-h-[624px] pb-8">
             <AdvancedFilters
               currentFilter={filter}
               onFilterChange={setFilter}
@@ -2183,24 +1945,24 @@ function App() {
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#01ae79] mx-auto"></div>
                 <p className="mt-4 text-muted-foreground text-sm">Loading sent requests...</p>
               </div>
-            ) : filteredSentRequests.length === 0 ? (
-              <div className="text-center py-8">
+            ) : filteredOutgoingRequests.length === 0 ? (
+              <div className="text-center py-8 mb-8">
                 <div className="w-24 h-24 bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm">
                   <Send className="w-12 h-12 text-blue-500" />
                 </div>
                 <h3 className="text-lg font-semibold text-foreground mb-2">
                   {searchTerm || filter !== 'all' ? 'No sent requests found' : 'No sent requests'}
                 </h3>
-                <p className="text-muted-foreground">
+                <p className="text-muted-foreground max-w-md mx-auto">
                   {searchTerm || filter !== 'all'
                     ? 'Try adjusting your search terms or filters'
-                    : 'You\'ll see sent requests here'
+                    : 'You\'ll see sent connection requests to other users here'
                   }
                 </p>
               </div>
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                {filteredSentRequests.map(request => (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+                {filteredOutgoingRequests.filter((item): item is PendingRequest => 'status' in item && item.status === 'pending').map((request: PendingRequest) => (
                   <SentRequestCard
                     key={request.id}
                     request={request}

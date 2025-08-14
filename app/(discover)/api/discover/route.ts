@@ -5,6 +5,7 @@ import { users, athleteProfiles, coachProfiles, recruitingProfiles, connections,
 import { and, eq, or, not, ilike, isNull, exists, ne, arrayOverlaps, sql } from 'drizzle-orm';
 import { sanitizeText, sanitizeNumber } from '@/utils/sanitization';
 import { withRateLimit } from '@/utils/security';
+import { createHeightFilter, createWeightFilter } from '@/database/db-utils';
 
 // Force Node.js runtime
 export const runtime = 'nodejs';
@@ -447,37 +448,20 @@ async function handleDiscoverRequest(request: NextRequest) {
 
     // Height filter - only for athletes with proper database-level filtering
     if (minHeight && minHeight > 60) {
-      // Convert height directly in database using SQL for better performance
       filterConditions.push(
         and(
           not(isNull(athleteProfiles.userId)),
-          sql`(
-            CASE 
-              WHEN ${athleteProfiles.height} ~ '^[0-9]{1,2}''[0-9]{1,2}"$' THEN
-                CAST(SPLIT_PART(${athleteProfiles.height}, '''', 1) AS INTEGER) * 12 + 
-                CAST(REPLACE(SPLIT_PART(${athleteProfiles.height}, '''', 2), '"', '') AS INTEGER)
-              WHEN ${athleteProfiles.height} ~ '^[0-9]{1,2}''$' THEN
-                CAST(REPLACE(${athleteProfiles.height}, '''', '') AS INTEGER) * 12
-              ELSE NULL
-            END
-          ) >= ${minHeight}`
+          createHeightFilter(minHeight)
         )
       );
     }
 
-    // Weight filter - only for athletes with proper database-level filtering  
+    // Weight filter - only for athletes with proper database-level filtering
     if (minWeight && minWeight > 100) {
-      // Convert weight directly in database using SQL for better performance
       filterConditions.push(
         and(
           not(isNull(athleteProfiles.userId)),
-          sql`(
-            CASE 
-              WHEN ${athleteProfiles.weight} ~ '^[0-9]{1,3}$' THEN
-                CAST(${athleteProfiles.weight} AS INTEGER)
-              ELSE NULL
-            END
-          ) >= ${minWeight}`
+          createWeightFilter(minWeight)
         )
       );
     }
