@@ -295,7 +295,7 @@ export async function GET(request: NextRequest) {
                 studentClassifications: string[];
                 positions: string[];
                 scholarshipsAvailable: number | null;
-              }[]).find(
+              const mainSportNeeds = (otherUser.recruitingProfile.recruitingNeeds as RecruitingNeed[]).find(
                 (need) => need.sport === otherUser.recruitingProfile?.sportRecruiting
               );
               if (mainSportNeeds) {
