@@ -171,7 +171,7 @@ async function parseSearchParams(request: NextRequest) {
         graduatingClasses: graduatingClassesArray.map((gc: string) => sanitizeText(gc)).filter(Boolean),
         conferences: conferencesArray.map((c: string) => sanitizeText(c)).filter(Boolean),
         minHeight: sanitizeNumber(body.minHeight, 60, 96),
-        minWeight: sanitizeNumber(body.minWeight, 100, 350)
+        minWeight: sanitizeNumber(body.minWeight, 100, 500)
       };
     } catch (err) {
       if (err instanceof RequestValidationError) {
