@@ -1252,7 +1252,7 @@ export async function PUT(
                   }
                 }
 
-                console.log('Camp experience transaction completed successfully:', operationsLog);
+            
               } catch (innerError) {
                 // Log the transaction operations attempted before failure
                 console.error('Transaction rollback triggered. Operations attempted:', operationsLog);

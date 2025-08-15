@@ -199,7 +199,7 @@ async function cleanupUserFiles(userId: string) {
       (result.status === 'fulfilled' && !result.value.success)
     ).length;
 
-    console.log(`File cleanup for user ${userId}: ${successfulCount} successful, ${failedCount} failed`);
+
 
     // File cleanup completed
 

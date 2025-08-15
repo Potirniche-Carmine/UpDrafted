@@ -396,6 +396,8 @@ export function AthleteEditDialogs({
     }
   }, [dialogType, profileData.youtubeVideos]);
 
+
+
   // Set measurable to edit when measurableIdToEdit changes
   useEffect(() => {
     if (measurableIdToEdit && profileData.measurables) {
@@ -2290,6 +2292,7 @@ export function AthleteEditDialogs({
                         <div className="text-sm text-muted-foreground mb-1">
                           <Label className="text-xs">Date Range</Label>
                           <DateRangePicker
+                            key={`${campForm.startDate?.toISOString()}-${campForm.endDate?.toISOString()}`}
                             startDate={campForm.startDate}
                             endDate={campForm.endDate}
                             onStartDateChange={(date) => setCampForm(f => ({ ...f, startDate: date }))}
@@ -2386,59 +2389,29 @@ export function AthleteEditDialogs({
                         </div>
                         <div className="text-sm text-muted-foreground">{exp.description}</div>
                         <div className="flex gap-2 mt-1">
-                          <Button size="sm" variant="outline" onClick={() => {
-                            setCampEditIndex(idx);
-                            // Convert dates to the exact format expected by Select components
-                            const findMatchingOption = (date: Date | string, options: CampDateOption[]): string => {
-                              let targetDate: Date;
-                              
-                              if (typeof date === 'string') {
-                                // Use the isoStringToDate function to handle timezone issues properly
-                                targetDate = isoStringToDate(date);
-                              } else {
-                                targetDate = date;
-                              }
-                              
-                              // Find the option that matches the year and month using UTC methods
-                              const targetYear = targetDate.getUTCFullYear();
-                              const targetMonth = targetDate.getUTCMonth();
-                              
-                              const matchingOption = options.find(option => {
-                                // Handle both YYYY-MM-DD format and ISO string format
-                                let optionDate: Date;
-                                if (/^\d{4}-\d{2}-\d{2}$/.test(option.value)) {
-                                  // YYYY-MM-DD format - use UTC constructor
-                                  const [year, month] = option.value.split('-').map(Number);
-                                  optionDate = new Date(Date.UTC(year, month - 1, 1));
-                                } else {
-                                  // ISO string format
-                                  optionDate = new Date(option.value);
-                                }
-                                return optionDate.getUTCFullYear() === targetYear && optionDate.getUTCMonth() === targetMonth;
-                              });
-                              
-                              return matchingOption ? matchingOption.value : '';
-                            };
-                            
-                            // Convert existing dates to Date objects
-                            const startDate = typeof exp.startDate === 'string' ? isoStringToDate(exp.startDate) : exp.startDate;
-                            const endDate = typeof exp.endDate === 'string' ? isoStringToDate(exp.endDate) : exp.endDate;
-                            const endDateIsPresent = isPresentDate(endDate);
-                            
-                            setCampForm({
-                              type: exp.type,
-                              name: exp.name,
-                              city: exp.city,
-                              state: exp.state,
-                              country: exp.country,
-                              startDate: startDate,
-                              endDate: endDate,
-                              sport: exp.sport,
-                              description: exp.description
-                            });
-                            
-                            setCampFormError(null);
-                          }}>Edit</Button>
+                                      <Button size="sm" variant="outline" onClick={() => {
+              setCampEditIndex(idx);
+              
+              // Convert existing dates to Date objects
+              const startDate = typeof exp.startDate === 'string' ? isoStringToDate(exp.startDate) : exp.startDate;
+              const endDate = typeof exp.endDate === 'string' ? isoStringToDate(exp.endDate) : exp.endDate;
+              
+              const newCampForm = {
+                type: exp.type,
+                name: exp.name,
+                city: exp.city,
+                state: exp.state,
+                country: exp.country,
+                startDate: startDate,
+                endDate: endDate,
+                sport: exp.sport,
+                description: exp.description
+              };
+              
+              setCampForm(newCampForm);
+              
+              setCampFormError(null);
+            }}>Edit</Button>
                           <Button size="sm" variant="destructive" onClick={() => {
                             setTempCampExperience(tempCampExperience.filter((_, i) => i !== idx));
                             setIsDirty(true);
@@ -2759,12 +2732,16 @@ export function AthleteEditDialogs({
     const [tempEndDate, setTempEndDate] = useState<Date | undefined>(endDate);
     const [isPresent, setIsPresent] = useState<boolean>(endDate ? isPresentDate(endDate) : false);
 
-    // Update temp dates when props change
-    useEffect(() => {
-      setTempStartDate(startDate);
-      setTempEndDate(endDate);
-      setIsPresent(endDate ? isPresentDate(endDate) : false);
-    }, [startDate, endDate]);
+                  // Update temp dates when props change - ensure we always have the latest values
+              useEffect(() => {
+                // Ensure we have proper Date objects using isoStringToDate for consistency
+                const normalizedStartDate = typeof startDate === 'string' ? isoStringToDate(startDate) : startDate;
+                const normalizedEndDate = typeof endDate === 'string' ? isoStringToDate(endDate) : endDate;
+                
+                setTempStartDate(normalizedStartDate);
+                setTempEndDate(normalizedEndDate);
+                setIsPresent(normalizedEndDate ? isPresentDate(normalizedEndDate) : false);
+              }, [startDate, endDate]);
 
     const handleStartDateChange = (date: Date | undefined) => {
       setTempStartDate(date);
@@ -2792,11 +2769,16 @@ export function AthleteEditDialogs({
       setIsOpen(false);
     };
 
-    const handleCancel = () => {
-      setTempStartDate(startDate);
-      setTempEndDate(endDate);
-      setIsOpen(false);
-    };
+                  const handleCancel = () => {
+                // Reset to the original prop values, ensuring proper date normalization
+                const normalizedStartDate = typeof startDate === 'string' ? isoStringToDate(startDate) : startDate;
+                const normalizedEndDate = typeof endDate === 'string' ? isoStringToDate(endDate) : endDate;
+                
+                setTempStartDate(normalizedStartDate);
+                setTempEndDate(normalizedEndDate);
+                setIsPresent(normalizedEndDate ? isPresentDate(normalizedEndDate) : false);
+                setIsOpen(false);
+              };
 
     const formatDateRange = () => {
       if (!startDate && !endDate) return placeholder;
@@ -2826,30 +2808,30 @@ export function AthleteEditDialogs({
         <PopoverContent className="w-[600px] p-0 z-[9999]" align="start" side="bottom">
           <div className="p-3">
             <div className="flex gap-4">
-              <div className="space-y-2">
-                <Label className="text-sm font-medium">Start Date</Label>
-                <div className="w-[280px]">
-                  <Calendar
-                    mode="single"
-                    selected={tempStartDate}
-                    onSelect={handleStartDateChange}
-                    initialFocus
-                    className="w-full"
-                  />
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label className="text-sm font-medium">End Date</Label>
-                <div className="w-[280px]">
-                  <Calendar
-                    mode="single"
-                    selected={tempEndDate}
-                    onSelect={handleEndDateChange}
-                    disabled={isPresent}
-                    className="w-full"
-                  />
-                </div>
-              </div>
+                                      <div className="space-y-2">
+                          <Label className="text-sm font-medium">Start Date</Label>
+                          <div className="w-[280px]">
+                            <Calendar
+                              mode="single"
+                              selected={tempStartDate}
+                              onSelect={handleStartDateChange}
+                              initialFocus
+                              className="w-full"
+                            />
+                          </div>
+                        </div>
+                        <div className="space-y-2">
+                          <Label className="text-sm font-medium">End Date</Label>
+                          <div className="w-[280px]">
+                            <Calendar
+                              mode="single"
+                              selected={tempEndDate}
+                              onSelect={handleEndDateChange}
+                              disabled={isPresent}
+                              className="w-full"
+                            />
+                          </div>
+                        </div>
             </div>
             <div className="flex items-center space-x-2 mt-4">
               <Checkbox

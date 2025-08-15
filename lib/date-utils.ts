@@ -761,7 +761,7 @@ export function validateDateIntegrity(
  * ];
  * 
  * const results = validateDateDataset(dateEntries, 'camp experiences');
- * console.log(results.summary); // "Date validation for camp experiences: 2/3 valid entries, 1 issues found"
+ * // console.log(results.summary); // "Date validation for camp experiences: 2/3 valid entries, 1 issues found"
  * 
  * if (results.invalidEntries > 0) {
  *   console.warn('Date validation issues:', results.issues);

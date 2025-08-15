@@ -1839,7 +1839,7 @@ export const notificationOperations = {
 
           // If notification already exists, don't create a new one
           if (existingNotification) {
-            console.log(`Duplicate connection notification prevented for user ${toUserId} from ${fromUserId}`);
+    
             return null;
           }
         } catch (error) {
@@ -2450,7 +2450,7 @@ export const schoolOperations = {
       
       // If similarity is 99% or higher, return the existing school instead of creating a duplicate
       if (similarity >= 99) {
-        console.log(`Using existing similar school: "${school.name}" for input "${trimmedName}" (${similarity.toFixed(1)}% similar)`);
+
         return school;
       }
     }
