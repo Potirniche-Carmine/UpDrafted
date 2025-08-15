@@ -251,10 +251,46 @@ export function formatCampDate(date: Date | string): string {
     return 'Present';
   }
 
-  return dateObj.toLocaleDateString('en-US', {
-    month: 'long',
-    year: 'numeric'
-  });
+  // Format as YYYY-MM-DD
+  const year = dateObj.getFullYear();
+  const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+  const day = String(dateObj.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+/**
+ * Format a date as "Month, Year" for display purposes
+ * Example: "January, 2025"
+ */
+export function formatDateAsMonthYear(date: Date | string): string {
+  // Handle string input (convert to Date object)
+  let dateObj: Date;
+  if (typeof date === 'string') {
+    try {
+      dateObj = new Date(date);
+    } catch {
+      console.error('DEBUG - Invalid date string passed to formatDateAsMonthYear:', date);
+      return 'Invalid Date';
+    }
+  } else {
+    dateObj = date;
+  }
+
+  // Ensure we have a valid Date object
+  if (!dateObj || !(dateObj instanceof Date) || isNaN(dateObj.getTime())) {
+    console.error('DEBUG - Invalid date passed to formatDateAsMonthYear:', dateObj);
+    return 'Invalid Date';
+  }
+
+  // Check if it's the special "Present" date
+  if (isPresentDate(dateObj)) {
+    return 'Present';
+  }
+
+  // Format as "Month, Year"
+  const month = dateObj.toLocaleDateString('en-US', { month: 'long' });
+  const year = dateObj.getFullYear();
+  return `${month}, ${year}`;
 }
 
 /**
@@ -542,6 +578,75 @@ export function formatDateRange(startDate: Date | string, endDate: Date | string
   const startFormatted = formatCampDate(startDate);
   const endFormatted = isPresentDate(endDate) ? 'Present' : formatCampDate(endDate);
   return `${startFormatted} - ${endFormatted}`;
+}
+
+/**
+ * Format a date range as "Month, Year - Month, Year" for display purposes
+ * Example: "January, 2025 - April, 2025"
+ */
+export function formatDateRangeAsMonthYear(startDate: Date | string, endDate: Date | string): string {
+  const startFormatted = formatDateAsMonthYear(startDate);
+  const endFormatted = isPresentDate(endDate) ? 'Present' : formatDateAsMonthYear(endDate);
+  return `${startFormatted} - ${endFormatted}`;
+}
+
+/**
+ * Parse a date range string back into individual start and end dates
+ * Handles formats like "2025-02-05 - Present" or "2025-02-05 - 2025-08-15"
+ * 
+ * @param dateRangeString - The date range string to parse
+ * @returns Object with startDate and endDate as Date objects, or undefined if parsing fails
+ */
+export function parseDateRange(dateRangeString: string): { startDate: Date; endDate: Date } | undefined {
+  if (!dateRangeString || typeof dateRangeString !== 'string') {
+    return undefined;
+  }
+
+  try {
+    // Split on " - " (space, dash, space)
+    const parts = dateRangeString.split(' - ');
+    if (parts.length !== 2) {
+      return undefined;
+    }
+
+    const [startPart, endPart] = parts.map(part => part.trim());
+    
+    // Parse start date
+    let startDate: Date;
+    if (/^\d{4}-\d{2}-\d{2}$/.test(startPart)) {
+      // YYYY-MM-DD format
+      const [year, month, day] = startPart.split('-').map(Number);
+      startDate = new Date(year, month - 1, day);
+    } else {
+      // Try parsing as regular date
+      startDate = new Date(startPart);
+    }
+
+    if (isNaN(startDate.getTime())) {
+      return undefined;
+    }
+
+    // Parse end date
+    let endDate: Date;
+    if (endPart === 'Present') {
+      endDate = PRESENT_DATE;
+    } else if (/^\d{4}-\d{2}-\d{2}$/.test(endPart)) {
+      // YYYY-MM-DD format
+      const [year, month, day] = endPart.split('-').map(Number);
+      endDate = new Date(year, month - 1, day);
+    } else {
+      // Try parsing as regular date
+      endDate = new Date(endPart);
+    }
+
+    if (isNaN(endDate.getTime())) {
+      return undefined;
+    }
+
+    return { startDate, endDate };
+  } catch (error) {
+    return undefined;
+  }
 }
 
 /**

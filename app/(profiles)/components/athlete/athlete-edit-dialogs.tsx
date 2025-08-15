@@ -23,14 +23,14 @@ import { SchoolSelector } from "@/components/ui/school-selector";
 import { divisionHasConferences } from "@/lib/conference-data";
 import { 
   generateCampDateOptions, 
-  generateFilteredEndDateOptions,
   isoStringToDate,
   formatDateRange,
   toTitleCase,
   type CampDateOption,
   PRESENT_DATE,
   isPresentDate,
-  formatCampDate
+  formatCampDate,
+  parseDateRange
 } from '@/lib/date-utils';
 import { cn } from "@/lib/utils";
 
@@ -176,6 +176,13 @@ function PresentDatePicker({
 }: PresentDatePickerProps) {
   return (
     <div className="space-y-2">
+      <DatePicker
+        date={date}
+        onDateChange={onDateChange}
+        placeholder={placeholder}
+        disabled={disabled || isPresent}
+        className={className}
+      />
       <div className="flex items-center space-x-2">
         <Checkbox
           id="present-checkbox"
@@ -192,15 +199,6 @@ function PresentDatePicker({
           Present (ongoing)
         </Label>
       </div>
-      {!isPresent && (
-        <DatePicker
-          date={date}
-          onDateChange={onDateChange}
-          placeholder={placeholder}
-          disabled={disabled}
-          className={className}
-        />
-      )}
     </div>
   );
 }
@@ -363,12 +361,11 @@ export function AthleteEditDialogs({
     country: '',
     startDate: undefined as Date | undefined,
     endDate: undefined as Date | undefined,
-    endDateIsPresent: false,
     sport: '',
     description: ''
   });
   const [campFormError, setCampFormError] = useState<string | null>(null);
-  const [filteredEndDateOptions, setFilteredEndDateOptions] = useState<CampDateOption[]>([]);
+
   // Ref for the add/edit form
 
 
@@ -2289,29 +2286,17 @@ export function AthleteEditDialogs({
                             disabled={!campForm.country}
                           />
                         </div>
-                        {/* Start Date and End Date on the same line */}
-                        <div className="flex flex-row gap-4 text-sm text-muted-foreground mb-1 flex-nowrap">
-                          <div className="w-40">
-                            <Label className="text-xs">Start Date</Label>
-                            <DatePicker
-                              date={campForm.startDate}
-                              onDateChange={(date) => setCampForm(f => ({ ...f, startDate: date }))}
-                              placeholder="Select start date"
-                              className="!h-11"
-                            />
-                          </div>
-                          <div className="w-40">
-                            <Label className="text-xs">End Date</Label>
-                            <PresentDatePicker
-                              isPresent={campForm.endDateIsPresent}
-                              date={campForm.endDate}
-                              onDateChange={(date) => setCampForm(f => ({ ...f, endDate: date }))}
-                              onPresentChange={(isPresent) => setCampForm(f => ({ ...f, endDateIsPresent: isPresent }))}
-                              placeholder="Select end date"
-                              disabled={!campForm.startDate}
-                              className="!h-11"
-                            />
-                          </div>
+                        {/* Date Range */}
+                        <div className="text-sm text-muted-foreground mb-1">
+                          <Label className="text-xs">Date Range</Label>
+                          <DateRangePicker
+                            startDate={campForm.startDate}
+                            endDate={campForm.endDate}
+                            onStartDateChange={(date) => setCampForm(f => ({ ...f, startDate: date }))}
+                            onEndDateChange={(date) => setCampForm(f => ({ ...f, endDate: date }))}
+                            placeholder="Select date range"
+                            className="!h-11"
+                          />
                         </div>
                         {/* Editable description */}
                         <Textarea
@@ -2337,14 +2322,14 @@ export function AthleteEditDialogs({
                               return;
                             }
                             
-                            // Validate dates
-                            if (!campForm.startDate || (campForm.endDateIsPresent && !campForm.endDate) || (!campForm.endDateIsPresent && !campForm.endDate)) {
-                              setCampFormError('Please select valid dates.');
+                            // Validate and parse dates
+                            const parsedDates = validateAndParseDateRange(campForm.startDate, campForm.endDate);
+                            if (!parsedDates) {
+                              setCampFormError('Please select valid start and end dates.');
                               return;
                             }
                             
-                            const startDate = campForm.startDate;
-                            const endDate = campForm.endDateIsPresent ? PRESENT_DATE : campForm.endDate!;
+                            const { startDate, endDate } = parsedDates;
                             
                             setCampFormError(null);
                             // Save changes to this experience
@@ -2370,12 +2355,12 @@ export function AthleteEditDialogs({
                             }
                             setTempCampExperience(updated);
                             setCampEditIndex(null);
-                            setCampForm({ type: 'Camp', name: '', city: '', state: '', country: '', startDate: undefined, endDate: undefined, endDateIsPresent: false, sport: '', description: '' });
+                            setCampForm({ type: 'Camp', name: '', city: '', state: '', country: '', startDate: undefined, endDate: undefined, sport: '', description: '' });
                             setIsDirty(true);
                           }}>Save</Button>
                           <Button size="sm" variant="outline" onClick={() => {
                             setCampEditIndex(null);
-                            setCampForm({ type: 'Camp', name: '', city: '', state: '', country: '', startDate: undefined, endDate: undefined, endDateIsPresent: false, sport: '', description: '' });
+                            setCampForm({ type: 'Camp', name: '', city: '', state: '', country: '', startDate: undefined, endDate: undefined, sport: '', description: '' });
                             setCampFormError(null);
                           }}>Cancel</Button>
                         </div>
@@ -2446,9 +2431,8 @@ export function AthleteEditDialogs({
                               city: exp.city,
                               state: exp.state,
                               country: exp.country,
-                              startDate: endDateIsPresent ? undefined : startDate,
-                              endDate: endDateIsPresent ? undefined : endDate,
-                              endDateIsPresent,
+                              startDate: startDate,
+                              endDate: endDate,
                               sport: exp.sport,
                               description: exp.description
                             });
@@ -2460,7 +2444,7 @@ export function AthleteEditDialogs({
                             setIsDirty(true);
                             if (campEditIndex === idx) {
                               setCampEditIndex(null);
-                              setCampForm({ type: 'Camp', name: '', city: '', state: '', country: '', startDate: undefined, endDate: undefined, endDateIsPresent: false, sport: '', description: '' });
+                              setCampForm({ type: 'Camp', name: '', city: '', state: '', country: '', startDate: undefined, endDate: undefined, sport: '', description: '' });
                             }
                           }}>Remove</Button>
                         </div>
@@ -2544,29 +2528,17 @@ export function AthleteEditDialogs({
                         disabled={!campForm.country}
                       />
                     </div>
-                    {/* Start Date and End Date on the same line */}
-                    <div className="flex flex-row gap-4 text-sm text-muted-foreground mb-1 flex-nowrap">
-                      <div className="w-40">
-                        <Label className="text-xs">Start Date</Label>
-                        <DatePicker
-                          date={campForm.startDate}
-                          onDateChange={(date) => setCampForm(f => ({ ...f, startDate: date }))}
-                          placeholder="Select start date"
-                          className="!h-11"
-                        />
-                      </div>
-                      <div className="w-40">
-                        <Label className="text-xs">End Date</Label>
-                        <PresentDatePicker
-                          isPresent={campForm.endDateIsPresent}
-                          date={campForm.endDate}
-                          onDateChange={(date) => setCampForm(f => ({ ...f, endDate: date }))}
-                          onPresentChange={(isPresent) => setCampForm(f => ({ ...f, endDateIsPresent: isPresent }))}
-                          placeholder="Select end date"
-                          disabled={!campForm.startDate}
-                          className="!h-11"
-                        />
-                      </div>
+                    {/* Date Range */}
+                    <div className="text-sm text-muted-foreground mb-1">
+                      <Label className="text-xs">Date Range</Label>
+                      <DateRangePicker
+                        startDate={campForm.startDate}
+                        endDate={campForm.endDate}
+                        onStartDateChange={(date) => setCampForm(f => ({ ...f, startDate: date }))}
+                        onEndDateChange={(date) => setCampForm(f => ({ ...f, endDate: date }))}
+                        placeholder="Select date range"
+                        className="!h-11"
+                      />
                     </div>
                     {/* Editable description */}
                     <Textarea
@@ -2592,14 +2564,14 @@ export function AthleteEditDialogs({
                           return;
                         }
                         
-                        // Convert string values to Date objects using the new date utilities
-                        const startDate = isoStringToDate(campForm.startDate);
-                        const endDate = isoStringToDate(campForm.endDate);
-                        
-                        if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
-                          setCampFormError('Invalid date format.');
+                        // Validate and parse dates
+                        const parsedDates = validateAndParseDateRange(campForm.startDate, campForm.endDate);
+                        if (!parsedDates) {
+                          setCampFormError('Please select valid start and end dates.');
                           return;
                         }
+                        
+                        const { startDate, endDate } = parsedDates;
                         
                         setCampFormError(null);
                         // Add new experience
@@ -2618,12 +2590,12 @@ export function AthleteEditDialogs({
                         updated.push(newExperience);
                         setTempCampExperience(updated);
                         setCampEditIndex(null);
-                        setCampForm({ type: 'Camp', name: '', city: '', state: '', country: '', startDate: '', endDate: '', sport: '', description: '' });
+                        setCampForm({ type: 'Camp', name: '', city: '', state: '', country: '', startDate: undefined, endDate: undefined, sport: '', description: '' });
                         setIsDirty(true);
                       }}>Save</Button>
                       <Button size="sm" variant="outline" onClick={() => {
                         setCampEditIndex(null);
-                        setCampForm({ type: 'Camp', name: '', city: '', state: '', country: '', startDate: '', endDate: '', sport: '', description: '' });
+                        setCampForm({ type: 'Camp', name: '', city: '', state: '', country: '', startDate: undefined, endDate: undefined, sport: '', description: '' });
                         setCampFormError(null);
                       }}>Cancel</Button>
                     </div>
@@ -2634,7 +2606,7 @@ export function AthleteEditDialogs({
                   <div className="pt-2">
                     <Button size="sm" variant="outline" onClick={() => {
                       setCampEditIndex(tempCampExperience.length);
-                      setCampForm({ type: 'Camp', name: '', city: '', state: '', country: '', startDate: undefined, endDate: undefined, endDateIsPresent: false, sport: '', description: '' });
+                      setCampForm({ type: 'Camp', name: '', city: '', state: '', country: '', startDate: undefined, endDate: undefined, sport: '', description: '' });
                       setCampFormError(null);
                     }}>
                       + Add New Experience
@@ -2706,36 +2678,207 @@ export function AthleteEditDialogs({
           : []
       );
       setCampEditIndex(null);
-      setCampForm({ type: 'Camp', name: '', city: '', state: '', country: '', startDate: '', endDate: '', sport: '', description: '' });
+      setCampForm({ type: 'Camp', name: '', city: '', state: '', country: '', startDate: undefined, endDate: undefined, sport: '', description: '' });
       setCampFormError(null);
-      setFilteredEndDateOptions([]);
       campExperienceInitializedRef.current = true;
     }
     if (!isOpen) {
       campExperienceInitializedRef.current = false;
-      setFilteredEndDateOptions([]);
     }
   }, [isOpen, dialogType, profileData.campExperience]);
 
   // Add a ref to track if initialization has happened for this open session
   const campExperienceInitializedRef = useRef(false);
 
-  // Update filtered end date options when start date changes
-  useEffect(() => {
-    if (campForm.startDate) {
-      const filteredOptions = generateFilteredEndDateOptions(campForm.startDate);
-      setFilteredEndDateOptions(filteredOptions);
-      
-      // If current end date is no longer valid, clear it
-      if (campForm.endDate && !filteredOptions.some(option => option.value === campForm.endDate)) {
-        setCampForm(prev => ({ ...prev, endDate: '' }));
+
+
+  // Helper function to validate and parse date range
+  const validateAndParseDateRange = (startDate: Date | string | undefined, endDate: Date | string | undefined): { startDate: Date; endDate: Date } | null => {
+    if (!startDate || !endDate) {
+      return null;
+    }
+    
+    let parsedStartDate: Date;
+    let parsedEndDate: Date;
+    
+    // Parse start date
+    if (startDate instanceof Date) {
+      parsedStartDate = startDate;
+    } else if (typeof startDate === 'string') {
+      const parsed = new Date(startDate);
+      if (isNaN(parsed.getTime())) {
+        return null;
+      }
+      parsedStartDate = parsed;
+    } else {
+      return null;
+    }
+    
+    // Parse end date
+    if (endDate instanceof Date) {
+      parsedEndDate = endDate;
+    } else if (typeof endDate === 'string') {
+      if (endDate === 'Present' || isPresentDate(endDate)) {
+        parsedEndDate = PRESENT_DATE;
+      } else {
+        const parsed = new Date(endDate);
+        if (isNaN(parsed.getTime())) {
+          return null;
+        }
+        parsedEndDate = parsed;
       }
     } else {
-      setFilteredEndDateOptions([]);
-      // Clear end date when start date is cleared
-      setCampForm(prev => ({ ...prev, endDate: '' }));
+      return null;
     }
-  }, [campForm.startDate, campForm.endDate]);
+    
+    return { startDate: parsedStartDate, endDate: parsedEndDate };
+  };
+
+  // DateRangePicker component for camp experience date ranges
+  interface DateRangePickerProps {
+    startDate?: Date;
+    endDate?: Date;
+    onStartDateChange: (date: Date | undefined) => void;
+    onEndDateChange: (date: Date | undefined) => void;
+    placeholder: string;
+    disabled?: boolean;
+    className?: string;
+  }
+
+  function DateRangePicker({ 
+    startDate, 
+    endDate, 
+    onStartDateChange, 
+    onEndDateChange, 
+    placeholder, 
+    disabled, 
+    className 
+  }: DateRangePickerProps) {
+    const [isOpen, setIsOpen] = useState(false);
+    const [tempStartDate, setTempStartDate] = useState<Date | undefined>(startDate);
+    const [tempEndDate, setTempEndDate] = useState<Date | undefined>(endDate);
+    const [isPresent, setIsPresent] = useState<boolean>(endDate ? isPresentDate(endDate) : false);
+
+    // Update temp dates when props change
+    useEffect(() => {
+      setTempStartDate(startDate);
+      setTempEndDate(endDate);
+      setIsPresent(endDate ? isPresentDate(endDate) : false);
+    }, [startDate, endDate]);
+
+    const handleStartDateChange = (date: Date | undefined) => {
+      setTempStartDate(date);
+      // Clear end date if it's before the new start date
+      if (date && tempEndDate && tempEndDate < date) {
+        setTempEndDate(undefined);
+      }
+    };
+
+    const handleEndDateChange = (date: Date | undefined) => {
+      setTempEndDate(date);
+    };
+
+    const handleApply = () => {
+      // Ensure we have valid dates before applying
+      if (!tempStartDate) {
+        return; // Don't apply if no start date
+      }
+      
+      // For end date, handle both regular dates and "Present"
+      const finalEndDate = isPresent ? PRESENT_DATE : tempEndDate;
+      
+      onStartDateChange(tempStartDate);
+      onEndDateChange(finalEndDate);
+      setIsOpen(false);
+    };
+
+    const handleCancel = () => {
+      setTempStartDate(startDate);
+      setTempEndDate(endDate);
+      setIsOpen(false);
+    };
+
+    const formatDateRange = () => {
+      if (!startDate && !endDate) return placeholder;
+      
+      const startStr = startDate ? formatCampDate(startDate) : 'Not set';
+      const endStr = endDate && isPresentDate(endDate) ? 'Present' : (endDate ? formatCampDate(endDate) : 'Not set');
+      
+      return `${startStr} - ${endStr}`;
+    };
+
+    return (
+      <Popover open={isOpen} onOpenChange={setIsOpen}>
+        <PopoverTrigger asChild>
+          <Button
+            variant="outline"
+            className={cn(
+              "w-full justify-start text-left font-normal",
+              (!startDate && !endDate) && "text-muted-foreground",
+              className
+            )}
+            disabled={disabled}
+          >
+            <CalendarIcon className="mr-2 h-4 w-4" />
+            {formatDateRange()}
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-[600px] p-0 z-[9999]" align="start" side="bottom">
+          <div className="p-3">
+            <div className="flex gap-4">
+              <div className="space-y-2">
+                <Label className="text-sm font-medium">Start Date</Label>
+                <div className="w-[280px]">
+                  <Calendar
+                    mode="single"
+                    selected={tempStartDate}
+                    onSelect={handleStartDateChange}
+                    initialFocus
+                    className="w-full"
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label className="text-sm font-medium">End Date</Label>
+                <div className="w-[280px]">
+                  <Calendar
+                    mode="single"
+                    selected={tempEndDate}
+                    onSelect={handleEndDateChange}
+                    disabled={isPresent}
+                    className="w-full"
+                  />
+                </div>
+              </div>
+            </div>
+            <div className="flex items-center space-x-2 mt-4">
+              <Checkbox
+                id="present-checkbox"
+                checked={isPresent}
+                onCheckedChange={(checked) => {
+                  setIsPresent(checked as boolean);
+                  if (checked) {
+                    setTempEndDate(undefined);
+                  }
+                }}
+              />
+              <Label htmlFor="present-checkbox" className="text-sm font-medium">
+                Present (ongoing)
+              </Label>
+            </div>
+            <div className="flex gap-2 mt-4 pt-4 border-t">
+              <Button size="sm" onClick={handleApply} className="flex-1">
+                Apply
+              </Button>
+              <Button size="sm" variant="outline" onClick={handleCancel} className="flex-1">
+                Cancel
+              </Button>
+            </div>
+          </div>
+        </PopoverContent>
+      </Popover>
+    );
+  }
 
   return (
     <>

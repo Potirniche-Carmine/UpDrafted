@@ -309,7 +309,7 @@ SocialMediaSection.displayName = "SocialMediaSection";
 
 
 // Update CampExperienceCard prop types and usage
-import { formatDateRange } from '@/lib/date-utils';
+import { formatDateRangeAsMonthYear } from '@/lib/date-utils';
 
 function CampExperienceCard({ experiences, isOwnProfile, onEdit }: { 
   experiences: Array<{
@@ -403,7 +403,7 @@ function CampExperienceCard({ experiences, isOwnProfile, onEdit }: {
                           : `${exp.city}, ${exp.country}`
                         : exp.city || exp.country
                     }</span>
-                    <span>{formatDateRange(exp.startDate, exp.endDate)}</span>
+                    <span>{formatDateRangeAsMonthYear(exp.startDate, exp.endDate)}</span>
                   </div>
                   <p className="text-sm text-foreground mt-1">{exp.description}</p>
                 </div>
