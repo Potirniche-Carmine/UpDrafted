@@ -204,10 +204,10 @@ export function dateToStringWithErrorHandling(
       return ['9999-12-31', null];
     }
 
-    // Convert Date object to YYYY-MM-DD format using UTC methods to avoid timezone issues
-    const year = dateObj.getUTCFullYear();
-    const month = String(dateObj.getUTCMonth() + 1).padStart(2, '0');
-    const day = String(dateObj.getUTCDate()).padStart(2, '0');
+    // Convert Date object to YYYY-MM-DD format using local methods to preserve the selected date
+    const year = dateObj.getFullYear();
+    const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+    const day = String(dateObj.getDate()).padStart(2, '0');
     const dateString = `${year}-${month}-${day}`;
 
     return [dateString, null];
@@ -251,7 +251,7 @@ export function formatCampDate(date: Date | string): string {
     return 'Present';
   }
 
-  // Format as YYYY-MM-DD
+  // Format as YYYY-MM-DD using local date methods to preserve the selected date
   const year = dateObj.getFullYear();
   const month = String(dateObj.getMonth() + 1).padStart(2, '0');
   const day = String(dateObj.getDate()).padStart(2, '0');
@@ -455,12 +455,12 @@ export function isoStringToDate(dateString: string): Date {
         return PRESENT_DATE;
       }
       
-      // Create date with UTC to prevent timezone shifting
-      // Use UTC methods to ensure consistent date across timezones
-      const date = new Date(Date.UTC(year, month - 1, day)); // month is 0-indexed in Date constructor
+      // Create date with local timezone to preserve the selected date
+      // Use local methods to ensure the date matches what the user selected
+      const date = new Date(year, month - 1, day); // month is 0-indexed in Date constructor
       
       // Validate the constructed date matches the input (prevents invalid dates like Feb 30)
-      if (date.getUTCFullYear() !== year || date.getUTCMonth() !== month - 1 || date.getUTCDate() !== day) {
+      if (date.getFullYear() !== year || date.getMonth() !== month - 1 || date.getDate() !== day) {
         console.warn(`isoStringToDate: Date construction mismatch for "${sanitizedInput}", returning PRESENT_DATE`);
         return PRESENT_DATE;
       }
@@ -642,7 +642,7 @@ export function parseDateRange(dateRangeString: string): { startDate: Date; endD
     }
 
     return { startDate, endDate };
-  } catch (error) {
+  } catch {
     return undefined;
   }
 }
@@ -735,8 +735,8 @@ export function validateDateIntegrity(
       recommendations, 
       parsedValue: parsedDate 
     };
-  } catch (error) {
-    issues.push(`Exception during date parsing in ${context}: ${error instanceof Error ? error.message : 'Unknown error'}`);
+  } catch {
+    issues.push(`Exception during date parsing in ${context}: Unknown error`);
     recommendations.push('Check date format and ensure it follows expected patterns');
     return { isValid: false, issues, recommendations };
   }

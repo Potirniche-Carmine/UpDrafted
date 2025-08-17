@@ -22,15 +22,12 @@ import { ConferenceSelector } from "@/components/ui/conference-selector";
 import { SchoolSelector } from "@/components/ui/school-selector";
 import { divisionHasConferences } from "@/lib/conference-data";
 import { 
-  generateCampDateOptions, 
   isoStringToDate,
   formatDateRange,
   toTitleCase,
-  type CampDateOption,
   PRESENT_DATE,
   isPresentDate,
-  formatCampDate,
-  parseDateRange
+  formatCampDate
 } from '@/lib/date-utils';
 import { cn } from "@/lib/utils";
 
@@ -86,7 +83,7 @@ const YEAR_OPTIONS = Array.from({ length: 11 }, (_, i) => {
 });
 
 // Use the new date utilities for camp experience options
-const CAMP_DATE_OPTIONS = generateCampDateOptions();
+// const CAMP_DATE_OPTIONS = generateCampDateOptions();
 
 // Add constant for video limit
 const VIDEO_LIMIT = 2;
@@ -111,97 +108,97 @@ const COUNTRIES = [
 ];
 
 // DatePicker component for camp experience dates
-interface DatePickerProps {
-  date?: Date;
-  onDateChange: (date: Date | undefined) => void;
-  placeholder: string;
-  disabled?: boolean;
-  className?: string;
-}
+// interface DatePickerProps {
+//   date?: Date;
+//   onDateChange: (date: Date | undefined) => void;
+//   placeholder: string;
+//   disabled?: boolean;
+//   className?: string;
+// }
 
-function DatePicker({ date, onDateChange, placeholder, disabled, className }: DatePickerProps) {
-  return (
-    <Popover>
-      <PopoverTrigger asChild>
-        <Button
-          variant="outline"
-          className={cn(
-            "w-full justify-start text-left font-normal",
-            !date && "text-muted-foreground",
-            className
-          )}
-          disabled={disabled}
-        >
-          <CalendarIcon className="mr-2 h-4 w-4" />
-          {date ? formatCampDate(date) : placeholder}
-        </Button>
-      </PopoverTrigger>
-             <PopoverContent className="w-auto p-0 z-[9999]" align="start">
-        <Calendar
-          mode="single"
-          selected={date}
-          onSelect={onDateChange}
-          initialFocus
-          disabled={(date) => {
-            // Disable dates more than 10 years in the past
-            const tenYearsAgo = new Date();
-            tenYearsAgo.setFullYear(tenYearsAgo.getFullYear() - 10);
-            return date < tenYearsAgo;
-          }}
-        />
-      </PopoverContent>
-    </Popover>
-  );
-}
+// function DatePicker({ date, onDateChange, placeholder, disabled, className }: DatePickerProps) {
+//   return (
+//     <Popover>
+//       <PopoverTrigger asChild>
+//         <Button
+//           variant="outline"
+//           className={cn(
+//             "w-full justify-start text-left font-normal",
+//             !date && "text-muted-foreground",
+//             className
+//           )}
+//           disabled={disabled}
+//         >
+//           <CalendarIcon className="mr-2 h-4 w-4" />
+//           {date ? formatCampDate(date) : placeholder}
+//         </Button>
+//       </PopoverTrigger>
+//              <PopoverContent className="w-auto p-0 z-[9999]" align="start">
+//         <Calendar
+//           mode="single"
+//           selected={date}
+//           onSelect={onDateChange}
+//           initialFocus
+//           disabled={(date) => {
+//             // Disable dates more than 10 years in the past
+//             const tenYearsAgo = new Date();
+//             tenYearsAgo.setFullYear(tenYearsAgo.getFullYear() - 10);
+//             return date < tenYearsAgo;
+//           }}
+//         />
+//       </PopoverContent>
+//     </Popover>
+//   );
+// }
 
 // Present date picker component
-interface PresentDatePickerProps {
-  isPresent: boolean;
-  date?: Date;
-  onDateChange: (date: Date | undefined) => void;
-  onPresentChange: (isPresent: boolean) => void;
-  placeholder: string;
-  disabled?: boolean;
-  className?: string;
-}
+// interface PresentDatePickerProps {
+//   isPresent: boolean;
+//   date?: Date;
+//   onDateChange: (date: Date | undefined) => void;
+//   onPresentChange: (isPresent: boolean) => void;
+//   placeholder: string;
+//   disabled?: boolean;
+//   className?: string;
+// }
 
-function PresentDatePicker({ 
-  isPresent, 
-  date, 
-  onDateChange, 
-  onPresentChange, 
-  placeholder, 
-  disabled, 
-  className 
-}: PresentDatePickerProps) {
-  return (
-    <div className="space-y-2">
-      <DatePicker
-        date={date}
-        onDateChange={onDateChange}
-        placeholder={placeholder}
-        disabled={disabled || isPresent}
-        className={className}
-      />
-      <div className="flex items-center space-x-2">
-        <Checkbox
-          id="present-checkbox"
-          checked={isPresent}
-          onCheckedChange={(checked) => {
-            onPresentChange(checked as boolean);
-            if (checked) {
-              onDateChange(undefined);
-            }
-          }}
-          disabled={disabled}
-        />
-        <Label htmlFor="present-checkbox" className="text-sm font-bold">
-          Present (ongoing)
-        </Label>
-      </div>
-    </div>
-  );
-}
+// function PresentDatePicker({ 
+//   isPresent, 
+//   date, 
+//   onDateChange, 
+//   onPresentChange, 
+//   placeholder, 
+//   disabled, 
+//   className 
+// }: PresentDatePickerProps) {
+//   return (
+//     <div className="space-y-2">
+//       <DatePicker
+//         date={date}
+//         onDateChange={onDateChange}
+//         placeholder={placeholder}
+//         disabled={disabled || isPresent}
+//         className={className}
+//       />
+//       <div className="flex items-center space-x-2">
+//         <Checkbox
+//           id="present-checkbox"
+//           checked={isPresent}
+//           onCheckedChange={(checked) => {
+//             onPresentChange(checked as boolean);
+//             if (checked) {
+//               onDateChange(undefined);
+//             }
+//           }}
+//           disabled={disabled}
+//         />
+//         <Label htmlFor="present-checkbox" className="text-sm font-bold">
+//           Present (ongoing)
+//         </Label>
+//       </div>
+//     </div>
+//   );
+// }
 
 export interface Measurable {
   id: string;
@@ -2297,7 +2294,14 @@ export function AthleteEditDialogs({
                               <Label className="text-xs">Start Date</Label>
                               <StartDatePicker
                                 date={campForm.startDate}
-                                onDateChange={(date) => setCampForm(f => ({ ...f, startDate: date }))}
+                                onDateChange={(date) => {
+                                  setCampForm(f => ({ ...f, startDate: date }));
+                                  // If start date is in the future and "Present" is checked, uncheck it
+                                  if (date && date >= new Date(new Date().setHours(0, 0, 0, 0)) && campEndDateIsPresent) {
+                                    setCampEndDateIsPresent(false);
+                                    setCampForm(f => ({ ...f, endDate: undefined }));
+                                  }
+                                }}
                                 placeholder="Select start date"
                                 className="!h-11"
                               />
@@ -2316,6 +2320,7 @@ export function AthleteEditDialogs({
                                 isPresent={campEndDateIsPresent}
                                 placeholder="Select end date"
                                 className="!h-11"
+                                startDate={campForm.startDate}
                               />
                             </div>
                           </div>
@@ -2534,7 +2539,14 @@ export function AthleteEditDialogs({
                           <Label className="text-xs">Start Date</Label>
                           <StartDatePicker
                             date={campForm.startDate}
-                            onDateChange={(date) => setCampForm(f => ({ ...f, startDate: date }))}
+                            onDateChange={(date) => {
+                              setCampForm(f => ({ ...f, startDate: date }));
+                              // If start date is in the future and "Present" is checked, uncheck it
+                              if (date && date >= new Date(new Date().setHours(0, 0, 0, 0)) && campEndDateIsPresent) {
+                                setCampEndDateIsPresent(false);
+                                setCampForm(f => ({ ...f, endDate: undefined }));
+                              }
+                            }}
                             placeholder="Select start date"
                             className="!h-11"
                           />
@@ -2553,6 +2565,7 @@ export function AthleteEditDialogs({
                             isPresent={campEndDateIsPresent}
                             placeholder="Select end date"
                             className="!h-11"
+                            startDate={campForm.startDate}
                           />
                         </div>
                       </div>
@@ -2675,15 +2688,17 @@ export function AthleteEditDialogs({
               let country = exp.country || '';
               
               // If we have the old stateCountry format, try to parse it
-              if (!state && !country && (exp as any).stateCountry) {
-                const stateCountry = (exp as any).stateCountry;
-                // Check if it's a US state
-                if (US_STATES.includes(stateCountry)) {
-                  state = stateCountry;
-                  country = 'United States';
-                } else {
-                  // Assume it's a country
-                  country = stateCountry;
+              if (!state && !country && (exp as { stateCountry?: string }).stateCountry) {
+                const stateCountry = (exp as { stateCountry?: string }).stateCountry;
+                if (stateCountry) {
+                  // Check if it's a US state
+                  if (US_STATES.includes(stateCountry)) {
+                    state = stateCountry;
+                    country = 'United States';
+                  } else {
+                    // Assume it's a country
+                    country = stateCountry;
+                  }
                 }
               }
               
@@ -2729,13 +2744,21 @@ export function AthleteEditDialogs({
     
     // Parse start date
     if (startDate instanceof Date) {
-      parsedStartDate = startDate;
+      // Fix timezone issue: ensure we're working with local date components
+      const year = startDate.getFullYear();
+      const month = startDate.getMonth();
+      const day = startDate.getDate();
+      parsedStartDate = new Date(year, month, day);
     } else if (typeof startDate === 'string') {
       const parsed = new Date(startDate);
       if (isNaN(parsed.getTime())) {
         return null;
       }
-      parsedStartDate = parsed;
+      // Fix timezone issue for string dates too
+      const year = parsed.getFullYear();
+      const month = parsed.getMonth();
+      const day = parsed.getDate();
+      parsedStartDate = new Date(year, month, day);
     } else {
       return null;
     }
@@ -2744,7 +2767,11 @@ export function AthleteEditDialogs({
     if (isPresent) {
       parsedEndDate = PRESENT_DATE;
     } else if (endDate instanceof Date) {
-      parsedEndDate = endDate;
+      // Fix timezone issue: ensure we're working with local date components
+      const year = endDate.getFullYear();
+      const month = endDate.getMonth();
+      const day = endDate.getDate();
+      parsedEndDate = new Date(year, month, day);
     } else if (typeof endDate === 'string') {
       if (endDate === 'Present' || isPresentDate(endDate)) {
         parsedEndDate = PRESENT_DATE;
@@ -2753,7 +2780,11 @@ export function AthleteEditDialogs({
         if (isNaN(parsed.getTime())) {
           return null;
         }
-        parsedEndDate = parsed;
+        // Fix timezone issue for string dates too
+        const year = parsed.getFullYear();
+        const month = parsed.getMonth();
+        const day = parsed.getDate();
+        parsedEndDate = new Date(year, month, day);
       }
     } else {
       return null;
@@ -2797,7 +2828,19 @@ export function AthleteEditDialogs({
           <Calendar
             mode="single"
             selected={date}
-            onSelect={onDateChange}
+            onSelect={(selectedDate) => {
+              // Fix timezone issue: ensure the date is created in local timezone
+              if (selectedDate) {
+                // Create a new date using local timezone to prevent shifting
+                const year = selectedDate.getFullYear();
+                const month = selectedDate.getMonth();
+                const day = selectedDate.getDate();
+                const localDate = new Date(year, month, day);
+                onDateChange(localDate);
+              } else {
+                onDateChange(undefined);
+              }
+            }}
             initialFocus
             disabled={(date: Date) => {
               // Disable dates more than 10 years in the past
@@ -2820,6 +2863,7 @@ export function AthleteEditDialogs({
     placeholder: string;
     disabled?: boolean;
     className?: string;
+    startDate?: Date; // Add startDate prop to check if it's in the future
   }
 
   function EndDatePicker({ 
@@ -2829,8 +2873,12 @@ export function AthleteEditDialogs({
     isPresent, 
     placeholder, 
     disabled, 
-    className 
+    className,
+    startDate
   }: EndDatePickerProps) {
+    // Check if start date is in the future (today or later)
+    const isStartDateInFuture = startDate ? startDate >= new Date(new Date().setHours(0, 0, 0, 0)) : false;
+    
     return (
       <div className="space-y-2">
         <Popover>
@@ -2852,7 +2900,19 @@ export function AthleteEditDialogs({
             <Calendar
               mode="single"
               selected={date}
-              onSelect={onDateChange}
+              onSelect={(selectedDate) => {
+                // Fix timezone issue: ensure the date is created in local timezone
+                if (selectedDate) {
+                  // Create a new date using local timezone to prevent shifting
+                  const year = selectedDate.getFullYear();
+                  const month = selectedDate.getMonth();
+                  const day = selectedDate.getDate();
+                  const localDate = new Date(year, month, day);
+                  onDateChange(localDate);
+                } else {
+                  onDateChange(undefined);
+                }
+              }}
               initialFocus
               disabled={(date: Date) => {
                 // Disable dates more than 10 years in the past
@@ -2863,22 +2923,25 @@ export function AthleteEditDialogs({
             />
           </PopoverContent>
         </Popover>
-        <div className="flex items-center space-x-2">
-          <Checkbox
-            id="present-checkbox"
-            checked={isPresent}
-            onCheckedChange={(checked) => {
-              onPresentChange(checked as boolean);
-              if (checked) {
-                onDateChange(undefined);
-              }
-            }}
-            disabled={disabled}
-          />
-          <Label htmlFor="present-checkbox" className="text-sm font-bold">
-            Present (ongoing)
-          </Label>
-        </div>
+        {/* Only show "Present" checkbox if start date is not in the future */}
+        {!isStartDateInFuture && (
+          <div className="flex items-center space-x-2">
+            <Checkbox
+              id="present-checkbox"
+              checked={isPresent}
+              onCheckedChange={(checked) => {
+                onPresentChange(checked as boolean);
+                if (checked) {
+                  onDateChange(undefined);
+                }
+              }}
+              disabled={disabled}
+            />
+            <Label htmlFor="present-checkbox" className="text-sm font-bold">
+              Present (ongoing)
+            </Label>
+          </div>
+        )}
       </div>
     );
   }
