@@ -2759,6 +2759,11 @@ export function AthleteEditDialogs({
       return null;
     }
     
+    // Validate that end date is not before start date (unless it's "Present")
+    if (!isPresent && parsedEndDate < parsedStartDate) {
+      return null;
+    }
+    
     return { startDate: parsedStartDate, endDate: parsedEndDate };
   };
 

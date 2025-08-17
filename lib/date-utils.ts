@@ -269,7 +269,6 @@ export function formatDateAsMonthYear(date: Date | string): string {
     try {
       dateObj = new Date(date);
     } catch {
-      console.error('DEBUG - Invalid date string passed to formatDateAsMonthYear:', date);
       return 'Invalid Date';
     }
   } else {
@@ -278,7 +277,6 @@ export function formatDateAsMonthYear(date: Date | string): string {
 
   // Ensure we have a valid Date object
   if (!dateObj || !(dateObj instanceof Date) || isNaN(dateObj.getTime())) {
-    console.error('DEBUG - Invalid date passed to formatDateAsMonthYear:', dateObj);
     return 'Invalid Date';
   }
 
