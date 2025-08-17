@@ -530,7 +530,7 @@ export function CoachEditDialogs({
           };
           break;
         case 'social-media':
-          console.log("Regular social media update: ", editData.instagram ? editData.instagram.replace('@', '') : undefined);
+  
           updates = {
             instagramHandle: editData.instagram ? editData.instagram.replace('@', '') : undefined,
             twitterHandle: editData.twitter ? editData.twitter.replace('@', '') : undefined
@@ -543,7 +543,7 @@ export function CoachEditDialogs({
           };
           break;
         case 'program-social-media':
-          console.log("Program Instagram: ", editData.programInstagram ? editData.programInstagram.replace('@', '') : undefined)
+  
           updates = {
             programInstagram: editData.programInstagram ? editData.programInstagram.replace('@', '') : undefined,
             programTwitter: editData.programTwitter ? editData.programTwitter.replace('@', '') : undefined

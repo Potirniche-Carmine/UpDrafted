@@ -127,7 +127,8 @@ export const athleteExperience = pgTable('athlete_experience', {
   type: text('type').notNull(), // 'Camp' or 'Club'
   name: text('name').notNull(),
   city: text('city').notNull(),
-  stateCountry: text('state_country').notNull(),
+  country: text('country').notNull(),
+  state: text('state'),
   startDate: date('start_date').notNull(), // Store as proper date for querying/sorting
   endDate: date('end_date').notNull(), // Store as proper date for querying/sorting. Use '9999-12-31' to represent "Present"
   sport: text('sport').notNull(),

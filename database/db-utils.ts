@@ -1839,7 +1839,7 @@ export const notificationOperations = {
 
           // If notification already exists, don't create a new one
           if (existingNotification) {
-            console.log(`Duplicate connection notification prevented for user ${toUserId} from ${fromUserId}`);
+    
             return null;
           }
         } catch (error) {
@@ -2027,7 +2027,8 @@ export const adminOperations = {
     type: 'Camp' | 'Club';
     name: string;
     city: string;
-    stateCountry: string;
+    country: string;
+    state?: string;
     startDate: Date | string;
     endDate: Date | string;
     sport: string;
@@ -2059,7 +2060,8 @@ export const adminOperations = {
         type: 'Camp' | 'Club';
         name: string;
         city: string;
-        stateCountry: string;
+        country: string;
+        state?: string;
         startDate: Date | string;
         endDate: Date | string;
         sport: string;
@@ -2096,7 +2098,8 @@ export const adminOperations = {
           type: exp.type,
           name: exp.name,
           city: exp.city,
-          stateCountry: exp.stateCountry,
+          country: exp.country,
+          state: exp.state || null,
           startDate: startDateString,
           endDate: endDateString,
           sport: exp.sport,
@@ -2447,7 +2450,7 @@ export const schoolOperations = {
       
       // If similarity is 99% or higher, return the existing school instead of creating a duplicate
       if (similarity >= 99) {
-        console.log(`Using existing similar school: "${school.name}" for input "${trimmedName}" (${similarity.toFixed(1)}% similar)`);
+
         return school;
       }
     }

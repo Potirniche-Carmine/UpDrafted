@@ -384,7 +384,8 @@ export function sanitizeProfileData(data: Record<string, unknown>): Record<strin
                 type: sanitizeText(expObj.type as string),
                 name: sanitizeText(expObj.name as string),
                 city: sanitizeText(expObj.city as string),
-                stateCountry: sanitizeText(expObj.stateCountry as string),
+                country: sanitizeText(expObj.country as string),
+                state: sanitizeText(expObj.state as string),
                 startDate: expObj.startDate, // Keep as Date object or string
                 endDate: expObj.endDate, // Keep as Date object or string
                 sport: sanitizeText(expObj.sport as string),

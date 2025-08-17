@@ -35,7 +35,8 @@ export interface AthleteProfileData {
     type: 'Camp' | 'Club';
     name: string;
     city: string;
-    stateCountry: string;
+    state: string;
+    country: string;
     startDate: Date | string; // Allow both Date and string for flexibility
     endDate: Date | string; // Allow both Date and string for flexibility (uses special date for "Present")
     sport: string;

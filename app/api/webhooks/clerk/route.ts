@@ -4,7 +4,7 @@ import { WebhookEvent } from '@clerk/nextjs/server';
 import { db } from '@/database/db';
 import { users, athleteProfiles, coachProfiles, recruitingProfiles, verificationFiles, verificationRequests, messages, conversations } from '@/database/schema';
 import { eq, or, and, isNotNull } from 'drizzle-orm';
-import { deleteFromR2 } from '@/database/r2/config';
+
 
 export async function POST(req: NextRequest) {
   try {
@@ -178,28 +178,28 @@ async function cleanupUserFiles(userId: string) {
     });
 
     // Delete all files from R2 storage
-    const deleteResults = await Promise.allSettled(
-      filesToDelete.map(async ({ key, isPrivate }) => {
-        try {
-          await deleteFromR2(key, isPrivate);
-          return { success: true, key };
-        } catch (error) {
-          console.error(`Failed to delete file ${key}:`, error);
-          return { success: false, key, error };
-        }
-      })
-    );
+    // const deleteResults = await Promise.allSettled(
+    //   filesToDelete.map(async ({ key, isPrivate }) => {
+    //     try {
+    //       await deleteFromR2(key, isPrivate);
+    //       return { success: true, key };
+    //     } catch (error) {
+    //       console.error(`Failed to delete file ${key}:`, error);
+    //       return { success: false, key, error };
+    //     }
+    //   })
+    // );
 
     // Log results for debugging
-    const successfulCount = deleteResults.filter(result => 
-      result.status === 'fulfilled' && result.value.success
-    ).length;
-    const failedCount = deleteResults.filter(result => 
-      result.status === 'rejected' || 
-      (result.status === 'fulfilled' && !result.value.success)
-    ).length;
+    // const successfulCount = deleteResults.filter(result => 
+    //   result.status === 'fulfilled' && result.value.success
+    // ).length;
+    // const failedCount = deleteResults.filter(result => 
+    //   result.status === 'rejected' || 
+    //   (result.status === 'fulfilled' && !result.value.success)
+    // ).length;
 
-    console.log(`File cleanup for user ${userId}: ${successfulCount} successful, ${failedCount} failed`);
+
 
     // File cleanup completed
 

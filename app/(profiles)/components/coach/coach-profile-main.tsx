@@ -265,16 +265,7 @@ export function CoachProfile({
   // Update profile data and track changes
   const updateProfileData = (updates: Partial<CoachProfileData>) => {
     try {
-      // Add debugging for program social media updates
-      if (updates.programInstagram !== undefined || updates.programTwitter !== undefined) {
-        console.log('updateProfileData - program social media update:', {
-          updates,
-          currentProgramInstagram: profileData.programInstagram,
-          currentProgramTwitter: profileData.programTwitter,
-          newProgramInstagram: updates.programInstagram,
-          newProgramTwitter: updates.programTwitter
-        });
-      }
+
 
       // Handle nested object updates properly
       const newData = { ...profileData };
@@ -289,23 +280,13 @@ export function CoachProfile({
             ...updates[typedKey]
           };
         } else {
-          // Add debugging for program social media fields
-          if (typedKey === 'programInstagram' || typedKey === 'programTwitter') {
-            console.log(`updateProfileData - setting ${typedKey}:`, {
-              oldValue: newData[typedKey],
-              newValue: updates[typedKey],
-              isUndefined: updates[typedKey] === undefined
-            });
-          }
+
           // @ts-expect-error - TypeScript can't infer the correct type here but it's safe
           newData[typedKey] = updates[typedKey];
         }
       });
       
-      console.log('updateProfileData - new data after update:', {
-        programInstagram: newData.programInstagram,
-        programTwitter: newData.programTwitter
-      });
+
       
       setProfileData(newData);
       checkForChanges(newData);

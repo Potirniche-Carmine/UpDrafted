@@ -121,7 +121,7 @@ function transformProfileData(profileData: Record<string, any>, profileType: str
         });
       }
 
-      transformed.campExperience = profileData.experience.map((exp: { id: number; type: string; name: string; city: string; stateCountry: string; startDate: string; endDate: string; sport: string; description: string }) => {
+      transformed.campExperience = profileData.experience.map((exp: { id: number; type: string; name: string; city: string; country: string; state?: string; startDate: string; endDate: string; sport: string; description: string }) => {
         // Handle start date - convert from database string to Date object using proper timezone handling
         const [startDate, startDateError] = parseDateWithErrorHandling(
           exp.startDate, 
@@ -153,7 +153,8 @@ function transformProfileData(profileData: Record<string, any>, profileType: str
           type: exp.type,
           name: exp.name,
           city: exp.city,
-          stateCountry: exp.stateCountry,
+          country: exp.country,
+          state: exp.state || '',
           startDate: startDate,
           endDate: endDate,
           sport: exp.sport,
@@ -1120,7 +1121,8 @@ export async function PUT(
             type: 'Camp' | 'Club';
             name: string;
             city: string;
-            stateCountry: string;
+            country: string;
+            state?: string;
             startDate: Date | string;
             endDate: Date | string;
             sport: string;
@@ -1157,7 +1159,8 @@ export async function PUT(
               type: exp.type,
               name: exp.name,
               city: exp.city,
-              stateCountry: exp.stateCountry,
+              country: exp.country,
+              state: exp.state || null,
               startDate: startDateString,
               endDate: endDateString,
               sport: exp.sport,
@@ -1249,7 +1252,7 @@ export async function PUT(
                   }
                 }
 
-                console.log('Camp experience transaction completed successfully:', operationsLog);
+            
               } catch (innerError) {
                 // Log the transaction operations attempted before failure
                 console.error('Transaction rollback triggered. Operations attempted:', operationsLog);
