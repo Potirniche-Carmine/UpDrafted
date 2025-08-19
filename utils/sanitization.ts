@@ -310,6 +310,21 @@ export function sanitizeProfileData(data: Record<string, unknown>): Record<strin
       case 'studentClassifications':
         sanitized[key] = sanitizeArray(value);
         break;
+        
+      // Team Level - validate against allowed values
+      case 'teamLevel':
+        if (value && typeof value === 'string') {
+          const teamLevel = value.toLowerCase().trim();
+          if (['varsity', 'jv', 'freshman'].includes(teamLevel)) {
+            sanitized[key] = teamLevel;
+          } else {
+            console.warn('sanitizeProfileData: Invalid teamLevel value, rejecting:', value);
+            sanitized[key] = null;
+          }
+        } else {
+          sanitized[key] = null;
+        }
+        break;
 
         
       // Social media object

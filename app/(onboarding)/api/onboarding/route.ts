@@ -175,6 +175,7 @@ export async function POST(request: NextRequest) {
             height: profileData.height!,
             weight: profileData.weight!,
             positions: profileData.positions!,
+            teamLevel: profileData.teamLevel, // Include team level for high school athletes
             gpa: profileData.gpa ? parseFloat(profileData.gpa) : null,
             satScore: profileData.satScore,
             actScore: profileData.actScore,

@@ -69,6 +69,7 @@ export const athleteProfiles = pgTable('athlete_profiles', {
   height: text('height').notNull(),
   weight: text('weight').notNull(),
   positions: text('positions').array().notNull(),
+  teamLevel: text('team_level'), // Team level for high school athletes (varsity, jv, freshman)
   gpa: real('gpa'),
   satScore: integer('sat_score'),
   actScore: integer('act_score'),

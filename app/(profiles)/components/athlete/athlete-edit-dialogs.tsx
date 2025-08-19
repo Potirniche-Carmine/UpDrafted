@@ -11,7 +11,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Save, X, Plus, Shield, CalendarIcon } from "lucide-react";
+import { Save, X, Plus, Shield, CalendarIcon, Trophy } from "lucide-react";
 import { getSportsList, US_STATES, GRADUATION_YEARS, getPositionsForSport, getMeasurablesForSport, DIVISIONS } from '@/lib/sports-data';
 import { EducationLevel } from '@/app/(onboarding)/lib/onboarding';
 import { sanitizeProfileData } from '@/utils/sanitization';
@@ -250,6 +250,8 @@ export interface AthleteProfileData {
   personalStatement?: string;
   achievements?: string[];
   measurables?: Measurable[];
+  teamLevel?: 'varsity' | 'jv' | 'freshman' | null; // Prototype: Team level for high school students
+  isDemoProfile?: boolean; // Demo Profile Flag
       campExperience?: Array<{
       id?: number; // Database ID for existing experiences
       type: 'Camp' | 'Club',
@@ -441,7 +443,8 @@ export function AthleteEditDialogs({
           heightFeet: heightParts ? heightParts[1] : '',
           heightInches: heightParts ? heightParts[2] : '',
           weight: profileData.weight.replace(/\s*lbs?\s*/gi, ''),
-          positions: profileData.positions
+          positions: profileData.positions,
+          teamLevel: profileData.teamLevel || null // Include team level from profile data
         });
         break;
       case 'academic-info':
@@ -524,6 +527,11 @@ export function AthleteEditDialogs({
         setEditData({});
         // Only reset image state when dialog first opens, not when profileData changes
         // This prevents resetting the form after successful image upload
+        break;
+      case 'team-level':
+        setEditData({
+          teamLevel: 'varsity' // Prototype: Default to varsity, would come from profile data
+        });
         break;
       case 'camp-experience':
         // Initialization now handled in separate useEffect
@@ -1029,6 +1037,7 @@ export function AthleteEditDialogs({
         updates.sport = editData.sport;
         updates.secondarySports = editData.secondarySports;
         updates.educationLevel = editData.educationLevel;
+        updates.teamLevel = editData.teamLevel; // Add team level for high school students
         updates.division = editData.division;
         updates.conference = editData.conference;
         updates.positions = editData.positions;
@@ -1175,6 +1184,8 @@ export function AthleteEditDialogs({
         break;
       }
 
+
+
       case 'profile-image':
         // Image uploads handle their own saving
         return;
@@ -1266,6 +1277,110 @@ export function AthleteEditDialogs({
                   </SelectContent>
                 </Select>
               </div>
+
+              {/* Team Level - Only show for high school students */}
+              {editData.educationLevel === 'high_school' && (
+                <div className="space-y-4">
+                  <Label>Team Level</Label>
+                  <div className="grid grid-cols-1 gap-3">
+                    <div className={`relative border-2 rounded-lg p-4 cursor-pointer transition-all ${
+                      editData.teamLevel && editData.teamLevel === 'varsity' 
+                        ? 'border-orange-500 bg-orange-50 dark:bg-orange-950/20' 
+                        : 'border-border hover:border-orange-300'
+                    }`}
+                    onClick={() => setEditData(prev => ({ ...prev, teamLevel: 'varsity' }))}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
+                          editData.teamLevel && editData.teamLevel === 'varsity' 
+                            ? 'border-orange-500 bg-orange-500' 
+                            : 'border-border'
+                        }`}>
+                          {editData.teamLevel && editData.teamLevel === 'varsity' && (
+                            <div className="w-2 h-2 bg-white rounded-full"></div>
+                          )}
+                        </div>
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-1">
+                            <Trophy className="w-5 h-5 text-orange-600" />
+                            <h3 className="font-semibold text-lg">Varsity</h3>
+                          </div>
+                          <p className="text-sm text-muted-foreground">
+                            Top-level team representing your school in official competitions
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className={`relative border-2 rounded-lg p-4 cursor-pointer transition-all ${
+                      editData.teamLevel && editData.teamLevel === 'jv' 
+                        ? 'border-blue-500 bg-blue-50 dark:bg-blue-950/20' 
+                        : 'border-border hover:border-blue-300'
+                    }`}
+                    onClick={() => setEditData(prev => ({ ...prev, teamLevel: 'jv' }))}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
+                          editData.teamLevel && editData.teamLevel === 'jv' 
+                            ? 'border-blue-500 bg-blue-500' 
+                            : 'border-border'
+                        }`}>
+                          {editData.teamLevel && editData.teamLevel === 'jv' && (
+                            <div className="w-2 h-2 bg-white rounded-full"></div>
+                          )}
+                        </div>
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-1">
+                            <Trophy className="w-5 h-5 text-blue-600" />
+                            <h3 className="font-semibold text-lg">Junior Varsity</h3>
+                          </div>
+                          <p className="text-sm text-muted-foreground">
+                            Development team for athletes working toward varsity level
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className={`relative border-2 rounded-lg p-4 cursor-pointer transition-all ${
+                      editData.teamLevel && editData.teamLevel === 'freshman' 
+                        ? 'border-green-500 bg-green-50 dark:bg-green-950/20' 
+                        : 'border-border hover:border-green-300'
+                    }`}
+                    onClick={() => setEditData(prev => ({ ...prev, teamLevel: 'freshman' }))}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
+                          editData.teamLevel && editData.teamLevel === 'freshman' 
+                            ? 'border-green-500 bg-green-500' 
+                            : 'border-border'
+                        }`}>
+                          {editData.teamLevel && editData.teamLevel === 'freshman' && (
+                            <div className="w-2 h-2 bg-white rounded-full"></div>
+                          )}
+                        </div>
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-1">
+                            <Trophy className="w-5 h-5 text-green-600" />
+                            <h3 className="font-semibold text-lg">Freshman</h3>
+                          </div>
+                          <p className="text-sm text-muted-foreground">
+                            Entry-level team for first-year high school athletes
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="bg-muted/50 rounded-lg p-4">
+                    <h4 className="font-medium text-sm mb-2">About Team Levels</h4>
+                    <ul className="text-xs text-muted-foreground space-y-1">
+                      <li>• <strong>Varsity:</strong> Highest level, represents school in official competitions</li>
+                      <li>• <strong>Junior Varsity (JV):</strong> Development team, often includes sophomores and juniors</li>
+                      <li>• <strong>Freshman:</strong> Entry-level team, typically for first-year students</li>
+                    </ul>
+                  </div>
+                </div>
+              )}
 
               {/* Division and Conference - Only show for college athletes (not high school) */}
               {editData.educationLevel !== 'high_school' && (
@@ -2082,6 +2197,8 @@ export function AthleteEditDialogs({
           </>
         );
       }
+
+
 
       case 'profile-image':
         return (

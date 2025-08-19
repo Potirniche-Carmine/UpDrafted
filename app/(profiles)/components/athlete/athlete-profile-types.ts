@@ -78,6 +78,12 @@ export interface AthleteProfileData {
 
   // Measurables
   measurables?: Measurable[];
+
+  // Team Level (Prototype: For high school students)
+  teamLevel?: 'varsity' | 'jv' | 'freshman' | null;
+  
+  // Demo Profile Flag
+  isDemoProfile?: boolean;
 }
 
 export interface AthleteProfileProps {
