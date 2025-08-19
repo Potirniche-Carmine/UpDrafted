@@ -22,7 +22,7 @@ export interface OnboardingFormData {
   heightInches: string;
   weight: string;
   positions: string[];
-  teamLevel?: 'varsity' | 'jv' | 'freshman'; // Team level for high school athletes
+  teamLevel?: 'varsity' | 'jv' | 'freshman' | null; // Team level for high school athletes
   gpa: number | null;
   satScore: number | null;
   actScore: number | null;
@@ -80,7 +80,7 @@ export interface OnboardingProfileData {
   height?: string; // Combined from heightFeet and heightInches
   weight?: string;
   positions?: string[];
-  teamLevel?: 'varsity' | 'jv' | 'freshman'; // Team level for high school athletes
+  teamLevel?: 'varsity' | 'jv' | 'freshman' | null; // Team level for high school athletes
   gpa?: string | null; // Database expects string for decimal fields
   satScore?: number | null;
   actScore?: number | null;

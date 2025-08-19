@@ -250,7 +250,7 @@ export interface AthleteProfileData {
   personalStatement?: string;
   achievements?: string[];
   measurables?: Measurable[];
-  teamLevel?: 'varsity' | 'jv' | 'freshman'; // Prototype: Team level for high school students
+  teamLevel?: 'varsity' | 'jv' | 'freshman' | null; // Prototype: Team level for high school students
   isDemoProfile?: boolean; // Demo Profile Flag
       campExperience?: Array<{
       id?: number; // Database ID for existing experiences
@@ -1284,7 +1284,7 @@ export function AthleteEditDialogs({
                   <Label>Team Level</Label>
                   <div className="grid grid-cols-1 gap-3">
                     <div className={`relative border-2 rounded-lg p-4 cursor-pointer transition-all ${
-                      editData.teamLevel === 'varsity' 
+                      editData.teamLevel && editData.teamLevel === 'varsity' 
                         ? 'border-orange-500 bg-orange-50 dark:bg-orange-950/20' 
                         : 'border-border hover:border-orange-300'
                     }`}
@@ -1292,11 +1292,11 @@ export function AthleteEditDialogs({
                     >
                       <div className="flex items-center gap-3">
                         <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
-                          editData.teamLevel === 'varsity' 
+                          editData.teamLevel && editData.teamLevel === 'varsity' 
                             ? 'border-orange-500 bg-orange-500' 
                             : 'border-border'
                         }`}>
-                          {editData.teamLevel === 'varsity' && (
+                          {editData.teamLevel && editData.teamLevel === 'varsity' && (
                             <div className="w-2 h-2 bg-white rounded-full"></div>
                           )}
                         </div>
@@ -1313,7 +1313,7 @@ export function AthleteEditDialogs({
                     </div>
 
                     <div className={`relative border-2 rounded-lg p-4 cursor-pointer transition-all ${
-                      editData.teamLevel === 'jv' 
+                      editData.teamLevel && editData.teamLevel === 'jv' 
                         ? 'border-blue-500 bg-blue-50 dark:bg-blue-950/20' 
                         : 'border-border hover:border-blue-300'
                     }`}
@@ -1321,11 +1321,11 @@ export function AthleteEditDialogs({
                     >
                       <div className="flex items-center gap-3">
                         <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
-                          editData.teamLevel === 'jv' 
+                          editData.teamLevel && editData.teamLevel === 'jv' 
                             ? 'border-blue-500 bg-blue-500' 
                             : 'border-border'
                         }`}>
-                          {editData.teamLevel === 'jv' && (
+                          {editData.teamLevel && editData.teamLevel === 'jv' && (
                             <div className="w-2 h-2 bg-white rounded-full"></div>
                           )}
                         </div>
@@ -1342,7 +1342,7 @@ export function AthleteEditDialogs({
                     </div>
 
                     <div className={`relative border-2 rounded-lg p-4 cursor-pointer transition-all ${
-                      editData.teamLevel === 'freshman' 
+                      editData.teamLevel && editData.teamLevel === 'freshman' 
                         ? 'border-green-500 bg-green-50 dark:bg-green-950/20' 
                         : 'border-border hover:border-green-300'
                     }`}
@@ -1350,11 +1350,11 @@ export function AthleteEditDialogs({
                     >
                       <div className="flex items-center gap-3">
                         <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
-                          editData.teamLevel === 'freshman' 
+                          editData.teamLevel && editData.teamLevel === 'freshman' 
                             ? 'border-green-500 bg-green-500' 
                             : 'border-border'
                         }`}>
-                          {editData.teamLevel === 'freshman' && (
+                          {editData.teamLevel && editData.teamLevel === 'freshman' && (
                             <div className="w-2 h-2 bg-white rounded-full"></div>
                           )}
                         </div>
