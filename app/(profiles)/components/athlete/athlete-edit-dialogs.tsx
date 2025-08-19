@@ -1656,7 +1656,7 @@ export function AthleteEditDialogs({
                 {validationErrors.instagram && <p className="text-red-500 text-sm">{validationErrors.instagram}</p>}
               </div>
               <div className="space-y-2">
-                <Label htmlFor="edit-twitter">Twitter/X Handle</Label>
+                <Label htmlFor="edit-twitter">X Handle</Label>
                 <div className="flex items-center">
                   <span className="text-muted-foreground mr-2">@</span>
                   <Input

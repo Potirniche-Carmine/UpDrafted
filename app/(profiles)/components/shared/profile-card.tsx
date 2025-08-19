@@ -8,7 +8,6 @@ import Image from "next/image";
 import { 
   MapPin, 
   Instagram, 
-  Twitter, 
   Users, 
   Building, 
   Edit,
@@ -154,9 +153,9 @@ export function ProfileCard({
                     href={`https://twitter.com/${data.twitterHandle.replace('@', '')}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex items-center gap-2 px-3 py-2 bg-blue-500 text-white rounded-lg hover:opacity-90 transition-opacity"
+                    className="flex items-center gap-2 px-3 py-2 bg-black text-white rounded-lg hover:opacity-90 transition-opacity"
                   >
-                    <Twitter className="w-4 h-4" />
+                                          <Image src="/icons/x-white-logo.png" alt="X" width={16} height={16} />
                     <span className="text-sm font-medium">{data.twitterHandle}</span>
                   </a>
                 )}

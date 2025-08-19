@@ -649,7 +649,7 @@ export default function RecruiterForm({ data, onInputChange }: RecruiterFormProp
             )}
           </div>
           <div className="space-y-3">
-            <Label htmlFor="twitterHandle" className="text-sm font-medium">Personal Twitter</Label>
+            <Label htmlFor="twitterHandle" className="text-sm font-medium">Personal X</Label>
             <SocialInput
               id="twitterHandle"
               placeholder="yourname"

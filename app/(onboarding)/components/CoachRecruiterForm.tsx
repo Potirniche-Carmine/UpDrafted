@@ -436,7 +436,7 @@ export default function CoachRecruiterForm({ data, onInputChange }: CoachRecruit
           )}
         </div>
         <div className="space-y-3">
-          <Label htmlFor="orgTwitterHandle" className="text-base font-medium">Program Twitter</Label>
+          <Label htmlFor="orgTwitterHandle" className="text-base font-medium">Program X</Label>
           <SocialInput
             id="orgTwitterHandle"
             placeholder="programname"

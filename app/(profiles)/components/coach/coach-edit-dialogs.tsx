@@ -874,7 +874,7 @@ export function CoachEditDialogs({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="twitter">Twitter Handle</Label>
+              <Label htmlFor="twitter">X Handle</Label>
               <div className="flex items-center">
                 <span className="text-muted-foreground mr-2">@</span>
                 <Input
@@ -949,7 +949,7 @@ export function CoachEditDialogs({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="programTwitter">Program Twitter Handle</Label>
+              <Label htmlFor="programTwitter">Program X Handle</Label>
               <div className="flex items-center">
                 <span className="text-muted-foreground mr-2">@</span>
                 <Input
