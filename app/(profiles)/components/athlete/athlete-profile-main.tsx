@@ -9,7 +9,6 @@ import Link from "next/link";
 import {
   MapPin,
   Instagram,
-  Twitter,
   ExternalLink,
   Edit,
   Plus,
@@ -279,12 +278,12 @@ const SocialMediaSection = memo(({ socialMedia, isOwnProfile, onEdit }: {
           {socialMedia.twitter && (
             <a
               href={`https://twitter.com/${socialMedia.twitter.replace('@', '')}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center justify-center gap-2 px-3 py-2 bg-blue-500 text-white rounded-lg hover:opacity-90 transition-opacity min-w-0"
-              title={`@${socialMedia.twitter.replace('@', '')}`}
+                              target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-center gap-2 px-3 py-2 bg-black text-white rounded-lg hover:opacity-90 transition-opacity min-w-0"
+                title={`@${socialMedia.twitter.replace('@', '')}`}
             >
-              <Twitter className="w-4 h-4 flex-shrink-0" />
+              <Image src="/icons/x-white-logo.png" alt="X" width={16} height={16} className="flex-shrink-0" />
               <span className={`${getTextSizeClass(socialMedia.twitter)} font-medium break-words`}>
                 {formatHandle(socialMedia.twitter)}
               </span>

@@ -842,7 +842,7 @@ export default function AthleteForm({ data, onInputChange }: AthleteFormProps) {
           )}
         </div>
         <div className="space-y-3">
-          <Label htmlFor="twitterHandle" className="text-base font-medium">Twitter Handle</Label>
+          <Label htmlFor="twitterHandle" className="text-base font-medium">X Handle</Label>
           <SocialInput
             id="twitterHandle"
             placeholder="yourusername"
