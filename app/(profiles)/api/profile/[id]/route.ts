@@ -1018,6 +1018,7 @@ export async function PUT(
       if (sanitizedData.height !== undefined) profileUpdateData.height = sanitizedData.height as string;
       if (sanitizedData.weight !== undefined) profileUpdateData.weight = sanitizedData.weight as string;
       if (sanitizedData.positions !== undefined) profileUpdateData.positions = sanitizedData.positions as string[];
+      if (sanitizedData.teamLevel !== undefined) profileUpdateData.teamLevel = sanitizedData.teamLevel as string;
       if (sanitizedData.gpa !== undefined) profileUpdateData.gpa = sanitizedData.gpa as number;
       if (sanitizedData.satScore !== undefined) profileUpdateData.satScore = sanitizedData.satScore as number;
       if (sanitizedData.actScore !== undefined) profileUpdateData.actScore = sanitizedData.actScore as number;

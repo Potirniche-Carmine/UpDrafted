@@ -473,6 +473,26 @@ export default function AthleteForm({ data, onInputChange }: AthleteFormProps) {
         />
       </div>
 
+      {/* Team Level Selection - Only for High School Students */}
+      {data.educationLevel === 'high_school' && data.sport && (
+        <div className="space-y-3">
+          <Label htmlFor="teamLevel" className="text-base font-medium">Team Level *</Label>
+          <Select value={data.teamLevel || ''} onValueChange={(value) => onInputChange('teamLevel', value)}>
+            <SelectTrigger className="!h-11 w-full bg-background">
+              <SelectValue placeholder="Select your team level" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="varsity">Varsity</SelectItem>
+              <SelectItem value="jv">Junior Varsity</SelectItem>
+              <SelectItem value="freshman">Freshman</SelectItem>
+            </SelectContent>
+          </Select>
+          <p className="text-xs text-muted-foreground">
+            This helps coaches understand your current competitive level.
+          </p>
+        </div>
+      )}
+
       {/* Secondary Sports */}
       <div className="space-y-3">
         <Label className="text-base font-medium">Secondary Sports</Label>

@@ -443,7 +443,8 @@ export function AthleteEditDialogs({
           heightFeet: heightParts ? heightParts[1] : '',
           heightInches: heightParts ? heightParts[2] : '',
           weight: profileData.weight.replace(/\s*lbs?\s*/gi, ''),
-          positions: profileData.positions
+          positions: profileData.positions,
+          teamLevel: profileData.teamLevel || null // Include team level from profile data
         });
         break;
       case 'academic-info':

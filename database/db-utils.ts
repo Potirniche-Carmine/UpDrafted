@@ -1090,6 +1090,7 @@ export const onboardingOperations = {
       height: profileData.height!,
       weight: profileData.weight!,
       positions: profileData.positions!,
+      teamLevel: profileData.teamLevel,
       division: profileData.division,
       conference: profileData.conference,
       gpa: profileData.gpa ? parseFloat(profileData.gpa) : undefined,

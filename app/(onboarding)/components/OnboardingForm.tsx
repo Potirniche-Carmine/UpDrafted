@@ -34,6 +34,7 @@ const initialData: OnboardingData = {
   heightInches: "",
   weight: "",
   positions: [],
+  teamLevel: undefined,
   gpa: null,
   satScore: null,
   actScore: null,
@@ -252,6 +253,7 @@ export default function OnboardingForm({ role, onBack }: OnboardingFormProps) {
     if (data.role === 'athlete') {
       if (!data.ageConfirmation) missing.push("Age confirmation (13 years or older)");
       if (!data.sport) missing.push("Primary sport");
+      if (data.educationLevel === 'high_school' && !data.teamLevel) missing.push("Team level");
       if (!data.graduationYear) missing.push("Graduation year");
       if (!data.educationLevel) missing.push("Education level");
       if (!data.organizationName) missing.push("School/organization name");
