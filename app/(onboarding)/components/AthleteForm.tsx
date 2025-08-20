@@ -482,6 +482,7 @@ export default function AthleteForm({ data, onInputChange }: AthleteFormProps) {
               <SelectValue placeholder="Select your team level" />
             </SelectTrigger>
             <SelectContent>
+              <SelectItem value="none">None</SelectItem>
               <SelectItem value="varsity">Varsity</SelectItem>
               <SelectItem value="jv">Junior Varsity</SelectItem>
               <SelectItem value="freshman">Freshman</SelectItem>

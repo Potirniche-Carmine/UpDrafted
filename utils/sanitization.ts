@@ -315,7 +315,7 @@ export function sanitizeProfileData(data: Record<string, unknown>): Record<strin
       case 'teamLevel':
         if (value && typeof value === 'string') {
           const teamLevel = value.toLowerCase().trim();
-          if (['varsity', 'jv', 'freshman'].includes(teamLevel)) {
+          if (['varsity', 'jv', 'freshman', 'none'].includes(teamLevel)) {
             sanitized[key] = teamLevel;
           } else {
             console.warn('sanitizeProfileData: Invalid teamLevel value, rejecting:', value);
