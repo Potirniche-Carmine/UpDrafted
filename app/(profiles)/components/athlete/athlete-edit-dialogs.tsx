@@ -250,7 +250,7 @@ export interface AthleteProfileData {
   personalStatement?: string;
   achievements?: string[];
   measurables?: Measurable[];
-  teamLevel?: 'varsity' | 'jv' | 'freshman' | null; // Prototype: Team level for high school students
+  teamLevel?: 'varsity' | 'jv' | 'freshman' | 'none' | null; // Prototype: Team level for high school students
   isDemoProfile?: boolean; // Demo Profile Flag
       campExperience?: Array<{
       id?: number; // Database ID for existing experiences
@@ -1369,6 +1369,34 @@ export function AthleteEditDialogs({
                         </div>
                       </div>
                     </div>
+                    <div className={`relative border-2 rounded-lg p-4 cursor-pointer transition-all ${
+                      editData.teamLevel === 'none' 
+                        ? 'border-gray-500 bg-gray-50 dark:bg-gray-950/20' 
+                        : 'border-border hover:border-gray-300'
+                    }`}
+                    onClick={() => setEditData(prev => ({ ...prev, teamLevel: 'none' }))}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
+                          editData.teamLevel === 'none' 
+                            ? 'border-gray-500 bg-gray-500' 
+                            : 'border-border'
+                        }`}>
+                          {editData.teamLevel === 'none' && (
+                            <div className="w-2 h-2 bg-white rounded-full"></div>
+                          )}
+                        </div>
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-1">
+                            <Trophy className="w-5 h-5 text-gray-600" />
+                            <h3 className="font-semibold text-lg">None</h3>
+                          </div>
+                          <p className="text-sm text-muted-foreground">
+                            No official school team; club or recreational participation
+                          </p>
+                        </div>
+                      </div>
+                    </div>
                   </div>
 
                   <div className="bg-muted/50 rounded-lg p-4">
@@ -1377,6 +1405,7 @@ export function AthleteEditDialogs({
                       <li>• <strong>Varsity:</strong> Highest level, represents school in official competitions</li>
                       <li>• <strong>Junior Varsity (JV):</strong> Development team, often includes sophomores and juniors</li>
                       <li>• <strong>Freshman:</strong> Entry-level team, typically for first-year students</li>
+                      <li>• <strong>None:</strong> No official school team; typically a club or recreational sport</li>
                     </ul>
                   </div>
                 </div>

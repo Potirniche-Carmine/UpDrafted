@@ -1133,19 +1133,13 @@ export function AthleteProfile({
                     <div className="flex flex-wrap justify-center gap-2 mb-3">
                       {/* Main Sport with Team Level for High School Students */}
                       {(safeProfileData.educationLevel === 'high_school' || safeProfileData.isDemoProfile) ? (
-                        <Badge className={`text-white hover:opacity-90 text-xs shadow-md ${
-                          safeProfileData.teamLevel && safeProfileData.teamLevel === 'varsity' 
-                            ? 'bg-gradient-to-r from-orange-500 to-red-500' 
-                            : safeProfileData.teamLevel && safeProfileData.teamLevel === 'jv'
-                            ? 'bg-gradient-to-r from-blue-500 to-indigo-500'
-                            : safeProfileData.teamLevel && safeProfileData.teamLevel === 'freshman'
-                            ? 'bg-gradient-to-r from-green-500 to-emerald-500'
-                            : 'bg-gradient-to-r from-orange-500 to-red-500' // Default to varsity
-                        }`}>
+                        <Badge variant="outline" className="text-xs">
                           <Trophy className="w-3 h-3 mr-1" />
-                          {safeProfileData.teamLevel && safeProfileData.teamLevel === 'varsity' ? 'Varsity' :
-                           safeProfileData.teamLevel && safeProfileData.teamLevel === 'jv' ? 'Junior Varsity' :
-                           safeProfileData.teamLevel && safeProfileData.teamLevel === 'freshman' ? 'Freshman' : 'Varsity'} {safeProfileData.sport}
+                          {safeProfileData.teamLevel === 'varsity' ? 'Varsity ' :
+                           safeProfileData.teamLevel === 'jv' ? 'Junior Varsity ' :
+                           safeProfileData.teamLevel === 'freshman' ? 'Freshman ' :
+                           safeProfileData.teamLevel === 'none' ? '' : 'Varsity '}
+                          {safeProfileData.sport}
                         </Badge>
                       ) : (
                         <Badge className="bg-gradient-to-r from-cyan-500 to-teal-600 text-white hover:from-cyan-600 hover:to-teal-700 text-xs shadow-md">
