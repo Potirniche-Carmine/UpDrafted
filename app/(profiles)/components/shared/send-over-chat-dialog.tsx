@@ -125,6 +125,7 @@ export function SendOverChatDialog({
   onSendToConnection
 }: SendOverChatDialogProps) {
   const [connections, setConnections] = useState<Connection[]>([]);
+  const [rawConnectionsData, setRawConnectionsData] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -138,6 +139,12 @@ export function SendOverChatDialog({
   useEffect(() => {
     if (open) {
       fetchConnections();
+    } else {
+      // Clear data when dialog closes
+      setConnections([]);
+      setRawConnectionsData(null);
+      setSearchTerm('');
+      setError(null);
     }
   }, [open]);
 
@@ -167,8 +174,26 @@ export function SendOverChatDialog({
       
       const data = await response.json();
       
-      // Transform the data to match our interface
-      const transformedConnections: Connection[] = data.connected.map((conn: any) => ({
+      // Store raw data for reference
+      setRawConnectionsData(data);
+      
+      // Filter out the profile being shared to prevent self-sharing
+      let availableConnections = data.connected;
+      
+      if (profileToShare.id) {
+        availableConnections = data.connected.filter((conn: any) => {
+          const isProfileBeingShared = conn.otherUser.userId === profileToShare.id;
+          if (isProfileBeingShared) {
+            console.log(`Filtering out profile being shared: ${profileToShare.name} (${profileToShare.id})`);
+          }
+          return !isProfileBeingShared;
+        });
+      }
+      
+      console.log(`Found ${data.connected.length} total connections, ${availableConnections.length} available for sharing`);
+      
+      // Transform the filtered data to match our interface
+      const transformedConnections: Connection[] = availableConnections.map((conn: any) => ({
         id: conn.otherUser.userId,
         name: conn.otherUser.fullName,
         imageUrl: conn.otherUser.profileImage,
@@ -268,8 +293,15 @@ export function SendOverChatDialog({
               <div className="text-muted-foreground">
                 <Users className="w-8 h-8 mx-auto mb-2 opacity-50" />
                 <p className="text-sm">
-                  {searchTerm ? 'No connections found matching your search' : 'No connections found'}
+                  {searchTerm ? 'No connections found matching your search' : 
+                   connections.length === 0 ? 'No connections found' : 
+                   'No other connections available to share this profile with'}
                 </p>
+                {!searchTerm && connections.length === 0 && rawConnectionsData?.connected && rawConnectionsData.connected.length > 0 && (
+                  <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">
+                    This profile is already in your connections
+                  </p>
+                )}
                 {searchTerm && (
                   <Button 
                     variant="ghost" 
