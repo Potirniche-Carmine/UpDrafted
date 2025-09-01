@@ -29,6 +29,7 @@ import { VerificationDialog } from "../shared/verification-dialog";
 import { OptimizedOrgLogo } from "../shared/optimized-org-logo";
 import { RecruiterProfileData, RecruiterProfileProps } from './recruiter-profile-types';
 import { ConnectionDialog } from "../shared/connection-dialog";
+import { SendOverChatDialog } from "../shared/send-over-chat-dialog";
 import { useUser } from "@clerk/nextjs";
 import { useRoleView } from '@/hooks/use-role-view';
 import { getStudentClassificationDisplayName, StudentClassification } from '@/lib/sports-data';
@@ -479,6 +480,7 @@ export function RecruiterProfile({
   const [isConnecting, setIsConnecting] = useState(false);
   const [currentConnectionStatus, setCurrentConnectionStatus] = useState(connectionStatus);
   const [isPreviewMode, setIsPreviewMode] = useState(false);
+  const [sendOverChatDialogOpen, setSendOverChatDialogOpen] = useState(false);
 
   // Update selectedSport when sportSpecificNeeds changes to ensure it always points to a sport with data
   useEffect(() => {
@@ -777,6 +779,16 @@ export function RecruiterProfile({
     setIsPreviewMode(false);
   };
 
+  const handleShare = () => {
+    setSendOverChatDialogOpen(true);
+  };
+
+  const handleSendToConnection = (connectionId: string) => {
+    // Navigate to messages page with the selected conversation and profile to share
+    const profileUrl = window.location.href;
+    window.location.href = `/messages?conversation=${connectionId}&share=${encodeURIComponent(profileUrl)}`;
+  };
+
   const handleConnectClick = () => {
     if (canConnect && currentConnectionStatus === "none") {
       setConnectionDialogOpen(true);
@@ -903,7 +915,7 @@ export function RecruiterProfile({
         onAcceptConnection={handleConnectionConfirm}
         onDeclineConnection={handleWithdrawConnection}
         onReport={handleReportProfile}
-        onShare={onShare}
+        onShare={handleShare}
         onPreviewProfile={isOwnProfile ? handlePreviewProfile : undefined}
         onEditProfile={isOwnProfile ? handleEditProfile : undefined}
         isPreviewMode={isPreviewMode}
@@ -931,6 +943,21 @@ export function RecruiterProfile({
           isConnecting={isConnecting}
         />
       )}
+
+      {/* Send Over Chat Dialog */}
+      <SendOverChatDialog
+        open={sendOverChatDialogOpen}
+        onOpenChange={setSendOverChatDialogOpen}
+        profileToShare={{
+          id: profileData.userId || profileData.id,
+          name: profileData.fullName,
+          imageUrl: profileData.profileImage || null,
+          role: 'recruiter',
+          division: profileData.division,
+          educationLevel: undefined
+        }}
+        onSendToConnection={handleSendToConnection}
+      />
 
       <div className="container py-4 md:py-6 lg:py-8 px-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-2 lg:gap-6 xl:gap-8 max-w-screen-2xl mx-auto">

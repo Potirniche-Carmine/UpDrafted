@@ -30,14 +30,11 @@ export function RecruiterProfileWrapper({
   // Placeholder handlers – integrate real logic when available
   const handleConnect = () => {};
 
-  const handleShare = () => {};
-
   return (
     <RecruiterProfile
       data={data}
       isOwnProfile={isOwnProfile}
       onConnect={handleConnect}
-      onShare={handleShare}
       hasPendingVerification={hasPendingVerification}
       pendingSubmittedAt={pendingSubmittedAt}
       hasRejectedVerification={hasRejectedVerification}

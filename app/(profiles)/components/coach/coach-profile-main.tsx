@@ -30,6 +30,7 @@ import { VerificationDialog } from "../shared/verification-dialog";
 import { OptimizedOrgLogo } from "../shared/optimized-org-logo";
 import { CoachProfileData, CoachProfileProps } from './coach-profile-types';
 import { ConnectionDialog } from "../shared/connection-dialog";
+import { SendOverChatDialog } from "../shared/send-over-chat-dialog";
 import { useUser } from "@clerk/nextjs";
 import { useRoleView } from '@/hooks/use-role-view';
 import { getStudentClassificationDisplayName, StudentClassification } from '@/lib/sports-data';
@@ -234,6 +235,7 @@ export function CoachProfile({
   const [currentConnectionStatus, setCurrentConnectionStatus] = useState(connectionStatus);
   const [isPreviewMode, setIsPreviewMode] = useState(false);
   const [confirmDiscardOpen, setConfirmDiscardOpen] = useState(false);
+  const [sendOverChatDialogOpen, setSendOverChatDialogOpen] = useState(false);
     const { user } = useUser();
   const effectiveRole = user?.publicMetadata?.role as string;
   
@@ -528,6 +530,16 @@ export function CoachProfile({
     setIsPreviewMode(false);
   };
 
+  const handleShare = () => {
+    setSendOverChatDialogOpen(true);
+  };
+
+  const handleSendToConnection = (connectionId: string) => {
+    // Navigate to messages page with the selected conversation and profile to share
+    const profileUrl = window.location.href;
+    window.location.href = `/messages?conversation=${connectionId}&share=${encodeURIComponent(profileUrl)}`;
+  };
+
   const handleConnectClick = () => {
     if (canConnect && currentConnectionStatus === "none") {
       setConnectionDialogOpen(true);
@@ -659,7 +671,7 @@ export function CoachProfile({
         onAcceptConnection={handleConnectionConfirm}
         onDeclineConnection={handleWithdrawConnection}
         onReport={() => {}}
-        onShare={onShare}
+        onShare={handleShare}
         onPreviewProfile={isOwnProfile ? handlePreviewProfile : undefined}
         onEditProfile={isOwnProfile ? handleEditProfile : undefined}
         isPreviewMode={isPreviewMode}
@@ -727,6 +739,21 @@ export function CoachProfile({
             // Keep dialog open if there's an error
           }
         }}
+      />
+
+      {/* Send Over Chat Dialog */}
+      <SendOverChatDialog
+        open={sendOverChatDialogOpen}
+        onOpenChange={setSendOverChatDialogOpen}
+        profileToShare={{
+          id: profileData.userId || profileData.id,
+          name: profileData.fullName,
+          imageUrl: profileData.profileImage || null,
+          role: 'coach',
+          division: profileData.division,
+          educationLevel: undefined
+        }}
+        onSendToConnection={handleSendToConnection}
       />
 
       <div className="container py-4 md:py-8">

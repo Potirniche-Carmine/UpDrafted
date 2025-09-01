@@ -29,6 +29,7 @@ import { VerificationDialog } from "../shared/verification-dialog";
 import { useRoleView } from '@/hooks/use-role-view';
 import { AthleteProfileData, AthleteProfileProps, Measurable } from './athlete-profile-types';
 import { ConnectionDialog } from "../shared/connection-dialog";
+import { SendOverChatDialog } from "../shared/send-over-chat-dialog";
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
 import { useUser } from "@clerk/nextjs";
 
@@ -448,6 +449,7 @@ export function AthleteProfile({
   const [isConnecting, setIsConnecting] = useState(false);
   const [currentConnectionStatus, setCurrentConnectionStatus] = useState(connectionStatus);
   const [isPreviewMode, setIsPreviewMode] = useState(false);
+  const [sendOverChatDialogOpen, setSendOverChatDialogOpen] = useState(false);
   
   // Confirmation dialog state
   const [confirmationDialog, setConfirmationDialog] = useState<{
@@ -706,6 +708,16 @@ export function AthleteProfile({
     setIsPreviewMode(false);
   };
 
+  const handleShare = () => {
+    setSendOverChatDialogOpen(true);
+  };
+
+  const handleSendToConnection = (connectionId: string) => {
+    // Navigate to messages page with the selected conversation and profile to share
+    const profileUrl = window.location.href;
+    window.location.href = `/messages?conversation=${connectionId}&share=${encodeURIComponent(profileUrl)}`;
+  };
+
   const handleConnectClick = () => {
     if (!isOwnProfile && canDraft && currentConnectionStatus === "none") {
       setConnectionDialogOpen(true);
@@ -949,7 +961,7 @@ export function AthleteProfile({
         onAcceptConnection={handleAcceptConnection}
         onDeclineConnection={handleDeclineConnection}
         onReport={() => {}}
-        onShare={onShare}
+        onShare={handleShare}
         onPreviewProfile={isOwnProfile ? handlePreviewProfile : undefined}
         onEditProfile={isOwnProfile ? handleEditProfile : undefined}
         isPreviewMode={isPreviewMode}
@@ -1036,6 +1048,21 @@ export function AthleteProfile({
         confirmText={confirmationDialog.confirmText}
         variant={confirmationDialog.variant}
         onConfirm={confirmationDialog.onConfirm}
+      />
+
+      {/* Send Over Chat Dialog */}
+      <SendOverChatDialog
+        open={sendOverChatDialogOpen}
+        onOpenChange={setSendOverChatDialogOpen}
+        profileToShare={{
+          id: safeProfileData.userId || safeProfileData.id,
+          name: safeProfileData.fullName,
+          imageUrl: safeProfileData.profileImage || null,
+          role: 'athlete',
+          division: safeProfileData.division,
+          educationLevel: safeProfileData.educationLevel
+        }}
+        onSendToConnection={handleSendToConnection}
       />
 
       <div className="container py-4 md:py-8">
