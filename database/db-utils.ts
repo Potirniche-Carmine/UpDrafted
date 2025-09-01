@@ -1369,6 +1369,11 @@ export const messageOperations = {
   
   // Create a new conversation
   async createConversation(user1Id: string, user2Id: string): Promise<{ id: number }> {
+    // Prevent creating conversations with the same user
+    if (user1Id === user2Id) {
+      throw new Error('Cannot create conversation with yourself');
+    }
+    
     const [conversation] = await db.insert(conversations)
       .values({
         user1Id,
@@ -1399,7 +1404,12 @@ export const messageOperations = {
       orderBy: [desc(conversations.lastMessageAt)]
     });
     
-    return allConversations;
+    // Filter out conversations where both users are the same person
+    const filteredConversations = allConversations.filter(conversation => 
+      conversation.user1Id !== conversation.user2Id
+    );
+    
+    return filteredConversations;
   },
 
   // Update connection active status for a conversation
