@@ -292,6 +292,7 @@ export const conversations = pgTable('conversations', {
   index('idx_conversations_user1_lastmessage').on(table.user1Id, table.lastMessageAt.desc()),
   index('idx_conversations_user2_lastmessage').on(table.user2Id, table.lastMessageAt.desc()),
   unique('conversations_users_unique').on(table.user1Id, table.user2Id),
+  // Note: Application-level validation ensures user1Id !== user2Id
 ]);
 
 export const messages = pgTable('messages', {
