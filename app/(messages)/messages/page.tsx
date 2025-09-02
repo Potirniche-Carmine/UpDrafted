@@ -175,7 +175,7 @@ export default function MessagingPage() {
   // Handle URL parameters for pre-filled messages and conversation selection
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
-    const conversationParam = urlParams.get('conversation');
+    //const conversationParam = urlParams.get('conversation');
     const messageParam = urlParams.get('message');
     
     // If there's a message parameter, pre-fill the message input

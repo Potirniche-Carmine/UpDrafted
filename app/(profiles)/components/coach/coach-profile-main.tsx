@@ -533,12 +533,6 @@ export function CoachProfile({
     setSendOverChatDialogOpen(true);
   };
 
-  const handleSendToConnection = (connectionId: string) => {
-    // Navigate to messages page with the selected conversation and profile to share
-    const profileUrl = window.location.href;
-    window.location.href = `/messages?conversation=${connectionId}&share=${encodeURIComponent(profileUrl)}`;
-  };
-
   const handleConnectClick = () => {
     if (canConnect && currentConnectionStatus === "none") {
       setConnectionDialogOpen(true);
