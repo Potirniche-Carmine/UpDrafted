@@ -18,7 +18,7 @@ import Link from "next/link";
 interface Connection {
   id: string;
   name: string;
-  imageUrl: string | null;
+  imageUrl: string | undefined;
   role: string;
   division?: string;
   educationLevel?: string;
@@ -30,12 +30,12 @@ interface SendOverChatDialogProps {
   profileToShare: {
     id: string;
     name: string;
-    imageUrl: string | null;
+    imageUrl: string | undefined;
     role: string;
     division?: string;
     educationLevel?: string;
   };
-  onSendToConnection?: (connectionId: string) => void;
+  onSendToConnection?: (connectionId: string) => void; // Optional callback for custom handling (currently redirects to messages page)
 }
 
 // Helper function to get role badge with descriptive text and improved styling
@@ -100,9 +100,9 @@ const getRoleBadge = (role: string, division?: string, educationLevel?: string) 
 };
 
 // Process profile image URL to ensure it works with R2/CloudFlare
-const getProfileImageUrl = (profileImage: string | null): string | null => {
+const getProfileImageUrl = (profileImage: string | null | undefined): string | undefined => {
   if (!profileImage || typeof profileImage !== 'string') {
-    return null;
+    return undefined;
   }
   
   // Clean up "undefined/" from the path, which seems to be a data issue
@@ -212,13 +212,39 @@ export function SendOverChatDialog({
   };
 
   const handleSendToConnection = (connectionId: string) => {
-    onSendToConnection?.(connectionId);
+    // Find the connection name for a more personalized message
+    const connection = connections.find(conn => conn.id === connectionId);
+    const connectionName = connection?.name || 'there';
+    
+    // Create a pre-filled message with the profile link
+    const profileLink = `${window.location.origin}/profile/${profileToShare.id}`;
+    const preMessage = `Hi ${connectionName}! I wanted to share this profile with you: ${profileLink}`;
+    
+    // Encode the message for URL parameters
+    const encodedMessage = encodeURIComponent(preMessage);
+    
+    // Redirect to messages page with conversation and pre-filled message
+    // Use the connectionId as the conversation parameter - this will work for both existing and new conversations
+    window.location.href = `/messages?conversation=${connectionId}&message=${encodedMessage}`;
+    
+    // Close the dialog
     onOpenChange(false);
   };
 
   const handleStartNewChat = (connectionId: string) => {
-    // Navigate to messages page with the selected conversation
-    window.location.href = `/messages?conversation=${connectionId}`;
+    // Find the connection name for a more personalized message
+    const connection = connections.find(conn => conn.id === connectionId);
+    const connectionName = connection?.name || 'there';
+    
+    // Create a pre-filled message with the profile link
+    const profileLink = `${window.location.origin}/profile/${profileToShare.id}`;
+    const preMessage = `Hi ${connectionName}! I wanted to share this profile with you: ${profileLink}`;
+    
+    // Encode the message for URL parameters
+    const encodedMessage = encodeURIComponent(preMessage);
+    
+    // Navigate to messages page with conversation and pre-filled message
+    window.location.href = `/messages?conversation=${connectionId}&message=${encodedMessage}`;
   };
 
   return (
