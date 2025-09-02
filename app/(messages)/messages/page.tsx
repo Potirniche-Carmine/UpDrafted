@@ -178,12 +178,9 @@ export default function MessagingPage() {
     const conversationParam = urlParams.get('conversation');
     const messageParam = urlParams.get('message');
     
-    console.log('URL parameters detected:', { conversationParam, messageParam });
-    
     // If there's a message parameter, pre-fill the message input
     if (messageParam) {
       const decodedMessage = decodeURIComponent(messageParam);
-      console.log('Pre-filling message:', decodedMessage);
       setNewMessage(decodedMessage);
       
       // Focus the textarea after a short delay to ensure it's rendered
@@ -792,7 +789,6 @@ export default function MessagingPage() {
   
   // Auto-create conversation when coming from profile share
   const handleAutoCreateConversation = useCallback(async (partnerId: string) => {
-    console.log('Auto-creating conversation for partner:', partnerId);
     setLoading(true);
     
     try {
@@ -821,7 +817,6 @@ export default function MessagingPage() {
 
       if (result.success) {
         const newConversationId = result.conversationId;
-        console.log('Auto-created conversation with ID:', newConversationId);
         
         // Select the new conversation
         setSelectedConversationId(newConversationId);
@@ -832,7 +827,6 @@ export default function MessagingPage() {
         newUrl.searchParams.delete('conversation');
         newUrl.searchParams.delete('message');
         window.history.replaceState({}, '', newUrl.toString());
-        console.log('URL parameters cleaned up after auto-creation');
         
         // Refresh conversations list to get the new conversation
         fetchConversations();
@@ -886,7 +880,6 @@ export default function MessagingPage() {
     const conversationParam = urlParams.get('conversation');
     
     if (conversationParam && conversations.length > 0 && initialLoadComplete) {
-      console.log('Attempting to auto-select conversation for:', conversationParam);
       
       // First, try to find an existing conversation
       const targetConversation = conversations.find(conv => 
@@ -894,7 +887,6 @@ export default function MessagingPage() {
       );
       
       if (targetConversation) {
-        console.log('Found existing conversation, auto-selecting:', targetConversation);
         setSelectedConversationId(targetConversation.id);
         setTargetConnectionId(null);
         
@@ -904,20 +896,16 @@ export default function MessagingPage() {
           newUrl.searchParams.delete('conversation');
           newUrl.searchParams.delete('message');
           window.history.replaceState({}, '', newUrl.toString());
-          console.log('URL parameters cleaned up after conversation selection');
         }, 100);
       } else {
         // Look for a new connection that needs a conversation created
         const newConnection = conversations.find(conv => conv.id === 0 && conv.partnerId === conversationParam);
         if (newConnection) {
-          console.log('Found new connection, will auto-create conversation:', newConnection);
           setTargetConnectionId(conversationParam);
           
           // Automatically create the conversation and select it
           handleAutoCreateConversation(conversationParam);
-        } else {
-          console.log('No matching conversation or connection found for:', conversationParam);
-        }
+        } 
       }
     }
   }, [conversations, initialLoadComplete, handleAutoCreateConversation]); // Re-run when conversations are loaded and initial load is complete
