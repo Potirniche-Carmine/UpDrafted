@@ -40,15 +40,11 @@ export function AthleteProfileWrapper({
   const handleConnect = () => {
   };
 
-  const handleShare = () => {
-  };
-
   return (
     <AthleteProfile
       data={data}
       isOwnProfile={isOwnProfile}
       onConnect={handleConnect}
-      onShare={handleShare}
       hasPendingVerification={hasPendingVerification}
       pendingSubmittedAt={pendingSubmittedAt}
       hasRejectedVerification={hasRejectedVerification}

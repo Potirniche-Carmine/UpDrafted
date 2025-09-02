@@ -23,14 +23,11 @@ export function CoachProfileWrapper({
   // Placeholder handlers – integrate real logic when available
   const handleConnect = () => {};
 
-  const handleShare = () => {};
-
   return (
     <CoachProfile
       data={data}
       isOwnProfile={isOwnProfile}
       onConnect={handleConnect}
-      onShare={handleShare}
       hasPendingVerification={hasPendingVerification}
       pendingSubmittedAt={pendingSubmittedAt}
       connectionStatus={connectionStatus}

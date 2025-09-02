@@ -165,11 +165,34 @@ export default function MessagingPage() {
   const [connectionSearchTerm, setConnectionSearchTerm] = useState("");
   const [initialLoadComplete, setInitialLoadComplete] = useState(false);
   const [reportDialogOpen, setReportDialogOpen] = useState(false);
+  const [targetConnectionId, setTargetConnectionId] = useState<string | null>(null);
   
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const fetchingConversations = useRef(false);
   const fetchingMessages = useRef(false);
+
+  // Handle URL parameters for pre-filled messages and conversation selection
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    //const conversationParam = urlParams.get('conversation');
+    const messageParam = urlParams.get('message');
+    
+    // If there's a message parameter, pre-fill the message input
+    if (messageParam) {
+      const decodedMessage = decodeURIComponent(messageParam);
+      setNewMessage(decodedMessage);
+      
+      // Focus the textarea after a short delay to ensure it's rendered
+      setTimeout(() => {
+        if (textareaRef.current) {
+          textareaRef.current.focus();
+        }
+      }, 100);
+    }
+  }, []); // Only run once on mount
+  
+
 
   // Handle mobile keyboard visibility and scroll behavior
   useEffect(() => {
@@ -763,17 +786,85 @@ export default function MessagingPage() {
       setLoading(false);
     }
   }, [fetchConversations]);
+  
+  // Auto-create conversation when coming from profile share
+  const handleAutoCreateConversation = useCallback(async (partnerId: string) => {
+    setLoading(true);
+    
+    try {
+      const windowWithClerk = window as unknown as {
+        Clerk?: {
+          session?: {
+            getToken: () => Promise<string>;
+          };
+        };
+      };
+      const token = await windowWithClerk.Clerk?.session?.getToken();
+
+      const response = await fetch('/api/messages', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          operation: 'getOrCreateConversation',
+          partnerId: partnerId
+        })
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        const newConversationId = result.conversationId;
+        
+        // Select the new conversation
+        setSelectedConversationId(newConversationId);
+        setTargetConnectionId(null);
+        
+        // Clean up URL parameters
+        const newUrl = new URL(window.location.href);
+        newUrl.searchParams.delete('conversation');
+        newUrl.searchParams.delete('message');
+        window.history.replaceState({}, '', newUrl.toString());
+        
+        // Refresh conversations list to get the new conversation
+        fetchConversations();
+      } else {
+        throw new Error(result.error || 'Failed to auto-create conversation');
+      }
+
+    } catch (error) {
+      console.error('Error auto-creating conversation:', error);
+      setError(error instanceof Error ? error.message : 'Failed to auto-create conversation');
+    } finally {
+      setLoading(false);
+    }
+  }, [fetchConversations]);
 
   // Handle clicking on a conversation (including ones without existing messages)
   const handleConversationClick = useCallback(async (conversation: Conversation) => {
     if (conversation.id === 0) {
       // This is a connected user without a conversation yet, create one
+      // Store the current message to preserve it after conversation creation
+      const currentMessage = newMessage;
       await startConversation(conversation.partnerId);
+      
+      // Restore the message after a short delay to ensure the conversation is selected
+      setTimeout(() => {
+        if (currentMessage) {
+          setNewMessage(currentMessage);
+          // Focus the textarea
+          if (textareaRef.current) {
+            textareaRef.current.focus();
+          }
+        }
+      }, 500);
     } else {
       // This is an existing conversation, just select it
       setSelectedConversationId(conversation.id);
     }
-  }, [startConversation]);
+  }, [startConversation, newMessage]);
   
   // Filter connections based on search
   const filteredConnections = useMemo(() => {
@@ -782,6 +873,42 @@ export default function MessagingPage() {
       conn.name.toLowerCase().includes(connectionSearchTerm.toLowerCase())
     );
   }, [connections, connectionSearchTerm]);
+
+  // Handle automatic conversation selection when conversations are loaded
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const conversationParam = urlParams.get('conversation');
+    
+    if (conversationParam && conversations.length > 0 && initialLoadComplete) {
+      
+      // First, try to find an existing conversation
+      const targetConversation = conversations.find(conv => 
+        conv.partnerId === conversationParam || conv.id.toString() === conversationParam
+      );
+      
+      if (targetConversation) {
+        setSelectedConversationId(targetConversation.id);
+        setTargetConnectionId(null);
+        
+        // Clean up URL parameters after successful selection
+        setTimeout(() => {
+          const newUrl = new URL(window.location.href);
+          newUrl.searchParams.delete('conversation');
+          newUrl.searchParams.delete('message');
+          window.history.replaceState({}, '', newUrl.toString());
+        }, 100);
+      } else {
+        // Look for a new connection that needs a conversation created
+        const newConnection = conversations.find(conv => conv.id === 0 && conv.partnerId === conversationParam);
+        if (newConnection) {
+          setTargetConnectionId(conversationParam);
+          
+          // Automatically create the conversation and select it
+          handleAutoCreateConversation(conversationParam);
+        } 
+      }
+    }
+  }, [conversations, initialLoadComplete, handleAutoCreateConversation]); // Re-run when conversations are loaded and initial load is complete
 
   return (
     <AuthWrapper>
@@ -842,6 +969,8 @@ export default function MessagingPage() {
                         className={`p-4 rounded-lg cursor-pointer transition-all duration-200 ${
                           selectedConversationId === convo.id
                             ? 'bg-[#01ae79]/10 dark:bg-[#01ae79]/20 border border-[#01ae79]/30 dark:border-[#01ae79]/40 shadow-sm'
+                            : targetConnectionId === convo.partnerId && convo.id === 0
+                            ? 'bg-amber-500/10 dark:bg-amber-500/20 border border-amber-500/30 dark:border-amber-500/40 shadow-sm animate-pulse'
                             : 'hover:bg-[#01ae79]/5 dark:hover:bg-[#01ae79]/10 border border-transparent hover:border-[#01ae79]/20 dark:hover:border-[#01ae79]/30'
                         }`}
                       >
@@ -871,7 +1000,9 @@ export default function MessagingPage() {
                             </div>
                             <div className="flex justify-between items-center">
                               <p className="text-xs text-muted-foreground truncate">
-                                {convo.lastMessagePreview || (convo.id === 0 ? 'Click to start messaging' : 'No messages yet')}
+                                {convo.lastMessagePreview || (convo.id === 0 ? 
+                                  (targetConnectionId === convo.partnerId ? 'Click to start messaging and share profile' : 'Click to start messaging') 
+                                  : 'No messages yet')}
                               </p>
                               {convo.unreadCount > 0 && (
                                 <span className="ml-2 bg-[#01ae79] text-white text-xs font-bold px-2 py-1 rounded-full flex-shrink-0">{convo.unreadCount}</span>
