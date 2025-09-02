@@ -195,47 +195,7 @@ export default function MessagingPage() {
     }
   }, []); // Only run once on mount
   
-  // Handle automatic conversation selection when conversations are loaded
-  useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const conversationParam = urlParams.get('conversation');
-    
-    if (conversationParam && conversations.length > 0 && initialLoadComplete) {
-      console.log('Attempting to auto-select conversation for:', conversationParam);
-      
-      // First, try to find an existing conversation
-      const targetConversation = conversations.find(conv => 
-        conv.partnerId === conversationParam || conv.id.toString() === conversationParam
-      );
-      
-      if (targetConversation) {
-        console.log('Found existing conversation, auto-selecting:', targetConversation);
-        setSelectedConversationId(targetConversation.id);
-        setTargetConnectionId(null);
-        
-        // Clean up URL parameters after successful selection
-        setTimeout(() => {
-          const newUrl = new URL(window.location.href);
-          newUrl.searchParams.delete('conversation');
-          newUrl.searchParams.delete('message');
-          window.history.replaceState({}, '', newUrl.toString());
-          console.log('URL parameters cleaned up after conversation selection');
-        }, 100);
-      } else {
-        // Look for a new connection that needs a conversation created
-        const newConnection = conversations.find(conv => conv.id === 0 && conv.partnerId === conversationParam);
-        if (newConnection) {
-          console.log('Found new connection, will auto-create conversation:', newConnection);
-          setTargetConnectionId(conversationParam);
-          
-          // Automatically create the conversation and select it
-          handleAutoCreateConversation(conversationParam);
-        } else {
-          console.log('No matching conversation or connection found for:', conversationParam);
-        }
-      }
-    }
-  }, [conversations, initialLoadComplete]); // Re-run when conversations are loaded and initial load is complete
+
 
   // Handle mobile keyboard visibility and scroll behavior
   useEffect(() => {
@@ -919,6 +879,48 @@ export default function MessagingPage() {
       conn.name.toLowerCase().includes(connectionSearchTerm.toLowerCase())
     );
   }, [connections, connectionSearchTerm]);
+
+  // Handle automatic conversation selection when conversations are loaded
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const conversationParam = urlParams.get('conversation');
+    
+    if (conversationParam && conversations.length > 0 && initialLoadComplete) {
+      console.log('Attempting to auto-select conversation for:', conversationParam);
+      
+      // First, try to find an existing conversation
+      const targetConversation = conversations.find(conv => 
+        conv.partnerId === conversationParam || conv.id.toString() === conversationParam
+      );
+      
+      if (targetConversation) {
+        console.log('Found existing conversation, auto-selecting:', targetConversation);
+        setSelectedConversationId(targetConversation.id);
+        setTargetConnectionId(null);
+        
+        // Clean up URL parameters after successful selection
+        setTimeout(() => {
+          const newUrl = new URL(window.location.href);
+          newUrl.searchParams.delete('conversation');
+          newUrl.searchParams.delete('message');
+          window.history.replaceState({}, '', newUrl.toString());
+          console.log('URL parameters cleaned up after conversation selection');
+        }, 100);
+      } else {
+        // Look for a new connection that needs a conversation created
+        const newConnection = conversations.find(conv => conv.id === 0 && conv.partnerId === conversationParam);
+        if (newConnection) {
+          console.log('Found new connection, will auto-create conversation:', newConnection);
+          setTargetConnectionId(conversationParam);
+          
+          // Automatically create the conversation and select it
+          handleAutoCreateConversation(conversationParam);
+        } else {
+          console.log('No matching conversation or connection found for:', conversationParam);
+        }
+      }
+    }
+  }, [conversations, initialLoadComplete, handleAutoCreateConversation]); // Re-run when conversations are loaded and initial load is complete
 
   return (
     <AuthWrapper>

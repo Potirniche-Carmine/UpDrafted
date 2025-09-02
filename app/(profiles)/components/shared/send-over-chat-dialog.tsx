@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -12,8 +12,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { Search, MessageCircle, Send, Users, ArrowLeft } from "lucide-react";
-import Link from "next/link";
+import { Search, MessageCircle, Send, Users } from "lucide-react";
 
 interface Connection {
   id: string;
@@ -35,7 +34,7 @@ interface SendOverChatDialogProps {
     division?: string;
     educationLevel?: string;
   };
-  onSendToConnection?: (connectionId: string) => void; // Optional callback for custom handling (currently redirects to messages page)
+
 }
 
 // Helper function to get role badge with descriptive text and improved styling
@@ -121,11 +120,21 @@ const getProfileImageUrl = (profileImage: string | null | undefined): string | u
 export function SendOverChatDialog({
   open,
   onOpenChange,
-  profileToShare,
-  onSendToConnection
+  profileToShare
 }: SendOverChatDialogProps) {
   const [connections, setConnections] = useState<Connection[]>([]);
-  const [rawConnectionsData, setRawConnectionsData] = useState<any>(null);
+  const [rawConnectionsData, setRawConnectionsData] = useState<{
+    connected: Array<{
+      otherUser: {
+        userId: string;
+        fullName: string;
+        profileImage: string | undefined;
+        role: string;
+        division?: string;
+        educationLevel?: string;
+      };
+    }>;
+  } | null>(null);
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -135,26 +144,19 @@ export function SendOverChatDialog({
     connection.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  // Fetch connections when dialog opens
-  useEffect(() => {
-    if (open) {
-      fetchConnections();
-    } else {
-      // Clear data when dialog closes
-      setConnections([]);
-      setRawConnectionsData(null);
-      setSearchTerm('');
-      setError(null);
-    }
-  }, [open]);
-
-  const fetchConnections = async () => {
+  const fetchConnections = useCallback(async () => {
     setLoading(true);
     setError(null);
     
     try {
       // Get auth token
-      const windowWithClerk = window as any;
+      const windowWithClerk = window as {
+        Clerk?: {
+          session?: {
+            getToken: () => Promise<string>;
+          };
+        };
+      };
       const token = await windowWithClerk.Clerk?.session?.getToken();
       
       if (!token) {
@@ -181,7 +183,16 @@ export function SendOverChatDialog({
       let availableConnections = data.connected;
       
       if (profileToShare.id) {
-        availableConnections = data.connected.filter((conn: any) => {
+        availableConnections = data.connected.filter((conn: {
+          otherUser: {
+            userId: string;
+            fullName: string;
+            profileImage: string | undefined;
+            role: string;
+            division?: string;
+            educationLevel?: string;
+          };
+        }) => {
           const isProfileBeingShared = conn.otherUser.userId === profileToShare.id;
           if (isProfileBeingShared) {
             console.log(`Filtering out profile being shared: ${profileToShare.name} (${profileToShare.id})`);
@@ -193,7 +204,16 @@ export function SendOverChatDialog({
       console.log(`Found ${data.connected.length} total connections, ${availableConnections.length} available for sharing`);
       
       // Transform the filtered data to match our interface
-      const transformedConnections: Connection[] = availableConnections.map((conn: any) => ({
+      const transformedConnections: Connection[] = availableConnections.map((conn: {
+        otherUser: {
+          userId: string;
+          fullName: string;
+          profileImage: string | undefined;
+          role: string;
+          division?: string;
+          educationLevel?: string;
+        };
+      }) => ({
         id: conn.otherUser.userId,
         name: conn.otherUser.fullName,
         imageUrl: conn.otherUser.profileImage,
@@ -209,7 +229,20 @@ export function SendOverChatDialog({
     } finally {
       setLoading(false);
     }
-  };
+  }, [profileToShare.id, profileToShare.name]);
+
+  // Fetch connections when dialog opens
+  useEffect(() => {
+    if (open) {
+      fetchConnections();
+    } else {
+      // Clear data when dialog closes
+      setConnections([]);
+      setRawConnectionsData(null);
+      setSearchTerm('');
+      setError(null);
+    }
+  }, [open, fetchConnections]);
 
   const handleSendToConnection = (connectionId: string) => {
     // Find the connection name for a more personalized message
@@ -256,7 +289,7 @@ export function SendOverChatDialog({
             Send Profile Over Chat
           </DialogTitle>
           <DialogDescription className="text-sm text-muted-foreground">
-            Choose a connection to share {profileToShare.name}'s profile with
+            Choose a connection to share {profileToShare.name}&apos;s profile with
           </DialogDescription>
         </DialogHeader>
 

@@ -455,7 +455,6 @@ export function RecruiterProfile({
   data, 
   isOwnProfile = false, 
   onConnect, 
-  onShare,
   hasPendingVerification,
   pendingSubmittedAt,
   hasRejectedVerification,
@@ -951,12 +950,12 @@ export function RecruiterProfile({
         profileToShare={{
           id: profileData.userId || profileData.id,
           name: profileData.fullName,
-          imageUrl: profileData.profileImage || null,
+          imageUrl: profileData.profileImage || undefined,
           role: 'recruiter',
           division: profileData.division,
           educationLevel: undefined
         }}
-        onSendToConnection={handleSendToConnection}
+
       />
 
       <div className="container py-4 md:py-6 lg:py-8 px-4 sm:px-6 lg:px-8">

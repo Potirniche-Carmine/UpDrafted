@@ -219,7 +219,6 @@ export function CoachProfile({
   data, 
   isOwnProfile = false, 
   onConnect, 
-  onShare,
   hasPendingVerification,
   pendingSubmittedAt,
   connectionStatus = "none",
@@ -748,12 +747,12 @@ export function CoachProfile({
         profileToShare={{
           id: profileData.userId || profileData.id,
           name: profileData.fullName,
-          imageUrl: profileData.profileImage || null,
+          imageUrl: profileData.profileImage || undefined,
           role: 'coach',
           division: profileData.division,
           educationLevel: undefined
         }}
-        onSendToConnection={handleSendToConnection}
+
       />
 
       <div className="container py-4 md:py-8">

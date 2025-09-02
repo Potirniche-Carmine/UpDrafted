@@ -420,7 +420,6 @@ export function AthleteProfile({
   data, 
   isOwnProfile = false, 
   onConnect, 
-  onShare,
   hasPendingVerification,
   pendingSubmittedAt,
   hasRejectedVerification,
@@ -1057,12 +1056,12 @@ export function AthleteProfile({
         profileToShare={{
           id: safeProfileData.userId || safeProfileData.id,
           name: safeProfileData.fullName,
-          imageUrl: safeProfileData.profileImage || null,
+          imageUrl: safeProfileData.profileImage || undefined,
           role: 'athlete',
           division: safeProfileData.division,
           educationLevel: safeProfileData.educationLevel
         }}
-        onSendToConnection={handleSendToConnection}
+
       />
 
       <div className="container py-4 md:py-8">
