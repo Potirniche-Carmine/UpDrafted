@@ -7,6 +7,7 @@ import { Header } from "@/components/header";
 import { Footer } from "@/components/footer";
 import { QueryProvider } from '@/components/providers/query-provider'
 import { generateMetadata } from "@/lib/seo";
+import { ToastContainer } from "@/components/ui/toast";
 import Script from "next/script";
 
 const roboto = Roboto({ 
@@ -105,6 +106,7 @@ export default function RootLayout({
                 {children}
               </main>
               <Footer />
+              <ToastContainer />
             </ClerkProviderWrapper>
           </ThemeProvider>
         </QueryProvider>

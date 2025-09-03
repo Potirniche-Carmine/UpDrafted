@@ -118,6 +118,21 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Check if user can send connection request (7-day cooldown after withdrawal)
+    const cooldownCheck = await connectionOperations.canSendConnectionRequest(currentUserId, targetUserId);
+    if (!cooldownCheck.canSend) {
+      if (cooldownCheck.hoursRemaining) {
+        const days = Math.floor(cooldownCheck.hoursRemaining / 24);
+        const hours = cooldownCheck.hoursRemaining % 24;
+        const timeRemaining = days > 0 ? `${days} day(s) and ${hours} hour(s)` : `${hours} hour(s)`;
+        return createErrorResponse(
+          `You must wait ${timeRemaining} before sending another connection request to this person. This prevents spam and allows time for meaningful connections.`,
+          429
+        );
+      }
+      return createErrorResponse('Connection request already exists', 409);
+    }
+
     // Create the connection using user IDs
     const connection = await connectionOperations.createConnection(
       currentUserId,
@@ -377,8 +392,8 @@ export async function DELETE(request: NextRequest) {
       return createErrorResponse('Connection ID or Target User ID is required', 400);
     }
 
-    // Delete the connection
-    const deleted = await connectionOperations.deleteConnection(currentUserId, targetUserId || '');
+    // Delete the connection and log withdrawal for cooldown tracking
+    const deleted = await connectionOperations.withdrawConnection(currentUserId, targetUserId || '');
 
     if (!deleted) {
       return createErrorResponse('Connection not found or unauthorized', 404);

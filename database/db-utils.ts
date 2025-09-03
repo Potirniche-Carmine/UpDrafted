@@ -1,4 +1,4 @@
-import { eq, and, desc, or, asc, sql, count, lt } from 'drizzle-orm';
+import { eq, and, desc, or, asc, sql, count, lt, ilike, inArray } from 'drizzle-orm';
 import { db } from './db';
 import { parseHeightToInches, parseWeightToPounds } from '@/lib/parsing-utils';
 import { 
@@ -951,6 +951,81 @@ export const connectionOperations = {
       
       return true;
     });
+  },
+
+  // Delete connection and log withdrawal with cooldown tracking
+  async withdrawConnection(fromUserId: string, toUserId: string) {
+    // First delete the connection
+    const [deletedConnection] = await db
+      .delete(connections)
+      .where(or(
+        and(eq(connections.fromUserId, fromUserId), eq(connections.toUserId, toUserId)),
+        and(eq(connections.fromUserId, toUserId), eq(connections.toUserId, fromUserId))
+      ))
+      .returning();
+
+    // Log the withdrawal for cooldown tracking
+    if (deletedConnection) {
+      await db.insert(activityLog).values({
+        viewerId: fromUserId,
+        viewedUserId: toUserId,
+        action: 'connectionWithdrawn',
+        metadata: {
+          connectionId: deletedConnection.id,
+          withdrawnAt: new Date().toISOString()
+        }
+      });
+    }
+
+    return deletedConnection;
+  },
+
+  // Check if user can send connection request (7-day cooldown after withdrawal)
+  async canSendConnectionRequest(fromUserId: string, toUserId: string): Promise<{
+    canSend: boolean;
+    cooldownEndsAt?: Date;
+    hoursRemaining?: number;
+  }> {
+    // Check if there's already a connection
+    const existingConnection = await db.query.connections.findFirst({
+      where: or(
+        and(eq(connections.fromUserId, fromUserId), eq(connections.toUserId, toUserId)),
+        and(eq(connections.fromUserId, toUserId), eq(connections.toUserId, fromUserId))
+      )
+    });
+
+    if (existingConnection) {
+      return { canSend: false };
+    }
+
+    // Check for recent withdrawal
+    const lastWithdrawal = await db.query.activityLog.findFirst({
+      where: and(
+        eq(activityLog.viewerId, fromUserId),
+        eq(activityLog.viewedUserId, toUserId),
+        eq(activityLog.action, 'connectionWithdrawn')
+      ),
+      orderBy: [desc(activityLog.createdAt)]
+    });
+
+    if (!lastWithdrawal) {
+      return { canSend: true };
+    }
+
+    const cooldownPeriod = 7 * 24 * 60 * 60 * 1000; // 7 days in milliseconds
+    const cooldownEndsAt = new Date(lastWithdrawal.createdAt.getTime() + cooldownPeriod);
+    const now = new Date();
+
+    if (now < cooldownEndsAt) {
+      const hoursRemaining = Math.ceil((cooldownEndsAt.getTime() - now.getTime()) / (60 * 60 * 1000));
+      return {
+        canSend: false,
+        cooldownEndsAt,
+        hoursRemaining
+      };
+    }
+
+    return { canSend: true };
   }
 };
 
@@ -2233,23 +2308,14 @@ export const schoolOperations = {
           and(
             eq(schools.classification, classification),
             or(
-              // Exact name match (highest priority)
-              sql`LOWER(${schools.name}) LIKE ${searchQuery}`,
-              // Normalized name match for better fuzzy matching
-              sql`LOWER(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(${schools.name}, 'university', 'u'), 'college', 'c'), 'state', 'st'), 'technology', 'tech'), 'institute', 'inst')) LIKE ${'%' + normalizedQuery + '%'}`
+              // Use ilike for case-insensitive pattern matching instead of raw SQL
+              ilike(schools.name, searchQuery),
+              // For complex normalized matching, we'll use the simpler normalized query with ilike
+              ilike(schools.name, `%${normalizedQuery}%`)
             )
           )
         )
-        .orderBy(
-          // Prioritize exact matches, then starts with, then contains
-          sql`CASE 
-            WHEN LOWER(${schools.name}) = ${query.toLowerCase()} THEN 0 
-            WHEN LOWER(${schools.name}) LIKE ${query.toLowerCase() + '%'} THEN 1 
-            WHEN LOWER(${schools.name}) LIKE ${searchQuery} THEN 2
-            ELSE 3 
-          END`,
-          schools.name
-        )
+        .orderBy(schools.name)
         .limit(limit);
     }
     
@@ -2263,33 +2329,25 @@ export const schoolOperations = {
       .from(schools)
       .where(
         or(
-          // Exact name match (highest priority)
-          sql`LOWER(${schools.name}) LIKE ${searchQuery}`,
-          // Normalized name match for better fuzzy matching
-          sql`LOWER(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(${schools.name}, 'university', 'u'), 'college', 'c'), 'state', 'st'), 'technology', 'tech'), 'institute', 'inst')) LIKE ${'%' + normalizedQuery + '%'}`
+          // Use ilike for case-insensitive pattern matching instead of raw SQL
+          ilike(schools.name, searchQuery),
+          // For complex normalized matching, we'll use the simpler normalized query with ilike
+          ilike(schools.name, `%${normalizedQuery}%`)
         )
       )
-      .orderBy(
-        // Prioritize exact matches, then starts with, then contains
-        sql`CASE 
-          WHEN LOWER(${schools.name}) = ${query.toLowerCase()} THEN 0 
-          WHEN LOWER(${schools.name}) LIKE ${query.toLowerCase() + '%'} THEN 1 
-          WHEN LOWER(${schools.name}) LIKE ${searchQuery} THEN 2
-          ELSE 3 
-        END`,
-        schools.name
-      )
+      .orderBy(schools.name)
       .limit(limit);
   },
 
   // Create a new school
   async createSchool(schoolData: NewSchool) {
     // Check if school already exists with exact name and classification to prevent duplicates
+    const normalizedName = schoolData.name.toLowerCase().trim();
     const existingSchool = await db
       .select()
       .from(schools)
       .where(and(
-        sql`LOWER(TRIM(${schools.name})) = ${schoolData.name.toLowerCase().trim()}`,
+        ilike(schools.name, normalizedName),
         eq(schools.classification, schoolData.classification)
       ))
       .limit(1);
@@ -2309,7 +2367,7 @@ export const schoolOperations = {
           .select()
           .from(schools)
           .where(and(
-            sql`LOWER(TRIM(${schools.name})) = ${schoolData.name.toLowerCase().trim()}`,
+            ilike(schools.name, normalizedName),
             eq(schools.classification, schoolData.classification)
           ))
           .limit(1);
@@ -2407,7 +2465,7 @@ export const schoolOperations = {
       .from(schools)
       .where(and(
         eq(schools.classification, classification),
-        sql`LOWER(TRIM(${schools.name})) = ${normalizedInput}`
+        ilike(schools.name, normalizedInput)
       ))
       .limit(5);
 
@@ -2419,7 +2477,7 @@ export const schoolOperations = {
     const nameParts = normalizedInput.split(' ').filter(part => part.length > 2);
     if (nameParts.length > 0) {
       const likeConditions = nameParts.map(part => 
-        sql`LOWER(${schools.name}) LIKE ${'%' + part + '%'}`
+        ilike(schools.name, `%${part}%`)
       );
       
       existingSchools = await db
@@ -2445,7 +2503,7 @@ export const schoolOperations = {
       .from(schools)
       .where(and(
         eq(schools.classification, classification),
-        sql`LOWER(${schools.name}) = ${trimmedName.toLowerCase()}`
+        ilike(schools.name, trimmedName.toLowerCase())
       ))
       .limit(1);
 
@@ -2516,7 +2574,7 @@ export const schoolOperations = {
     const schoolsData = await db
       .select({ id: schools.id, name: schools.name })
       .from(schools)
-      .where(sql`${schools.id} IN (${sql.join(validIds, sql`, `)})`);
+      .where(inArray(schools.id, validIds));
 
     return new Map(schoolsData.map(school => [school.id, school.name]));
   }

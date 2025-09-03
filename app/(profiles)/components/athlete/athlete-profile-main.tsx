@@ -31,6 +31,7 @@ import { AthleteProfileData, AthleteProfileProps, Measurable } from './athlete-p
 import { ConnectionDialog } from "../shared/connection-dialog";
 import { SendOverChatDialog } from "../shared/send-over-chat-dialog";
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
+import { useToast } from "@/components/ui/toast";
 import { useUser } from "@clerk/nextjs";
 import { generateProfileSlug } from '@/lib/utils';
 
@@ -451,6 +452,9 @@ export function AthleteProfile({
   const [isPreviewMode, setIsPreviewMode] = useState(false);
   const [sendOverChatDialogOpen, setSendOverChatDialogOpen] = useState(false);
   
+  // Toast hook
+  const toast = useToast();
+  
   // Confirmation dialog state
   const [confirmationDialog, setConfirmationDialog] = useState<{
     open: boolean;
@@ -744,6 +748,15 @@ export function AthleteProfile({
 
       if (!response.ok) {
         const errorData = await response.json();
+        
+        // Log error details to console
+        console.error('Connection withdrawal failed:', {
+          status: response.status,
+          error: errorData.error,
+          targetUserId: safeProfileData.userId,
+          timestamp: new Date().toISOString()
+        });
+        
         throw new Error(errorData.error || 'Failed to withdraw connection request');
       }
 
@@ -751,18 +764,30 @@ export function AthleteProfile({
       if (result.success) {
         setCurrentConnectionStatus("none");
       } else {
+        // Log unexpected API response structure to console
+        console.error('Unexpected withdrawal API response:', {
+          result,
+          targetUserId: safeProfileData.userId,
+          timestamp: new Date().toISOString()
+        });
+        
         throw new Error(result.error || 'Failed to withdraw connection request');
       }
     } catch (error) {
-      console.error('Error withdrawing connection request:', error);
-      setConfirmationDialog({
-        open: true,
-        title: "Connection Error",
-        description: error instanceof Error ? error.message : 'Failed to withdraw connection request. Please try again.',
-        confirmText: "OK",
-        variant: "danger",
-        onConfirm: () => setConfirmationDialog(prev => ({ ...prev, open: false }))
-      });
+      if (error instanceof Error) {
+        console.error('Error withdrawing connection request:', {
+          message: error.message,
+          stack: error.stack,
+          targetUserId: safeProfileData.userId,
+          timestamp: new Date().toISOString()
+        });
+      }
+      
+      toast.error(
+        "Connection Error",
+        "Something went wrong while withdrawing your connection request. Please try again.",
+        7000
+      );
     } finally {
       setIsConnecting(false);
     }
@@ -793,25 +818,51 @@ export function AthleteProfile({
 
       if (!response.ok) {
         const errorData = await response.json();
+        
+        // Log error details to console
+        console.error('Connection acceptance failed:', {
+          status: response.status,
+          error: errorData.error,
+          targetUserId: safeProfileData.userId,
+          timestamp: new Date().toISOString()
+        });
+        
         throw new Error(errorData.error || 'Failed to accept connection request');
       }
 
       const result = await response.json();
       if (result.success) {
         setCurrentConnectionStatus("connected");
+        toast.success(
+          "Connection Accepted",
+          `You are now connected with ${safeProfileData.fullName}`,
+          5000
+        );
       } else {
+        // Log unexpected API response structure to console
+        console.error('Unexpected acceptance API response:', {
+          result,
+          targetUserId: safeProfileData.userId,
+          timestamp: new Date().toISOString()
+        });
+        
         throw new Error(result.error || 'Failed to accept connection request');
       }
     } catch (error) {
-      console.error('Error accepting connection request:', error);
-      setConfirmationDialog({
-        open: true,
-        title: "Connection Error",
-        description: error instanceof Error ? error.message : 'Failed to accept connection request. Please try again.',
-        confirmText: "OK",
-        variant: "danger",
-        onConfirm: () => setConfirmationDialog(prev => ({ ...prev, open: false }))
-      });
+      if (error instanceof Error) {
+        console.error('Error accepting connection request:', {
+          message: error.message,
+          stack: error.stack,
+          targetUserId: safeProfileData.userId,
+          timestamp: new Date().toISOString()
+        });
+      }
+      
+      toast.error(
+        "Connection Error",
+        "Something went wrong while accepting the connection request. Please try again.",
+        7000
+      );
     } finally {
       setIsConnecting(false);
     }
@@ -842,6 +893,15 @@ export function AthleteProfile({
 
       if (!response.ok) {
         const errorData = await response.json();
+        
+        // Log error details to console
+        console.error('Connection decline failed:', {
+          status: response.status,
+          error: errorData.error,
+          targetUserId: safeProfileData.userId,
+          timestamp: new Date().toISOString()
+        });
+        
         throw new Error(errorData.error || 'Failed to decline connection request');
       }
 
@@ -849,18 +909,30 @@ export function AthleteProfile({
       if (result.success) {
         setCurrentConnectionStatus("none");
       } else {
+        // Log unexpected API response structure to console
+        console.error('Unexpected decline API response:', {
+          result,
+          targetUserId: safeProfileData.userId,
+          timestamp: new Date().toISOString()
+        });
+        
         throw new Error(result.error || 'Failed to decline connection request');
       }
     } catch (error) {
-      console.error('Error declining connection request:', error);
-      setConfirmationDialog({
-        open: true,
-        title: "Connection Error",
-        description: error instanceof Error ? error.message : 'Failed to decline connection request. Please try again.',
-        confirmText: "OK",
-        variant: "danger",
-        onConfirm: () => setConfirmationDialog(prev => ({ ...prev, open: false }))
-      });
+      if (error instanceof Error) {
+        console.error('Error declining connection request:', {
+          message: error.message,
+          stack: error.stack,
+          targetUserId: safeProfileData.userId,
+          timestamp: new Date().toISOString()
+        });
+      }
+      
+      toast.error(
+        "Connection Error", 
+        "Something went wrong while declining the connection request. Please try again.",
+        7000
+      );
     } finally {
       setIsConnecting(false);
     }
@@ -893,6 +965,27 @@ export function AthleteProfile({
 
       if (!response.ok) {
         const errorData = await response.json();
+        
+        // Check if this is a 7-day cooldown error (status 429)
+        if (response.status === 429) {
+          // Show toast for 7-day double connection cooldown
+          toast.error(
+            "Connection Request Limit",
+            errorData.error || 'You must wait before sending another connection request to this person.',
+            7000
+          );
+          setConnectionDialogOpen(false);
+          return;
+        }
+        
+        // For all other errors, log to console and throw
+        console.error('Connection request failed:', {
+          status: response.status,
+          error: errorData.error,
+          targetUserId: safeProfileData.userId,
+          timestamp: new Date().toISOString()
+        });
+        
         throw new Error(errorData.error || 'Failed to send connection request');
       }
 
@@ -901,21 +994,40 @@ export function AthleteProfile({
         // Update connection status to pending
         setCurrentConnectionStatus("pending");
         setConnectionDialogOpen(false);
+        // Show success toast
+        toast.success(
+          "Connection Request Sent",
+          `Your connection request has been sent to ${safeProfileData.fullName}`,
+          5000
+        );
         // Call the original onConnect if provided
         onConnect?.();
       } else {
+        // Log unexpected API response structure to console
+        console.error('Unexpected connection API response:', {
+          result,
+          targetUserId: safeProfileData.userId,
+          timestamp: new Date().toISOString()
+        });
+        
         throw new Error(result.error || 'Failed to send connection request');
       }
     } catch (error) {
-      console.error('Error sending connection request:', error);
-      setConfirmationDialog({
-        open: true,
-        title: "Connection Error",
-        description: error instanceof Error ? error.message : 'Failed to send connection request. Please try again.',
-        confirmText: "OK",
-        variant: "danger",
-        onConfirm: () => setConfirmationDialog(prev => ({ ...prev, open: false }))
-      });
+      // Only show error toast if it's not the 7-day cooldown case (already handled above)
+      if (error instanceof Error) {
+        console.error('Error sending connection request:', {
+          message: error.message,
+          stack: error.stack,
+          targetUserId: safeProfileData.userId,
+          timestamp: new Date().toISOString()
+        });
+        
+        toast.error(
+          "Connection Error",
+          "Something went wrong while sending your connection request. Please try again.",
+          7000
+        );
+      }
     } finally {
       setIsConnecting(false);
     }
@@ -960,7 +1072,7 @@ export function AthleteProfile({
         onPreviewProfile={isOwnProfile ? handlePreviewProfile : undefined}
         onEditProfile={isOwnProfile ? handleEditProfile : undefined}
         isPreviewMode={isPreviewMode}
-        connectLabel="Draft"
+        connectLabel="Connect"
         profileName={safeProfileData.fullName}
         profileType="athlete"
         reportedUserId={safeProfileData.userId}

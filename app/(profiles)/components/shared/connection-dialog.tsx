@@ -62,7 +62,7 @@ export function ConnectionDialog({
   const getActionLabel = () => {
     switch (profileType) {
       case "athlete":
-        return "Draft";
+        return "Connect";
       case "coach":
         return "Connect with Coach";
       case "recruiter":

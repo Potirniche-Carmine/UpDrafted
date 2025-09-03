@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireAnyRole } from '@/utils/roles';
 import { db } from '@/database/db';
 import { users, athleteProfiles, coachProfiles, recruitingProfiles, connections, recruitingProfileNeeds, recruitingNeeds, schools } from '@/database/schema';
-import { and, eq, or, not, ilike, isNull, exists, ne, arrayOverlaps, sql } from 'drizzle-orm';
+import { and, eq, or, not, ilike, isNull, exists, ne, arrayOverlaps } from 'drizzle-orm';
 import { sanitizeText, sanitizeNumber } from '@/utils/sanitization';
 import { withRateLimit } from '@/utils/security';
 import { createHeightFilter, createWeightFilter } from '@/database/db-utils';
@@ -334,7 +334,7 @@ async function handleDiscoverRequest(request: NextRequest) {
 
     // Search conditions with parameterized queries to prevent SQL injection
     const searchConditions = query ? (() => {
-      const searchTerm = sql`${'%' + query.toLowerCase() + '%'}`;
+      const searchTerm = `%${query.toLowerCase()}%`;
       return [
         or(
           and(

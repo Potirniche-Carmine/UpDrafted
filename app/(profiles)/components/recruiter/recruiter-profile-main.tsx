@@ -30,6 +30,7 @@ import { OptimizedOrgLogo } from "../shared/optimized-org-logo";
 import { RecruiterProfileData, RecruiterProfileProps } from './recruiter-profile-types';
 import { ConnectionDialog } from "../shared/connection-dialog";
 import { SendOverChatDialog } from "../shared/send-over-chat-dialog";
+import { useToast } from "@/components/ui/toast";
 import { useUser } from "@clerk/nextjs";
 import { useRoleView } from '@/hooks/use-role-view';
 import { getStudentClassificationDisplayName, StudentClassification } from '@/lib/sports-data';
@@ -495,6 +496,9 @@ export function RecruiterProfile({
   const { user } = useUser();
   const effectiveRole = user?.publicMetadata?.role as string;
   
+  // Toast hook
+  const toast = useToast();
+  
   // Get admin role information for demo profile uploads
   const { isAdmin, viewingAs } = useRoleView();
 
@@ -814,6 +818,15 @@ export function RecruiterProfile({
 
       if (!response.ok) {
         const errorData = await response.json();
+        
+        // Log error details to console
+        console.error('Connection withdrawal failed:', {
+          status: response.status,
+          error: errorData.error,
+          targetUserId: profileData.userId,
+          timestamp: new Date().toISOString()
+        });
+        
         throw new Error(errorData.error || 'Failed to withdraw connection request');
       }
 
@@ -821,11 +834,30 @@ export function RecruiterProfile({
       if (result.success) {
         setCurrentConnectionStatus("none");
       } else {
+        // Log unexpected API response structure to console
+        console.error('Unexpected withdrawal API response:', {
+          result,
+          targetUserId: profileData.userId,
+          timestamp: new Date().toISOString()
+        });
+        
         throw new Error(result.error || 'Failed to withdraw connection request');
       }
     } catch (error) {
-      console.error('Error withdrawing connection request:', error);
-      alert(error instanceof Error ? error.message : 'Failed to withdraw connection request. Please try again.');
+      if (error instanceof Error) {
+        console.error('Error withdrawing connection request:', {
+          message: error.message,
+          stack: error.stack,
+          targetUserId: profileData.userId,
+          timestamp: new Date().toISOString()
+        });
+      }
+      
+      toast.error(
+        "Connection Error",
+        "Something went wrong while withdrawing your connection request. Please try again.",
+        7000
+      );
     } finally {
       setIsConnecting(false);
     }
@@ -858,6 +890,27 @@ export function RecruiterProfile({
 
       if (!response.ok) {
         const errorData = await response.json();
+        
+        // Check if this is a 7-day cooldown error (status 429)
+        if (response.status === 429) {
+          // Show toast for 7-day double connection cooldown
+          toast.error(
+            "Connection Request Limit",
+            errorData.error || 'You must wait before sending another connection request to this person.',
+            7000
+          );
+          setConnectionDialogOpen(false);
+          return;
+        }
+        
+        // For all other errors, log to console and throw
+        console.error('Connection request failed:', {
+          status: response.status,
+          error: errorData.error,
+          targetUserId: profileData.userId,
+          timestamp: new Date().toISOString()
+        });
+        
         throw new Error(errorData.error || 'Failed to send connection request');
       }
 
@@ -866,14 +919,40 @@ export function RecruiterProfile({
         // Update connection status to pending
         setCurrentConnectionStatus("pending");
         setConnectionDialogOpen(false);
+        // Show success toast
+        toast.success(
+          "Connection Request Sent",
+          `Your connection request has been sent to ${profileData.fullName}`,
+          5000
+        );
         // Call the original onConnect if provided
         onConnect?.();
       } else {
+        // Log unexpected API response structure to console
+        console.error('Unexpected connection API response:', {
+          result,
+          targetUserId: profileData.userId,
+          timestamp: new Date().toISOString()
+        });
+        
         throw new Error(result.error || 'Failed to send connection request');
       }
     } catch (error) {
-      console.error('Error sending connection request:', error);
-      alert(error instanceof Error ? error.message : 'Failed to send connection request. Please try again.');
+      // Only show error toast if it's not the 7-day cooldown case (already handled above)
+      if (error instanceof Error) {
+        console.error('Error sending connection request:', {
+          message: error.message,
+          stack: error.stack,
+          targetUserId: profileData.userId,
+          timestamp: new Date().toISOString()
+        });
+        
+        toast.error(
+          "Connection Error",
+          "Something went wrong while sending your connection request. Please try again.",
+          7000
+        );
+      }
     } finally {
       setIsConnecting(false);
     }

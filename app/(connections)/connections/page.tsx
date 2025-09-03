@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
 import { useRouter } from 'next/navigation';
 
 import Link from 'next/link';
@@ -1602,15 +1602,29 @@ function App() {
   const filteredOutgoingRequests = useFilteredConnections(sentRequests);
 
   // Connection action handlers
-  const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
+  const [connectionToRemove, setConnectionToRemove] = useState<{id: number, targetUserId: string, userName: string} | null>(null);
+  const [requestToWithdraw, setRequestToWithdraw] = useState<{id: number, targetUserId: string, userName: string} | null>(null);
   const [activeTab, setActiveTab] = useState('connections');
 
-  const handleRemoveConnection = async (connectionId: number, targetUserId: string) => {
+  const handleRemoveConnection = (connectionId: number, targetUserId: string) => {
+    // Find the connection to get the user's name for the dialog
+    const connection = connections.find(c => c.id === connectionId);
+    const userName = connection?.otherUser.fullName || 'this user';
+    
+    setConnectionToRemove({ id: connectionId, targetUserId, userName });
+  };
+
+  const confirmRemoveConnection = async () => {
+    if (!connectionToRemove) return;
+    
     try {
       const response = await fetch('/api/connections', {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ connectionId, targetUserId })
+        body: JSON.stringify({ 
+          connectionId: connectionToRemove.id, 
+          targetUserId: connectionToRemove.targetUserId 
+        })
       });
       
       if (response.ok) {
@@ -1618,7 +1632,13 @@ function App() {
       }
     } catch (error) {
       console.error('Failed to remove connection:', error);
+    } finally {
+      setConnectionToRemove(null);
     }
+  };
+
+  const handleCancelRemove = () => {
+    setConnectionToRemove(null);
   };
 
   const handleAcceptRequest = async (requestId: number) => {
@@ -1654,11 +1674,23 @@ function App() {
   };
 
   const handleWithdrawRequest = async (requestId: number, targetUserId: string) => {
+    // Find the user name for the confirmation dialog
+    const request = sentRequests.find(req => req.id === requestId);
+    const userName = request?.otherUser.fullName || 'this user';
+    setRequestToWithdraw({ id: requestId, targetUserId, userName });
+  };
+
+  const confirmWithdrawRequest = async () => {
+    if (!requestToWithdraw) return;
+    
     try {
       const response = await fetch('/api/connections', {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ connectionId: requestId, targetUserId })
+        body: JSON.stringify({ 
+          connectionId: requestToWithdraw.id, 
+          targetUserId: requestToWithdraw.targetUserId 
+        })
       });
       
       if (response.ok) {
@@ -1666,17 +1698,18 @@ function App() {
       }
     } catch (error) {
       console.error('Failed to withdraw request:', error);
+    } finally {
+      setRequestToWithdraw(null);
     }
+  };
+
+  const cancelWithdrawRequest = () => {
+    setRequestToWithdraw(null);
   };
 
   // Alias for compatibility
   const applyFilters = handleApplyFilters;
   const clearAllFilters = handleResetFilters;
-  
-  const confirmRemoveConnection = () => {
-    setConfirmDialogOpen(false);
-    // Add actual remove logic here if needed
-  };
 
   // Show page layout first, then load data (like messages page)
   return (
@@ -1976,25 +2009,38 @@ function App() {
         </Tabs>
       </div>
 
-      {/* Confirmation Dialog */}
-      <Dialog open={confirmDialogOpen} onOpenChange={setConfirmDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Remove Connection</DialogTitle>
-            <DialogDescription>
-              Are you sure you want to remove this connection? This action cannot be undone.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setConfirmDialogOpen(false)}>
-              Cancel
-            </Button>
-            <Button variant="destructive" onClick={confirmRemoveConnection}>
-              Remove
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {/* Confirmation Dialogs */}
+      <ConfirmationDialog
+        open={connectionToRemove !== null}
+        onOpenChange={(open) => !open && handleCancelRemove()}
+        title="Remove Connection"
+        description={
+          connectionToRemove 
+            ? `Are you sure you want to remove your connection with ${connectionToRemove.userName}? This action cannot be undone.`
+            : "Are you sure you want to remove this connection? This action cannot be undone."
+        }
+        confirmText="Remove"
+        cancelText="Cancel"
+        variant="danger"
+        onConfirm={confirmRemoveConnection}
+        onCancel={handleCancelRemove}
+      />
+
+      <ConfirmationDialog
+        open={requestToWithdraw !== null}
+        onOpenChange={(open) => !open && cancelWithdrawRequest()}
+        title="Withdraw Request"
+        description={
+          requestToWithdraw 
+            ? `Are you sure you want to withdraw your connection request to ${requestToWithdraw.userName}? You will not be able to send another request to this person for 7 days to prevent spam.`
+            : "Are you sure you want to withdraw this connection request? You will not be able to send another request to this person for 7 days to prevent spam."
+        }
+        confirmText="Withdraw"
+        cancelText="Cancel"
+        variant="danger"
+        onConfirm={confirmWithdrawRequest}
+        onCancel={cancelWithdrawRequest}
+      />
     </div>
   );
 }

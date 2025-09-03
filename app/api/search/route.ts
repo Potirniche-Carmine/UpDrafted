@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireAnyRole } from '@/utils/roles';
 import { db } from '@/database/db';
 import { users, athleteProfiles, coachProfiles, recruitingProfiles, schools } from '@/database/schema';
-import { or, eq, ilike, sql, and, ne, isNull } from 'drizzle-orm';
+import { or, eq, ilike, and, ne, isNull, count } from 'drizzle-orm';
 import { R2_PUBLIC_URL, constructR2Url } from '@/database/r2';
 import { withRateLimit } from '@/utils/security';
 import { getCachedWithType, setCachedWithType, createErrorResponse, createSuccessResponse } from '@/utils/security';
@@ -81,7 +81,7 @@ export async function GET(request: NextRequest) {
       return createSuccessResponse(cachedResults, rateLimitCheck.headers);
     }
 
-    const searchTerm = sql`${'%' + query.toLowerCase() + '%'}`;
+    const searchTerm = `%${query.toLowerCase()}%`;
     const results: SearchResult[] = [];
     let totalResults = 0;
 
@@ -304,7 +304,7 @@ export async function GET(request: NextRequest) {
       if (role !== 'athlete') {
         countPromises.push(
           db
-            .select({ count: sql<number>`count(*)` })
+            .select({ count: count() })
             .from(athleteProfiles)
             .innerJoin(users, eq(users.id, athleteProfiles.userId))
             .leftJoin(schools, eq(schools.id, athleteProfiles.schoolId))
@@ -332,7 +332,7 @@ export async function GET(request: NextRequest) {
     if (!roleFilter || roleFilter === 'coach') {
       countPromises.push(
         db
-          .select({ count: sql<number>`count(*)` })
+          .select({ count: count() })
           .from(coachProfiles)
           .innerJoin(users, eq(users.id, coachProfiles.userId))
           .leftJoin(schools, eq(schools.id, coachProfiles.schoolId))
@@ -360,7 +360,7 @@ export async function GET(request: NextRequest) {
     if (!roleFilter || roleFilter === 'recruiter') {
       countPromises.push(
         db
-          .select({ count: sql<number>`count(*)` })
+          .select({ count: count() })
           .from(recruitingProfiles)
           .innerJoin(users, eq(users.id, recruitingProfiles.userId))
           .leftJoin(schools, eq(schools.id, recruitingProfiles.schoolId))
