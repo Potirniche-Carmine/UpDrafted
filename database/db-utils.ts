@@ -1,4 +1,4 @@
-import { eq, and, desc, or, asc, sql, count, lt, ilike, inArray } from 'drizzle-orm';
+import { eq, and, desc, or, asc, sql, count, lt, ilike, inArray, ne } from 'drizzle-orm';
 import { db } from './db';
 import { parseHeightToInches, parseWeightToPounds } from '@/lib/parsing-utils';
 import { 
@@ -1591,7 +1591,7 @@ export const messageOperations = {
         })
         .where(and(
           eq(messages.conversationId, conversationId),
-          sql`${messages.senderId} != ${userId}`,
+          ne(messages.senderId, userId), // Use ne() instead of raw SQL
           eq(messages.isRead, false)
         ));
       

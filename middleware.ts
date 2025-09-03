@@ -1,20 +1,25 @@
 import { clerkMiddleware } from '@clerk/nextjs/server';
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
-import { SecurityEvents } from './utils/security';
+import { SecurityEvents, withRateLimit, type UserRole } from './utils/security';
 
-// Simple in-memory rate limiting for MVP (would use Redis in production)
-const rateLimit = new Map<string, { count: number; resetTime: number }>();
+// Helper function to determine rate limit type based on endpoint
+function getRateLimitType(pathname: string): string {
+  if (pathname.includes('/upload') || pathname.includes('/verification')) return 'fileUpload';
+  if (pathname.includes('/messages')) return 'messaging';
+  if (pathname.includes('/search')) return 'search';
+  if (pathname.includes('/connections')) return 'connections';
+  if (pathname.includes('/notifications')) return 'notifications';
+  if (pathname.includes('/reports')) return 'reports';
+  return 'general';
+}
 
-// Clean up old entries periodically
-setInterval(() => {
-  const now = Date.now();
-  for (const [key, value] of rateLimit.entries()) {
-    if (now > value.resetTime) {
-      rateLimit.delete(key);
-    }
-  }
-}, 60000); // Clean every minute
+// Helper function to get user role from Clerk auth
+async function getUserRole(): Promise<{ userId?: string; role: UserRole }> {
+  // For now, default to 'athlete' - this would be enhanced with actual role extraction
+  // In a real implementation, you'd extract the user ID and role from the Clerk session
+  return { role: 'athlete' as UserRole };
+}
 
 // Security middleware for mutation operations
 const securityMiddleware = async (request: NextRequest) => {
@@ -53,37 +58,21 @@ const securityMiddleware = async (request: NextRequest) => {
     }
   }
 
-  // Rate limiting for mutation operations
-  const clientIP = request.headers.get('x-forwarded-for')?.split(',')[0] || 
-                  request.headers.get('x-real-ip') || 
-                  'unknown';
-  const now = Date.now();
-  const windowMs = 60 * 1000; // 1 minute window
-  const maxRequests = 100; // Max 100 requests per minute per IP
-
-  const current = rateLimit.get(clientIP);
-  if (current && now < current.resetTime) {
-    if (current.count >= maxRequests) {
-      // Log security event
-      SecurityEvents.rateLimitExceeded(request, undefined, maxRequests);
-      
-      return NextResponse.json(
-        { error: 'Too many requests. Please try again later.' },
-        { 
-          status: 429,
-          headers: {
-            'Retry-After': Math.ceil((current.resetTime - now) / 1000).toString(),
-            'Access-Control-Allow-Origin': '*',
-            'Access-Control-Allow-Methods': 'POST, PUT, DELETE, PATCH',
-            'Access-Control-Allow-Headers': 'Content-Type, Authorization'
-          }
-        }
-      );
-    }
-    current.count++;
-  } else {
-    rateLimit.set(clientIP, { count: 1, resetTime: now + windowMs });
+  // Advanced rate limiting with Redis support
+  const { userId, role } = await getUserRole();
+  const limitType = getRateLimitType(request.nextUrl.pathname) as 'fileUpload' | 'general' | 'messaging' | 'search' | 'connections' | 'notifications' | 'reports';
+  
+  const rateLimitResult = await withRateLimit(request, limitType, userId, role);
+  
+  if (!rateLimitResult.success && rateLimitResult.response) {
+    return rateLimitResult.response;
   }
+
+    // Continue with CSRF protection after rate limiting
+  const securityResponse = NextResponse.next();
+  Object.entries(rateLimitResult.headers).forEach(([key, value]) => {
+    securityResponse.headers.set(key, value);
+  });
 
   // CSRF Protection
   const origin = request.headers.get('origin');
@@ -118,15 +107,14 @@ const securityMiddleware = async (request: NextRequest) => {
   }
 
   // Add security headers
-  const response = NextResponse.next();
-  response.headers.set('X-Content-Type-Options', 'nosniff');
-  response.headers.set('X-Frame-Options', 'DENY');
-  response.headers.set('X-XSS-Protection', '1; mode=block');
-  response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
-  response.headers.set('X-Permitted-Cross-Domain-Policies', 'none');
-  response.headers.set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+  securityResponse.headers.set('X-Content-Type-Options', 'nosniff');
+  securityResponse.headers.set('X-Frame-Options', 'DENY');
+  securityResponse.headers.set('X-XSS-Protection', '1; mode=block');
+  securityResponse.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
+  securityResponse.headers.set('X-Permitted-Cross-Domain-Policies', 'none');
+  securityResponse.headers.set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
 
-  return response;
+  return securityResponse;
 };
 
 // Combine Clerk middleware with security middleware
@@ -148,28 +136,19 @@ export default clerkMiddleware(async (auth, req) => {
       return securityResult;
     }
     
-    // Add additional security headers for API routes
-    const response = NextResponse.next();
-    response.headers.set('X-Content-Type-Options', 'nosniff');
-    response.headers.set('X-Frame-Options', 'DENY');
-    response.headers.set('X-XSS-Protection', '1; mode=block');
-    response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
-    response.headers.set('X-Permitted-Cross-Domain-Policies', 'none');
-    response.headers.set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
-    
-    return response;
+    return securityResult;
   }
 
   // For non-API routes, just add basic security headers
-  const response = NextResponse.next();
-  response.headers.set('X-Content-Type-Options', 'nosniff');
-  response.headers.set('X-Frame-Options', 'DENY');
-  response.headers.set('X-XSS-Protection', '1; mode=block');
-  response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
-  response.headers.set('X-Permitted-Cross-Domain-Policies', 'none');
-  response.headers.set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+  const nonApiResponse = NextResponse.next();
+  nonApiResponse.headers.set('X-Content-Type-Options', 'nosniff');
+  nonApiResponse.headers.set('X-Frame-Options', 'DENY');
+  nonApiResponse.headers.set('X-XSS-Protection', '1; mode=block');
+  nonApiResponse.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
+  nonApiResponse.headers.set('X-Permitted-Cross-Domain-Policies', 'none');
+  nonApiResponse.headers.set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
   
-  return response;
+  return nonApiResponse;
 });
 
 // Optimized matcher configuration

@@ -1,50 +1,22 @@
-import { auth } from '@clerk/nextjs/server';
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/database/db';
 import { athleteProfiles, coachProfiles, recruitingProfiles } from '@/database/schema';
 import { eq, and } from 'drizzle-orm';
+import { requireAdmin } from '@/utils/roles';
 
 export async function GET(request: NextRequest) {
   try {
-    const { userId } = await auth();
-    
-    if (!userId) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
-
-    // Get user and check if admin
-    const user = await fetch(`https://api.clerk.com/v1/users/${userId}`, {
-      headers: {
-        Authorization: `Bearer ${process.env.CLERK_SECRET_KEY}`,
-      },
-    });
-
-    if (!user.ok) {
-      return NextResponse.json(
-        { error: 'Failed to verify user' },
-        { status: 403 }
-      );
-    }
-
-    const userData = await user.json();
-    const isAdmin = userData.public_metadata?.role === 'admin';
-
-    if (!isAdmin) {
-      return NextResponse.json(
-        { error: 'Admin access required' },
-        { status: 403 }
-      );
-    }
+    // Validate admin access using secure session claims
+    const adminResult = await requireAdmin();
+    if (adminResult instanceof NextResponse) return adminResult;
 
     const { searchParams } = new URL(request.url);
     const role = searchParams.get('role');
+    const targetUserId = searchParams.get('targetUserId');
 
-    if (!role) {
+    if (!role || !targetUserId) {
       return NextResponse.json(
-        { error: 'Role parameter is required' },
+        { error: 'Role and targetUserId parameters are required' },
         { status: 400 }
       );
     }
@@ -56,7 +28,7 @@ export async function GET(request: NextRequest) {
       case 'athlete':
         profile = await db.query.athleteProfiles.findFirst({
           where: and(
-            eq(athleteProfiles.userId, userId),
+            eq(athleteProfiles.userId, targetUserId),
             eq(athleteProfiles.isDemoProfile, true)
           ),
           columns: {
@@ -69,7 +41,7 @@ export async function GET(request: NextRequest) {
       case 'coach':
         profile = await db.query.coachProfiles.findFirst({
           where: and(
-            eq(coachProfiles.userId, userId),
+            eq(coachProfiles.userId, targetUserId),
             eq(coachProfiles.isDemoProfile, true)
           ),
           columns: {
@@ -82,7 +54,7 @@ export async function GET(request: NextRequest) {
       case 'recruiter':
         profile = await db.query.recruitingProfiles.findFirst({
           where: and(
-            eq(recruitingProfiles.userId, userId),
+            eq(recruitingProfiles.userId, targetUserId),
             eq(recruitingProfiles.isDemoProfile, true)
           ),
           columns: {
@@ -116,44 +88,15 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const { userId } = await auth();
-    
-    if (!userId) {
+    // Validate admin access using secure session claims
+    const adminResult = await requireAdmin();
+    if (adminResult instanceof NextResponse) return adminResult;
+
+    const { role, isVerified, targetUserId } = await request.json();
+
+    if (!role || typeof isVerified !== 'boolean' || !targetUserId) {
       return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
-
-    // Get user and check if admin
-    const user = await fetch(`https://api.clerk.com/v1/users/${userId}`, {
-      headers: {
-        Authorization: `Bearer ${process.env.CLERK_SECRET_KEY}`,
-      },
-    });
-
-    if (!user.ok) {
-      return NextResponse.json(
-        { error: 'Failed to verify user' },
-        { status: 403 }
-      );
-    }
-
-    const userData = await user.json();
-    const isAdmin = userData.public_metadata?.role === 'admin';
-
-    if (!isAdmin) {
-      return NextResponse.json(
-        { error: 'Admin access required' },
-        { status: 403 }
-      );
-    }
-
-    const { role, isVerified } = await request.json();
-
-    if (!role || typeof isVerified !== 'boolean') {
-      return NextResponse.json(
-        { error: 'Role and isVerified status are required' },
+        { error: 'Role, isVerified status, and targetUserId are required' },
         { status: 400 }
       );
     }
@@ -167,7 +110,7 @@ export async function POST(request: NextRequest) {
           .update(athleteProfiles)
           .set({ isVerified, updatedAt: new Date() })
           .where(and(
-            eq(athleteProfiles.userId, userId),
+            eq(athleteProfiles.userId, targetUserId),
             eq(athleteProfiles.isDemoProfile, true)
           ))
           .returning({ id: athleteProfiles.id });
@@ -178,7 +121,7 @@ export async function POST(request: NextRequest) {
           .update(coachProfiles)
           .set({ isVerified, updatedAt: new Date() })
           .where(and(
-            eq(coachProfiles.userId, userId),
+            eq(coachProfiles.userId, targetUserId),
             eq(coachProfiles.isDemoProfile, true)
           ))
           .returning({ id: coachProfiles.id });
@@ -189,7 +132,7 @@ export async function POST(request: NextRequest) {
           .update(recruitingProfiles)
           .set({ isVerified, updatedAt: new Date() })
           .where(and(
-            eq(recruitingProfiles.userId, userId),
+            eq(recruitingProfiles.userId, targetUserId),
             eq(recruitingProfiles.isDemoProfile, true)
           ))
           .returning({ id: recruitingProfiles.id });

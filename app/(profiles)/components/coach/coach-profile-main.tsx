@@ -484,11 +484,24 @@ export function CoachProfile({
       // Create a more prominent error notification
       const notification = document.createElement('div');
       notification.className = 'fixed top-4 left-1/2 transform -translate-x-1/2 bg-red-500 text-white px-6 py-4 rounded-lg shadow-lg z-50 max-w-md text-center';
-      notification.innerHTML = `
-        <div class="font-semibold">Failed to save profile</div>
-        <div class="text-sm mt-1">${errorMessage}</div>
-        <div class="text-xs mt-2 opacity-90">Please try again or contact support if the issue persists.</div>
-      `;
+      
+      // Create elements safely without innerHTML
+      const titleDiv = document.createElement('div');
+      titleDiv.className = 'font-semibold';
+      titleDiv.textContent = 'Failed to save profile';
+      
+      const messageDiv = document.createElement('div');
+      messageDiv.className = 'text-sm mt-1';
+      messageDiv.textContent = errorMessage;
+      
+      const helpDiv = document.createElement('div');
+      helpDiv.className = 'text-xs mt-2 opacity-90';
+      helpDiv.textContent = 'Please try again or contact support if the issue persists.';
+      
+      notification.appendChild(titleDiv);
+      notification.appendChild(messageDiv);
+      notification.appendChild(helpDiv);
+      
       document.body.appendChild(notification);
       
       // Remove notification after 8 seconds
