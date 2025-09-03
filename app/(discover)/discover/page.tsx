@@ -668,11 +668,30 @@ function SearchPageContent() {
     return false; // No valid cache found
   }, [effectiveRole]);
 
+  // Generate profile URL with slug
+  const generateProfileUrl = useCallback((user: DiscoverUser) => {
+    if (user.fullName) {
+      const slug = user.fullName.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+      return `/profile/${slug}/${user.id}`;
+    }
+    // Fallback to old format if no fullName
+    return `/profile/${user.id}`;
+  }, []);
+
   // Handle profile view with caching
   const handleViewProfile = useCallback((userId: string) => {
     saveSearchState();
-    router.push(`/profile/${userId}`);
-  }, [saveSearchState, router]);
+    
+    // Find the user in the current results to get their fullName
+    const user = allUsers.find(u => u.id === userId);
+    if (user && user.fullName) {
+      const profileUrl = generateProfileUrl(user);
+      router.push(profileUrl);
+    } else {
+      // Fallback to old format if user not found or no fullName
+      router.push(`/profile/${userId}`);
+    }
+  }, [saveSearchState, router, allUsers, generateProfileUrl]);
 
   // Auto-load results when the page first loads
   useEffect(() => {
@@ -880,7 +899,7 @@ function SearchPageContent() {
           <div className="flex items-start gap-3">
             {/* Avatar - Clickable */}
             <a
-              href={`/profile/${user.id}`}
+              href={generateProfileUrl(user)}
               className="relative flex-shrink-0 cursor-pointer hover:opacity-80 transition-opacity block"
               onClick={(e) => {
                 e.preventDefault();
@@ -909,7 +928,7 @@ function SearchPageContent() {
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0 flex-1 space-y-1">
                   <a
-                    href={`/profile/${user.id}`}
+                    href={generateProfileUrl(user)}
                     className="font-semibold text-base text-card-foreground leading-tight break-words line-clamp-2 cursor-pointer hover:text-[#01ae79] transition-colors block"
                     onClick={(e) => {
                       e.preventDefault();
@@ -1040,7 +1059,7 @@ function SearchPageContent() {
               </div>
             ) : user.hasIncomingRequest ? (
               <a
-                href={`/profile/${user.id}`}
+                href={generateProfileUrl(user)}
                 className="w-full bg-amber-100 hover:bg-amber-200 text-amber-700 dark:bg-amber-900/30 dark:hover:bg-amber-900/40 dark:text-amber-400 border border-amber-200 dark:border-amber-700 shadow-sm hover:shadow-md transition-all duration-200 font-medium py-2 text-sm rounded-md flex items-center justify-center no-underline"
                 onClick={(e) => {
                   e.preventDefault();
@@ -1052,7 +1071,7 @@ function SearchPageContent() {
               </a>
             ) : (
               <a
-                href={`/profile/${user.id}`}
+                href={generateProfileUrl(user)}
                 className="w-full bg-[#01ae79] hover:bg-[#01ae79]/90 text-white border-0 shadow-sm hover:shadow-md transition-all duration-200 font-medium py-2 text-sm rounded-md flex items-center justify-center no-underline"
                 onClick={(e) => {
                   e.preventDefault();

@@ -250,7 +250,7 @@ export function SendOverChatDialog({
     const connectionName = connection?.name || 'there';
     
     // Create a pre-filled message with the profile link
-    const profileLink = `${window.location.origin}/profile/${profileToShare.id}`;
+    const profileLink = `${window.location.origin}/profile/${profileToShare.name?.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '') || 'user'}/${profileToShare.id}`;
     const preMessage = `Hi ${connectionName}! I wanted to share this profile with you: ${profileLink}`;
     
     // Encode the message for URL parameters
@@ -270,7 +270,7 @@ export function SendOverChatDialog({
     const connectionName = connection?.name || 'there';
     
     // Create a pre-filled message with the profile link
-    const profileLink = `${window.location.origin}/profile/${profileToShare.id}`;
+    const profileLink = `${window.location.origin}/profile/${profileToShare.name?.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '') || 'user'}/${profileToShare.id}`;
     const preMessage = `Hi ${connectionName}! I wanted to share this profile with you: ${profileLink}`;
     
     // Encode the message for URL parameters

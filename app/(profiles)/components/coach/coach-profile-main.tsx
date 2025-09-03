@@ -34,6 +34,7 @@ import { SendOverChatDialog } from "../shared/send-over-chat-dialog";
 import { useUser } from "@clerk/nextjs";
 import { useRoleView } from '@/hooks/use-role-view';
 import { getStudentClassificationDisplayName, StudentClassification } from '@/lib/sports-data';
+import { generateProfileSlug } from '@/lib/utils';
 
 // Social Media Section Component (same as athlete profile)
 const SocialMediaSection = memo(({ socialMedia, isOwnProfile, onEdit }: { 
@@ -421,7 +422,7 @@ export function CoachProfile({
         organizationLogo: profileData.organizationLogo === undefined ? null : profileData.organizationLogo
       };
       
-      const response = await fetch(`/api/profile/${userIdForApi}`, {
+      const response = await fetch(`/api/profile/${generateProfileSlug(profileData.fullName)}/${userIdForApi}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',

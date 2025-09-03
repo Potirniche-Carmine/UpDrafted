@@ -1042,7 +1042,7 @@ export default function MessagingPage() {
                       >
                         <ArrowLeft size={18} />
                       </Button>
-                      <Link href={`/profile/${activeConversation?.partnerId}`} className="relative cursor-pointer hover:opacity-80 transition-opacity">
+                      <Link href={`/profile/${activeConversation?.partnerName?.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '') || 'user'}/${activeConversation?.partnerId}`} className="relative cursor-pointer hover:opacity-80 transition-opacity">
                         <Avatar className="w-12 h-12 rounded-full object-cover ring-2 ring-[#01ae79]/20 dark:ring-[#01ae79]/30">
                           <AvatarImage src={getProfileImageUrl(activeConversation?.partnerImageUrl || null) || undefined} alt={activeConversation?.partnerName || "Profile picture"} className="object-cover" />
                           <AvatarFallback className="text-sm font-semibold bg-gradient-to-br from-[#01ae79]/10 to-[#01ae79]/20 text-[#01ae79]">
@@ -1053,7 +1053,7 @@ export default function MessagingPage() {
                       <div className="flex-1">
                         <div className="flex items-center justify-between">
                           <div className="flex items-center">
-                            <Link href={`/profile/${activeConversation?.partnerId}`} className="cursor-pointer hover:opacity-80 transition-opacity">
+                            <Link href={`/profile/${activeConversation?.partnerName?.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '') || 'user'}/${activeConversation?.partnerId}`} className="cursor-pointer hover:opacity-80 transition-opacity">
                               <h2 className="text-base font-semibold text-foreground">{activeConversation?.partnerName}</h2>
                             </Link>
                             <div className="ml-2 cursor-help flex items-center" title="Messages are encrypted. UpDrafted may access them only to monitor for safety violations such as harassment, hate speech, or spam.">

@@ -455,7 +455,7 @@ const UserCard: React.FC<UserCardProps> = ({ connection, onRemoveConnection }) =
         <CardContent className="p-3 sm:p-4 md:p-5">
           {/* Header Section with Date */}
           <Link 
-            href={`/profile/${otherUser.userId}`}
+            href={`/profile/${otherUser.fullName?.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '') || 'user'}/${otherUser.userId}`}
             className="block"
           >
             <div className="flex items-start justify-between mb-3 md:mb-4">
@@ -675,7 +675,7 @@ const PendingRequestCard: React.FC<PendingRequestCardProps> = ({ request, onAcce
         <CardContent className="p-3 sm:p-4 md:p-5">
           {/* Header Section with Date */}
           <Link 
-            href={`/profile/${otherUser.userId}`}
+            href={`/profile/${otherUser.fullName?.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '') || 'user'}/${otherUser.userId}`}
             className="block"
           >
             <div className="flex items-start justify-between mb-3 md:mb-4 gap-3">
@@ -913,7 +913,7 @@ const SentRequestCard: React.FC<SentRequestCardProps> = ({ request, onWithdraw, 
         <CardContent className="p-3 sm:p-4 md:p-5">
           {/* Header Section with Date */}
           <Link 
-            href={`/profile/${otherUser.userId}`}
+            href={`/profile/${otherUser.fullName?.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '') || 'user'}/${otherUser.userId}`}
             className="block"
           >
             <div className="flex items-start justify-between mb-3 md:mb-4 gap-3">

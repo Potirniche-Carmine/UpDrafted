@@ -297,6 +297,8 @@ async function handleGetNotifications(userId: string, body: GetNotificationsRequ
         } else if (notification.type === 'profileView') {
           // For profile view notifications, link to the viewer's profile
           if (metadata.actorUserId) {
+            // Note: We can't generate the slug here since we don't have the fullName
+            // The frontend will need to handle slug generation when displaying the link
             enhancedData = {
               ...enhancedData,
               link: `/profile/${metadata.actorUserId}`,
