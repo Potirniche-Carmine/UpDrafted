@@ -6,6 +6,7 @@ import { eq, desc, and } from 'drizzle-orm';
 import { profileOperations, notificationOperations } from '@/database/db-utils';
 import { withRateLimit } from '@/utils/security';
 import { createErrorResponse } from '@/utils/security';
+import { generateProfileUrl } from '@/lib/utils';
 
 type Operation = 'getNotifications' | 'markAsRead' | 'markAllAsRead' | 'getUnreadCount' | 'dismissAllNotifications';
 
@@ -296,13 +297,21 @@ async function handleGetNotifications(userId: string, body: GetNotificationsRequ
           };
         } else if (notification.type === 'profileView') {
           // For profile view notifications, link to the viewer's profile
-          if (metadata.actorUserId) {
-            // Note: We can't generate the slug here since we don't have the fullName
-            // The frontend will need to handle slug generation when displaying the link
-            enhancedData = {
-              ...enhancedData,
-              link: `/profile/${metadata.actorUserId}`,
-            };
+          if (metadata.actorUserId && typeof metadata.actorUserId === 'string') {
+            const actorInfo = actorProfilesMap.get(metadata.actorUserId);
+            if (actorInfo?.fullName) {
+              // Use the generateProfileUrl function to create the correct URL format
+              enhancedData = {
+                ...enhancedData,
+                link: generateProfileUrl(actorInfo.fullName, metadata.actorUserId),
+              };
+            } else {
+              // Fallback to old format if no fullName available
+              enhancedData = {
+                ...enhancedData,
+                link: `/profile/${metadata.actorUserId}`,
+              };
+            }
           }
         }
       }
