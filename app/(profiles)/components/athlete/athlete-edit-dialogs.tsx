@@ -270,10 +270,13 @@ interface AthleteEditDialogsProps {
   isOpen: boolean;
   dialogType: string | null;
   profileData: AthleteProfileData;
-  measurableIdToEdit?: string | null;
+  measurableIdToEdit: string | null;
   onClose: () => void;
   onSave: (updates: Partial<AthleteProfileData>) => void;
   selectedSport: string;
+  // Add verification status props
+  hasPendingVerification?: boolean;
+  hasPendingTransferPortalVerification?: boolean;
 }
 
 // Add mockCampExperience at the top of the file for use in the dialog - COMMENTED OUT FOR TESTING EMPTY STATE
@@ -326,7 +329,9 @@ export function AthleteEditDialogs({
   measurableIdToEdit,
   onClose,
   onSave,
-  selectedSport
+  selectedSport,
+  hasPendingVerification = false,
+  hasPendingTransferPortalVerification = false
 }: AthleteEditDialogsProps) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [editData, setEditData] = useState<Record<string, any>>({});
@@ -1000,6 +1005,11 @@ export function AthleteEditDialogs({
     onClose();
   };
 
+  // Check if fields should be locked due to pending verification
+  const shouldLockFields = () => {
+    return hasPendingVerification || hasPendingTransferPortalVerification;
+  };
+
   // Check if the current dialog can be saved
   const canSave = () => {
     // Delete dialogs don't use the save button
@@ -1009,6 +1019,11 @@ export function AthleteEditDialogs({
     
     // SECURITY: Prevent saving MaxPreps changes for verified users
     if (dialogType === 'maxpreps-verification' && profileData.isVerified && profileData.maxPrepsUrl) {
+      return false;
+    }
+    
+    // Prevent saving basic-info dialog when fields are locked due to pending verification
+    if (dialogType === 'basic-info' && shouldLockFields()) {
       return false;
     }
     
@@ -1224,16 +1239,29 @@ export function AthleteEditDialogs({
             </DialogHeader>
             <div className="space-y-6 max-h-[70vh] overflow-y-auto pr-2">
               <div className="space-y-2">
-                <Label htmlFor="edit-fullName">Full Name *</Label>
+                <Label htmlFor="edit-fullName" className={cn(
+                  "Full Name *",
+                  shouldLockFields() && "text-muted-foreground"
+                )}>
+                  {shouldLockFields() && <span className="text-xs text-muted-foreground block">(Locked during verification)</span>}
+                </Label>
                 <Input
                   id="edit-fullName"
                   value={editData.fullName || ''}
-                  onChange={(e) => handleFieldChange('fullName', e.target.value)}
-                  className={`h-11 w-full ${validationErrors.fullName ? 'border-red-500' : ''}`}
+                  onChange={(e) => {
+                    if (!shouldLockFields()) {
+                      handleFieldChange('fullName', e.target.value);
+                    }
+                  }}
+                  className={cn(
+                    "h-11 w-full",
+                    validationErrors.fullName ? 'border-red-500' : '',
+                    shouldLockFields() && "opacity-50 cursor-not-allowed bg-muted"
+                  )}
                   maxLength={FIELD_LIMITS.FULL_NAME}
                   autoComplete="off"
                   inputMode="text"
-                  
+                  disabled={shouldLockFields()}
                 />
                 {validationErrors.fullName && (
                   <p className="text-sm text-red-500">{validationErrors.fullName}</p>
@@ -1241,14 +1269,25 @@ export function AthleteEditDialogs({
               </div>
               
               <div className="space-y-2">
-                <Label htmlFor="edit-sport">Primary Sport *</Label>
+                <Label htmlFor="edit-sport" className={cn(
+                  "Primary Sport *",
+                  shouldLockFields() && "text-muted-foreground"
+                )}>
+                  {shouldLockFields() && <span className="text-xs text-muted-foreground block">(Locked during verification)</span>}
+                </Label>
                 <Select
                   value={String(editData.sport || '')}
                   onValueChange={(value) => {
-                    setEditData(prev => ({ ...prev, sport: value, positions: [] }));
+                    if (!shouldLockFields()) {
+                      setEditData(prev => ({ ...prev, sport: value, positions: [] }));
+                    }
                   }}
+                  disabled={shouldLockFields()}
                 >
-                  <SelectTrigger className="!h-11 w-full" id="edit-sport">
+                  <SelectTrigger className={cn(
+                    "!h-11 w-full",
+                    shouldLockFields() && "opacity-50 cursor-not-allowed bg-muted"
+                  )} id="edit-sport">
                     <SelectValue placeholder="Select sport" />
                   </SelectTrigger>
                   <SelectContent className="z-[70]">
@@ -1260,14 +1299,25 @@ export function AthleteEditDialogs({
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="edit-educationLevel">Education Level *</Label>
+                <Label htmlFor="edit-educationLevel" className={cn(
+                  "Education Level *",
+                  shouldLockFields() && "text-muted-foreground"
+                )}>
+                  {shouldLockFields() && <span className="text-xs text-muted-foreground block">(Locked during verification)</span>}
+                </Label>
                 <Select
                   value={String(editData.educationLevel || '')}
                   onValueChange={(value) => {
-                    setEditData(prev => ({ ...prev, educationLevel: value }));
+                    if (!shouldLockFields()) {
+                      setEditData(prev => ({ ...prev, educationLevel: value }));
+                    }
                   }}
+                  disabled={shouldLockFields()}
                 >
-                  <SelectTrigger className="!h-11 w-full" id="edit-educationLevel">
+                  <SelectTrigger className={cn(
+                    "!h-11 w-full",
+                    shouldLockFields() && "opacity-50 cursor-not-allowed bg-muted"
+                  )} id="edit-educationLevel">
                     <SelectValue placeholder="Select education level" />
                   </SelectTrigger>
                   <SelectContent className="z-[70]">
@@ -1281,14 +1331,27 @@ export function AthleteEditDialogs({
               {/* Team Level - Only show for high school students */}
               {editData.educationLevel === 'high_school' && (
                 <div className="space-y-4">
-                  <Label>Team Level</Label>
+                  <Label className={cn(
+                    "Team Level",
+                    shouldLockFields() && "text-muted-foreground"
+                  )}>
+                    {shouldLockFields() && <span className="text-xs text-muted-foreground block">(Locked during verification)</span>}
+                  </Label>
                   <div className="grid grid-cols-1 gap-3">
-                    <div className={`relative border-2 rounded-lg p-4 cursor-pointer transition-all ${
+                    <div className={cn(
+                      "relative border-2 rounded-lg p-4 transition-all",
                       editData.teamLevel && editData.teamLevel === 'varsity' 
                         ? 'border-orange-500 bg-orange-50 dark:bg-orange-950/20' 
-                        : 'border-border hover:border-orange-300'
-                    }`}
-                    onClick={() => setEditData(prev => ({ ...prev, teamLevel: 'varsity' }))}
+                        : 'border-border',
+                      shouldLockFields() 
+                        ? 'opacity-50 cursor-not-allowed' 
+                        : 'cursor-pointer hover:border-orange-300'
+                    )}
+                    onClick={() => {
+                      if (!shouldLockFields()) {
+                        setEditData(prev => ({ ...prev, teamLevel: 'varsity' }));
+                      }
+                    }}
                     >
                       <div className="flex items-center gap-3">
                         <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
@@ -1312,12 +1375,20 @@ export function AthleteEditDialogs({
                       </div>
                     </div>
 
-                    <div className={`relative border-2 rounded-lg p-4 cursor-pointer transition-all ${
+                    <div className={cn(
+                      "relative border-2 rounded-lg p-4 transition-all",
                       editData.teamLevel && editData.teamLevel === 'jv' 
                         ? 'border-blue-500 bg-blue-50 dark:bg-blue-950/20' 
-                        : 'border-border hover:border-blue-300'
-                    }`}
-                    onClick={() => setEditData(prev => ({ ...prev, teamLevel: 'jv' }))}
+                        : 'border-border',
+                      shouldLockFields() 
+                        ? 'opacity-50 cursor-not-allowed' 
+                        : 'cursor-pointer hover:border-blue-300'
+                    )}
+                    onClick={() => {
+                      if (!shouldLockFields()) {
+                        setEditData(prev => ({ ...prev, teamLevel: 'jv' }));
+                      }
+                    }}
                     >
                       <div className="flex items-center gap-3">
                         <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
@@ -1341,12 +1412,20 @@ export function AthleteEditDialogs({
                       </div>
                     </div>
 
-                    <div className={`relative border-2 rounded-lg p-4 cursor-pointer transition-all ${
+                    <div className={cn(
+                      "relative border-2 rounded-lg p-4 transition-all",
                       editData.teamLevel && editData.teamLevel === 'freshman' 
                         ? 'border-green-500 bg-green-50 dark:bg-green-950/20' 
-                        : 'border-border hover:border-green-300'
-                    }`}
-                    onClick={() => setEditData(prev => ({ ...prev, teamLevel: 'freshman' }))}
+                        : 'border-border',
+                      shouldLockFields() 
+                        ? 'opacity-50 cursor-not-allowed' 
+                        : 'cursor-pointer hover:border-green-300'
+                    )}
+                    onClick={() => {
+                      if (!shouldLockFields()) {
+                        setEditData(prev => ({ ...prev, teamLevel: 'freshman' }));
+                      }
+                    }}
                     >
                       <div className="flex items-center gap-3">
                         <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
@@ -1369,12 +1448,20 @@ export function AthleteEditDialogs({
                         </div>
                       </div>
                     </div>
-                    <div className={`relative border-2 rounded-lg p-4 cursor-pointer transition-all ${
+                    <div className={cn(
+                      "relative border-2 rounded-lg p-4 transition-all",
                       editData.teamLevel === 'none' 
                         ? 'border-gray-500 bg-gray-50 dark:bg-gray-950/20' 
-                        : 'border-border hover:border-gray-300'
-                    }`}
-                    onClick={() => setEditData(prev => ({ ...prev, teamLevel: 'none' }))}
+                        : 'border-border',
+                      shouldLockFields() 
+                        ? 'opacity-50 cursor-not-allowed' 
+                        : 'cursor-pointer hover:border-gray-300'
+                    )}
+                    onClick={() => {
+                      if (!shouldLockFields()) {
+                        setEditData(prev => ({ ...prev, teamLevel: 'none' }));
+                      }
+                    }}
                     >
                       <div className="flex items-center gap-3">
                         <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
@@ -1415,18 +1502,29 @@ export function AthleteEditDialogs({
               {editData.educationLevel !== 'high_school' && (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="edit-division">Division</Label>
+                    <Label htmlFor="edit-division" className={cn(
+                      "Division",
+                      shouldLockFields() && "text-muted-foreground"
+                    )}>
+                      {shouldLockFields() && <span className="text-xs text-muted-foreground block">(Locked during verification)</span>}
+                    </Label>
                     <Select
                       value={String(editData.division || '')}
                       onValueChange={(value) => {
-                        setEditData(prev => ({ 
-                          ...prev, 
-                          division: value,
-                          conference: '' 
-                        }));
+                        if (!shouldLockFields()) {
+                          setEditData(prev => ({ 
+                            ...prev, 
+                            division: value,
+                            conference: '' 
+                          }));
+                        }
                       }}
+                      disabled={shouldLockFields()}
                     >
-                      <SelectTrigger className="!h-11 w-full" id="edit-division">
+                      <SelectTrigger className={cn(
+                        "!h-11 w-full",
+                        shouldLockFields() && "opacity-50 cursor-not-allowed bg-muted"
+                      )} id="edit-division">
                         <SelectValue placeholder="Select division" />
                       </SelectTrigger>
                       <SelectContent className="z-[70]">
@@ -1440,15 +1538,25 @@ export function AthleteEditDialogs({
                   {/* Conference - Only show when division is selected and has conferences */}
                   {editData.division && divisionHasConferences(editData.division) && (
                     <div className="space-y-2">
-                      <Label htmlFor="edit-conference">Conference</Label>
+                      <Label htmlFor="edit-conference" className={cn(
+                        "Conference",
+                        shouldLockFields() && "text-muted-foreground"
+                      )}>
+                        {shouldLockFields() && <span className="text-xs text-muted-foreground block">(Locked during verification)</span>}
+                      </Label>
                       <ConferenceSelector
                         division={editData.division || ''}
                         value={editData.conference || ''}
-                        onValueChange={(value) => setEditData(prev => ({ ...prev, conference: value }))}
+                        onValueChange={(value) => {
+                          if (!shouldLockFields()) {
+                            setEditData(prev => ({ ...prev, conference: value }));
+                          }
+                        }}
                         placeholder="Select conference"
                         label=""
                         inDialog={true}
                         height="h-12"
+                        disabled={shouldLockFields()}
                       />
                     </div>
                   )}
@@ -1457,10 +1565,22 @@ export function AthleteEditDialogs({
 
               {/* Secondary Sports */}
               <div className="space-y-2">
-                <Label htmlFor="edit-secondarySports">Secondary Sports</Label>
+                <Label htmlFor="edit-secondarySports" className={cn(
+                  "Secondary Sports",
+                  shouldLockFields() && "text-muted-foreground"
+                )}>
+                  {shouldLockFields() && <span className="text-xs text-muted-foreground block">(Locked during verification)</span>}
+                </Label>
                 <div className="space-y-2">
-                  <Select onValueChange={addSecondarySport}>
-                    <SelectTrigger className="!h-11 w-full" id="edit-secondarySports">
+                  <Select onValueChange={(value) => {
+                    if (!shouldLockFields()) {
+                      addSecondarySport(value);
+                    }
+                  }} disabled={shouldLockFields()}>
+                    <SelectTrigger className={cn(
+                      "!h-11 w-full",
+                      shouldLockFields() && "opacity-50 cursor-not-allowed bg-muted"
+                    )} id="edit-secondarySports">
                       <SelectValue placeholder="Add secondary sport (optional)" />
                     </SelectTrigger>
                     <SelectContent className="z-[70]">
@@ -1479,7 +1599,12 @@ export function AthleteEditDialogs({
                             variant="ghost"
                             size="sm"
                             className="ml-1 h-4 w-4 p-0"
-                            onClick={() => removeSecondarySport(sport)}
+                            onClick={() => {
+                              if (!shouldLockFields()) {
+                                removeSecondarySport(sport);
+                              }
+                            }}
+                            disabled={shouldLockFields()}
                           >
                             <X className="h-3 w-3" />
                           </Button>
@@ -1493,16 +1618,31 @@ export function AthleteEditDialogs({
               {/* Positions */}
               {availablePositions.length > 0 && (
                 <div className="space-y-2">
-                  <Label>Positions *</Label>
+                  <Label className={cn(
+                    "Positions *",
+                    shouldLockFields() && "text-muted-foreground"
+                  )}>
+                    {shouldLockFields() && <span className="text-xs text-muted-foreground block">(Locked during verification)</span>}
+                  </Label>
                   <div className="grid grid-cols-2 gap-2 max-h-32 overflow-y-auto">
                     {availablePositions.map((position, index) => (
                       <div key={position} className="flex items-center space-x-2">
                         <Checkbox
                           id={`edit-position-${index}`}
                           checked={(editData.positions as string[])?.includes(position) || false}
-                          onCheckedChange={() => togglePosition(position)}
+                          onCheckedChange={() => {
+                            if (!shouldLockFields()) {
+                              togglePosition(position);
+                            }
+                          }}
+                          disabled={shouldLockFields()}
                         />
-                        <Label htmlFor={`edit-position-${index}`} className="text-sm">{position}</Label>
+                        <Label htmlFor={`edit-position-${index}`} className={cn(
+                          "text-sm",
+                          shouldLockFields() ? "cursor-not-allowed text-muted-foreground" : "cursor-pointer"
+                        )}>
+                          {position}
+                        </Label>
                       </div>
                     ))}
                   </div>
@@ -1511,12 +1651,25 @@ export function AthleteEditDialogs({
 
               {/* Country select field */}
               <div className="space-y-2">
-                <Label htmlFor="edit-country">Country *</Label>
+                <Label htmlFor="edit-country" className={cn(
+                  "Country *",
+                  shouldLockFields() && "text-muted-foreground"
+                )}>
+                  {shouldLockFields() && <span className="text-xs text-muted-foreground block">(Locked during verification)</span>}
+                </Label>
                 <Select
                   value={String(editData.country || '')}
-                  onValueChange={(value) => setEditData(prev => ({ ...prev, country: value }))}
+                  onValueChange={(value) => {
+                    if (!shouldLockFields()) {
+                      setEditData(prev => ({ ...prev, country: value }));
+                    }
+                  }}
+                  disabled={shouldLockFields()}
                 >
-                  <SelectTrigger className="!h-11 w-full" id="edit-country">
+                  <SelectTrigger className={cn(
+                    "!h-11 w-full",
+                    shouldLockFields() && "opacity-50 cursor-not-allowed bg-muted"
+                  )} id="edit-country">
                     <SelectValue placeholder="Select country" />
                   </SelectTrigger>
                   <SelectContent className="z-[70]">
@@ -1529,17 +1682,30 @@ export function AthleteEditDialogs({
               
               <div className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="edit-city">City *</Label>
+                  <Label htmlFor="edit-city" className={cn(
+                    "City *",
+                    shouldLockFields() && "text-muted-foreground"
+                  )}>
+                    {shouldLockFields() && <span className="text-xs text-muted-foreground block">(Locked during verification)</span>}
+                  </Label>
                   <Input
                     id="edit-city"
                     placeholder="Los Angeles"
                     value={editData.city || ''}
-                    onChange={(e) => handleFieldChange('city', e.target.value)}
-                    className={`h-11 w-full ${validationErrors.city ? 'border-red-500' : ''}`}
+                    onChange={(e) => {
+                      if (!shouldLockFields()) {
+                        handleFieldChange('city', e.target.value);
+                      }
+                    }}
+                    className={cn(
+                      "h-11 w-full",
+                      validationErrors.city ? 'border-red-500' : '',
+                      shouldLockFields() && "opacity-50 cursor-not-allowed bg-muted"
+                    )}
                     maxLength={FIELD_LIMITS.CITY}
                     autoComplete="off"
                     inputMode="text"
-                    
+                    disabled={shouldLockFields()}
                   />
                   {validationErrors.city && (
                     <p className="text-sm text-red-500">{validationErrors.city}</p>
@@ -1548,12 +1714,25 @@ export function AthleteEditDialogs({
                 {/* Only show State * if country is United States or not selected */}
                 {(!editData.country || editData.country === 'United States') && (
                   <div className="space-y-2">
-                    <Label htmlFor="edit-state">State *</Label>
+                    <Label htmlFor="edit-state" className={cn(
+                      "State *",
+                      shouldLockFields() && "text-muted-foreground"
+                    )}>
+                      {shouldLockFields() && <span className="text-xs text-muted-foreground block">(Locked during verification)</span>}
+                    </Label>
                     <Select
                       value={String(editData.state || '')}
-                      onValueChange={(value) => setEditData(prev => ({ ...prev, state: value }))}
+                      onValueChange={(value) => {
+                        if (!shouldLockFields()) {
+                          setEditData(prev => ({ ...prev, state: value }));
+                        }
+                      }}
+                      disabled={shouldLockFields()}
                     >
-                      <SelectTrigger className="!h-11 w-full" id="edit-state">
+                      <SelectTrigger className={cn(
+                        "!h-11 w-full",
+                        shouldLockFields() && "opacity-50 cursor-not-allowed bg-muted"
+                      )} id="edit-state">
                         <SelectValue placeholder="Select state" />
                       </SelectTrigger>
                       <SelectContent className="z-[70]">
@@ -1567,15 +1746,27 @@ export function AthleteEditDialogs({
               </div>
 
               <div className="space-y-2">
+                <Label className={cn(
+                  "text-sm font-medium",
+                  shouldLockFields() && "text-muted-foreground"
+                )}>
+                  School/Organization *
+                  {shouldLockFields() && <span className="text-xs text-muted-foreground block">(Locked during verification)</span>}
+                </Label>
                 <SchoolSelector
                   value={editData.organizationName || ''}
-                  onValueChange={(value) => handleFieldChange('organizationName', value)}
+                  onValueChange={(value) => {
+                    if (!shouldLockFields()) {
+                      handleFieldChange('organizationName', value);
+                    }
+                  }}
                   placeholder="Start typing school name..."
-                  label="School/Organization"
+                  label=""
                   required={true}
                   labelClassName="text-sm font-medium"
-                  description="Start typing to search - if your school isn't found, just type the full name"
+                  description={shouldLockFields() ? "This field is locked during verification" : "Start typing to search - if your school isn't found, just type the full name"}
                   educationLevel={editData.educationLevel as EducationLevel}
+                  disabled={shouldLockFields()}
                 />
                 {validationErrors.organizationName && (
                   <p className="text-sm text-red-500">{validationErrors.organizationName}</p>
@@ -1583,12 +1774,25 @@ export function AthleteEditDialogs({
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="edit-graduationYear">Graduation Year *</Label>
+                <Label htmlFor="edit-graduationYear" className={cn(
+                  "Graduation Year *",
+                  shouldLockFields() && "text-muted-foreground"
+                )}>
+                  {shouldLockFields() && <span className="text-xs text-muted-foreground block">(Locked during verification)</span>}
+                </Label>
                 <Select
                   value={editData.graduationYear?.toString() || ''}
-                  onValueChange={(value) => setEditData(prev => ({ ...prev, graduationYear: parseInt(value) }))}
+                  onValueChange={(value) => {
+                    if (!shouldLockFields()) {
+                      setEditData(prev => ({ ...prev, graduationYear: parseInt(value) }));
+                    }
+                  }}
+                  disabled={shouldLockFields()}
                 >
-                  <SelectTrigger className="!h-11 w-full" id="edit-graduationYear">
+                  <SelectTrigger className={cn(
+                    "!h-11 w-full",
+                    shouldLockFields() && "opacity-50 cursor-not-allowed bg-muted"
+                  )} id="edit-graduationYear">
                     <SelectValue placeholder="Select year" />
                   </SelectTrigger>
                   <SelectContent className="z-[70]">
@@ -1601,13 +1805,27 @@ export function AthleteEditDialogs({
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label>Height *</Label>
+                  <Label className={cn(
+                    "Height *",
+                    shouldLockFields() && "text-muted-foreground"
+                  )}>
+                    {shouldLockFields() && <span className="text-xs text-muted-foreground block">(Locked during verification)</span>}
+                  </Label>
                   <div className="flex gap-2">
                     <Select
                       value={editData.heightFeet as string || ''}
-                      onValueChange={(value) => setEditData(prev => ({ ...prev, heightFeet: value }))}
+                      onValueChange={(value) => {
+                        if (!shouldLockFields()) {
+                          setEditData(prev => ({ ...prev, heightFeet: value }));
+                        }
+                      }}
+                      disabled={shouldLockFields()}
                     >
-                      <SelectTrigger className={`!h-11 ${!editData.heightFeet ? 'border-red-300' : ''}`}>
+                      <SelectTrigger className={cn(
+                        "!h-11",
+                        !editData.heightFeet ? 'border-red-300' : '',
+                        shouldLockFields() && "opacity-50 cursor-not-allowed bg-muted"
+                      )}>
                         <SelectValue placeholder="Feet" />
                       </SelectTrigger>
                       <SelectContent className="z-[70]">
@@ -1618,9 +1836,18 @@ export function AthleteEditDialogs({
                     </Select>
                     <Select
                       value={editData.heightInches as string || ''}
-                      onValueChange={(value) => setEditData(prev => ({ ...prev, heightInches: value }))}
+                      onValueChange={(value) => {
+                        if (!shouldLockFields()) {
+                          setEditData(prev => ({ ...prev, heightInches: value }));
+                        }
+                      }}
+                      disabled={shouldLockFields()}
                     >
-                      <SelectTrigger className={`!h-11 ${!editData.heightInches ? 'border-red-300' : ''}`}>
+                      <SelectTrigger className={cn(
+                        "!h-11",
+                        !editData.heightInches ? 'border-red-300' : '',
+                        shouldLockFields() && "opacity-50 cursor-not-allowed bg-muted"
+                      )}>
                         <SelectValue placeholder="In" />
                       </SelectTrigger>
                       <SelectContent className="z-[70]">
@@ -1635,16 +1862,29 @@ export function AthleteEditDialogs({
                   )}
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="edit-weight">Weight *</Label>
+                  <Label htmlFor="edit-weight" className={cn(
+                    "Weight *",
+                    shouldLockFields() && "text-muted-foreground"
+                  )}>
+                    {shouldLockFields() && <span className="text-xs text-muted-foreground block">(Locked during verification)</span>}
+                  </Label>
                   <Input
                     id="edit-weight"
                     placeholder="185"
                     value={editData.weight || ''}
-                    onChange={(e) => handleFieldChange('weight', e.target.value)}
-                    className={`h-11 w-full ${validationErrors.weight ? 'border-red-500' : ''}`}
+                    onChange={(e) => {
+                      if (!shouldLockFields()) {
+                        handleFieldChange('weight', e.target.value);
+                      }
+                    }}
+                    className={cn(
+                      "h-11 w-full",
+                      validationErrors.weight ? 'border-red-500' : '',
+                      shouldLockFields() && "opacity-50 cursor-not-allowed bg-muted"
+                    )}
                     autoComplete="off"
                     inputMode="numeric"
-                    
+                    disabled={shouldLockFields()}
                   />
                   {validationErrors.weight && (
                     <p className="text-sm text-red-500">{validationErrors.weight}</p>
@@ -3137,9 +3377,15 @@ export function AthleteEditDialogs({
                 <Button 
                   onClick={handleSave}
                   disabled={!canSave() || isUploading}
+                  className={cn(
+                    dialogType === 'basic-info' && shouldLockFields() && "opacity-50 cursor-not-allowed"
+                  )}
                 >
                   <Save className="w-4 h-4 mr-2" />
                   Save Changes
+                  {dialogType === 'basic-info' && shouldLockFields() && (
+                    <span className="text-xs text-muted-foreground ml-2">(Locked)</span>
+                  )}
                 </Button>
               </DialogFooter>
             ) : null

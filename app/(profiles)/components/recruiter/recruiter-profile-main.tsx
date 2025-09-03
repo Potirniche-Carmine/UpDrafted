@@ -1485,6 +1485,7 @@ export function RecruiterProfile({
         profileData={profileData}
         selectedSport={selectedSport}
         onClose={() => setEditDialogOpen(null)}
+        hasPendingVerification={hasPendingVerification}
         onSave={(updates: Partial<RecruiterProfileData>) => {
           try {
             updateProfileData(updates);

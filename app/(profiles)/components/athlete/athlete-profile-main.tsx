@@ -1144,6 +1144,8 @@ export function AthleteProfile({
           }
         }}
         selectedSport={selectedSport}
+        hasPendingVerification={hasPendingVerification}
+        hasPendingTransferPortalVerification={hasPendingTransferPortalVerification}
       />
 
       {/* Confirmation Dialog */}

@@ -790,6 +790,7 @@ export function CoachProfile({
         dialogType={editDialogOpen}
         profileData={profileData}
         onClose={() => setEditDialogOpen(null)}
+        hasPendingVerification={hasPendingVerification}
         onSave={(updates: Partial<CoachProfileData>) => {
           try {
             updateProfileData(updates);
