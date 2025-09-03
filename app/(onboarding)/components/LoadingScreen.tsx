@@ -84,14 +84,14 @@ export function LoadingScreen({ role }: LoadingScreenProps) {
         clearTimeout(fallbackTimer);
       };
     }
-  }, [completedSteps.length, router, user?.id, isRedirecting]);
+  }, [completedSteps.length, router, user?.id, user?.fullName, user?.firstName, user?.lastName, isRedirecting]);
 
   const handleManualRedirect = async () => {
     if (user?.id && !isRedirecting) {
       setIsRedirecting(true);
+      const fullName = user?.fullName || `${user?.firstName} ${user?.lastName}`;
       try {
         // Generate profile URL with slug
-        const fullName = user?.fullName || `${user?.firstName} ${user?.lastName}`;
         const profileUrl = fullName ? generateProfileUrl(fullName, user.id) : `/profile/${user.id}`;
         
         await router.push(profileUrl);

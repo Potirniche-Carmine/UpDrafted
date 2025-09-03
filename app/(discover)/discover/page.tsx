@@ -668,6 +668,16 @@ function SearchPageContent() {
     return false; // No valid cache found
   }, [effectiveRole]);
 
+  // Generate profile URL with slug
+  const generateProfileUrl = useCallback((user: DiscoverUser) => {
+    if (user.fullName) {
+      const slug = user.fullName.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+      return `/profile/${slug}/${user.id}`;
+    }
+    // Fallback to old format if no fullName
+    return `/profile/${user.id}`;
+  }, []);
+
   // Handle profile view with caching
   const handleViewProfile = useCallback((userId: string) => {
     saveSearchState();
@@ -799,16 +809,6 @@ function SearchPageContent() {
     const baseUrl = process.env.NEXT_PUBLIC_R2_PUBLIC_URL || 'https://pub-19c0754937db426497ca014f0e2a297c.r2.dev';
     return `${baseUrl}/${profileImage}`;
   };
-
-  // Generate profile URL with slug
-  const generateProfileUrl = useCallback((user: DiscoverUser) => {
-    if (user.fullName) {
-      const slug = user.fullName.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
-      return `/profile/${slug}/${user.id}`;
-    }
-    // Fallback to old format if no fullName
-    return `/profile/${user.id}`;
-  }, []);
 
   // Helper to format education level consistently  
   const formatEducationLevel = (educationLevel?: string) => {
