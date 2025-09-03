@@ -94,6 +94,11 @@ interface ProfileApiResponse {
   adminViewingRole?: string;
 }
 
+// New wrapper component that only loads after authentication passes
+function ProfileContentWrapper({ profileId, slug }: { profileId: string; slug: string | null }) {
+  return <ProfileContent profileId={profileId} slug={slug} />;
+}
+
 export default function ProfilePage({ params }: ProfilePageProps) {
   const [profileId, setProfileId] = useState<string | null>(null);
   const [slug, setSlug] = useState<string | null>(null);
@@ -126,11 +131,6 @@ export default function ProfilePage({ params }: ProfilePageProps) {
       <ProfileContentWrapper profileId={profileId} slug={slug} />
     </AuthWrapper>
   );
-}
-
-// New wrapper component that only loads after authentication passes
-function ProfileContentWrapper({ profileId, slug }: { profileId: string; slug: string | null }) {
-  return <ProfileContent profileId={profileId} slug={slug} />;
 }
 
 function ProfileContent({ profileId, slug }: { profileId: string; slug: string | null }) {

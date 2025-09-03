@@ -43,7 +43,7 @@ export function useProfileNavigation(): UseProfileNavigationReturn {
       if (userId) {
         // If navigating to another user's profile, we need to fetch their profile data
         try {
-          const response = await fetch(`/api/profile/${targetUserId}`);
+          const response = await fetch(`/api/profile?userId=${targetUserId}`);
           if (response.ok) {
             const profileData = await response.json();
             if (profileData.profile?.fullName) {
@@ -68,7 +68,7 @@ export function useProfileNavigation(): UseProfileNavigationReturn {
         } else {
           // Fallback: fetch own profile data
           try {
-            const response = await fetch(`/api/profile/${targetUserId}`);
+            const response = await fetch(`/api/profile?userId=${targetUserId}`);
             if (response.ok) {
               const profileData = await response.json();
               if (profileData.profile?.fullName) {
