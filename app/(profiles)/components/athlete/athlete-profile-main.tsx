@@ -32,6 +32,7 @@ import { ConnectionDialog } from "../shared/connection-dialog";
 import { SendOverChatDialog } from "../shared/send-over-chat-dialog";
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
 import { useUser } from "@clerk/nextjs";
+import { generateProfileSlug } from '@/lib/utils';
 
 // Memoize heavy components
 const MeasurablesSection = memo(({ measurables, allSports, selectedSport, onSportChange, isOwnProfile, onEditSection }: { 
@@ -602,7 +603,7 @@ export function AthleteProfile({
         profileImage: safeProfileData.profileImage === undefined ? null : safeProfileData.profileImage
       };
       
-      const response = await fetch(`/api/profile/${userIdForApi}`, {
+      const response = await fetch(`/api/profile/${generateProfileSlug(profileData.fullName)}/${userIdForApi}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',

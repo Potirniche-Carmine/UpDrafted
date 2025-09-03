@@ -374,7 +374,7 @@ function ActivityLogContent() {
                       {getTimeAgo(activity.createdAt)}
                     </p>
                     <Link 
-                      href={`/profile/${activity.viewer.id}`}
+                      href={`/profile/${activity.viewer.name?.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '') || 'user'}/${activity.viewer.id}`}
                       className="text-xs text-[#01ae79] hover:underline"
                     >
                       View Profile

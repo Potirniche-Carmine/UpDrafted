@@ -1,16 +1,16 @@
-"use client";
+ "use client";
 
 import { notFound } from 'next/navigation';
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { useAuth } from '@clerk/nextjs';
-import { AthleteProfileWrapper } from '../../components/athlete-profile-wrapper';
-import { CoachProfileWrapper } from '../../components/coach-profile-wrapper';
-import { RecruiterProfileWrapper } from '../../components/recruiter-profile-wrapper';
-import { AuthWrapper } from '../../../../components/auth-wrapper';
-import { navigationStateManager } from '../../lib/navigation-state';
-import type { AthleteProfileData } from '../../components/athlete-profile';
-import type { CoachProfileData } from '../../lib/base-profile-types';
-import type { RecruiterProfileData } from '../../components/recruiter/recruiter-profile-types';
+import { AthleteProfileWrapper } from '../../../components/athlete-profile-wrapper';
+import { CoachProfileWrapper } from '../../../components/coach-profile-wrapper';
+import { RecruiterProfileWrapper } from '../../../components/recruiter-profile-wrapper';
+import { AuthWrapper } from '../../../../../components/auth-wrapper';
+import { navigationStateManager } from '../../../lib/navigation-state';
+import type { AthleteProfileData } from '../../../components/athlete-profile';
+import type { CoachProfileData } from '../../../lib/base-profile-types';
+import type { RecruiterProfileData } from '../../../components/recruiter/recruiter-profile-types';
 
 // Global cache that persists across component mounts/unmounts
 const globalProfileCache = new Map<string, { 
@@ -62,6 +62,7 @@ const setCachedProfile = (profileId: string, data: ProfileApiResponse) => {
 
 interface ProfilePageProps {
   params: Promise<{
+    slug: string;
     id: string;
   }>;
 }
@@ -95,6 +96,7 @@ interface ProfileApiResponse {
 
 export default function ProfilePage({ params }: ProfilePageProps) {
   const [profileId, setProfileId] = useState<string | null>(null);
+  const [slug, setSlug] = useState<string | null>(null);
   const [paramsReady, setParamsReady] = useState(false);
 
   useEffect(() => {
@@ -102,6 +104,7 @@ export default function ProfilePage({ params }: ProfilePageProps) {
       try {
         const resolvedParams = await params;
         setProfileId(resolvedParams.id);
+        setSlug(resolvedParams.slug);
         setParamsReady(true);
       } catch (error) {
         console.error('Error resolving params:', error);
@@ -120,17 +123,17 @@ export default function ProfilePage({ params }: ProfilePageProps) {
     <AuthWrapper 
       requireAuth={true}
     >
-      <ProfileContentWrapper profileId={profileId} />
+      <ProfileContentWrapper profileId={profileId} slug={slug} />
     </AuthWrapper>
   );
 }
 
 // New wrapper component that only loads after authentication passes
-function ProfileContentWrapper({ profileId }: { profileId: string }) {
-  return <ProfileContent profileId={profileId} />;
+function ProfileContentWrapper({ profileId, slug }: { profileId: string; slug: string | null }) {
+  return <ProfileContent profileId={profileId} slug={slug} />;
 }
 
-function ProfileContent({ profileId }: { profileId: string }) {
+function ProfileContent({ profileId, slug }: { profileId: string; slug: string | null }) {
   const { getToken } = useAuth();
   const [profileData, setProfileData] = useState<ProfileApiResponse | null>(null);
   const [loading, setLoading] = useState(true);
@@ -183,7 +186,7 @@ function ProfileContent({ profileId }: { profileId: string }) {
         throw new Error('No authentication token available after multiple attempts');
       }
 
-      const response = await fetch(`/api/profile/${profileId}`, {
+      const response = await fetch(`/api/profile/${slug}/${profileId}`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -255,7 +258,7 @@ function ProfileContent({ profileId }: { profileId: string }) {
     } finally {
       setLoading(false);
     }
-  }, [profileId, getToken]);
+  }, [profileId, slug, getToken]);
 
   useEffect(() => {
     // Get navigation source from the global state manager

@@ -16,6 +16,7 @@ export const runtime = 'nodejs';
 
 interface ProfilePageParams {
   params: Promise<{
+    slug: string;
     id: string;
   }>;
 }
@@ -376,7 +377,7 @@ export async function GET(
     if (!rateLimitResult.success) {
       return rateLimitResult.response;
     }
-    const { id: profileUserId } = await params;
+    const { slug, id: profileUserId } = await params;
 
     // Validate the profile user ID format
     if (!profileUserId || typeof profileUserId !== 'string' || profileUserId.trim() === '') {
@@ -390,6 +391,22 @@ export async function GET(
     if (!/^[a-zA-Z0-9_-]+$/.test(profileUserId)) {
       return NextResponse.json(
         { error: 'Invalid user ID format' },
+        { status: 400 }
+      );
+    }
+
+    // Validate the slug format
+    if (!slug || typeof slug !== 'string' || slug.trim() === '') {
+      return NextResponse.json(
+        { error: 'Invalid slug' },
+        { status: 400 }
+      );
+    }
+
+    // Prevent potential injection attacks by validating the slug format
+    if (!/^[a-zA-Z0-9\s-]+$/.test(slug)) {
+      return NextResponse.json(
+        { error: 'Invalid slug format' },
         { status: 400 }
       );
     }
@@ -785,6 +802,26 @@ export async function GET(
     }
 
     if (!profileData) {
+      return NextResponse.json(
+        { error: 'Profile not found' },
+        { status: 404 }
+      );
+    }
+
+    // Validate that the slug matches the profile's full name
+    const profileFullName = profileData.fullName;
+    if (!profileFullName) {
+      return NextResponse.json(
+        { error: 'Profile name not found' },
+        { status: 500 }
+      );
+    }
+
+    // Create a slug from the full name for comparison
+    const expectedSlug = profileFullName.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+    const providedSlug = slug.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+    
+    if (expectedSlug !== providedSlug) {
       return NextResponse.json(
         { error: 'Profile not found' },
         { status: 404 }

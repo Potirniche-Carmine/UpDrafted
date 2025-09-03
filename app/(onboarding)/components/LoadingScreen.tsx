@@ -7,6 +7,7 @@ import { Loader2, CheckCircle, User, Shield, Sparkles } from "lucide-react";
 import { UserRole } from "../lib/types";
 import { useRouter } from "next/navigation";
 import { useUser } from "@clerk/nextjs";
+import { generateProfileUrl } from "@/lib/utils";
 
 interface LoadingScreenProps {
   role: UserRole;
@@ -57,8 +58,12 @@ export function LoadingScreen({ role }: LoadingScreenProps) {
         if (user?.id && !isRedirecting) {
           setIsRedirecting(true);
           try {
+            // Generate profile URL with slug
+            const fullName = user?.fullName || `${user?.firstName} ${user?.lastName}`;
+            const profileUrl = fullName ? generateProfileUrl(fullName, user.id) : `/profile/${user.id}`;
+            
             // Direct navigation to profile - avoid dashboard
-            await router.push(`/profile/${user.id}`);
+            await router.push(profileUrl);
           } catch (error) {
             console.error('Auto-redirect failed:', error);
             setShowFallbackButton(true);
@@ -85,11 +90,16 @@ export function LoadingScreen({ role }: LoadingScreenProps) {
     if (user?.id && !isRedirecting) {
       setIsRedirecting(true);
       try {
-        await router.push(`/profile/${user.id}`);
+        // Generate profile URL with slug
+        const fullName = user?.fullName || `${user?.firstName} ${user?.lastName}`;
+        const profileUrl = fullName ? generateProfileUrl(fullName, user.id) : `/profile/${user.id}`;
+        
+        await router.push(profileUrl);
       } catch (error) {
         console.error('Manual redirect failed:', error);
         // Fallback to window.location if router fails
-        window.location.href = `/profile/${user.id}`;
+        const fallbackUrl = fullName ? generateProfileUrl(fullName, user.id) : `/profile/${user.id}`;
+        window.location.href = fallbackUrl;
       }
     }
   };
