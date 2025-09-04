@@ -921,11 +921,11 @@ function SearchPageContent() {
                    <Shield className="h-3 w-3 text-white" />
                  </div>
                )}
-               {!user.isVerified && user.role === 'coach' && (
-                 <div className="absolute -bottom-1 -right-1 bg-[#f59e0b] rounded-full p-1 border-2 border-background">
-                   <Shield className="h-3 w-3 text-white" />
-                 </div>
-               )}
+              {!user.isVerified && (
+                <div className="absolute -bottom-1 -right-1 bg-[#f59e0b] rounded-full p-1 border-2 border-background">
+                  <Shield className="h-3 w-3 text-white" />
+                </div>
+              )}
             </a>
 
             {/* Name, Organization and Badge */}
