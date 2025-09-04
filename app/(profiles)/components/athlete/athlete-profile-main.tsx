@@ -555,7 +555,7 @@ export function AthleteProfile({
   };
 
   const checkNameSave = (userIdForApi: string, startTime: number) => {
-    const oldFullName = originalFullName; // Use the stored original name
+        const oldFullName = originalFullName; // Use the stored original name
         const newFullName = safeProfileData.fullName; // Use the form data, not the API response
         const hasNameChanged = oldFullName !== newFullName;
 
@@ -654,7 +654,6 @@ export function AthleteProfile({
       const result = await response.json();
       if (result.success) {
         // Check if we should show verification dialog after successful save
-        const savedProfile = result.data;
 
         // Remove beforeunload listener to prevent popup during reload
         if (beforeUnloadHandlerRef.current) {
