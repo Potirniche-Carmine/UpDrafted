@@ -916,11 +916,16 @@ function SearchPageContent() {
                   {user.fullName ? user.fullName.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() : 'UN'}
                 </AvatarFallback>
               </Avatar>
-              {user.isVerified && (
-                <div className="absolute -bottom-1 -right-1 bg-[#01ae79] rounded-full p-1 border-2 border-background">
-                  <Shield className="h-3 w-3 text-white" />
-                </div>
-              )}
+                {user.isVerified && (
+                 <div className="absolute -bottom-1 -right-1 bg-[#01ae79] rounded-full p-1 border-2 border-background">
+                   <Shield className="h-3 w-3 text-white" />
+                 </div>
+               )}
+               {!user.isVerified && user.role === 'coach' && (
+                 <div className="absolute -bottom-1 -right-1 bg-[#f59e0b] rounded-full p-1 border-2 border-background">
+                   <Shield className="h-3 w-3 text-white" />
+                 </div>
+               )}
             </a>
 
             {/* Name, Organization and Badge */}
