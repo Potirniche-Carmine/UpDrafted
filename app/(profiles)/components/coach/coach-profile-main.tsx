@@ -37,6 +37,7 @@ import { useRoleView } from '@/hooks/use-role-view';
 import { getStudentClassificationDisplayName, StudentClassification } from '@/lib/sports-data';
 import { generateProfileSlug, generateProfileUrl } from '@/lib/utils';
 import { useRouter } from 'next/navigation';
+import { showUnverifiedAccountWarning } from '@/utils/toast-helpers';
 
 // Social Media Section Component (same as athlete profile)
 const SocialMediaSection = memo(({ socialMedia, isOwnProfile, onEdit }: { 
@@ -564,13 +565,8 @@ export function CoachProfile({
 
   const handleConnectClick = () => {
     if (canConnect && currentConnectionStatus === "none") {
-      if (!profileData.isVerified) {
-        toast.warning(
-          "Unverified Account",
-          "This is an unverified account. Make sure to only trust verified profiles, never share personal information, and be cautious of impersonators.",
-          7000
-        );
-      }
+      // Show unverified warning once on click
+      showUnverifiedAccountWarning(toast, !!profileData.isVerified);
       setConnectionDialogOpen(true);
     }
   };
