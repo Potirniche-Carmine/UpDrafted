@@ -388,8 +388,35 @@ function SearchPageContent() {
     return 'all'; // Athletes default to 'all'
   };
 
+  // Helper function to get a valid tab with multiple fallbacks
+  const getValidTab = useCallback((userRole: string, urlTab?: string | null): TabValue => {
+    const availableTabs = getAvailableTabs(userRole);
+    const availableTabValues = availableTabs.map(tab => tab.value);
+    
+    // First, try the URL tab if it's valid
+    if (urlTab && availableTabValues.includes(urlTab as TabValue)) {
+      return urlTab as TabValue;
+    }
+    
+    // Then try the default tab for the role
+    const defaultTab = getDefaultTab(userRole);
+    if (availableTabValues.includes(defaultTab)) {
+      return defaultTab;
+    }
+    
+    // Finally, fallback to the first available tab
+    const fallbackTab = availableTabValues[0] || 'all';
+    
+    // Log warning if we had to use fallback (for debugging)
+    if (urlTab && !availableTabValues.includes(urlTab as TabValue)) {
+      console.warn(`Invalid tab "${urlTab}" for role "${userRole}". Using fallback: "${fallbackTab}"`);
+    }
+    
+    return fallbackTab;
+  }, []); // No dependencies since getAvailableTabs and getDefaultTab are pure functions
+
   const [activeTab, setActiveTab] = useState<TabValue>(
-    searchParams?.get('tab') as TabValue || getDefaultTab(effectiveRole)
+    getValidTab(effectiveRole, searchParams?.get('tab'))
   );
 
   // Filter states
@@ -657,7 +684,7 @@ function SearchPageContent() {
           setSelectedConferences(parsed.selectedConferences || []);
           setMinHeight(parsed.minHeight || 60);
           setMinWeight(parsed.minWeight || 100);
-          setActiveTab(parsed.activeTab || getDefaultTab(effectiveRole));
+          setActiveTab(getValidTab(effectiveRole, parsed.activeTab));
           setHasSearched(parsed.hasSearched || false);
           return true; // Successfully loaded cache, but need to search fresh
         }
@@ -666,7 +693,7 @@ function SearchPageContent() {
       console.warn('Failed to load search state from cache:', error);
     }
     return false; // No valid cache found
-  }, [effectiveRole]);
+  }, [effectiveRole, getValidTab]);
 
   // Generate profile URL with slug
   const generateProfileUrl = useCallback((user: DiscoverUser) => {
@@ -706,6 +733,16 @@ function SearchPageContent() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [effectiveRole]); // Only depend on effectiveRole to prevent multiple triggers
+
+  // Ensure activeTab is always valid when role changes
+  useEffect(() => {
+    if (effectiveRole) {
+      const validTab = getValidTab(effectiveRole, activeTab);
+      if (validTab !== activeTab) {
+        setActiveTab(validTab);
+      }
+    }
+  }, [effectiveRole, activeTab, getValidTab]);
 
   // Show discover button when filters change (only if filters are applied)
   useEffect(() => {
@@ -1525,7 +1562,10 @@ function SearchPageContent() {
           {/* Main Content */}
           <div className="flex-1">
             {/* Tabs */}
-            <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as TabValue)}>
+            <Tabs value={activeTab} onValueChange={(value) => {
+              const validTab = getValidTab(effectiveRole, value);
+              setActiveTab(validTab);
+            }}>
               <TabsList className="grid w-full mb-6 bg-card border border-border" style={{ gridTemplateColumns: `repeat(${availableTabs.length}, minmax(0, 1fr))` }}>
                 {availableTabs.map((tab) => (
                   <TabsTrigger
