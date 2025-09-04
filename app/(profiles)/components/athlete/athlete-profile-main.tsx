@@ -35,6 +35,7 @@ import { useToast } from "@/components/ui/toast";
 import { useUser } from "@clerk/nextjs";
 import { generateProfileSlug, generateProfileUrl } from '@/lib/utils';
 import { useRouter } from "next/navigation";
+import { showUnverifiedAccountWarning } from '@/utils/toast-helpers';
 
 // Memoize heavy components
 const MeasurablesSection = memo(({ measurables, allSports, selectedSport, onSportChange, isOwnProfile, onEditSection }: { 
@@ -733,6 +734,8 @@ export function AthleteProfile({
 
   const handleConnectClick = () => {
     if (!isOwnProfile && canDraft && currentConnectionStatus === "none") {
+      // Show unverified warning once on click
+      showUnverifiedAccountWarning(toast, !!safeProfileData.isVerified);
       setConnectionDialogOpen(true);
     }
   };
