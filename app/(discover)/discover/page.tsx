@@ -343,6 +343,53 @@ const getTabRole = (tab: TabValue): string | null => {
   }
 };
 
+// Set default tab based on user role
+const getDefaultTab = (userRole: string): TabValue => {
+  if (userRole === 'coach' || userRole === 'recruiter') {
+    return 'athletes'; // Coaches and recruiters can only see athletes
+  }
+  return 'all'; // Athletes default to 'all'
+};
+
+// Helper function to get a valid tab with multiple fallbacks
+const getValidTab = (userRole: string, urlTab?: string | null): TabValue => {
+  const availableTabs = getAvailableTabs(userRole);
+  const availableTabValues = availableTabs.map(tab => tab.value);
+  
+  // Validate that we have available tabs
+  if (!availableTabValues || availableTabValues.length === 0) {
+    console.error(`No available tabs found for role "${userRole}". This should not happen.`);
+    return 'all'; // Ultimate fallback
+  }
+  
+  // First, try the URL tab if it's valid
+  if (urlTab && availableTabValues.includes(urlTab as TabValue)) {
+    return urlTab as TabValue;
+  }
+  
+  // Then try the default tab for the role
+  const defaultTab = getDefaultTab(userRole);
+  if (availableTabValues.includes(defaultTab)) {
+    return defaultTab;
+  }
+  
+  // Finally, fallback to the first available tab
+  const fallbackTab = availableTabValues[0];
+  
+  // Additional safety check (should never be needed due to validation above)
+  if (!fallbackTab) {
+    console.error(`Failed to get fallback tab for role "${userRole}". Available tabs:`, availableTabValues);
+    return 'all'; // Ultimate fallback
+  }
+  
+  // Log warning if we had to use fallback (for debugging)
+  if (urlTab && !availableTabValues.includes(urlTab as TabValue)) {
+    console.warn(`Invalid tab "${urlTab}" for role "${userRole}". Using fallback: "${fallbackTab}"`);
+  }
+  
+  return fallbackTab;
+};
+
 function SearchPageContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -379,41 +426,6 @@ function SearchPageContent() {
         return 'Find athletes, coaches & recruiters';
     }
   };
-
-  // Set default tab based on user role
-  const getDefaultTab = (userRole: string): TabValue => {
-    if (userRole === 'coach' || userRole === 'recruiter') {
-      return 'athletes'; // Coaches and recruiters can only see athletes
-    }
-    return 'all'; // Athletes default to 'all'
-  };
-
-  // Helper function to get a valid tab with multiple fallbacks
-  const getValidTab = useCallback((userRole: string, urlTab?: string | null): TabValue => {
-    const availableTabs = getAvailableTabs(userRole);
-    const availableTabValues = availableTabs.map(tab => tab.value);
-    
-    // First, try the URL tab if it's valid
-    if (urlTab && availableTabValues.includes(urlTab as TabValue)) {
-      return urlTab as TabValue;
-    }
-    
-    // Then try the default tab for the role
-    const defaultTab = getDefaultTab(userRole);
-    if (availableTabValues.includes(defaultTab)) {
-      return defaultTab;
-    }
-    
-    // Finally, fallback to the first available tab
-    const fallbackTab = availableTabValues[0] || 'all';
-    
-    // Log warning if we had to use fallback (for debugging)
-    if (urlTab && !availableTabValues.includes(urlTab as TabValue)) {
-      console.warn(`Invalid tab "${urlTab}" for role "${userRole}". Using fallback: "${fallbackTab}"`);
-    }
-    
-    return fallbackTab;
-  }, []); // No dependencies since getAvailableTabs and getDefaultTab are pure functions
 
   const [activeTab, setActiveTab] = useState<TabValue>(
     getValidTab(effectiveRole, searchParams?.get('tab'))
@@ -693,7 +705,7 @@ function SearchPageContent() {
       console.warn('Failed to load search state from cache:', error);
     }
     return false; // No valid cache found
-  }, [effectiveRole, getValidTab]);
+  }, [effectiveRole]);
 
   // Generate profile URL with slug
   const generateProfileUrl = useCallback((user: DiscoverUser) => {
@@ -742,7 +754,7 @@ function SearchPageContent() {
         setActiveTab(validTab);
       }
     }
-  }, [effectiveRole, activeTab, getValidTab]);
+  }, [effectiveRole, activeTab]);
 
   // Show discover button when filters change (only if filters are applied)
   useEffect(() => {
