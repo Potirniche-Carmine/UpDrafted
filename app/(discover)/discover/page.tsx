@@ -922,7 +922,7 @@ function SearchPageContent() {
                  </div>
                )}
                {!user.isVerified && user.role === 'coach' && (
-                 <div className="absolute -bottom-1 -right-1 bg-amber-500 rounded-full p-1 border-2 border-background">
+                 <div className="absolute -bottom-1 -right-1 bg-[#f59e0b] rounded-full p-1 border-2 border-background">
                    <Shield className="h-3 w-3 text-white" />
                  </div>
                )}
