@@ -655,12 +655,6 @@ export function AthleteProfile({
       if (result.success) {
         // Check if we should show verification dialog after successful save
         const savedProfile = result.data;
-        const shouldShowTransferPortalVerification = 
-          savedProfile &&
-          (savedProfile.educationLevel === 'undergraduate' || savedProfile.educationLevel === 'graduate') &&
-          savedProfile.division &&
-          ['NCAA Division I', 'NCAA Division II', 'NCAA Division III'].includes(savedProfile.division) &&
-          !savedProfile.isOnTransferPortal;
 
         // Remove beforeunload listener to prevent popup during reload
         if (beforeUnloadHandlerRef.current) {
