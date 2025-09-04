@@ -17,6 +17,7 @@ import { sanitizeProfileData } from '@/utils/sanitization';
 import { FileUpload } from '@/components/ui/file-upload';
 import { useRoleView } from '@/hooks/use-role-view';
 import { SchoolSelector } from "@/components/ui/school-selector";
+import { cn } from '@/lib/utils';
 
 // Field validation limits
 const FIELD_LIMITS = {
@@ -64,6 +65,7 @@ interface RecruiterEditDialogsProps {
   selectedSport?: string;
   onClose: () => void;
   onSave: (updates: Partial<RecruiterProfileData>) => void;
+  hasPendingVerification?: boolean;
 }
 
 export function RecruiterEditDialogs({
@@ -72,7 +74,8 @@ export function RecruiterEditDialogs({
   profileData,
   selectedSport,
   onClose,
-  onSave
+  onSave,
+  hasPendingVerification = false
 }: RecruiterEditDialogsProps) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [editData, setEditData] = useState<Record<string, any>>({});
@@ -85,6 +88,11 @@ export function RecruiterEditDialogs({
 
   // Get admin role information for demo profile uploads
   const { isAdmin, viewingAs } = useRoleView();
+
+  // Helper function to determine if fields should be locked due to pending verification
+  const shouldLockFields = () => {
+    return hasPendingVerification;
+  };
 
   // Initialize edit data when dialog opens
   useEffect(() => {
@@ -664,12 +672,20 @@ export function RecruiterEditDialogs({
               <Input
                 id="fullName"
                 value={editData.fullName || ''}
-                onChange={(e) => handleFieldChange('fullName', e.target.value)}
+                onChange={(e) => {
+                  if (!shouldLockFields()) {
+                    handleFieldChange('fullName', e.target.value);
+                  }
+                }}
                 placeholder="Enter your full name"
                 maxLength={FIELD_LIMITS.FULL_NAME}
                 autoComplete="off"
                 inputMode="text"
                 autoFocus={false}
+                className={cn(
+                  shouldLockFields() && 'text-muted-foreground opacity-50 cursor-not-allowed bg-muted'
+                )}
+                disabled={shouldLockFields()}
               />
               {validationErrors.fullName && (
                 <p className="text-sm text-red-500 mt-1">{validationErrors.fullName}</p>
@@ -681,12 +697,20 @@ export function RecruiterEditDialogs({
               <Input
                 id="title"
                 value={editData.title || ''}
-                onChange={(e) => handleFieldChange('title', e.target.value)}
+                onChange={(e) => {
+                  if (!shouldLockFields()) {
+                    handleFieldChange('title', e.target.value);
+                  }
+                }}
                 placeholder="e.g., Head Recruiter, Assistant Recruiter"
                 maxLength={FIELD_LIMITS.TITLE}
                 autoComplete="off"
                 inputMode="text"
                 autoFocus={false}
+                className={cn(
+                  shouldLockFields() && 'text-muted-foreground opacity-50 cursor-not-allowed bg-muted'
+                )}
+                disabled={shouldLockFields()}
               />
               {validationErrors.title && (
                 <p className="text-sm text-red-500 mt-1">{validationErrors.title}</p>
@@ -697,9 +721,16 @@ export function RecruiterEditDialogs({
               <Label htmlFor="sportRecruiting">Sport Recruiting *</Label>
               <Select 
                 value={editData.sportRecruiting || ''} 
-                onValueChange={(value) => handleFieldChange('sportRecruiting', value)}
+                onValueChange={(value) => {
+                  if (!shouldLockFields()) {
+                    handleFieldChange('sportRecruiting', value);
+                  }
+                }}
               >
-                <SelectTrigger className="!h-11 w-full">
+                <SelectTrigger className={cn(
+                  '!h-11 w-full',
+                  shouldLockFields() && 'text-muted-foreground opacity-50 cursor-not-allowed bg-muted'
+                )}>
                   <SelectValue placeholder="Select sport" />
                 </SelectTrigger>
                 <SelectContent className="z-[70]">
@@ -718,13 +749,18 @@ export function RecruiterEditDialogs({
             <div className="space-y-2">
               <SchoolSelector
                 value={editData.organizationName || ''}
-                onValueChange={(value) => handleFieldChange('organizationName', value)}
+                onValueChange={(value) => {
+                  if (!shouldLockFields()) {
+                    handleFieldChange('organizationName', value);
+                  }
+                }}
                 placeholder="Start typing school name..."
                 label="Organization Name"
                 required={true}
                 labelClassName="text-sm font-medium"
                 description="Start typing to search - if your school isn't found, just type the full name"
                 educationLevel="undergraduate"
+                disabled={shouldLockFields()}
               />
               {validationErrors.organizationName && (
                 <p className="text-sm text-red-500 mt-1">{validationErrors.organizationName}</p>
@@ -736,9 +772,16 @@ export function RecruiterEditDialogs({
               <Label htmlFor="edit-country">Country *</Label>
               <Select
                 value={String(editData.country || '')}
-                onValueChange={(value) => setEditData(prev => ({ ...prev, country: value }))}
+                onValueChange={(value) => {
+                  if (!shouldLockFields()) {
+                    setEditData(prev => ({ ...prev, country: value }));
+                  }
+                }}
               >
-                <SelectTrigger className="!h-11 w-full" id="edit-country">
+                <SelectTrigger className={cn(
+                  '!h-11 w-full',
+                  shouldLockFields() && 'text-muted-foreground opacity-50 cursor-not-allowed bg-muted'
+                )} id="edit-country">
                   <SelectValue placeholder="Select country" />
                 </SelectTrigger>
                 <SelectContent className="z-[70]">
@@ -754,8 +797,16 @@ export function RecruiterEditDialogs({
                 <Input
                   id="edit-city"
                   value={editData.city || ''}
-                  onChange={(e) => handleFieldChange('city', e.target.value)}
-                  className="h-11 w-full"
+                  onChange={(e) => {
+                    if (!shouldLockFields()) {
+                      handleFieldChange('city', e.target.value);
+                    }
+                  }}
+                  className={cn(
+                    "h-11 w-full",
+                    shouldLockFields() && 'text-muted-foreground opacity-50 cursor-not-allowed bg-muted'
+                  )}
+                  disabled={shouldLockFields()}
                 />
               </div>
               {/* Only show State * if country is United States or not selected */}
@@ -764,9 +815,16 @@ export function RecruiterEditDialogs({
                   <Label htmlFor="edit-state">State *</Label>
                   <Select
                     value={String(editData.state || '')}
-                    onValueChange={(value) => setEditData(prev => ({ ...prev, state: value }))}
+                    onValueChange={(value) => {
+                      if (!shouldLockFields()) {
+                        setEditData(prev => ({ ...prev, state: value }));
+                      }
+                    }}
                   >
-                    <SelectTrigger className="!h-11 w-full" id="edit-state">
+                    <SelectTrigger className={cn(
+                      '!h-11 w-full',
+                      shouldLockFields() && 'text-muted-foreground opacity-50 cursor-not-allowed bg-muted'
+                    )} id="edit-state">
                       <SelectValue placeholder="Select state" />
                     </SelectTrigger>
                     <SelectContent className="z-[70]">
@@ -783,9 +841,16 @@ export function RecruiterEditDialogs({
               <Label htmlFor="division">Division</Label>
               <Select 
                 value={editData.division || ''} 
-                onValueChange={(value) => handleFieldChange('division', value)}
+                onValueChange={(value) => {
+                  if (!shouldLockFields()) {
+                    handleFieldChange('division', value);
+                  }
+                }}
               >
-                <SelectTrigger className="!h-11 w-full">
+                <SelectTrigger className={cn(
+                  '!h-11 w-full',
+                  shouldLockFields() && 'text-muted-foreground opacity-50 cursor-not-allowed bg-muted'
+                )}>
                   <SelectValue placeholder="Select division" />
                 </SelectTrigger>
                 <SelectContent className="z-[70]">
@@ -803,11 +868,19 @@ export function RecruiterEditDialogs({
               <Input
                 id="conference"
                 value={editData.conference || ''}
-                onChange={(e) => handleFieldChange('conference', e.target.value)}
+                onChange={(e) => {
+                  if (!shouldLockFields()) {
+                    handleFieldChange('conference', e.target.value);
+                  }
+                }}
                 placeholder="e.g., Big Ten, ACC, etc."
                 autoComplete="off"
                 inputMode="text"
                 autoFocus={false}
+                className={cn(
+                  shouldLockFields() && 'text-muted-foreground opacity-50 cursor-not-allowed bg-muted'
+                )}
+                disabled={shouldLockFields()}
               />
             </div>
           </div>
@@ -1360,10 +1433,16 @@ export function RecruiterEditDialogs({
            dialogType !== 'add-sport' && (
             <Button 
               onClick={handleSave} 
-              disabled={isUploading || !isRecruitingNeedsFormValid()}
+              disabled={isUploading || !isRecruitingNeedsFormValid() || (dialogType === 'basic-info' && shouldLockFields())}
+              className={cn(
+                dialogType === 'basic-info' && shouldLockFields() && "opacity-50 cursor-not-allowed"
+              )}
             >
               <Save className="w-4 h-4 mr-2" />
               Save Changes
+              {dialogType === 'basic-info' && shouldLockFields() && (
+                <span className="text-xs text-muted-foreground ml-2">(Locked)</span>
+              )}
             </Button>
           )}
           {dialogType === 'add-sport' && (

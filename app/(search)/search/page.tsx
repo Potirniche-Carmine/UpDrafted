@@ -13,6 +13,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { AuthWrapper } from '../../../components/auth-wrapper';
 import { useAuth } from "@clerk/nextjs";
 import { getSportsList } from "@/lib/sports-data";
+import { generateProfileUrl } from "@/lib/utils";
 
 interface SearchResult {
   id: string;
@@ -409,7 +410,7 @@ function SearchPageContent() {
       ) : getCurrentPageResults().length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
           {getCurrentPageResults().map((user) => (
-            <Link key={user.id} href={`/profile/${user.fullName?.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '') || 'user'}/${user.id}`}>
+            <Link key={user.id} href={generateProfileUrl(user.fullName, user.id)}>
               <Card className="hover:shadow-lg transition-all duration-200 hover:border-green-200 dark:hover:border-green-800 group">
                 <CardContent className="p-4 md:p-6">
                   <div className="flex items-start gap-3 md:gap-4">

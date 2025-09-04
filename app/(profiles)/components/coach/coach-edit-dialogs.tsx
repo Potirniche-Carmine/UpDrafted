@@ -17,6 +17,7 @@ import { sanitizeProfileData } from '@/utils/sanitization';
 import { FileUpload } from '@/components/ui/file-upload';
 import { useRoleView } from '@/hooks/use-role-view';
 import { SchoolSelector } from "@/components/ui/school-selector";
+import { cn } from '@/lib/utils';
 
 
 // Field validation limits
@@ -63,6 +64,7 @@ interface CoachEditDialogsProps {
   profileData: CoachProfileData;
   onClose: () => void;
   onSave: (updates: Partial<CoachProfileData>) => void;
+  hasPendingVerification?: boolean;
 }
 
 export function CoachEditDialogs({
@@ -70,7 +72,8 @@ export function CoachEditDialogs({
   dialogType,
   profileData,
   onClose,
-  onSave
+  onSave,
+  hasPendingVerification = false
 }: CoachEditDialogsProps) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [editData, setEditData] = useState<Record<string, any>>({});
@@ -83,6 +86,11 @@ export function CoachEditDialogs({
 
   // Get admin role information for demo profile uploads
   const { isAdmin, viewingAs } = useRoleView();
+
+  // Helper function to determine if fields should be locked due to pending verification
+  const shouldLockFields = () => {
+    return hasPendingVerification;
+  };
 
   // Initialize edit data when dialog opens
   useEffect(() => {
@@ -596,12 +604,19 @@ export function CoachEditDialogs({
               <Input
                 id="fullName"
                 value={editData.fullName || ''}
-                onChange={(e) => handleFieldChange('fullName', e.target.value)}
+                onChange={(e) => {
+                  if (!shouldLockFields()) {
+                    handleFieldChange('fullName', e.target.value);
+                  }
+                }}
                 placeholder="Enter your full name"
-                className={validationErrors.fullName ? 'border-red-500' : ''}
+                className={cn(
+                  validationErrors.fullName ? 'border-red-500' : '',
+                  shouldLockFields() && 'text-muted-foreground opacity-50 cursor-not-allowed bg-muted'
+                )}
                 autoComplete="off"
                 inputMode="text"
-                
+                disabled={shouldLockFields()}
               />
               {validationErrors.fullName && <p className="text-red-500 text-sm">{validationErrors.fullName}</p>}
             </div>
@@ -611,20 +626,35 @@ export function CoachEditDialogs({
               <Input
                 id="title"
                 value={editData.title || ''}
-                onChange={(e) => handleFieldChange('title', e.target.value)}
+                onChange={(e) => {
+                  if (!shouldLockFields()) {
+                    handleFieldChange('title', e.target.value);
+                  }
+                }}
                 placeholder="e.g., Head Coach, Assistant Coach, Program Director"
-                className={validationErrors.title ? 'border-red-500' : ''}
+                className={cn(
+                  validationErrors.title ? 'border-red-500' : '',
+                  shouldLockFields() && 'text-muted-foreground opacity-50 cursor-not-allowed bg-muted'
+                )}
                 autoComplete="off"
                 inputMode="text"
-                
+                disabled={shouldLockFields()}
               />
               {validationErrors.title && <p className="text-red-500 text-sm">{validationErrors.title}</p>}
             </div>
 
             <div className="space-y-2">
               <Label htmlFor="sportCoaching">Sport *</Label>
-              <Select value={editData.sportCoaching || ''} onValueChange={(value) => handleFieldChange('sportCoaching', value)}>
-                                <SelectTrigger className={`!h-11 w-full ${validationErrors.sportCoaching ? 'border-red-500' : ''}`}>
+              <Select value={editData.sportCoaching || ''} onValueChange={(value) => {
+                if (!shouldLockFields()) {
+                  handleFieldChange('sportCoaching', value);
+                }
+              }}>
+                <SelectTrigger className={cn(
+                  '!h-11 w-full',
+                  validationErrors.sportCoaching ? 'border-red-500' : '',
+                  shouldLockFields() && 'text-muted-foreground opacity-50 cursor-not-allowed bg-muted'
+                )}>
                   <SelectValue placeholder="Select sport" />
                 </SelectTrigger>
                 <SelectContent className="z-[70]">
@@ -638,8 +668,15 @@ export function CoachEditDialogs({
 
             <div className="space-y-2">
               <Label htmlFor="division">Division</Label>
-              <Select value={editData.division || ''} onValueChange={(value) => handleFieldChange('division', value)}>
-                <SelectTrigger className="!h-11 w-full">
+              <Select value={editData.division || ''} onValueChange={(value) => {
+                if (!shouldLockFields()) {
+                  handleFieldChange('division', value);
+                }
+              }}>
+                <SelectTrigger className={cn(
+                  '!h-11 w-full',
+                  shouldLockFields() && 'text-muted-foreground opacity-50 cursor-not-allowed bg-muted'
+                )}>
                   <SelectValue placeholder="Select division" />
                 </SelectTrigger>
                 <SelectContent className="z-[70]">
@@ -653,13 +690,18 @@ export function CoachEditDialogs({
             <div className="space-y-2">
               <SchoolSelector
                 value={editData.organizationName || ''}
-                onValueChange={(value) => handleFieldChange('organizationName', value)}
+                onValueChange={(value) => {
+                  if (!shouldLockFields()) {
+                    handleFieldChange('organizationName', value);
+                  }
+                }}
                 placeholder="Start typing school name..."
                 label="School/Organization"
                 required={true}
                 labelClassName="text-sm font-medium"
                 description="Start typing to search - if your school isn't found, just type the full name"
                 educationLevel="undergraduate"
+                disabled={shouldLockFields()}
               />
               {validationErrors.organizationName && <p className="text-red-500 text-sm">{validationErrors.organizationName}</p>}
             </div>
@@ -669,9 +711,16 @@ export function CoachEditDialogs({
               <Label htmlFor="edit-country">Country *</Label>
               <Select
                 value={String(editData.country || '')}
-                onValueChange={(value) => setEditData(prev => ({ ...prev, country: value }))}
+                onValueChange={(value) => {
+                  if (!shouldLockFields()) {
+                    setEditData(prev => ({ ...prev, country: value }));
+                  }
+                }}
               >
-                <SelectTrigger className="!h-11 w-full" id="edit-country">
+                <SelectTrigger className={cn(
+                  '!h-11 w-full',
+                  shouldLockFields() && 'text-muted-foreground opacity-50 cursor-not-allowed bg-muted'
+                )} id="edit-country">
                   <SelectValue placeholder="Select country" />
                 </SelectTrigger>
                 <SelectContent className="z-[70]">
@@ -687,8 +736,16 @@ export function CoachEditDialogs({
                 <Input
                   id="edit-city"
                   value={editData.city || ''}
-                  onChange={(e) => handleFieldChange('city', e.target.value)}
-                  className="h-11 w-full"
+                  onChange={(e) => {
+                    if (!shouldLockFields()) {
+                      handleFieldChange('city', e.target.value);
+                    }
+                  }}
+                  className={cn(
+                    "h-11 w-full",
+                    shouldLockFields() && 'text-muted-foreground opacity-50 cursor-not-allowed bg-muted'
+                  )}
+                  disabled={shouldLockFields()}
                 />
                 {validationErrors.city && <p className="text-red-500 text-sm">{validationErrors.city}</p>}
               </div>
@@ -698,9 +755,16 @@ export function CoachEditDialogs({
                   <Label htmlFor="edit-state">State *</Label>
                   <Select
                     value={String(editData.state || '')}
-                    onValueChange={(value) => setEditData(prev => ({ ...prev, state: value }))}
+                    onValueChange={(value) => {
+                      if (!shouldLockFields()) {
+                        setEditData(prev => ({ ...prev, state: value }));
+                      }
+                    }}
                   >
-                    <SelectTrigger className="!h-11 w-full" id="edit-state">
+                    <SelectTrigger className={cn(
+                      '!h-11 w-full',
+                      shouldLockFields() && 'text-muted-foreground opacity-50 cursor-not-allowed bg-muted'
+                    )} id="edit-state">
                       <SelectValue placeholder="Select state" />
                     </SelectTrigger>
                     <SelectContent className="z-[70]">
@@ -719,11 +783,18 @@ export function CoachEditDialogs({
               <Input
                 id="conference"
                 value={editData.conference || ''}
-                onChange={(e) => handleFieldChange('conference', e.target.value)}
+                onChange={(e) => {
+                  if (!shouldLockFields()) {
+                    handleFieldChange('conference', e.target.value);
+                  }
+                }}
                 placeholder="e.g., Big Ten, SEC, WAC"
                 autoComplete="off"
                 inputMode="text"
-                
+                className={cn(
+                  shouldLockFields() && 'text-muted-foreground opacity-50 cursor-not-allowed bg-muted'
+                )}
+                disabled={shouldLockFields()}
               />
             </div>
           </div>
@@ -1089,10 +1160,16 @@ export function CoachEditDialogs({
           {dialogType !== 'profile-image' && dialogType !== 'organization-logo' && (
             <Button 
               onClick={handleSave} 
-              disabled={isUploading || !isRecruitingNeedsFormValid()}
+              disabled={isUploading || !isRecruitingNeedsFormValid() || (dialogType === 'basic-info' && shouldLockFields())}
+              className={cn(
+                dialogType === 'basic-info' && shouldLockFields() && "opacity-50 cursor-not-allowed"
+              )}
             >
               <Save className="w-4 h-4 mr-2" />
               Save Changes
+              {dialogType === 'basic-info' && shouldLockFields() && (
+                <span className="text-xs text-muted-foreground ml-2">(Locked)</span>
+              )}
             </Button>
           )}
           {dialogType === 'profile-image' && profileImagePreview && (

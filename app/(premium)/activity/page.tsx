@@ -11,6 +11,7 @@ import { Eye, Users, Calendar, Crown, ArrowRight, TrendingUp, Lock, Star } from 
 import Link from "next/link";
 import { AuthWrapper } from "../../../components/auth-wrapper";
 import { Protect } from "@clerk/nextjs";
+import { generateProfileUrl } from "@/lib/utils";
 
 interface ActivityItem {
   id: number;
@@ -374,7 +375,7 @@ function ActivityLogContent() {
                       {getTimeAgo(activity.createdAt)}
                     </p>
                     <Link 
-                      href={`/profile/${activity.viewer.name?.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '') || 'user'}/${activity.viewer.id}`}
+                      href={generateProfileUrl(activity.viewer.name, activity.viewer.id)}
                       className="text-xs text-[#01ae79] hover:underline"
                     >
                       View Profile

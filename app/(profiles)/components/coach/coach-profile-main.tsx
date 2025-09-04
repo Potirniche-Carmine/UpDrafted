@@ -35,7 +35,8 @@ import { useToast } from "@/components/ui/toast";
 import { useUser } from "@clerk/nextjs";
 import { useRoleView } from '@/hooks/use-role-view';
 import { getStudentClassificationDisplayName, StudentClassification } from '@/lib/sports-data';
-import { generateProfileSlug } from '@/lib/utils';
+import { generateProfileSlug, generateProfileUrl } from '@/lib/utils';
+import { useRouter } from 'next/navigation';
 
 // Social Media Section Component (same as athlete profile)
 const SocialMediaSection = memo(({ socialMedia, isOwnProfile, onEdit }: { 
@@ -239,6 +240,10 @@ export function CoachProfile({
   const [sendOverChatDialogOpen, setSendOverChatDialogOpen] = useState(false);
   const { user } = useUser();
   const effectiveRole = user?.publicMetadata?.role as string;
+  const router = useRouter();
+  
+  // Store the original full name to compare against when saving
+  const [originalFullName, setOriginalFullName] = useState(data.fullName);
   
   // Toast hook
   const toast = useToast();
@@ -426,6 +431,7 @@ export function CoachProfile({
         organizationLogo: profileData.organizationLogo === undefined ? null : profileData.organizationLogo
       };
       
+      // Use the updated name from the form for the API call
       const response = await fetch(`/api/profile/${generateProfileSlug(profileData.fullName)}/${userIdForApi}`, {
         method: 'PUT',
         headers: {
@@ -463,15 +469,33 @@ export function CoachProfile({
         // Update the page data reference so changes are permanent
         Object.assign(data, result.data);
         
-        // Ensure minimum loading time of 1.5 seconds for better UX
-        const elapsedTime = Date.now() - startTime;
-        const minLoadingTime = 1500; // 1.5 seconds
-        const remainingTime = Math.max(0, minLoadingTime - elapsedTime);
+        // Update the original full name to the new saved name for future comparisons
+        setOriginalFullName(profileData.fullName);
         
-        // Refresh the page after showing loading for minimum duration
-        setTimeout(() => {
-          window.location.reload();
-        }, remainingTime);
+        // Check if full name has changed and navigate to new URL if needed
+        const oldFullName = originalFullName; // Use the stored original name
+        const newFullName = profileData.fullName; // Use the form data, not the API response
+        const hasNameChanged = oldFullName !== newFullName;
+        
+        if (hasNameChanged) {
+          // Generate new profile URL with updated name
+          const newProfileUrl = generateProfileUrl(newFullName, userIdForApi);
+          
+          // Navigate to new URL immediately after successful save
+          router.push(newProfileUrl);
+        } else {
+          // Ensure minimum loading time of 1.5 seconds for better UX
+          const elapsedTime = Date.now() - startTime;
+          const minLoadingTime = 1500; // 1.5 seconds
+          const remainingTime = Math.max(0, minLoadingTime - elapsedTime);
+          
+          // Refresh the page after showing loading for minimum duration
+          
+          setTimeout(() => {
+            window.location.reload();
+          }, remainingTime);
+          
+        }
       } else {
         throw new Error(result.error || 'Failed to update profile');
       }
@@ -790,6 +814,7 @@ export function CoachProfile({
         dialogType={editDialogOpen}
         profileData={profileData}
         onClose={() => setEditDialogOpen(null)}
+        hasPendingVerification={hasPendingVerification}
         onSave={(updates: Partial<CoachProfileData>) => {
           try {
             updateProfileData(updates);
