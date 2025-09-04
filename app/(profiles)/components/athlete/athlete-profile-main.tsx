@@ -733,6 +733,13 @@ export function AthleteProfile({
 
   const handleConnectClick = () => {
     if (!isOwnProfile && canDraft && currentConnectionStatus === "none") {
+      if (!safeProfileData.isVerified) {
+        toast.warning(
+          "Unverified Account",
+          "This is an unverified account. Make sure to only trust verified profiles, never share personal information, and be cautious of impersonators.",
+          7000
+        );
+      }
       setConnectionDialogOpen(true);
     }
   };

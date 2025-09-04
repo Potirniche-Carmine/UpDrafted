@@ -564,6 +564,13 @@ export function CoachProfile({
 
   const handleConnectClick = () => {
     if (canConnect && currentConnectionStatus === "none") {
+      if (!profileData.isVerified) {
+        toast.warning(
+          "Unverified Account",
+          "This is an unverified account. Make sure to only trust verified profiles, never share personal information, and be cautious of impersonators.",
+          7000
+        );
+      }
       setConnectionDialogOpen(true);
     }
   };

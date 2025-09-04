@@ -811,6 +811,13 @@ export function RecruiterProfile({
 
   const handleConnectClick = () => {
     if (canConnect && currentConnectionStatus === "none") {
+      if (!profileData.isVerified) {
+        toast.warning(
+          "Unverified Account",
+          "This is an unverified account. Make sure to only trust verified profiles, never share personal information, and be cautious of impersonators.",
+          7000
+        );
+      }
       setConnectionDialogOpen(true);
     }
   };
@@ -888,7 +895,6 @@ export function RecruiterProfile({
   const handleConnectionConfirm = async (note?: string) => {
     setIsConnecting(true);
     try {
-      // Get the current user's auth token
       const windowWithClerk = window as unknown as {
         Clerk?: {
           session?: {
