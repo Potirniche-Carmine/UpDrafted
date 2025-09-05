@@ -58,16 +58,33 @@ export function LoadingScreen({ role }: LoadingScreenProps) {
         if (user?.id && !isRedirecting) {
           setIsRedirecting(true);
           try {
-            // Generate profile URL with slug
-            const fullName = user?.fullName || `${user?.firstName} ${user?.lastName}`;
-            const profileUrl = fullName ? generateProfileUrl(fullName, user.id) : `/profile/${user.id}`;
+            // Fetch profile data from database to get the correct fullName
+            const response = await fetch(`/api/profile?userId=${user.id}`);
+            let profileUrl: string;
+            
+            if (response.ok) {
+              const profileData = await response.json();
+              if (profileData.profile?.fullName) {
+                profileUrl = generateProfileUrl(profileData.profile.fullName, user.id);
+              } else {
+                // Fallback to Clerk metadata if no database fullName
+                const fallbackFullName = user?.fullName || `${user?.firstName} ${user?.lastName}`;
+                profileUrl = fallbackFullName ? generateProfileUrl(fallbackFullName, user.id) : `/profile/${user.id}`;
+              }
+            } else {
+              // Fallback to Clerk metadata if API call fails
+              const fallbackFullName = user?.fullName || `${user?.firstName} ${user?.lastName}`;
+              profileUrl = fallbackFullName ? generateProfileUrl(fallbackFullName, user.id) : `/profile/${user.id}`;
+            }
             
             // Direct navigation to profile - avoid dashboard
             await router.push(profileUrl);
           } catch (error) {
             console.error('Auto-redirect failed:', error);
-            setShowFallbackButton(true);
-            setIsRedirecting(false);
+            // Fallback to Clerk metadata if fetch fails
+            const fallbackFullName = user?.fullName || `${user?.firstName} ${user?.lastName}`;
+            const fallbackUrl = fallbackFullName ? generateProfileUrl(fallbackFullName, user.id) : `/profile/${user.id}`;
+            await router.push(fallbackUrl);
           }
         }
       }, 2500); // Additional 2.5 seconds after steps complete (total ~7 seconds)
@@ -89,16 +106,32 @@ export function LoadingScreen({ role }: LoadingScreenProps) {
   const handleManualRedirect = async () => {
     if (user?.id && !isRedirecting) {
       setIsRedirecting(true);
-      const fullName = user?.fullName || `${user?.firstName} ${user?.lastName}`;
       try {
-        // Generate profile URL with slug
-        const profileUrl = fullName ? generateProfileUrl(fullName, user.id) : `/profile/${user.id}`;
+        // Fetch profile data from database to get the correct fullName
+        const response = await fetch(`/api/profile?userId=${user.id}`);
+        let profileUrl: string;
+        
+        if (response.ok) {
+          const profileData = await response.json();
+          if (profileData.profile?.fullName) {
+            profileUrl = generateProfileUrl(profileData.profile.fullName, user.id);
+          } else {
+            // Fallback to Clerk metadata if no database fullName
+            const fallbackFullName = user?.fullName || `${user?.firstName} ${user?.lastName}`;
+            profileUrl = fallbackFullName ? generateProfileUrl(fallbackFullName, user.id) : `/profile/${user.id}`;
+          }
+        } else {
+          // Fallback to Clerk metadata if API call fails
+          const fallbackFullName = user?.fullName || `${user?.firstName} ${user?.lastName}`;
+          profileUrl = fallbackFullName ? generateProfileUrl(fallbackFullName, user.id) : `/profile/${user.id}`;
+        }
         
         await router.push(profileUrl);
       } catch (error) {
         console.error('Manual redirect failed:', error);
-        // Fallback to window.location if router fails
-        const fallbackUrl = fullName ? generateProfileUrl(fullName, user.id) : `/profile/${user.id}`;
+        // Fallback to Clerk metadata if fetch fails
+        const fallbackFullName = user?.fullName || `${user?.firstName} ${user?.lastName}`;
+        const fallbackUrl = fallbackFullName ? generateProfileUrl(fallbackFullName, user.id) : `/profile/${user.id}`;
         window.location.href = fallbackUrl;
       }
     }

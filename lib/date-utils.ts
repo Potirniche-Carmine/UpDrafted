@@ -874,6 +874,81 @@ export function formatStateAbbreviation(stateCode: string): string {
 }
 
 /**
+ * Format a message timestamp to show both date and time in a user-friendly format
+ * Shows relative dates for recent messages and absolute dates for older ones
+ * 
+ * @param timestamp - The timestamp string or Date object to format
+ * @returns Formatted date and time string
+ * 
+ * @example
+ * // Recent messages (today):
+ * formatMessageTimestamp('2025-01-15T14:30:00Z') // "2:30 PM"
+ * 
+ * // Yesterday:
+ * formatMessageTimestamp('2025-01-14T14:30:00Z') // "Yesterday 2:30 PM"
+ * 
+ * // This week:
+ * formatMessageTimestamp('2025-01-13T14:30:00Z') // "Mon 2:30 PM"
+ * 
+ * // Older messages:
+ * formatMessageTimestamp('2025-01-10T14:30:00Z') // "Jan 10, 2:30 PM"
+ * formatMessageTimestamp('2024-12-15T14:30:00Z') // "Dec 15, 2024 2:30 PM"
+ */
+export function formatMessageTimestamp(timestamp: string | Date): string {
+  try {
+    const messageDate = typeof timestamp === 'string' ? new Date(timestamp) : timestamp;
+    
+    if (!messageDate || isNaN(messageDate.getTime())) {
+      return 'Invalid Date';
+    }
+
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const messageDay = new Date(messageDate.getFullYear(), messageDate.getMonth(), messageDate.getDate());
+    
+    // Calculate days difference
+    const daysDiff = Math.floor((today.getTime() - messageDay.getTime()) / (1000 * 60 * 60 * 24));
+    
+    // Format time part (always show 12-hour format)
+    const timeString = messageDate.toLocaleTimeString([], { 
+      hour: '2-digit', 
+      minute: '2-digit',
+      hour12: true 
+    });
+    
+    if (daysDiff === 0) {
+      // Today - just show time
+      return timeString;
+    } else if (daysDiff === 1) {
+      // Yesterday
+      return `Yesterday ${timeString}`;
+    } else if (daysDiff < 7) {
+      // This week - show day of week
+      const dayName = messageDate.toLocaleDateString([], { weekday: 'short' });
+      return `${dayName} ${timeString}`;
+    } else if (messageDate.getFullYear() === now.getFullYear()) {
+      // This year - show month and day
+      const monthDay = messageDate.toLocaleDateString([], { 
+        month: 'short', 
+        day: 'numeric' 
+      });
+      return `${monthDay}, ${timeString}`;
+    } else {
+      // Different year - show full date
+      const fullDate = messageDate.toLocaleDateString([], { 
+        month: 'short', 
+        day: 'numeric',
+        year: 'numeric'
+      });
+      return `${fullDate} ${timeString}`;
+    }
+  } catch (error) {
+    console.error('Error formatting message timestamp:', error);
+    return 'Invalid Date';
+  }
+}
+
+/**
  * Convert text to title case (capitalize first letter of each word) with enhanced security
  * Uses a comprehensive approach with input validation and sanitization to prevent injection attacks
  * 

@@ -17,6 +17,7 @@ import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { ReportDialog } from '../../(profiles)/components/shared/report-dialog';
 import { OfflineIndicator } from '../../../components/offline-indicator';
 import { useOfflineStatus } from '../../../hooks/use-offline-status';
+import { formatMessageTimestamp } from '../../../lib/date-utils';
 
 // Define real API types
 interface Conversation {
@@ -994,7 +995,7 @@ export default function MessagingPage() {
                               </h3>
                               <span className="text-xs text-muted-foreground dark:text-muted-foreground flex-shrink-0">
                                 {convo.lastMessageTime 
-                                  ? new Date(convo.lastMessageTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                                  ? formatMessageTimestamp(convo.lastMessageTime)
                                   : ''}
                               </span>
                             </div>
@@ -1122,7 +1123,7 @@ export default function MessagingPage() {
                                     ? 'text-white/80 text-right' 
                                     : 'text-muted-foreground text-left'
                                 }`}>
-                                  {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                  {formatMessageTimestamp(msg.createdAt)}
                                 </p>
                               </div>
                             </div>

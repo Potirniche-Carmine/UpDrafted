@@ -343,6 +343,53 @@ const getTabRole = (tab: TabValue): string | null => {
   }
 };
 
+// Set default tab based on user role
+const getDefaultTab = (userRole: string): TabValue => {
+  if (userRole === 'coach' || userRole === 'recruiter') {
+    return 'athletes'; // Coaches and recruiters can only see athletes
+  }
+  return 'all'; // Athletes default to 'all'
+};
+
+// Helper function to get a valid tab with multiple fallbacks
+const getValidTab = (userRole: string, urlTab?: string | null): TabValue => {
+  const availableTabs = getAvailableTabs(userRole);
+  const availableTabValues = availableTabs.map(tab => tab.value);
+  
+  // Validate that we have available tabs
+  if (!availableTabValues || availableTabValues.length === 0) {
+    console.error(`No available tabs found for role "${userRole}". This should not happen.`);
+    return 'all'; // Ultimate fallback
+  }
+  
+  // First, try the URL tab if it's valid
+  if (urlTab && availableTabValues.includes(urlTab as TabValue)) {
+    return urlTab as TabValue;
+  }
+  
+  // Then try the default tab for the role
+  const defaultTab = getDefaultTab(userRole);
+  if (availableTabValues.includes(defaultTab)) {
+    return defaultTab;
+  }
+  
+  // Finally, fallback to the first available tab
+  const fallbackTab = availableTabValues[0];
+  
+  // Additional safety check (should never be needed due to validation above)
+  if (!fallbackTab) {
+    console.error(`Failed to get fallback tab for role "${userRole}". Available tabs:`, availableTabValues);
+    return 'all'; // Ultimate fallback
+  }
+  
+  // Log warning if we had to use fallback (for debugging)
+  if (urlTab && !availableTabValues.includes(urlTab as TabValue)) {
+    console.warn(`Invalid tab "${urlTab}" for role "${userRole}". Using fallback: "${fallbackTab}"`);
+  }
+  
+  return fallbackTab;
+};
+
 function SearchPageContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -380,16 +427,8 @@ function SearchPageContent() {
     }
   };
 
-  // Set default tab based on user role
-  const getDefaultTab = (userRole: string): TabValue => {
-    if (userRole === 'coach' || userRole === 'recruiter') {
-      return 'athletes'; // Coaches and recruiters can only see athletes
-    }
-    return 'all'; // Athletes default to 'all'
-  };
-
   const [activeTab, setActiveTab] = useState<TabValue>(
-    searchParams?.get('tab') as TabValue || getDefaultTab(effectiveRole)
+    getValidTab(effectiveRole, searchParams?.get('tab'))
   );
 
   // Filter states
@@ -657,7 +696,7 @@ function SearchPageContent() {
           setSelectedConferences(parsed.selectedConferences || []);
           setMinHeight(parsed.minHeight || 60);
           setMinWeight(parsed.minWeight || 100);
-          setActiveTab(parsed.activeTab || getDefaultTab(effectiveRole));
+          setActiveTab(getValidTab(effectiveRole, parsed.activeTab));
           setHasSearched(parsed.hasSearched || false);
           return true; // Successfully loaded cache, but need to search fresh
         }
@@ -706,6 +745,16 @@ function SearchPageContent() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [effectiveRole]); // Only depend on effectiveRole to prevent multiple triggers
+
+  // Show discover button when filters change (only if filters are applied)
+  useEffect(() => {
+    if (effectiveRole) {
+      const validTab = getValidTab(effectiveRole, activeTab);
+      if (validTab !== activeTab) {
+        setActiveTab(validTab);
+      }
+    }
+  }, [effectiveRole, activeTab]);
 
   // Show discover button when filters change (always show after first search)
   useEffect(() => {
@@ -909,8 +958,13 @@ function SearchPageContent() {
                   {user.fullName ? user.fullName.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() : 'UN'}
                 </AvatarFallback>
               </Avatar>
-              {user.isVerified && (
-                <div className="absolute -bottom-1 -right-1 bg-[#01ae79] rounded-full p-1 border-2 border-background">
+                {user.isVerified && (
+                 <div className="absolute -bottom-1 -right-1 bg-[#01ae79] rounded-full p-1 border-2 border-background">
+                   <Shield className="h-3 w-3 text-white" />
+                 </div>
+               )}
+              {!user.isVerified && (
+                <div className="absolute -bottom-1 -right-1 bg-[#f59e0b] rounded-full p-1 border-2 border-background">
                   <Shield className="h-3 w-3 text-white" />
                 </div>
               )}
@@ -1513,7 +1567,10 @@ function SearchPageContent() {
           {/* Main Content */}
           <div className="flex-1">
             {/* Tabs */}
-            <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as TabValue)}>
+            <Tabs value={activeTab} onValueChange={(value) => {
+              const validTab = getValidTab(effectiveRole, value);
+              setActiveTab(validTab);
+            }}>
               <TabsList className="grid w-full mb-6 bg-card border border-border" style={{ gridTemplateColumns: `repeat(${availableTabs.length}, minmax(0, 1fr))` }}>
                 {availableTabs.map((tab) => (
                   <TabsTrigger

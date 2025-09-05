@@ -33,7 +33,9 @@ import { SendOverChatDialog } from "../shared/send-over-chat-dialog";
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
 import { useToast } from "@/components/ui/toast";
 import { useUser } from "@clerk/nextjs";
-import { generateProfileSlug } from '@/lib/utils';
+import { generateProfileSlug, generateProfileUrl } from '@/lib/utils';
+import { useRouter } from "next/navigation";
+import { showUnverifiedAccountWarning } from '@/utils/toast-helpers';
 
 // Memoize heavy components
 const MeasurablesSection = memo(({ measurables, allSports, selectedSport, onSportChange, isOwnProfile, onEditSection }: { 
@@ -451,6 +453,10 @@ export function AthleteProfile({
   const [currentConnectionStatus, setCurrentConnectionStatus] = useState(connectionStatus);
   const [isPreviewMode, setIsPreviewMode] = useState(false);
   const [sendOverChatDialogOpen, setSendOverChatDialogOpen] = useState(false);
+  const router = useRouter();
+  
+  // Store the original full name to compare against when saving
+  const [originalFullName, setOriginalFullName] = useState(data.fullName);
   
   // Toast hook
   const toast = useToast();
@@ -549,6 +555,31 @@ export function AthleteProfile({
     setEditDialogOpen(section);
   };
 
+  const checkNameSave = (userIdForApi: string, startTime: number) => {
+        const oldFullName = originalFullName; // Use the stored original name
+        const newFullName = safeProfileData.fullName; // Use the form data, not the API response
+        const hasNameChanged = oldFullName !== newFullName;
+
+        if (hasNameChanged) {
+          // Generate new profile URL with updated name
+          const newProfileUrl = generateProfileUrl(newFullName, userIdForApi);
+          
+          // Navigate to new URL immediately after successful save
+          router.push(newProfileUrl);
+        } else {
+          // Ensure minimum loading time of 1.5 seconds for better UX
+          const elapsedTime = Date.now() - startTime;
+          const minLoadingTime = 1500; // 1.5 seconds
+          const remainingTime = Math.max(0, minLoadingTime - elapsedTime);
+          
+          // Refresh the page after showing loading for minimum duration
+          
+          setTimeout(() => {
+            window.location.reload();
+          }, remainingTime);
+  }
+}
+
   const saveProfile = async () => {
     if (!effectiveIsOwnProfile || !hasUnsavedChanges) return;
     
@@ -607,7 +638,8 @@ export function AthleteProfile({
         profileImage: safeProfileData.profileImage === undefined ? null : safeProfileData.profileImage
       };
       
-      const response = await fetch(`/api/profile/${generateProfileSlug(profileData.fullName)}/${userIdForApi}`, {
+      // Use the updated name from the form for the API call
+      const response = await fetch(`/api/profile/${generateProfileSlug(safeProfileData.fullName)}/${userIdForApi}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -623,13 +655,6 @@ export function AthleteProfile({
       const result = await response.json();
       if (result.success) {
         // Check if we should show verification dialog after successful save
-        const savedProfile = result.data;
-        const shouldShowTransferPortalVerification = 
-          savedProfile &&
-          (savedProfile.educationLevel === 'undergraduate' || savedProfile.educationLevel === 'graduate') &&
-          savedProfile.division &&
-          ['NCAA Division I', 'NCAA Division II', 'NCAA Division III'].includes(savedProfile.division) &&
-          !savedProfile.isOnTransferPortal;
 
         // Remove beforeunload listener to prevent popup during reload
         if (beforeUnloadHandlerRef.current) {
@@ -644,22 +669,12 @@ export function AthleteProfile({
         // Update the page data reference so changes are permanent
         Object.assign(data, result.data);
         
-        // Show verification dialog if conditions are met
-        if (shouldShowTransferPortalVerification) {
-          setVerificationDialogOpen(true);
-          setIsSaving(false); // Stop loading since we're showing dialog instead of reloading
-          return; // Don't reload the page
-        }
+        // Update the original full name to the new saved name for future comparisons
+        setOriginalFullName(safeProfileData.fullName);
         
-        // Ensure minimum loading time of 1.5 seconds for better UX
-        const elapsedTime = Date.now() - startTime;
-        const minLoadingTime = 1500; // 1.5 seconds
-        const remainingTime = Math.max(0, minLoadingTime - elapsedTime);
+        checkNameSave(userIdForApi, startTime);
         
-        // Refresh the page after showing loading for minimum duration
-        setTimeout(() => {
-          window.location.reload();
-        }, remainingTime);
+        
       } else {
         throw new Error(result.error || 'Failed to update profile');
       }
@@ -719,6 +734,8 @@ export function AthleteProfile({
 
   const handleConnectClick = () => {
     if (!isOwnProfile && canDraft && currentConnectionStatus === "none") {
+      // Show unverified warning once on click
+      showUnverifiedAccountWarning(toast, !!safeProfileData.isVerified);
       setConnectionDialogOpen(true);
     }
   };
@@ -1144,6 +1161,8 @@ export function AthleteProfile({
           }
         }}
         selectedSport={selectedSport}
+        hasPendingVerification={hasPendingVerification}
+        hasPendingTransferPortalVerification={hasPendingTransferPortalVerification}
       />
 
       {/* Confirmation Dialog */}

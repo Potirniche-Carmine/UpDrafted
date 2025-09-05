@@ -61,28 +61,40 @@ export function useProfileNavigation(): UseProfileNavigationReturn {
           profileUrl = `/profile/${targetUserId}`;
         }
       } else {
-        // If navigating to own profile, try to get from user metadata first
-        const fullName = user?.fullName || user?.firstName + ' ' + user?.lastName;
-        if (fullName) {
-          profileUrl = generateProfileUrl(fullName, targetUserId);
-        } else {
-          // Fallback: fetch own profile data
-          try {
-            const response = await fetch(`/api/profile?userId=${targetUserId}`);
-            if (response.ok) {
-              const profileData = await response.json();
-              if (profileData.profile?.fullName) {
-                profileUrl = generateProfileUrl(profileData.profile.fullName, targetUserId);
+        // If navigating to own profile, always fetch from database to get the correct fullName
+        try {
+          const response = await fetch(`/api/profile?userId=${targetUserId}`);
+          if (response.ok) {
+            const profileData = await response.json();
+            if (profileData.profile?.fullName) {
+              profileUrl = generateProfileUrl(profileData.profile.fullName, targetUserId);
+            } else {
+              // Fallback to Clerk metadata if no database fullName
+              const fallbackFullName = user?.fullName || user?.firstName + ' ' + user?.lastName;
+              if (fallbackFullName) {
+                profileUrl = generateProfileUrl(fallbackFullName, targetUserId);
               } else {
-                // Fallback to old format if no fullName
+                // Final fallback to old format
                 profileUrl = `/profile/${targetUserId}`;
               }
+            }
+          } else {
+            // Fallback to Clerk metadata if API call fails
+            const fallbackFullName = user?.fullName || user?.firstName + ' ' + user?.lastName;
+            if (fallbackFullName) {
+              profileUrl = generateProfileUrl(fallbackFullName, targetUserId);
             } else {
-              // Fallback to old format if API call fails
+              // Final fallback to old format
               profileUrl = `/profile/${targetUserId}`;
             }
-          } catch {
-            // Fallback to old format if API call fails
+          }
+        } catch {
+          // Fallback to Clerk metadata if API call fails
+          const fallbackFullName = user?.fullName || user?.firstName + ' ' + user?.lastName;
+          if (fallbackFullName) {
+            profileUrl = generateProfileUrl(fallbackFullName, targetUserId);
+          } else {
+            // Final fallback to old format
             profileUrl = `/profile/${targetUserId}`;
           }
         }
