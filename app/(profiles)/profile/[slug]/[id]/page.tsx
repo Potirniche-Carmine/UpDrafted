@@ -78,6 +78,7 @@ interface ProfileApiResponse {
   currentUserRole: string;
   connectionStatus?: "none" | "pending" | "connected";
   connectionDirection?: "incoming" | "outgoing" | null;
+  connectionId?: number | null;
   hasPendingVerification?: boolean;
   pendingSubmittedAt?: string;
   hasRejectedVerification?: boolean;
