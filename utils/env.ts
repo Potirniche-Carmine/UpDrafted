@@ -12,12 +12,26 @@ const envSchema = z.object({
   // Encryption
   MESSAGE_ENCRYPTION_KEY: z.string().min(32, 'MESSAGE_ENCRYPTION_KEY must be at least 32 characters'),
   
-  // AWS/R2 Configuration
-  AWS_ACCESS_KEY_ID: z.string().min(1, 'AWS_ACCESS_KEY_ID is required'),
-  AWS_SECRET_ACCESS_KEY: z.string().min(1, 'AWS_SECRET_ACCESS_KEY is required'),
-  AWS_REGION: z.string().min(1, 'AWS_REGION is required'),
-  AWS_S3_BUCKET_NAME: z.string().min(1, 'AWS_S3_BUCKET_NAME is required'),
-  AWS_S3_ENDPOINT: z.string().url('AWS_S3_ENDPOINT must be a valid URL'),
+  // R2 Configuration
+  R2_ACCESS_KEY_ID: z.string().min(1, 'R2_ACCESS_KEY_ID is required'),
+  R2_SECRET_ACCESS_KEY: z.string().min(1, 'R2_SECRET_ACCESS_KEY is required'),
+  R2_ACCOUNT_ID: z.string().min(1, 'R2_ACCOUNT_ID is required'),
+  R2_PUBLIC_BUCKET_NAME: z.string().min(1, 'R2_PUBLIC_BUCKET_NAME is required'),
+  R2_PUBLIC_URL: z.string().url('R2_PUBLIC_URL must be a valid URL').optional(),
+  NEXT_PUBLIC_R2_PUBLIC_URL: z.string().url('NEXT_PUBLIC_R2_PUBLIC_URL must be a valid URL').optional(),
+  // R2_PRIVATE_BUCKET_NAME is required in production, optional in development
+  R2_PRIVATE_BUCKET_NAME: z.string().min(1, 'R2_PRIVATE_BUCKET_NAME is required in production').optional().refine(
+    (val) => {
+      // In production, this field is required
+      if (process.env.NODE_ENV === 'production' && !val) {
+        return false;
+      }
+      return true;
+    },
+    {
+      message: 'R2_PRIVATE_BUCKET_NAME is required in production environment'
+    }
+  ),
   
   // Optional Redis for production
   REDIS_URL: z.string().url('REDIS_URL must be a valid URL').optional(),
@@ -97,7 +111,9 @@ export const getSecurityConfig = () => ({
   
   rateLimits: {
     strict: isProduction,
-    fileUpload: isProduction ? 20 : 50,
+    fileUpload: isProduction ? 5 : 50, // Much stricter for file uploads
+    database: isProduction ? 100 : 500, // DB operation limits
+    r2Operations: isProduction ? 20 : 100, // R2 operation limits
     general: isProduction ? 200 : 500,
     messaging: isProduction ? 100 : 200,
   },

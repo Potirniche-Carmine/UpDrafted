@@ -5,7 +5,7 @@ import { users, athleteProfiles, coachProfiles, recruitingProfiles, connections,
 import { and, eq, or, not, ilike, isNull, exists, ne, arrayOverlaps } from 'drizzle-orm';
 import { sanitizeText, sanitizeNumber } from '@/utils/sanitization';
 import { withRateLimit } from '@/utils/security';
-import { createHeightFilter, createWeightFilter } from '@/database/db-utils';
+import { filterByHeight, filterByWeight } from '@/database/db-utils';
 
 // Force Node.js runtime
 export const runtime = 'nodejs';
@@ -449,27 +449,8 @@ async function handleDiscoverRequest(request: NextRequest) {
       );
     }
 
-    // Height filter - only for athletes with proper database-level filtering
-    // Note: createHeightFilter uses secure parameterization with ${minHeight}
-    if (minHeight && minHeight > 60) {
-      filterConditions.push(
-        and(
-          not(isNull(athleteProfiles.userId)),
-          createHeightFilter(minHeight)
-        )
-      );
-    }
-
-    // Weight filter - only for athletes with proper database-level filtering
-    // Note: createWeightFilter uses secure parameterization with ${minWeight}
-    if (minWeight && minWeight > 100) {
-      filterConditions.push(
-        and(
-          not(isNull(athleteProfiles.userId)),
-          createWeightFilter(minWeight)
-        )
-      );
-    }
+    // Height and weight filters are now applied at the application level for security
+    // Database-level filtering removed to prevent SQL injection
 
     // Combine all conditions
     const allConditions = [
@@ -736,8 +717,27 @@ async function handleDiscoverRequest(request: NextRequest) {
       };
     });
 
-    // Note: Height and weight filtering is now done at the database level for better performance
-    // No post-query filtering needed for these fields anymore
+    // Apply height and weight filtering at the application level for security
+    let filteredResults = processedResults;
+    
+    // Filter by height (athletes only)
+    if (minHeight && minHeight > 60) {
+      filteredResults = filteredResults.filter(user => {
+        if (user.role !== 'athlete' || !user.height) return true; // Keep non-athletes and those without height
+        return filterByHeight(user.height, minHeight);
+      });
+    }
+    
+    // Filter by weight (athletes only)
+    if (minWeight && minWeight > 100) {
+      filteredResults = filteredResults.filter(user => {
+        if (user.role !== 'athlete' || !user.weight) return true; // Keep non-athletes and those without weight
+        return filterByWeight(user.weight, minWeight);
+      });
+    }
+
+    // Note: Height and weight filtering is now done at the application level for security
+    // No database-level filtering used to prevent SQL injection vulnerabilities
 
     // Set security headers
     const headers = new Headers({
@@ -752,9 +752,9 @@ async function handleDiscoverRequest(request: NextRequest) {
     const response = new NextResponse(
       JSON.stringify({
         success: true,
-        results: processedResults,
-        total: processedResults.length,
-        hasMore: processedResults.length === pageSize
+        results: filteredResults,
+        total: filteredResults.length,
+        hasMore: filteredResults.length === pageSize
       }),
       { 
         status: 200,
