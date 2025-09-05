@@ -80,12 +80,10 @@ export function sanitizeText(input: string | undefined | null): string {
     /url\s*\(/gi
   ];
 
-  let cleanInput = trimmed;
-  let hadSuspiciousContent = false;
+  const cleanInput = trimmed;
 
   for (const pattern of suspiciousPatterns) {
     if (pattern.test(cleanInput)) {
-      hadSuspiciousContent = true;
       console.warn('sanitizeText: Suspicious pattern detected, sanitizing:', pattern.source);
     }
   }

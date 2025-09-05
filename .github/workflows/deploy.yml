@@ -30,14 +30,36 @@ jobs:
         run: |
           IMAGE_ID=ghcr.io/${{ github.repository_owner }}/updraftedprod
           IMAGE_ID=$(echo $IMAGE_ID | tr '[:upper:]' '[:lower:]')
-          docker build \
-            --build-arg DATABASE_URL=${{ secrets.DATABASE_URL }} \
+          # Create temporary files for secrets
+          echo "${{ secrets.DATABASE_URL }}" > /tmp/database_url
+          echo "${{ secrets.CLERK_SECRET_KEY }}" > /tmp/clerk_secret_key
+          echo "${{ secrets.MESSAGE_ENCRYPTION_KEY }}" > /tmp/message_encryption_key
+          echo "${{ secrets.R2_ACCESS_KEY_ID }}" > /tmp/r2_access_key_id
+          echo "${{ secrets.R2_SECRET_ACCESS_KEY }}" > /tmp/r2_secret_access_key
+          echo "${{ secrets.R2_ACCOUNT_ID }}" > /tmp/r2_account_id
+          echo "${{ secrets.R2_PUBLIC_BUCKET_NAME }}" > /tmp/r2_public_bucket_name
+          echo "${{ secrets.R2_PRIVATE_BUCKET_NAME }}" > /tmp/r2_private_bucket_name
+          # Build with secrets mounted
+          DOCKER_BUILDKIT=1 docker build \
             --build-arg NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=${{ secrets.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY }} \
-            --build-arg CLERK_SECRET_KEY=${{ secrets.CLERK_SECRET_KEY }} \
             --build-arg NEXT_PUBLIC_CLERK_SIGN_IN_URL=${{ secrets.NEXT_PUBLIC_CLERK_SIGN_IN_URL }} \
             --build-arg NEXT_PUBLIC_CLERK_SIGN_UP_URL=${{ secrets.NEXT_PUBLIC_CLERK_SIGN_UP_URL }} \
             --build-arg NEXT_PUBLIC_APP_URL=${{ secrets.NEXT_PUBLIC_APP_URL }} \
+            --build-arg R2_PUBLIC_URL=${{ secrets.R2_PUBLIC_URL }} \
+            --build-arg NEXT_PUBLIC_R2_PUBLIC_URL=${{ secrets.NEXT_PUBLIC_R2_PUBLIC_URL }} \
+            --secret id=database_url,src=/tmp/database_url \
+            --secret id=clerk_secret_key,src=/tmp/clerk_secret_key \
+            --secret id=message_encryption_key,src=/tmp/message_encryption_key \
+            --secret id=r2_access_key_id,src=/tmp/r2_access_key_id \
+            --secret id=r2_secret_access_key,src=/tmp/r2_secret_access_key \
+            --secret id=r2_account_id,src=/tmp/r2_account_id \
+            --secret id=r2_public_bucket_name,src=/tmp/r2_public_bucket_name \
+            --secret id=r2_private_bucket_name,src=/tmp/r2_private_bucket_name \
             -t $IMAGE_ID:latest .
+          # Clean up temporary files
+          rm -f /tmp/database_url /tmp/clerk_secret_key /tmp/message_encryption_key
+          rm -f /tmp/r2_access_key_id /tmp/r2_secret_access_key /tmp/r2_account_id
+          rm -f /tmp/r2_public_bucket_name /tmp/r2_private_bucket_name
           docker push $IMAGE_ID:latest
           
       - name: Trigger Coolify Production Deployment via Webhook
@@ -68,15 +90,37 @@ jobs:
         run: |
           IMAGE_ID=ghcr.io/${{ github.repository_owner }}/updrafteddev
           IMAGE_ID=$(echo $IMAGE_ID | tr '[:upper:]' '[:lower:]')
-          docker build \
+          # Create temporary files for secrets
+          echo "${{ secrets.DEV_DATABASE_URL }}" > /tmp/database_url
+          echo "${{ secrets.DEV_CLERK_SECRET_KEY }}" > /tmp/clerk_secret_key
+          echo "${{ secrets.DEV_MESSAGE_ENCRYPTION_KEY }}" > /tmp/message_encryption_key
+          echo "${{ secrets.DEV_R2_ACCESS_KEY_ID }}" > /tmp/r2_access_key_id
+          echo "${{ secrets.DEV_R2_SECRET_ACCESS_KEY }}" > /tmp/r2_secret_access_key
+          echo "${{ secrets.DEV_R2_ACCOUNT_ID }}" > /tmp/r2_account_id
+          echo "${{ secrets.DEV_R2_PUBLIC_BUCKET_NAME }}" > /tmp/r2_public_bucket_name
+          echo "${{ secrets.DEV_R2_PRIVATE_BUCKET_NAME }}" > /tmp/r2_private_bucket_name
+          # Build with secrets mounted
+          DOCKER_BUILDKIT=1 docker build \
             -f dockerfile.dev \
-            --build-arg DATABASE_URL=${{ secrets.DEV_DATABASE_URL }} \
             --build-arg NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=${{ secrets.DEV_NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY }} \
-            --build-arg CLERK_SECRET_KEY=${{ secrets.DEV_CLERK_SECRET_KEY }} \
             --build-arg NEXT_PUBLIC_CLERK_SIGN_IN_URL=${{ secrets.DEV_NEXT_PUBLIC_CLERK_SIGN_IN_URL }} \
             --build-arg NEXT_PUBLIC_CLERK_SIGN_UP_URL=${{ secrets.DEV_NEXT_PUBLIC_CLERK_SIGN_UP_URL }} \
             --build-arg NEXT_PUBLIC_APP_URL=${{ secrets.DEV_NEXT_PUBLIC_APP_URL }} \
+            --build-arg R2_PUBLIC_URL=${{ secrets.DEV_R2_PUBLIC_URL }} \
+            --build-arg NEXT_PUBLIC_R2_PUBLIC_URL=${{ secrets.DEV_NEXT_PUBLIC_R2_PUBLIC_URL }} \
+            --secret id=database_url,src=/tmp/database_url \
+            --secret id=clerk_secret_key,src=/tmp/clerk_secret_key \
+            --secret id=message_encryption_key,src=/tmp/message_encryption_key \
+            --secret id=r2_access_key_id,src=/tmp/r2_access_key_id \
+            --secret id=r2_secret_access_key,src=/tmp/r2_secret_access_key \
+            --secret id=r2_account_id,src=/tmp/r2_account_id \
+            --secret id=r2_public_bucket_name,src=/tmp/r2_public_bucket_name \
+            --secret id=r2_private_bucket_name,src=/tmp/r2_private_bucket_name \
             -t $IMAGE_ID:latest .
+          # Clean up temporary files
+          rm -f /tmp/database_url /tmp/clerk_secret_key /tmp/message_encryption_key
+          rm -f /tmp/r2_access_key_id /tmp/r2_secret_access_key /tmp/r2_account_id
+          rm -f /tmp/r2_public_bucket_name /tmp/r2_private_bucket_name
           docker push $IMAGE_ID:latest
           
       - name: Trigger Coolify Development Deployment via Webhook
