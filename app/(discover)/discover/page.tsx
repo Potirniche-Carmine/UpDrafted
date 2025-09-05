@@ -707,18 +707,11 @@ function SearchPageContent() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [effectiveRole]); // Only depend on effectiveRole to prevent multiple triggers
 
-  // Show discover button when filters change (only if filters are applied)
+  // Show discover button when filters change (always show after first search)
   useEffect(() => {
-    const hasFiltersApplied = selectedSports.length > 0 || 
-                             selectedDivisions.length > 0 || 
-                             selectedCountries.length > 1 || // More than just United States
-                             selectedStates.length > 0 ||
-                             selectedPositions.length > 0 ||
-                             selectedGraduatingClasses.length > 0 ||
-                             selectedConferences.length > 0 ||
-                             minHeight > 60 ||
-                             minWeight > 100;
-    setShowDiscoverButton(hasFiltersApplied && hasSearched);
+    // Always show the button if user has searched at least once, regardless of filters
+    // This allows users to go back to default filters or reapply changes
+    setShowDiscoverButton(hasSearched);
   }, [selectedSports, selectedDivisions, selectedCountries, selectedStates, selectedPositions, selectedGraduatingClasses, selectedConferences, minHeight, minWeight, hasSearched]);
 
   // Save search state whenever important data changes

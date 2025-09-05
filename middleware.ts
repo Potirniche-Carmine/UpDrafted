@@ -16,9 +16,15 @@ function getRateLimitType(pathname: string): string {
 
 // Helper function to get user role from Clerk auth
 async function getUserRole(): Promise<{ userId?: string; role: UserRole }> {
-  // For now, default to 'athlete' - this would be enhanced with actual role extraction
-  // In a real implementation, you'd extract the user ID and role from the Clerk session
-  return { role: 'athlete' as UserRole };
+  try {
+    // For now, default to 'athlete' - this would be enhanced with actual role extraction
+    // In a real implementation, you'd extract the user ID and role from the Clerk session
+    // This is a simplified version for security testing
+    return { role: 'athlete' as UserRole };
+  } catch (error) {
+    console.warn('Failed to get user role, defaulting to athlete:', error);
+    return { role: 'athlete' as UserRole };
+  }
 }
 
 // Security middleware for mutation operations
@@ -59,20 +65,26 @@ const securityMiddleware = async (request: NextRequest) => {
   }
 
   // Advanced rate limiting with Redis support
-  const { userId, role } = await getUserRole();
-  const limitType = getRateLimitType(request.nextUrl.pathname) as 'fileUpload' | 'general' | 'messaging' | 'search' | 'connections' | 'notifications' | 'reports';
-  
-  const rateLimitResult = await withRateLimit(request, limitType, userId, role);
-  
-  if (!rateLimitResult.success && rateLimitResult.response) {
-    return rateLimitResult.response;
-  }
-
-    // Continue with CSRF protection after rate limiting
   const securityResponse = NextResponse.next();
-  Object.entries(rateLimitResult.headers).forEach(([key, value]) => {
-    securityResponse.headers.set(key, value);
-  });
+  
+  try {
+    const { userId, role } = await getUserRole();
+    const limitType = getRateLimitType(request.nextUrl.pathname) as 'fileUpload' | 'general' | 'messaging' | 'search' | 'connections' | 'notifications' | 'reports';
+    
+    const rateLimitResult = await withRateLimit(request, limitType, userId, role);
+    
+    if (!rateLimitResult.success && rateLimitResult.response) {
+      return rateLimitResult.response;
+    }
+    
+    // Apply rate limit headers to response
+    Object.entries(rateLimitResult.headers).forEach(([key, value]) => {
+      securityResponse.headers.set(key, value);
+    });
+  } catch (error) {
+    console.error('Rate limiting error:', error);
+    // Continue without rate limiting if there's an error to avoid breaking the app
+  }
 
   // CSRF Protection
   const origin = request.headers.get('origin');
@@ -83,7 +95,7 @@ const securityMiddleware = async (request: NextRequest) => {
       const originUrl = new URL(origin);
       if (originUrl.host !== host) {
         // Log security event
-        SecurityEvents.csrfAttempt(request, origin, host);
+        SecurityEvents.csrfAttempt(request, origin || '', host);
         
         return NextResponse.json(
           { error: 'Invalid request origin' },

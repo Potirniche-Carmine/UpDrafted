@@ -19,7 +19,19 @@ const envSchema = z.object({
   R2_PUBLIC_BUCKET_NAME: z.string().min(1, 'R2_PUBLIC_BUCKET_NAME is required'),
   R2_PUBLIC_URL: z.string().url('R2_PUBLIC_URL must be a valid URL').optional(),
   NEXT_PUBLIC_R2_PUBLIC_URL: z.string().url('NEXT_PUBLIC_R2_PUBLIC_URL must be a valid URL').optional(),
-  R2_PRIVATE_BUCKET_NAME: z.string().min(1, 'R2_PRIVATE_BUCKET_NAME is required').optional(),
+  // R2_PRIVATE_BUCKET_NAME is required in production, optional in development
+  R2_PRIVATE_BUCKET_NAME: z.string().min(1, 'R2_PRIVATE_BUCKET_NAME is required in production').optional().refine(
+    (val) => {
+      // In production, this field is required
+      if (process.env.NODE_ENV === 'production' && !val) {
+        return false;
+      }
+      return true;
+    },
+    {
+      message: 'R2_PRIVATE_BUCKET_NAME is required in production environment'
+    }
+  ),
   
   // Optional Redis for production
   REDIS_URL: z.string().url('REDIS_URL must be a valid URL').optional(),
