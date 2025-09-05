@@ -58,4 +58,5 @@ export interface CoachProfileProps {
   pendingSubmittedAt?: string;
   connectionStatus?: "none" | "pending" | "connected";
   connectionDirection?: "incoming" | "outgoing" | null;
+  connectionId?: number | null;
 } 

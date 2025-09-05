@@ -435,7 +435,8 @@ export function AthleteProfile({
   transferPortalRejectionReason,
   transferPortalRejectedAt,
   connectionStatus = "none",
-  connectionDirection
+  connectionDirection,
+  connectionId
 }: AthleteProfileProps) {
   const [selectedSport, setSelectedSport] = useState(data.sport);
   const [editDialogOpen, setEditDialogOpen] = useState<string | null>(null);
@@ -813,6 +814,10 @@ export function AthleteProfile({
   const handleAcceptConnection = async () => {
     setIsConnecting(true);
     try {
+      if (!connectionId) {
+        throw new Error('Connection ID is required to accept connection');
+      }
+
       const windowWithClerk = window as unknown as {
         Clerk?: {
           session?: {
@@ -829,7 +834,7 @@ export function AthleteProfile({
           'Authorization': `Bearer ${token}`,
         },
         body: JSON.stringify({
-          fromUserId: safeProfileData.userId
+          connectionId: connectionId
         }),
       });
 

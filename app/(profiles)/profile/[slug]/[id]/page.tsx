@@ -421,6 +421,7 @@ function ProfileContent({ profileId, slug }: { profileId: string; slug: string |
           isOwnProfile={effectiveIsOwnProfile}
           connectionStatus={profileData.connectionStatus}
           connectionDirection={profileData.connectionDirection}
+          connectionId={profileData.connectionId}
           hasPendingVerification={profileData.hasPendingVerification}
           pendingSubmittedAt={profileData.pendingSubmittedAt}
           hasRejectedVerification={profileData.hasRejectedVerification}
@@ -440,6 +441,7 @@ function ProfileContent({ profileId, slug }: { profileId: string; slug: string |
           isOwnProfile={effectiveIsOwnProfile}
           connectionStatus={profileData.connectionStatus}
           connectionDirection={profileData.connectionDirection}
+          connectionId={profileData.connectionId}
           hasPendingVerification={profileData.hasPendingVerification}
           pendingSubmittedAt={profileData.pendingSubmittedAt}
         />
@@ -451,6 +453,7 @@ function ProfileContent({ profileId, slug }: { profileId: string; slug: string |
           isOwnProfile={effectiveIsOwnProfile}
           connectionStatus={profileData.connectionStatus}
           connectionDirection={profileData.connectionDirection}
+          connectionId={profileData.connectionId}
           hasPendingVerification={profileData.hasPendingVerification}
           pendingSubmittedAt={profileData.pendingSubmittedAt}
           hasRejectedVerification={profileData.hasRejectedVerification}

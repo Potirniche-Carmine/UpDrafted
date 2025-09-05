@@ -844,11 +844,13 @@ export async function GET(
     // Check connection status if viewing another user's profile
     let connectionStatus = "none";
     let connectionDirection = null; // "outgoing" or "incoming" for pending requests
+    let connectionId = null;
     if (!isOwnProfile) {
       try {
         const existingConnection = await connectionOperations.getConnectionBetweenUsers(currentUserId, profileUserId);
         if (existingConnection) {
           connectionStatus = existingConnection.status;
+          connectionId = existingConnection.id;
           if (existingConnection.status === 'pending') {
             // Determine direction: if current user is fromUserId, it's outgoing; if toUserId, it's incoming
             connectionDirection = existingConnection.fromUserId === currentUserId ? "outgoing" : "incoming";
@@ -870,6 +872,7 @@ export async function GET(
       currentUserRole,
       connectionStatus: !isOwnProfile ? connectionStatus : undefined,
       connectionDirection: !isOwnProfile ? connectionDirection : undefined,
+      connectionId: !isOwnProfile ? connectionId : undefined,
       ...(verificationStatus && verificationStatus)
     };
 

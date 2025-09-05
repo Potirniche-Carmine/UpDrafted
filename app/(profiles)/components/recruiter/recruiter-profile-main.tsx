@@ -465,7 +465,8 @@ export function RecruiterProfile({
   rejectionReason,
   rejectedAt,
   connectionStatus = "none",
-  connectionDirection
+  connectionDirection,
+  connectionId
 }: RecruiterProfileProps) {
   const [profileData, setProfileData] = useState<RecruiterProfileData>(data);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
@@ -982,6 +983,88 @@ export function RecruiterProfile({
     }
   };
 
+  const handleAcceptConnection = async () => {
+    setIsConnecting(true);
+    try {
+      if (!connectionId) {
+        throw new Error('Connection ID is required to accept connection');
+      }
+
+      const windowWithClerk = window as unknown as {
+        Clerk?: {
+          session?: {
+            getToken: () => Promise<string>;
+          };
+        };
+      };
+      const token = await windowWithClerk.Clerk?.session?.getToken();
+      
+      const response = await fetch('/api/connections', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          connectionId: connectionId
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        
+        // Log error details to console
+        console.error('Connection acceptance failed:', {
+          status: response.status,
+          error: errorData.error,
+          connectionId: connectionId,
+          targetUserId: profileData.userId,
+          timestamp: new Date().toISOString()
+        });
+        
+        throw new Error(errorData.error || 'Failed to accept connection request');
+      }
+
+      const result = await response.json();
+      if (result.success) {
+        setCurrentConnectionStatus("connected");
+        toast.success(
+          "Connection Accepted",
+          `You are now connected with ${profileData.fullName}`,
+          5000
+        );
+      } else {
+        // Log unexpected API response structure to console
+        console.error('Unexpected connection acceptance API response:', {
+          result,
+          connectionId: connectionId,
+          targetUserId: profileData.userId,
+          timestamp: new Date().toISOString()
+        });
+        
+        throw new Error(result.error || 'Failed to accept connection request');
+      }
+    } catch (error) {
+      if (error instanceof Error) {
+        console.error('Error accepting connection request:', {
+          message: error.message,
+          stack: error.stack,
+          connectionId: connectionId,
+          targetUserId: profileData.userId,
+          timestamp: new Date().toISOString()
+        });
+        
+        toast.error(
+          "Connection Error",
+          "Something went wrong while accepting the connection request. Please try again.",
+          7000
+        );
+      }
+    } finally {
+      setIsConnecting(false);
+    }
+  };
+
   const handleReportProfile = () => {
     // TODO: Open report modal or navigate to report page
   };
@@ -1009,7 +1092,7 @@ export function RecruiterProfile({
         isOwnProfile={isOwnProfile}
         onConnect={canConnect ? handleConnectClick : undefined}
         onWithdrawConnection={handleWithdrawConnection}
-        onAcceptConnection={handleConnectionConfirm}
+        onAcceptConnection={handleAcceptConnection}
         onDeclineConnection={handleWithdrawConnection}
         onReport={handleReportProfile}
         onShare={handleShare}

@@ -465,14 +465,19 @@ export async function PUT(request: NextRequest) {
     ]);
 
     // Create a conversation when the status is updated to 'connected'
+    // Determine the other participant to avoid creating a self-conversation
+    const partnerUserId = currentUserId === connection.toUserId 
+      ? connection.fromUserId 
+      : connection.toUserId;
+
     // Check if a conversation already exists between these users
     const existingConversation = await messageOperations.getConversationByUsers(
-      currentUserId, 
-      connection.toUserId
+      currentUserId,
+      partnerUserId
     );
-    
+
     if (!existingConversation) {
-      await messageOperations.createConversation(currentUserId, connection.toUserId);
+      await messageOperations.createConversation(currentUserId, partnerUserId);
     }
 
     return createSuccessResponse({

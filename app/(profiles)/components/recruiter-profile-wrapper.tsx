@@ -9,6 +9,7 @@ interface RecruiterProfileWrapperProps {
   isOwnProfile?: boolean;
   connectionStatus?: "none" | "pending" | "connected";
   connectionDirection?: "incoming" | "outgoing" | null;
+  connectionId?: number | null;
   hasPendingVerification?: boolean;
   pendingSubmittedAt?: string;
   hasRejectedVerification?: boolean;
@@ -21,6 +22,7 @@ export function RecruiterProfileWrapper({
   isOwnProfile = false,
   connectionStatus,
   connectionDirection,
+  connectionId,
   hasPendingVerification,
   pendingSubmittedAt,
   hasRejectedVerification,
@@ -42,6 +44,7 @@ export function RecruiterProfileWrapper({
       rejectedAt={rejectedAt}
       connectionStatus={connectionStatus}
       connectionDirection={connectionDirection}
+      connectionId={connectionId}
     />
   );
 } 

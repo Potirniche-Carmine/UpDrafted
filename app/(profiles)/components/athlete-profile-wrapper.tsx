@@ -8,6 +8,7 @@ interface AthleteProfileWrapperProps {
   isOwnProfile?: boolean;
   connectionStatus?: "none" | "pending" | "connected";
   connectionDirection?: "incoming" | "outgoing" | null;
+  connectionId?: number | null;
   hasPendingVerification?: boolean;
   pendingSubmittedAt?: string;
   hasRejectedVerification?: boolean;
@@ -26,6 +27,7 @@ export function AthleteProfileWrapper({
   isOwnProfile = false, 
   connectionStatus,
   connectionDirection,
+  connectionId,
   hasPendingVerification,
   pendingSubmittedAt,
   hasRejectedVerification,
@@ -57,6 +59,7 @@ export function AthleteProfileWrapper({
       transferPortalRejectedAt={transferPortalRejectedAt}
       connectionStatus={connectionStatus}
       connectionDirection={connectionDirection}
+      connectionId={connectionId}
     />
   );
 } 
