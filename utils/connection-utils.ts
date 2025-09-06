@@ -1,5 +1,4 @@
 import { useToast } from "@/components/ui/toast";
-import { undefined } from "zod";
 
 export interface Connection {
   fromUserId: string;
@@ -118,7 +117,7 @@ export const getPartnerUserId = (currentUserId: string | number, connection: Con
     throw new Error("UserId's are Null.");
   }
 
-  if (typeof currentUserId === 'undefined' || typeof connection.fromUserId === 'undefined' || typeof connection.fromUserId === 'undefined') {
+  if (typeof currentUserId === 'undefined' || typeof connection.fromUserId === 'undefined' || typeof connection.toUserId === 'undefined') {
     throw new Error("UserId's are Undefined.");
   }
 
