@@ -1,0 +1,104 @@
+import { useToast } from "@/components/ui/toast";
+
+export interface AcceptConnectionParams {
+  connectionId: string;
+  targetUserId: string | number;
+  profileName: string;
+  setIsConnecting: (loading: boolean) => void;
+  setCurrentConnectionStatus: (status: "none" | "pending" | "connected") => void;
+  toast: ReturnType<typeof useToast>;
+}
+
+/**
+ * Shared utility function to handle accepting connection requests
+ * Reduces code duplication across athlete, coach, and recruiter profile components
+ */
+export const handleAcceptConnection = async ({
+  connectionId,
+  targetUserId,
+  profileName,
+  setIsConnecting,
+  setCurrentConnectionStatus,
+  toast
+}: AcceptConnectionParams): Promise<void> => {
+  setIsConnecting(true);
+  
+  try {
+    if (!connectionId) {
+      throw new Error('Connection ID is required to accept connection');
+    }
+
+    const windowWithClerk = window as unknown as {
+      Clerk?: {
+        session?: {
+          getToken: () => Promise<string>;
+        };
+      };
+    };
+    const token = await windowWithClerk.Clerk?.session?.getToken();
+
+    const response = await fetch('/api/connections', {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        connectionId: connectionId
+      }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+
+      // Log error details to console
+      console.error('Connection acceptance failed:', {
+        status: response.status,
+        error: errorData.error,
+        connectionId: connectionId,
+        targetUserId: targetUserId,
+        timestamp: new Date().toISOString()
+      });
+
+      throw new Error(errorData.error || 'Failed to accept connection request');
+    }
+
+    const result = await response.json();
+    if (result.success) {
+      setCurrentConnectionStatus("connected");
+      toast.success(
+        "Connection Accepted",
+        `You are now connected with ${profileName}`,
+        5000
+      );
+    } else {
+      // Log unexpected API response structure to console
+      console.error('Unexpected connection acceptance API response:', {
+        result,
+        connectionId: connectionId,
+        targetUserId: targetUserId,
+        timestamp: new Date().toISOString()
+      });
+
+      throw new Error(result.error || 'Failed to accept connection request');
+    }
+  } catch (error) {
+    if (error instanceof Error) {
+      console.error('Error accepting connection request:', {
+        message: error.message,
+        stack: error.stack,
+        connectionId: connectionId,
+        targetUserId: targetUserId,
+        timestamp: new Date().toISOString()
+      });
+
+      toast.error(
+        "Connection Error",
+        "Something went wrong while accepting the connection request. Please try again.",
+        7000
+      );
+    }
+  } finally {
+    setIsConnecting(false);
+  }
+};

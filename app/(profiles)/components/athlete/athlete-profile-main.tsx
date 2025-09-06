@@ -36,6 +36,7 @@ import { useUser } from "@clerk/nextjs";
 import { generateProfileSlug, generateProfileUrl } from '@/lib/utils';
 import { useRouter } from "next/navigation";
 import { showUnverifiedAccountWarning } from '@/utils/toast-helpers';
+import { handleAcceptConnection as acceptConnection } from '@/utils/connection-utils';
 
 // Memoize heavy components
 const MeasurablesSection = memo(({ measurables, allSports, selectedSport, onSportChange, isOwnProfile, onEditSection }: { 
@@ -812,82 +813,14 @@ export function AthleteProfile({
   };
 
   const handleAcceptConnection = async () => {
-    setIsConnecting(true);
-    try {
-      if (!connectionId) {
-        throw new Error('Connection ID is required to accept connection');
-      }
-
-      const windowWithClerk = window as unknown as {
-        Clerk?: {
-          session?: {
-            getToken: () => Promise<string>;
-          };
-        };
-      };
-      const token = await windowWithClerk.Clerk?.session?.getToken();
-      
-      const response = await fetch('/api/connections', {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          connectionId: connectionId
-        }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        
-        // Log error details to console
-        console.error('Connection acceptance failed:', {
-          status: response.status,
-          error: errorData.error,
-          targetUserId: safeProfileData.userId,
-          timestamp: new Date().toISOString()
-        });
-        
-        throw new Error(errorData.error || 'Failed to accept connection request');
-      }
-
-      const result = await response.json();
-      if (result.success) {
-        setCurrentConnectionStatus("connected");
-        toast.success(
-          "Connection Accepted",
-          `You are now connected with ${safeProfileData.fullName}`,
-          5000
-        );
-      } else {
-        // Log unexpected API response structure to console
-        console.error('Unexpected acceptance API response:', {
-          result,
-          targetUserId: safeProfileData.userId,
-          timestamp: new Date().toISOString()
-        });
-        
-        throw new Error(result.error || 'Failed to accept connection request');
-      }
-    } catch (error) {
-      if (error instanceof Error) {
-        console.error('Error accepting connection request:', {
-          message: error.message,
-          stack: error.stack,
-          targetUserId: safeProfileData.userId,
-          timestamp: new Date().toISOString()
-        });
-      }
-      
-      toast.error(
-        "Connection Error",
-        "Something went wrong while accepting the connection request. Please try again.",
-        7000
-      );
-    } finally {
-      setIsConnecting(false);
-    }
+    await acceptConnection({
+      connectionId: String(connectionId!),
+      targetUserId: safeProfileData.userId || safeProfileData.id,
+      profileName: safeProfileData.fullName,
+      setIsConnecting,
+      setCurrentConnectionStatus,
+      toast
+    });
   };
 
   const handleDeclineConnection = async () => {
