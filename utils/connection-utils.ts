@@ -1,5 +1,10 @@
 import { useToast } from "@/components/ui/toast";
 
+export interface Connection {
+  fromUserId: string;
+  toUserId: string;
+}
+
 export interface AcceptConnectionParams {
   connectionId: string;
   targetUserId: string | number;
@@ -101,4 +106,33 @@ export const handleAcceptConnection = async ({
   } finally {
     setIsConnecting(false);
   }
+};
+
+/**
+ * Safely determines the partner user ID from a connection
+ * Handles type mismatches and edge cases robustly
+ */
+export const getPartnerUserId = (currentUserId: string | number, connection: Connection): string => {
+  const currentId = String(currentUserId);
+  const toUserId = String(connection.toUserId);
+  const fromUserId = String(connection.fromUserId);
+  
+  // Safety check - ensure we're not dealing with the same user
+  if (currentId === toUserId && currentId === fromUserId) {
+    throw new Error('Invalid connection: user cannot be connected to themselves');
+  }
+  
+  return currentId === toUserId ? connection.fromUserId : connection.toUserId;
+};
+
+/**
+ * Safely determines the original requester ID from a connection
+ * The original requester is the one who is NOT the current user
+ */
+export const getOriginalRequesterId = (currentUserId: string | number, connection: Connection): string => {
+  const currentId = String(currentUserId);
+  const fromUserId = String(connection.fromUserId);
+  
+  // The original requester is the one who is NOT the current user
+  return currentId === fromUserId ? connection.toUserId : connection.fromUserId;
 };
