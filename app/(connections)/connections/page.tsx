@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 
 import Link from 'next/link';
 import { AuthWrapper } from '../../../components/auth-wrapper';
@@ -1472,6 +1472,7 @@ const AdvancedFilters: React.FC<AdvancedFiltersProps> = ({
 function App() {
   const { user } = useUser();
   const effectiveRole = user?.publicMetadata?.role as string;
+  const searchParams = useSearchParams();
   
   const [searchTerm, setSearchTerm] = useState('');
   const [filter, setFilter] = useState('all');
@@ -1605,7 +1606,16 @@ function App() {
   // Connection action handlers
   const [connectionToRemove, setConnectionToRemove] = useState<{id: number, targetUserId: string, userName: string} | null>(null);
   const [requestToWithdraw, setRequestToWithdraw] = useState<{id: number, targetUserId: string, userName: string} | null>(null);
-  const [activeTab, setActiveTab] = useState('connections');
+  
+  // Initialize activeTab from URL search params, default to 'connections'
+  const [activeTab, setActiveTab] = useState(() => {
+    const tabParam = searchParams.get('tab');
+    // Validate tab parameter to prevent invalid values
+    if (tabParam && ['connections', 'requests', 'sent-requests'].includes(tabParam)) {
+      return tabParam;
+    }
+    return 'connections';
+  });
 
   const handleRemoveConnection = (connectionId: number, targetUserId: string) => {
     // Find the connection to get the user's name for the dialog
