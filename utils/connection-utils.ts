@@ -1,4 +1,5 @@
 import { useToast } from "@/components/ui/toast";
+import { undefined } from "zod";
 
 export interface Connection {
   fromUserId: string;
@@ -113,9 +114,18 @@ export const handleAcceptConnection = async ({
  * Handles type mismatches and edge cases robustly
  */
 export const getPartnerUserId = (currentUserId: string | number, connection: Connection): string => {
+  if (currentUserId == null || connection.fromUserId == null || connection.toUserId == null) {
+    throw new Error("UserId's are Null.");
+  }
+
+  if (typeof currentUserId === 'undefined' || typeof connection.fromUserId === 'undefined' || typeof connection.fromUserId === 'undefined') {
+    throw new Error("UserId's are Undefined.");
+  }
+
   const currentId = String(currentUserId);
   const toUserId = String(connection.toUserId);
   const fromUserId = String(connection.fromUserId);
+  
   
   // Safety check - ensure we're not dealing with the same user
   if (currentId === toUserId && currentId === fromUserId) {
