@@ -29,6 +29,11 @@ export const handleAcceptConnection = async ({
   setIsConnecting(true);
   
   try {
+    const connectionId_num = Number(connectionId);
+    if (isNaN(connectionId_num)){
+      throw new Error("Connection ID is NaN. ");
+    }
+    
     if (!connectionId) {
       throw new Error('Connection ID is required to accept connection');
     }
