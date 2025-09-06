@@ -29,13 +29,14 @@ export const handleAcceptConnection = async ({
   setIsConnecting(true);
   
   try {
-    const connectionId_num = Number(connectionId);
-    if (isNaN(connectionId_num)){
-      throw new Error("Connection ID is NaN. ");
-    }
-    
+    // Check if connectionId is provided and not empty
     if (!connectionId) {
       throw new Error('Connection ID is required to accept connection');
+    }
+    
+    const connectionId_num = Number(connectionId);
+    if (isNaN(connectionId_num) || connectionId_num <= 0) {
+      throw new Error("Connection ID must be a valid positive number");
     }
 
     const windowWithClerk = window as unknown as {
@@ -118,6 +119,7 @@ export const handleAcceptConnection = async ({
  * Handles type mismatches and edge cases robustly
  */
 export const getPartnerUserId = (currentUserId: string | number, connection: Connection): string => {
+  // Check for null or undefined values
   if (currentUserId == null || connection.fromUserId == null || connection.toUserId == null) {
     throw new Error("UserId's are Null.");
   }
@@ -126,10 +128,10 @@ export const getPartnerUserId = (currentUserId: string | number, connection: Con
     throw new Error("UserId's are Undefined.");
   }
 
+  // Convert to strings safely - at this point we know they're not null/undefined
   const currentId = String(currentUserId);
   const toUserId = String(connection.toUserId);
   const fromUserId = String(connection.fromUserId);
-  
   
   // Safety check - ensure we're not dealing with the same user
   if (currentId === toUserId && currentId === fromUserId) {
@@ -144,6 +146,16 @@ export const getPartnerUserId = (currentUserId: string | number, connection: Con
  * The original requester is the one who is NOT the current user
  */
 export const getOriginalRequesterId = (currentUserId: string | number, connection: Connection): string => {
+  // Check for null or undefined values
+  if (currentUserId == null || connection.fromUserId == null || connection.toUserId == null) {
+    throw new Error("UserId's are Null.");
+  }
+
+  if (typeof currentUserId === 'undefined' || typeof connection.fromUserId === 'undefined' || typeof connection.toUserId === 'undefined') {
+    throw new Error("UserId's are Undefined.");
+  }
+
+  // Convert to strings safely - at this point we know they're not null/undefined
   const currentId = String(currentUserId);
   const fromUserId = String(connection.fromUserId);
   
