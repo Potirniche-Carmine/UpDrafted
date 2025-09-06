@@ -128,17 +128,15 @@ export const getPartnerUserId = (currentUserId: string | number, connection: Con
     throw new Error("UserId's are Undefined.");
   }
 
-  // Convert to strings safely - at this point we know they're not null/undefined
+  // Convert currentUserId to string for comparison - connection properties are already strings
   const currentId = String(currentUserId);
-  const toUserId = String(connection.toUserId);
-  const fromUserId = String(connection.fromUserId);
   
   // Safety check - ensure we're not dealing with the same user
-  if (currentId === toUserId && currentId === fromUserId) {
+  if (currentId === connection.toUserId && currentId === connection.fromUserId) {
     throw new Error('Invalid connection: user cannot be connected to themselves');
   }
   
-  return currentId === toUserId ? connection.fromUserId : connection.toUserId;
+  return currentId === connection.toUserId ? connection.fromUserId : connection.toUserId;
 };
 
 /**
@@ -155,10 +153,9 @@ export const getOriginalRequesterId = (currentUserId: string | number, connectio
     throw new Error("UserId's are Undefined.");
   }
 
-  // Convert to strings safely - at this point we know they're not null/undefined
+  // Convert currentUserId to string for comparison - connection properties are already strings
   const currentId = String(currentUserId);
-  const fromUserId = String(connection.fromUserId);
   
   // The original requester is the one who is NOT the current user
-  return currentId === fromUserId ? connection.toUserId : connection.fromUserId;
+  return currentId === connection.fromUserId ? connection.toUserId : connection.fromUserId;
 };
