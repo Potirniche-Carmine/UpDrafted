@@ -4,6 +4,7 @@ import { connectionOperations, userOperations, messageOperations, notificationOp
 import { sanitizeText } from '@/utils/sanitization';
 import { withRateLimit } from '@/utils/security';
 import { getCachedWithType, setCachedWithType, invalidateCachePattern, createErrorResponse, createSuccessResponse } from '@/utils/security';
+import { getPartnerUserId, getOriginalRequesterId } from '@/utils/connection-utils';
 
 export const runtime = 'nodejs';
 
@@ -445,7 +446,7 @@ export async function PUT(request: NextRequest) {
     }
 
     // Create notification for the original requester that their connection was accepted
-    const originalRequesterId = connection.fromUserId === currentUserId ? connection.toUserId : connection.fromUserId;
+    const originalRequesterId = getOriginalRequesterId(currentUserId, connection);
     try {
       await notificationOperations.createConnectionNotification(
         originalRequesterId,
@@ -465,14 +466,17 @@ export async function PUT(request: NextRequest) {
     ]);
 
     // Create a conversation when the status is updated to 'connected'
+    // Determine the other participant to avoid creating a self-conversation
+    const partnerUserId = getPartnerUserId(currentUserId, connection);
+
     // Check if a conversation already exists between these users
     const existingConversation = await messageOperations.getConversationByUsers(
-      currentUserId, 
-      connection.toUserId
+      currentUserId,
+      partnerUserId
     );
-    
+
     if (!existingConversation) {
-      await messageOperations.createConversation(currentUserId, connection.toUserId);
+      await messageOperations.createConversation(currentUserId, partnerUserId);
     }
 
     return createSuccessResponse({

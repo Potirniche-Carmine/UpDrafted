@@ -37,6 +37,7 @@ import { getStudentClassificationDisplayName, StudentClassification } from '@/li
 import { generateProfileSlug, generateProfileUrl } from '@/lib/utils';
 import { useRouter } from 'next/navigation';
 import { showUnverifiedAccountWarning } from '@/utils/toast-helpers';
+import { handleAcceptConnection as acceptConnection } from '@/utils/connection-utils';
 
 // Social Media Section Component (same as athlete profile)
 const SocialMediaSection = memo(({ socialMedia, isOwnProfile, onEdit }: { 
@@ -465,7 +466,8 @@ export function RecruiterProfile({
   rejectionReason,
   rejectedAt,
   connectionStatus = "none",
-  connectionDirection
+  connectionDirection,
+  connectionId
 }: RecruiterProfileProps) {
   const [profileData, setProfileData] = useState<RecruiterProfileData>(data);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
@@ -982,6 +984,17 @@ export function RecruiterProfile({
     }
   };
 
+  const handleAcceptConnection = async () => {
+    await acceptConnection({
+      connectionId: String(connectionId!),
+      targetUserId: profileData.userId || profileData.id,
+      profileName: profileData.fullName,
+      setIsConnecting,
+      setCurrentConnectionStatus,
+      toast
+    });
+  };
+
   const handleReportProfile = () => {
     // TODO: Open report modal or navigate to report page
   };
@@ -1009,7 +1022,7 @@ export function RecruiterProfile({
         isOwnProfile={isOwnProfile}
         onConnect={canConnect ? handleConnectClick : undefined}
         onWithdrawConnection={handleWithdrawConnection}
-        onAcceptConnection={handleConnectionConfirm}
+        onAcceptConnection={handleAcceptConnection}
         onDeclineConnection={handleWithdrawConnection}
         onReport={handleReportProfile}
         onShare={handleShare}

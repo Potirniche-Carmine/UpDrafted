@@ -62,4 +62,5 @@ export interface RecruiterProfileProps {
   rejectedAt?: string;
   connectionStatus?: "none" | "pending" | "connected";
   connectionDirection?: "incoming" | "outgoing" | null;
+  connectionId?: number | null;
 } 

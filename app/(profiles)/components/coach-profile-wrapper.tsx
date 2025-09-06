@@ -8,6 +8,7 @@ interface CoachProfileWrapperProps {
   isOwnProfile?: boolean;
   connectionStatus?: "none" | "pending" | "connected";
   connectionDirection?: "incoming" | "outgoing" | null;
+  connectionId?: number | null;
   hasPendingVerification?: boolean;
   pendingSubmittedAt?: string;
 }
@@ -17,6 +18,7 @@ export function CoachProfileWrapper({
   isOwnProfile = false,
   connectionStatus,
   connectionDirection,
+  connectionId,
   hasPendingVerification,
   pendingSubmittedAt 
 }: CoachProfileWrapperProps) {
@@ -32,6 +34,7 @@ export function CoachProfileWrapper({
       pendingSubmittedAt={pendingSubmittedAt}
       connectionStatus={connectionStatus}
       connectionDirection={connectionDirection}
+      connectionId={connectionId}
     />
   );
 } 
