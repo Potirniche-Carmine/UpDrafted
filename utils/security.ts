@@ -8,7 +8,8 @@ const isDev = process.env.NODE_ENV === 'development';
 export const SECURITY_CONFIG = {
   redis: {
     url: process.env.REDIS_URL,
-    enabled: !!process.env.REDIS_URL,
+    token: process.env.REDIS_TOKEN,
+    enabled: !!process.env.REDIS_URL && !!process.env.REDIS_TOKEN,
   },
   cache: {
     profileInfo: isDev ? 60 : 300, // 1min dev, 5min prod
@@ -73,8 +74,11 @@ async function getRedisClient() {
   
   if (!redisClient) {
     try {
-      const Redis = (await import('ioredis')).default;
-      redisClient = new Redis(SECURITY_CONFIG.redis.url);
+      const { Redis } = await import('@upstash/redis');
+      redisClient = new Redis({ 
+        url: SECURITY_CONFIG.redis.url, 
+        token: SECURITY_CONFIG.redis.token 
+      });
     } catch (error) {
       console.warn('Redis connection failed, falling back to memory:', error);
       return null;
