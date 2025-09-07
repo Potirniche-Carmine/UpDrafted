@@ -14,29 +14,45 @@ import { env } from '../utils/env';
 
 const connectionString = env.DATABASE_URL;
 
-const pool = new Pool({ 
-  connectionString,
-  max: 20, 
-  idleTimeoutMillis: 30000,
-  connectionTimeoutMillis: 5000,
-  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
-  keepAlive: true,
-  keepAliveInitialDelayMillis: 10000,
-});
+// Singleton pattern for database connection
+let pool: Pool | null = null;
+let db: ReturnType<typeof drizzle<typeof schema>> | null = null;
 
-// Connection health monitoring
-pool.on('error', (err) => {
-  const sanitizedMsg = err.message.replace(/(password|pwd|token|key|secret)=[^&\s]+/gi, '$1=***');
-  console.error('Unexpected database connection error:', sanitizedMsg);
-});
+function createDatabaseConnection() {
+  if (pool && db) {
+    return { pool, db };
+  }
 
-// Graceful shutdown
-process.on('SIGINT', async () => {
-  console.log('Closing database connections...');
-  await pool.end();
-  process.exit(0);
-});
+  pool = new Pool({ 
+    connectionString,
+    max: 20, 
+    idleTimeoutMillis: 30000,
+    connectionTimeoutMillis: 5000,
+    ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+    keepAlive: true,
+    keepAliveInitialDelayMillis: 10000,
+  });
 
-export const db = drizzle(pool, { schema });
+  pool.on('error', (err) => {
+    console.error('Database connection error:', err.message);
+    pool = null;
+    db = null;
+  });
 
-export { pool };
+  if (!process.listenerCount('SIGINT')) {
+    process.on('SIGINT', async () => {
+      if (pool) {
+        await pool.end();
+        pool = null;
+        db = null;
+      }
+    });
+  }
+
+  db = drizzle(pool, { schema });
+  return { pool, db };
+}
+
+const { pool: dbPool, db: database } = createDatabaseConnection();
+
+export { database as db, dbPool as pool };

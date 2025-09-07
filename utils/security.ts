@@ -8,7 +8,8 @@ const isDev = process.env.NODE_ENV === 'development';
 export const SECURITY_CONFIG = {
   redis: {
     url: process.env.REDIS_URL,
-    enabled: !!process.env.REDIS_URL,
+    token: process.env.REDIS_TOKEN,
+    enabled: !!process.env.REDIS_URL && !!process.env.REDIS_TOKEN,
   },
   cache: {
     profileInfo: isDev ? 60 : 300, // 1min dev, 5min prod
@@ -73,8 +74,11 @@ async function getRedisClient() {
   
   if (!redisClient) {
     try {
-      const Redis = (await import('ioredis')).default;
-      redisClient = new Redis(SECURITY_CONFIG.redis.url);
+      const { Redis } = await import('@upstash/redis');
+      redisClient = new Redis({ 
+        url: SECURITY_CONFIG.redis.url, 
+        token: SECURITY_CONFIG.redis.token 
+      });
     } catch (error) {
       console.warn('Redis connection failed, falling back to memory:', error);
       return null;
@@ -775,4 +779,76 @@ export function validateFile(file: File): { valid: boolean; error?: string } {
   }
   
   return { valid: true };
+}
+
+// ==================== TIMESTAMP SECURITY ====================
+
+/**
+ * Validates timestamp headers to prevent replay attacks
+ * @param timestampHeader - The timestamp header value as string
+ * @param maxAgeMs - Maximum allowed age in milliseconds (default: 5 minutes)
+ * @param allowFutureMs - Maximum allowed future timestamp in milliseconds (default: 1 minute)
+ * @returns Object with validation result and error message if invalid
+ */
+export function validateTimestamp(
+  timestampHeader: string | null, 
+  maxAgeMs: number = 5 * 60 * 1000,
+  allowFutureMs: number = 1 * 60 * 1000
+): { valid: boolean; error?: string } {
+  if (!timestampHeader) {
+    return { valid: false, error: 'Missing timestamp header' };
+  }
+
+  const timestamp = parseInt(timestampHeader);
+  if (isNaN(timestamp)) {
+    return { valid: false, error: 'Invalid timestamp format' };
+  }
+
+  // Validate timestamp is a reasonable value (not negative, not too far in the future)
+  if (timestamp <= 0) {
+    return { valid: false, error: 'Invalid timestamp: must be positive' };
+  }
+
+  const now = Date.now();
+  
+  // Check if timestamp is too far in the future
+  if (timestamp > now + allowFutureMs) {
+    const allowFutureMinutes = Math.floor(allowFutureMs / 60000);
+    return { 
+      valid: false, 
+      error: `Request timestamp is too far in the future (max +${allowFutureMinutes} minute${allowFutureMinutes !== 1 ? 's' : ''})` 
+    };
+  }
+  
+  // Check if timestamp is too old
+  if (timestamp < now - maxAgeMs) {
+    const maxAgeMinutes = Math.floor(maxAgeMs / 60000);
+    return { 
+      valid: false, 
+      error: `Request timestamp is too old (max ${maxAgeMinutes} minute${maxAgeMinutes !== 1 ? 's' : ''} ago)` 
+    };
+  }
+
+  return { valid: true };
+}
+
+/**
+ * Generates a current timestamp for use in cron job requests
+ * @returns Current timestamp in milliseconds
+ */
+export function generateTimestamp(): number {
+  return Date.now();
+}
+
+/**
+ * Creates headers object for authenticated cron requests
+ * @param cronSecret - The cron secret token
+ * @returns Headers object with authentication and timestamp
+ */
+export function createCronHeaders(cronSecret: string): Record<string, string> {
+  return {
+    'x-cron-secret': cronSecret,
+    'x-timestamp': generateTimestamp().toString(),
+    'Content-Type': 'application/json'
+  };
 }

@@ -57,6 +57,7 @@ const nextConfig: NextConfig = {
     // Disable optimization for very small images (under 10KB as recommended)
     unoptimized: false,
     // Quality settings for different use cases
+    qualities: [25, 50, 75, 90, 100],
     loader: 'default',
   },
   
