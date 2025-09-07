@@ -1,13 +1,40 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { activityOperations } from '@/database/db-utils';
+import { validateTimestamp } from '@/utils/security';
+
+/**
+ * POST /api/activity/cleanup
+ * 
+ * Cleanup endpoint for old activity logs. Protected by:
+ * 1. CRON_SECRET_TOKEN - Must match environment variable
+ * 2. Timestamp validation - Request must be within ±5 minutes of current time
+ * 
+ * Required headers:
+ * - x-cron-secret: The cron secret token
+ * - x-timestamp: Current timestamp in milliseconds
+ * 
+ * Query parameters:
+ * - days: Number of days to keep (1-365, default: 14)
+ */
 
 export async function POST(request: NextRequest) {
   try {
     const authHeader = request.headers.get('x-cron-secret');
+    const timestampHeader = request.headers.get('x-timestamp');
     
+    // Validate cron secret
     if (authHeader !== process.env.CRON_SECRET_TOKEN) {
       return NextResponse.json(
         { error: 'Unauthorized' }, 
+        { status: 401 }
+      );
+    }
+
+    // Validate timestamp to prevent replay attacks
+    const timestampValidation = validateTimestamp(timestampHeader);
+    if (!timestampValidation.valid) {
+      return NextResponse.json(
+        { error: timestampValidation.error }, 
         { status: 401 }
       );
     }

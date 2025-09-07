@@ -780,3 +780,59 @@ export function validateFile(file: File): { valid: boolean; error?: string } {
   
   return { valid: true };
 }
+
+// ==================== TIMESTAMP SECURITY ====================
+
+/**
+ * Validates timestamp headers to prevent replay attacks
+ * @param timestampHeader - The timestamp header value as string
+ * @param maxAgeMs - Maximum allowed age in milliseconds (default: 5 minutes)
+ * @returns Object with validation result and error message if invalid
+ */
+export function validateTimestamp(
+  timestampHeader: string | null, 
+  maxAgeMs: number = 5 * 60 * 1000
+): { valid: boolean; error?: string } {
+  if (!timestampHeader) {
+    return { valid: false, error: 'Missing timestamp header' };
+  }
+
+  const timestamp = parseInt(timestampHeader);
+  if (isNaN(timestamp)) {
+    return { valid: false, error: 'Invalid timestamp format' };
+  }
+
+  const now = Date.now();
+  const timeDiff = Math.abs(now - timestamp);
+  
+  if (timeDiff > maxAgeMs) {
+    const maxAgeMinutes = Math.floor(maxAgeMs / 60000);
+    return { 
+      valid: false, 
+      error: `Request timestamp is outside acceptable window (±${maxAgeMinutes} minutes)` 
+    };
+  }
+
+  return { valid: true };
+}
+
+/**
+ * Generates a current timestamp for use in cron job requests
+ * @returns Current timestamp in milliseconds
+ */
+export function generateTimestamp(): number {
+  return Date.now();
+}
+
+/**
+ * Creates headers object for authenticated cron requests
+ * @param cronSecret - The cron secret token
+ * @returns Headers object with authentication and timestamp
+ */
+export function createCronHeaders(cronSecret: string): Record<string, string> {
+  return {
+    'x-cron-secret': cronSecret,
+    'x-timestamp': generateTimestamp().toString(),
+    'Content-Type': 'application/json'
+  };
+}
