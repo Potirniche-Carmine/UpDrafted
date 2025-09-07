@@ -787,11 +787,13 @@ export function validateFile(file: File): { valid: boolean; error?: string } {
  * Validates timestamp headers to prevent replay attacks
  * @param timestampHeader - The timestamp header value as string
  * @param maxAgeMs - Maximum allowed age in milliseconds (default: 5 minutes)
+ * @param allowFutureMs - Maximum allowed future timestamp in milliseconds (default: 1 minute)
  * @returns Object with validation result and error message if invalid
  */
 export function validateTimestamp(
   timestampHeader: string | null, 
-  maxAgeMs: number = 5 * 60 * 1000
+  maxAgeMs: number = 5 * 60 * 1000,
+  allowFutureMs: number = 1 * 60 * 1000
 ): { valid: boolean; error?: string } {
   if (!timestampHeader) {
     return { valid: false, error: 'Missing timestamp header' };
@@ -802,14 +804,28 @@ export function validateTimestamp(
     return { valid: false, error: 'Invalid timestamp format' };
   }
 
+  // Validate timestamp is a reasonable value (not negative, not too far in the future)
+  if (timestamp <= 0) {
+    return { valid: false, error: 'Invalid timestamp: must be positive' };
+  }
+
   const now = Date.now();
-  const timeDiff = Math.abs(now - timestamp);
   
-  if (timeDiff > maxAgeMs) {
+  // Check if timestamp is too far in the future
+  if (timestamp > now + allowFutureMs) {
+    const allowFutureMinutes = Math.floor(allowFutureMs / 60000);
+    return { 
+      valid: false, 
+      error: `Request timestamp is too far in the future (max +${allowFutureMinutes} minute${allowFutureMinutes !== 1 ? 's' : ''})` 
+    };
+  }
+  
+  // Check if timestamp is too old
+  if (timestamp < now - maxAgeMs) {
     const maxAgeMinutes = Math.floor(maxAgeMs / 60000);
     return { 
       valid: false, 
-      error: `Request timestamp is outside acceptable window (±${maxAgeMinutes} minutes)` 
+      error: `Request timestamp is too old (max ${maxAgeMinutes} minute${maxAgeMinutes !== 1 ? 's' : ''} ago)` 
     };
   }
 

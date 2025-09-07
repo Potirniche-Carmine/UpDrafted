@@ -7,7 +7,9 @@ import { validateTimestamp } from '@/utils/security';
  * 
  * Cleanup endpoint for old activity logs. Protected by:
  * 1. CRON_SECRET_TOKEN - Must match environment variable
- * 2. Timestamp validation - Request must be within ±5 minutes of current time
+ * 2. Timestamp validation - Request must be within acceptable time window:
+ *    - Not older than 5 minutes
+ *    - Not more than 1 minute in the future (prevents replay attacks)
  * 
  * Required headers:
  * - x-cron-secret: The cron secret token
@@ -15,6 +17,12 @@ import { validateTimestamp } from '@/utils/security';
  * 
  * Query parameters:
  * - days: Number of days to keep (1-365, default: 14)
+ * 
+ * Security features:
+ * - Prevents replay attacks with timestamp validation
+ * - Prevents future-dated requests
+ * - Database connection error handling
+ * - Proper error sanitization
  */
 
 export async function POST(request: NextRequest) {
@@ -26,7 +34,7 @@ export async function POST(request: NextRequest) {
     if (authHeader !== process.env.CRON_SECRET_TOKEN) {
       return NextResponse.json(
         { error: 'Unauthorized' }, 
-        { status: 401 }
+        { status: 400 }
       );
     }
 
@@ -35,7 +43,7 @@ export async function POST(request: NextRequest) {
     if (!timestampValidation.valid) {
       return NextResponse.json(
         { error: timestampValidation.error }, 
-        { status: 401 }
+        { status: 400 }
       );
     }
 

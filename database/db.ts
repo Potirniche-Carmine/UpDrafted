@@ -16,7 +16,7 @@ const connectionString = env.DATABASE_URL;
 
 // Singleton pattern for database connection
 let pool: Pool | null = null;
-let db: ReturnType<typeof drizzle> | null = null;
+let db: ReturnType<typeof drizzle<typeof schema>> | null = null;
 
 function createDatabaseConnection() {
   if (pool && db) {
@@ -33,23 +33,19 @@ function createDatabaseConnection() {
     keepAliveInitialDelayMillis: 10000,
   });
 
-  // Connection health monitoring
   pool.on('error', (err) => {
-    const sanitizedMsg = err.message.replace(/(password|pwd|token|key|secret)=[^&\s]+/gi, '$1=***');
-    console.error('Unexpected database connection error:', sanitizedMsg);
+    console.error('Database connection error:', err.message);
+    pool = null;
+    db = null;
   });
 
-  // Graceful shutdown - only add listener once
   if (!process.listenerCount('SIGINT')) {
-    process.setMaxListeners(15); // Increase limit to handle multiple modules
     process.on('SIGINT', async () => {
-      console.log('Closing database connections...');
       if (pool) {
         await pool.end();
         pool = null;
         db = null;
       }
-      process.exit(0);
     });
   }
 
