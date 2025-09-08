@@ -1580,10 +1580,10 @@ function SearchPageContent() {
                   <TabsTrigger
                     key={tab.value}
                     value={tab.value}
-                    className="flex items-center gap-2 data-[state=active]:bg-[#01ae79] data-[state=active]:text-white text-sm px-2 sm:px-4"
+                    className="flex items-center justify-center gap-1 sm:gap-2 data-[state=active]:bg-[#01ae79] data-[state=active]:text-white text-xs sm:text-sm px-1 sm:px-4 min-w-0"
                   >
                     {tab.icon}
-                    <span className="text-sm">{tab.label}</span>
+                    <span className="text-xs sm:text-sm truncate">{tab.label}</span>
                   </TabsTrigger>
                 ))}
               </TabsList>
