@@ -1,3 +1,4 @@
 dockerfile merge=ours
 dockerfile.dev merge=ours
+layout.tsx merge=ours
 .github/workflows/deploy.yml merge=ours
