@@ -185,26 +185,89 @@ export function sortByCompletenessWithRandomization(users: DiscoverUser[]): Disc
   const shuffledMedium = shuffleArray(mediumTier);
   const shuffledLow = shuffleArray(lowTier);
 
-  // Calculate how many from each tier go to top half
+  // Calculate how many from each tier go to top half with better edge case handling
+  // This improved algorithm ensures fair representation from all tiers while maintaining weighted preferences
   const totalUsers = users.length;
   const topHalfSize = Math.ceil(totalUsers / 2);
   
-  // Premium tier gets highest priority
-  const premiumInTopHalf = Math.floor(shuffledPremium.length * TIER_CONFIG.premium.topHalfChance);
-  const remainingTopHalfSlots = topHalfSize - premiumInTopHalf;
+  // Step 1: Calculate ideal distribution based on tier percentages
+  const idealPremiumInTopHalf = Math.floor(shuffledPremium.length * TIER_CONFIG.premium.topHalfChance);
+  const idealHighInTopHalf = Math.floor(shuffledHigh.length * TIER_CONFIG.high.topHalfChance);
+  const idealMediumInTopHalf = Math.floor(shuffledMedium.length * TIER_CONFIG.medium.topHalfChance);
+  const idealLowInTopHalf = Math.floor(shuffledLow.length * TIER_CONFIG.low.topHalfChance);
   
-  const highInTopHalf = Math.min(
-    Math.floor(shuffledHigh.length * TIER_CONFIG.high.topHalfChance),
-    remainingTopHalfSlots
-  );
-  const mediumInTopHalf = Math.min(
-    Math.floor(shuffledMedium.length * TIER_CONFIG.medium.topHalfChance),
-    remainingTopHalfSlots - highInTopHalf
-  );
-  const lowInTopHalf = Math.min(
-    remainingTopHalfSlots - highInTopHalf - mediumInTopHalf,
-    shuffledLow.length
-  );
+  const totalIdeal = idealPremiumInTopHalf + idealHighInTopHalf + idealMediumInTopHalf + idealLowInTopHalf;
+  
+  let premiumInTopHalf, highInTopHalf, mediumInTopHalf, lowInTopHalf;
+  
+  if (totalIdeal <= topHalfSize) {
+    // We have room for all ideal distributions, fill remaining slots proportionally
+    const remainingSlots = topHalfSize - totalIdeal;
+    const totalTierUsers = shuffledPremium.length + shuffledHigh.length + shuffledMedium.length + shuffledLow.length;
+    
+    // Distribute remaining slots proportionally by tier size, with premium bias
+    const extraForPremium = Math.min(remainingSlots, Math.floor((shuffledPremium.length / totalTierUsers) * remainingSlots * 1.5));
+    const extraForHigh = Math.min(remainingSlots - extraForPremium, Math.floor((shuffledHigh.length / totalTierUsers) * remainingSlots));
+    const extraForMedium = Math.min(remainingSlots - extraForPremium - extraForHigh, Math.floor((shuffledMedium.length / totalTierUsers) * remainingSlots));
+    const extraForLow = remainingSlots - extraForPremium - extraForHigh - extraForMedium;
+    
+    premiumInTopHalf = Math.min(idealPremiumInTopHalf + extraForPremium, shuffledPremium.length);
+    highInTopHalf = Math.min(idealHighInTopHalf + extraForHigh, shuffledHigh.length);
+    mediumInTopHalf = Math.min(idealMediumInTopHalf + extraForMedium, shuffledMedium.length);
+    lowInTopHalf = Math.min(idealLowInTopHalf + extraForLow, shuffledLow.length);
+  } else {
+    // We need to scale down proportionally while maintaining minimum representation
+    const scaleFactor = topHalfSize / totalIdeal;
+    
+    // Ensure each non-empty tier gets at least 1 representative if possible
+    const minRepresentation = 1;
+    
+    // Scale down the ideal numbers and add back minimum representation
+    premiumInTopHalf = shuffledPremium.length > 0 ? 
+      Math.min(Math.max(minRepresentation, Math.floor(idealPremiumInTopHalf * scaleFactor)), shuffledPremium.length) : 0;
+    highInTopHalf = shuffledHigh.length > 0 ? 
+      Math.min(Math.max(minRepresentation, Math.floor(idealHighInTopHalf * scaleFactor)), shuffledHigh.length) : 0;
+    mediumInTopHalf = shuffledMedium.length > 0 ? 
+      Math.min(Math.max(minRepresentation, Math.floor(idealMediumInTopHalf * scaleFactor)), shuffledMedium.length) : 0;
+    lowInTopHalf = shuffledLow.length > 0 ? 
+      Math.min(Math.max(minRepresentation, Math.floor(idealLowInTopHalf * scaleFactor)), shuffledLow.length) : 0;
+    
+    // Adjust if we've exceeded topHalfSize
+    const currentTotal = premiumInTopHalf + highInTopHalf + mediumInTopHalf + lowInTopHalf;
+    if (currentTotal > topHalfSize) {
+      // Reduce from largest tiers first while maintaining minimum representation
+      const excess = currentTotal - topHalfSize;
+      let remaining = excess;
+      
+      // Reduce premium first (but keep at least 1 if they exist)
+      if (remaining > 0 && premiumInTopHalf > minRepresentation && shuffledPremium.length > 0) {
+        const reduction = Math.min(remaining, premiumInTopHalf - minRepresentation);
+        premiumInTopHalf -= reduction;
+        remaining -= reduction;
+      }
+      
+      // Then high tier
+      if (remaining > 0 && highInTopHalf > minRepresentation && shuffledHigh.length > 0) {
+        const reduction = Math.min(remaining, highInTopHalf - minRepresentation);
+        highInTopHalf -= reduction;
+        remaining -= reduction;
+      }
+      
+      // Then medium tier
+      if (remaining > 0 && mediumInTopHalf > minRepresentation && shuffledMedium.length > 0) {
+        const reduction = Math.min(remaining, mediumInTopHalf - minRepresentation);
+        mediumInTopHalf -= reduction;
+        remaining -= reduction;
+      }
+      
+      // Finally low tier if absolutely necessary
+      if (remaining > 0 && lowInTopHalf > minRepresentation && shuffledLow.length > 0) {
+        const reduction = Math.min(remaining, lowInTopHalf - minRepresentation);
+        lowInTopHalf -= reduction;
+        remaining -= reduction;
+      }
+    }
+  }
 
   // Split each tier into top half and bottom half portions
   const topHalf = [
