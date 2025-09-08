@@ -2,6 +2,39 @@
 
 import { useMemo, useCallback } from 'react';
 
+/**
+ * Profile Completeness Sorting for Discover Page
+ * 
+ * This component provides client-side sorting based on profile completeness to prioritize
+ * more complete profiles while maintaining randomness and discovery opportunities.
+ * 
+ * Key Design Principles:
+ * - Focus on truly OPTIONAL fields that users can choose to fill out
+ * - Profile Image & Verified Status are the main completeness indicators
+ * - Positions and Height/Weight for athletes are optional enhancements
+ * - Maintains fair discovery - even incomplete profiles still appear
+ * - Uses weighted randomization instead of strict sorting
+ * 
+ * Scoring System (0-100 points):
+ * - Profile Image: 40 points (optional, shows professionalism)
+ * - Verified Status: 45 points (optional but most valuable for trust)  
+ * - Positions (coaches/recruiters only): 15 points (optional for them, required for athletes)
+ * - Scholarships Available (coaches/recruiters only): 15 points (optional recruiting info)
+ * 
+ * 4-Tier System:
+ * - Premium (85% top half): Coaches/Recruiters with ALL: positions + scholarships + verified + image
+ * - High (65% top half): High scoring profiles (70-89 points) - typically verified + image
+ * - Medium (35% top half): Medium scoring profiles (40-69 points) - verified OR image
+ * - Low (10% top half): Basic profiles (0-39 points)
+ * 
+ * Note: Athletes don't get position points since positions are required for them,
+ * but coaches/recruiters get points since positions are optional for their profiles.
+ * 
+ * Maximum possible scores:
+ * - Athletes: 85 points (image + verified) → High tier
+ * - Coaches/Recruiters: 115 points (capped at 100) → Premium tier if actively recruiting
+ */
+
 // Types for the DiscoverUser - matching the main page interface
 export interface DiscoverUser {
   id: string;
@@ -30,22 +63,20 @@ export interface DiscoverUser {
   } | null;
 }
 
-// Profile completeness scoring weights
+// Profile completeness scoring weights - using only truly optional fields
 const COMPLETENESS_WEIGHTS = {
-  profileImage: 25,
-  verified: 20,
-  organization: 15,
-  title: 10,           // For coaches/recruiters
-  graduationYear: 10,  // For athletes
-  heightWeight: 10,    // For athletes
-  positions: 10,
+  profileImage: 40,      // Has profile image (optional)
+  verified: 45,          // Verified status (optional but most valuable)
+  positions: 15,         // Has positions (optional for coaches/recruiters, required for athletes)
+  scholarshipsAvailable: 15, // Has scholarship info (optional for recruiters/coaches)
 };
 
-// Tier thresholds and distribution weights
+// Tier thresholds and distribution weights - 4-tier system
 const TIER_CONFIG = {
-  high: { min: 80, max: 100, topHalfChance: 0.6 },
-  medium: { min: 50, max: 79, topHalfChance: 0.3 },
-  low: { min: 0, max: 49, topHalfChance: 0.1 },
+  premium: { min: 90, max: 100, topHalfChance: 0.85 }, // Coaches/Recruiters with scholarships + positions + verified + image
+  high: { min: 70, max: 89, topHalfChance: 0.65 },    // Verified + image users
+  medium: { min: 40, max: 69, topHalfChance: 0.35 },  // Verified OR image users
+  low: { min: 0, max: 39, topHalfChance: 0.1 },       // Basic profiles
 };
 
 /**
@@ -54,51 +85,60 @@ const TIER_CONFIG = {
 function calculateCompletenessScore(user: DiscoverUser): number {
   let score = 0;
 
-  // Profile image
+  // Profile image - major optional factor (40 points)
   if (user.profileImage) {
     score += COMPLETENESS_WEIGHTS.profileImage;
   }
 
-  // Verified status
+  // Verified status - most important optional factor (45 points)
   if (user.isVerified) {
     score += COMPLETENESS_WEIGHTS.verified;
   }
 
-  // Organization name
-  if (user.organizationName && user.organizationName.trim() !== '') {
-    score += COMPLETENESS_WEIGHTS.organization;
-  }
-
-  // Role-specific scoring
-  if (user.role === 'coach' || user.role === 'recruiter') {
-    // Title/Position for coaches and recruiters
-    if (user.title && user.title.trim() !== '') {
-      score += COMPLETENESS_WEIGHTS.title;
-    }
-  } else if (user.role === 'athlete') {
-    // Graduation year for athletes
-    if (user.graduationYear) {
-      score += COMPLETENESS_WEIGHTS.graduationYear;
-    }
-
-    // Height and weight for athletes
-    if (user.height && user.weight) {
-      score += COMPLETENESS_WEIGHTS.heightWeight;
-    }
-  }
-
-  // Positions (for all roles)
-  if (user.positions && user.positions.length > 0) {
+  // Positions - optional for coaches/recruiters, required for athletes (15 points)
+  // Only give points to coaches/recruiters who have positions (since it's optional for them)
+  if ((user.role === 'coach' || user.role === 'recruiter') && user.positions && user.positions.length > 0) {
     score += COMPLETENESS_WEIGHTS.positions;
+  }
+
+  // Scholarships available - optional for coaches/recruiters (15 points)
+  if ((user.role === 'coach' || user.role === 'recruiter') && 
+      user.recruitingNeeds && 
+      user.recruitingNeeds.scholarshipsAvailable !== null && 
+      user.recruitingNeeds.scholarshipsAvailable > 0) {
+    score += COMPLETENESS_WEIGHTS.scholarshipsAvailable;
   }
 
   return Math.min(score, 100); // Cap at 100
 }
 
 /**
- * Determine which tier a user belongs to based on their completeness score
+ * Check if a coach/recruiter qualifies for premium tier (actively recruiting)
  */
-function getUserTier(score: number): 'high' | 'medium' | 'low' {
+function isPremiumRecruiter(user: DiscoverUser): boolean {
+  if (user.role !== 'coach' && user.role !== 'recruiter') return false;
+  
+  const hasPositions = !!(user.positions && user.positions.length > 0);
+  const hasScholarships = !!(user.recruitingNeeds && 
+                            user.recruitingNeeds.scholarshipsAvailable !== null && 
+                            user.recruitingNeeds.scholarshipsAvailable > 0);
+  const isVerified = !!user.isVerified;
+  const hasProfileImage = !!user.profileImage;
+  
+  // Premium tier: Must have ALL four elements (positions, scholarships, verified, profile image)
+  return hasPositions && hasScholarships && isVerified && hasProfileImage;
+}
+
+/**
+ * Determine which tier a user belongs to based on their completeness score and special criteria
+ */
+function getUserTier(user: DiscoverUser, score: number): 'premium' | 'high' | 'medium' | 'low' {
+  // Check for premium tier first (special case for actively recruiting coaches/recruiters)
+  if (isPremiumRecruiter(user)) {
+    return 'premium';
+  }
+  
+  // Standard tier logic based on score
   if (score >= TIER_CONFIG.high.min) return 'high';
   if (score >= TIER_CONFIG.medium.min) return 'medium';
   return 'low';
@@ -124,18 +164,23 @@ export function sortByCompletenessWithRandomization(users: DiscoverUser[]): Disc
   if (users.length === 0) return users;
 
   // Calculate scores and assign tiers
-  const usersWithScores = users.map(user => ({
-    user,
-    score: calculateCompletenessScore(user),
-    tier: getUserTier(calculateCompletenessScore(user)),
-  }));
+  const usersWithScores = users.map(user => {
+    const score = calculateCompletenessScore(user);
+    return {
+      user,
+      score,
+      tier: getUserTier(user, score),
+    };
+  });
 
   // Separate into tiers
+  const premiumTier = usersWithScores.filter(item => item.tier === 'premium');
   const highTier = usersWithScores.filter(item => item.tier === 'high');
   const mediumTier = usersWithScores.filter(item => item.tier === 'medium');
   const lowTier = usersWithScores.filter(item => item.tier === 'low');
 
   // Shuffle within each tier to maintain randomness
+  const shuffledPremium = shuffleArray(premiumTier);
   const shuffledHigh = shuffleArray(highTier);
   const shuffledMedium = shuffleArray(mediumTier);
   const shuffledLow = shuffleArray(lowTier);
@@ -144,24 +189,33 @@ export function sortByCompletenessWithRandomization(users: DiscoverUser[]): Disc
   const totalUsers = users.length;
   const topHalfSize = Math.ceil(totalUsers / 2);
   
-  const highInTopHalf = Math.floor(shuffledHigh.length * TIER_CONFIG.high.topHalfChance);
+  // Premium tier gets highest priority
+  const premiumInTopHalf = Math.floor(shuffledPremium.length * TIER_CONFIG.premium.topHalfChance);
+  const remainingTopHalfSlots = topHalfSize - premiumInTopHalf;
+  
+  const highInTopHalf = Math.min(
+    Math.floor(shuffledHigh.length * TIER_CONFIG.high.topHalfChance),
+    remainingTopHalfSlots
+  );
   const mediumInTopHalf = Math.min(
     Math.floor(shuffledMedium.length * TIER_CONFIG.medium.topHalfChance),
-    topHalfSize - highInTopHalf
+    remainingTopHalfSlots - highInTopHalf
   );
   const lowInTopHalf = Math.min(
-    topHalfSize - highInTopHalf - mediumInTopHalf,
+    remainingTopHalfSlots - highInTopHalf - mediumInTopHalf,
     shuffledLow.length
   );
 
   // Split each tier into top half and bottom half portions
   const topHalf = [
+    ...shuffledPremium.slice(0, premiumInTopHalf),
     ...shuffledHigh.slice(0, highInTopHalf),
     ...shuffledMedium.slice(0, mediumInTopHalf),
     ...shuffledLow.slice(0, lowInTopHalf),
   ];
 
   const bottomHalf = [
+    ...shuffledPremium.slice(premiumInTopHalf),
     ...shuffledHigh.slice(highInTopHalf),
     ...shuffledMedium.slice(mediumInTopHalf),
     ...shuffledLow.slice(lowInTopHalf),
