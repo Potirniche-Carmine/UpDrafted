@@ -32,6 +32,7 @@ import {
   CommandList,
 } from "@/components/ui/command";
 import { Checkbox } from "@/components/ui/checkbox";
+import { useProfileCompletenessSorting } from '../components/profile-completeness-sorter';
 
 // Filter option interface
 interface FilterOption {
@@ -771,7 +772,7 @@ function SearchPageContent() {
   }, [selectedSports, selectedDivisions, selectedStates, selectedPositions, selectedGraduatingClasses, selectedConferences, minHeight, minWeight, allUsers, activeTab, page, hasSearched, saveSearchState]);
 
   // Filter displayed users based on active tab
-  const displayedUsers = useMemo(() => {
+  const filteredUsers = useMemo(() => {
     if (!hasSearched || allUsers.length === 0) return [];
 
     const tabRole = getTabRole(activeTab);
@@ -787,6 +788,9 @@ function SearchPageContent() {
 
     return allUsers.filter(user => user.role === tabRole);
   }, [allUsers, activeTab, hasSearched, effectiveRole]);
+
+  // Apply profile completeness sorting to filtered users
+  const { sortedUsers: displayedUsers } = useProfileCompletenessSorting(filteredUsers);
 
   // Discover/Search function
   const handleDiscover = () => {
