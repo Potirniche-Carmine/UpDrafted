@@ -368,7 +368,7 @@ function DashboardContent({
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Navigation Cards */}
           <div className="lg:col-span-2">
-            <Card className="border-border/50">
+            <Card className="border shadow-sm bg-card/80 backdrop-blur-sm">
               <CardHeader>
                 <CardTitle className="text-foreground text-lg">Quick Navigation</CardTitle>
               </CardHeader>
@@ -385,7 +385,7 @@ function DashboardContent({
           {/* Side Content - Calendar and NCAA Rules */}
           <div className="space-y-6">
             {/* Calendar Date */}
-            <Card className="border-border/50">
+            <Card className="border shadow-sm bg-card/80 backdrop-blur-sm">
               <CardHeader className="pb-3">
                 <CardTitle className="text-foreground flex items-center text-lg">
                   <Calendar className="mr-2 h-6 w-6 text-[#01ae79]" />
@@ -393,14 +393,14 @@ function DashboardContent({
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-center p-4 bg-muted/30 rounded-md">
+                <div className="text-center p-4 bg-gradient-to-br from-[#01ae79]/5 to-[#01ae79]/10 border border-[#01ae79]/10 rounded-md">
                   <p className="text-xl font-semibold text-foreground">{formattedDate}</p>
                 </div>
               </CardContent>
             </Card>
 
             {/* NCAA Rules */}
-            <Card className="border-border/50">
+            <Card className="border shadow-sm bg-card/80 backdrop-blur-sm">
               <CardHeader className="pb-3">
                 <CardTitle className="text-foreground flex items-center text-lg">
                   <FileText className="mr-2 h-6 w-6 text-[#01ae79]" />
@@ -410,22 +410,19 @@ function DashboardContent({
               <CardContent>
                 <div className="space-y-4">
                   {ncaaRules.map((rule, index) => (
-                    <div key={index} className="space-y-2">
+                    <div key={index} className="space-y-2 p-3 rounded-lg bg-gradient-to-r from-muted/20 to-muted/30 border border-border/30">
                       <h3 className="text-base font-semibold text-foreground flex items-center">
                         <Info className="h-4 w-4 text-[#01ae79] mr-2 flex-shrink-0" />
                         {rule.title}
                       </h3>
                       <p className="text-sm text-muted-foreground leading-relaxed line-clamp-4">{rule.description}</p>
-                      {index < ncaaRules.length - 1 && (
-                        <div className="pt-2 border-b border-border/50"></div>
-                      )}
                     </div>
                   ))}
                   <div className="pt-3">
                     <Button 
                       variant="outline" 
                       size="sm" 
-                      className="w-full border-[#01ae79] text-[#01ae79] hover:bg-[#01ae79] hover:text-white text-sm py-2.5" 
+                      className="w-full border-[#01ae79] text-[#01ae79] hover:bg-[#01ae79] hover:text-white text-sm py-2.5 shadow-sm" 
                       onClick={() => window.open('https://www.ncsasports.org/ncaa-eligibility-center/recruiting-rules', '_blank')}
                     >
                       <span className="truncate">NCAA Rules & Periods</span>
@@ -457,15 +454,15 @@ function NavCard({
   if ('onClick' in item) {
     return (
       <Card 
-        className={`group transition-all duration-300 border-border/50 ${
+        className={`group transition-all duration-300 border shadow-sm bg-gradient-to-br from-card to-card/60 ${
           shouldDisable 
             ? 'opacity-50 cursor-not-allowed' 
-            : 'hover:shadow-lg hover:shadow-[#01ae79]/5 hover:border-[#01ae79]/20 dark:hover:border-[#01ae79]/30 cursor-pointer'
+            : 'hover:shadow-lg hover:shadow-[#01ae79]/10 hover:border-[#01ae79]/30 hover:from-card hover:to-[#01ae79]/5 cursor-pointer'
         }`} 
         onClick={shouldDisable ? undefined : item.onClick}
       >
         <CardContent className="flex flex-col items-center text-center p-4 min-h-[120px] justify-center">
-          <div className={`h-12 w-12 rounded-full bg-[${item.color}]/10 flex items-center justify-center mb-3 ${
+          <div className={`h-12 w-12 rounded-full bg-gradient-to-br from-[${item.color}]/10 to-[${item.color}]/20 border border-[${item.color}]/20 flex items-center justify-center mb-3 shadow-sm ${
             profileNavigating && isViewProfileAction ? 'animate-pulse' : ''
           }`}>
             <IconComponent 
@@ -481,9 +478,9 @@ function NavCard({
   
   return (
     <Link href={item.href}>
-      <Card className="group transition-all duration-300 hover:shadow-lg hover:shadow-[#01ae79]/5 border-border/50 hover:border-[#01ae79]/20 dark:hover:border-[#01ae79]/30 cursor-pointer h-full">
+      <Card className="group transition-all duration-300 hover:shadow-lg hover:shadow-[#01ae79]/10 border shadow-sm bg-gradient-to-br from-card to-card/60 hover:border-[#01ae79]/30 hover:from-card hover:to-[#01ae79]/5 cursor-pointer h-full">
         <CardContent className="flex flex-col items-center text-center p-4 min-h-[120px] justify-center">
-          <div className={`h-12 w-12 rounded-full bg-[${item.color}]/10 flex items-center justify-center mb-3`}>
+          <div className={`h-12 w-12 rounded-full bg-gradient-to-br from-[${item.color}]/10 to-[${item.color}]/20 border border-[${item.color}]/20 flex items-center justify-center mb-3 shadow-sm`}>
             <IconComponent 
               className={`h-6 w-6 text-[${item.color}]`} 
             />
