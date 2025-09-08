@@ -46,6 +46,7 @@ export default function RootLayout({
         <meta name="theme-color" content="#01ae79" />
 
         <link rel="manifest" href="/site.webmanifest" />
+        <Script defer src="https://analytics.updrafted.us/script.js" data-website-id="b065e482-946e-4887-874a-73eb756c0c25"/>
         <Script
           id="structured-data"
           type="application/ld+json"

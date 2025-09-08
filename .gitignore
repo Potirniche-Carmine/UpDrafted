@@ -48,3 +48,6 @@ next-env.d.ts
 
 #VsCode
 .vscode/
+
+#production build
+git update-index --skip-worktree app/layout.tsx
