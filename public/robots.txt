@@ -1,6 +1,6 @@
 User-agent: *
 
-# Allow public footer pages
+# Allow public pages
 Allow: /$
 Allow: /about$
 Allow: /for-athletes$
@@ -10,7 +10,18 @@ Allow: /contact$
 Allow: /terms-of-service$
 Allow: /privacy-policy$
 
-# Block all other areas
+# Allow static assets
+Allow: /icons/
+Allow: /images/
+Allow: /*.css$
+Allow: /*.js$
+Allow: /*.png$
+Allow: /*.jpg$
+Allow: /*.jpeg$
+Allow: /*.svg$
+Allow: /*.webp$
+
+# Block all other areas (private app sections)
 Disallow: /admin/
 Disallow: /api/
 Disallow: /_next/
@@ -27,7 +38,7 @@ Disallow: /connections/
 Disallow: /activity/
 Disallow: /pricing/
 
-# Canonical sitemap URL
+# Sitemap location (canonical HTTPS URL)
 Sitemap: https://updrafted.us/sitemap.xml
 
 # Crawl delay for respectful crawling
