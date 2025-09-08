@@ -1586,14 +1586,15 @@ function SearchPageContent() {
 
               {/* Badge Disclaimer */}
               <div className="mb-4 p-3 bg-muted/30 rounded-lg border border-border/50">
-                <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                  <div className="flex items-center gap-2">
+                <h3 className="text-sm font-medium mb-2">Profile Verification Status</h3>
+                <div className="flex items-center gap-4 text-sm text-muted-foreground" role="list">
+                  <div className="flex items-center gap-2" role="listitem">
                     <div className="bg-[#01ae79] rounded-full p-1">
                       <Shield className="h-3 w-3 text-white" />
                     </div>
                     <span>Verified Profile</span>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2" role="listitem">
                     <div className="bg-[#f59e0b] rounded-full p-1">
                       <Shield className="h-3 w-3 text-white" />
                     </div>
