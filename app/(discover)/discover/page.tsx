@@ -1584,6 +1584,24 @@ function SearchPageContent() {
                 ))}
               </TabsList>
 
+              {/* Badge Disclaimer */}
+              <div className="mb-4 p-3 bg-muted/30 rounded-lg border border-border/50">
+                <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                  <div className="flex items-center gap-2">
+                    <div className="bg-[#01ae79] rounded-full p-1">
+                      <Shield className="h-3 w-3 text-white" />
+                    </div>
+                    <span>Verified Profile</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="bg-[#f59e0b] rounded-full p-1">
+                      <Shield className="h-3 w-3 text-white" />
+                    </div>
+                    <span>Unverified Profile</span>
+                  </div>
+                </div>
+              </div>
+
               {availableTabs.map((tab) => (
                 <TabsContent key={tab.value} value={tab.value} className="mt-0">
                   {/* Results */}
