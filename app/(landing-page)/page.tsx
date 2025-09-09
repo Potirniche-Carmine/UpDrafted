@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { CheckCircle, Shield, Users, ArrowRight } from "lucide-react";
 import { AuthWrapper } from "../../components/auth-wrapper";
@@ -13,175 +14,96 @@ function HomePageContent() {
       <section className="relative w-full py-12 sm:py-16 md:py-24 lg:py-32 overflow-hidden">
         {/* Mobile Profile Screenshots - Vertical for mobile only */}
         <div className="absolute inset-0 pointer-events-none sm:hidden">
-          {/* Mobile Profile Screenshot - Right Side */}
-          <div className="absolute right-[-80px] top-20 transform rotate-12 opacity-[0.4] dark:opacity-[0.45]">
-            <div className="w-[200px] h-[350px] bg-gradient-to-br from-[#01ae79]/20 to-gray-200 dark:from-[#01ae79]/30 dark:to-gray-700 rounded-2xl shadow-2xl border border-gray-300 dark:border-gray-600">
-              {/* Mobile Profile Layout */}
-              <div className="p-4 space-y-4">
-                {/* Profile Header */}
-                <div className="text-center space-y-3">
-                  <div className="w-20 h-20 bg-[#01ae79]/30 dark:bg-[#01ae79]/40 rounded-full mx-auto"></div>
-                  <div className="space-y-1">
-                    <div className="h-4 bg-gray-300 dark:bg-gray-600 rounded w-24 mx-auto"></div>
-                    <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-16 mx-auto"></div>
-                  </div>
-                </div>
-                
-                {/* Stats Grid */}
-                <div className="grid grid-cols-2 gap-2">
-                  <div className="bg-white/50 dark:bg-gray-800/50 p-2 rounded text-center">
-                    <div className="h-2 bg-gray-300 dark:bg-gray-600 rounded mb-1"></div>
-                    <div className="h-3 bg-[#01ae79]/40 rounded"></div>
-                  </div>
-                  <div className="bg-white/50 dark:bg-gray-800/50 p-2 rounded text-center">
-                    <div className="h-2 bg-gray-300 dark:bg-gray-600 rounded mb-1"></div>
-                    <div className="h-3 bg-[#01ae79]/40 rounded"></div>
-                  </div>
-                </div>
-                
-                {/* Bio Section */}
-                <div className="space-y-2">
-                  <div className="h-2 bg-gray-200 dark:bg-gray-700 rounded w-full"></div>
-                  <div className="h-2 bg-gray-200 dark:bg-gray-700 rounded w-3/4"></div>
-                  <div className="h-2 bg-gray-200 dark:bg-gray-700 rounded w-1/2"></div>
-                </div>
-                
-                {/* Action Buttons */}
-                <div className="space-y-2">
-                  <div className="h-8 bg-[#01ae79]/20 dark:bg-[#01ae79]/30 rounded"></div>
-                  <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded"></div>
-                </div>
-                
-                {/* Bottom Stats */}
-                <div className="grid grid-cols-3 gap-1">
-                  <div className="text-center">
-                    <div className="h-2 bg-gray-200 dark:bg-gray-700 rounded mb-1"></div>
-                    <div className="h-3 bg-[#01ae79]/30 rounded"></div>
-                  </div>
-                  <div className="text-center">
-                    <div className="h-2 bg-gray-200 dark:bg-gray-700 rounded mb-1"></div>
-                    <div className="h-3 bg-[#01ae79]/30 rounded"></div>
-                  </div>
-                  <div className="text-center">
-                    <div className="h-2 bg-gray-200 dark:bg-gray-700 rounded mb-1"></div>
-                    <div className="h-3 bg-[#01ae79]/30 rounded"></div>
-                  </div>
-                </div>
-              </div>
-            </div>
+          {/* Mobile Athlete Profile Screenshot - Right Side */}
+          <div className="absolute right-[-80px] top-20 transform rotate-12 opacity-[0.15] dark:opacity-[0.18]">
+            <Image
+              src="/hero/athlete-light-mobile.png"
+              alt="Athlete Profile Mobile"
+              width={200}
+              height={350}
+              className="w-[200px] h-auto rounded-2xl shadow-2xl block dark:hidden"
+              priority={false}
+              quality={75}
+            />
+            <Image
+              src="/hero/athlete-dark-mobile.png"
+              alt="Athlete Profile Mobile Dark"
+              width={200}
+              height={350}
+              className="w-[200px] h-auto rounded-2xl shadow-2xl hidden dark:block"
+              priority={false}
+              quality={75}
+            />
           </div>
 
-          {/* Mobile Chat/Messages Screenshot - Left Side */}
-          <div className="absolute left-[-60px] bottom-32 transform -rotate-8 opacity-[0.35] dark:opacity-[0.4]">
-            <div className="w-[180px] h-[300px] bg-gradient-to-br from-gray-100 to-gray-300 dark:from-gray-800 dark:to-gray-600 rounded-2xl shadow-2xl border border-gray-300 dark:border-gray-600">
-              {/* Mobile Messages Layout */}
-              <div className="p-3 space-y-3">
-                {/* Header */}
-                <div className="flex items-center space-x-2 pb-2 border-b border-gray-300 dark:border-gray-600">
-                  <div className="w-6 h-6 bg-[#01ae79]/30 rounded-full"></div>
-                  <div className="h-3 bg-gray-300 dark:bg-gray-600 rounded w-20"></div>
-                </div>
-                
-                {/* Message Bubbles */}
-                <div className="space-y-2">
-                  <div className="flex justify-end">
-                    <div className="w-24 h-6 bg-[#01ae79]/20 rounded-lg"></div>
-                  </div>
-                  <div className="flex justify-start">
-                    <div className="w-20 h-6 bg-gray-200 dark:bg-gray-700 rounded-lg"></div>
-                  </div>
-                  <div className="flex justify-end">
-                    <div className="w-28 h-8 bg-[#01ae79]/20 rounded-lg"></div>
-                  </div>
-                  <div className="flex justify-start">
-                    <div className="w-16 h-6 bg-gray-200 dark:bg-gray-700 rounded-lg"></div>
-                  </div>
-                  <div className="flex justify-end">
-                    <div className="w-22 h-6 bg-[#01ae79]/20 rounded-lg"></div>
-                  </div>
-                </div>
-                
-                {/* Input Area */}
-                <div className="pt-4 border-t border-gray-300 dark:border-gray-600">
-                  <div className="h-8 bg-white/50 dark:bg-gray-700/50 rounded border"></div>
-                </div>
-              </div>
-            </div>
+          {/* Mobile Coach Dashboard Screenshot - Left Side */}
+          <div className="absolute left-[-60px] bottom-32 transform -rotate-8 opacity-[0.15] dark:opacity-[0.18]">
+            <Image
+              src="/hero/coach-light-mobile.png"
+              alt="Coach Dashboard Mobile"
+              width={180}
+              height={300}
+              className="w-[180px] h-auto rounded-2xl shadow-2xl block dark:hidden"
+              priority={false}
+              quality={75}
+            />
+            <Image
+              src="/hero/coach-dark-mobile.png"
+              alt="Coach Dashboard Mobile Dark"
+              width={180}
+              height={300}
+              className="w-[180px] h-auto rounded-2xl shadow-2xl hidden dark:block"
+              priority={false}
+              quality={75}
+            />
           </div>
         </div>
 
         {/* Desktop Background Screenshots - Hidden on mobile */}
+                {/* Desktop Profile Screenshots - Hidden on mobile, shown on larger screens */}
         <div className="absolute inset-0 pointer-events-none hidden sm:block">
-          {/* Athlete Profile Screenshot - Right Side */}
-          <div className="absolute right-[-150px] top-16 md:right-[-100px] md:top-20 lg:right-[-50px] lg:top-24 transform rotate-6 opacity-[0.25] sm:opacity-[0.35] dark:opacity-[0.35] dark:sm:opacity-[0.4]">
-            <div className="w-[500px] h-[350px] sm:w-[600px] sm:h-[400px] md:w-[700px] md:h-[450px] lg:w-[800px] lg:h-[500px] bg-gradient-to-br from-[#01ae79]/20 to-gray-200 dark:from-[#01ae79]/30 dark:to-gray-700 rounded-2xl shadow-2xl">
-              {/* Horizontal Athlete Profile Layout */}
-              <div className="p-6 flex">
-                {/* Left side - Profile photo and basic info */}
-                <div className="flex-shrink-0 space-y-3 mr-6">
-                  <div className="w-24 h-24 bg-[#01ae79]/30 dark:bg-[#01ae79]/40 rounded-full"></div>
-                  <div className="w-32">
-                    <div className="h-4 bg-gray-300 dark:bg-gray-600 rounded mb-2"></div>
-                    <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-3/4"></div>
-                  </div>
-                </div>
-                {/* Right side - Stats and info */}
-                <div className="flex-1 space-y-4">
-                  <div className="grid grid-cols-4 gap-3">
-                    <div className="bg-white/50 dark:bg-gray-800/50 p-3 rounded-lg">
-                      <div className="h-2 bg-gray-300 dark:bg-gray-600 rounded mb-1"></div>
-                      <div className="h-4 bg-[#01ae79]/40 rounded"></div>
-                    </div>
-                    <div className="bg-white/50 dark:bg-gray-800/50 p-3 rounded-lg">
-                      <div className="h-2 bg-gray-300 dark:bg-gray-600 rounded mb-1"></div>
-                      <div className="h-4 bg-[#01ae79]/40 rounded"></div>
-                    </div>
-                    <div className="bg-white/50 dark:bg-gray-800/50 p-3 rounded-lg">
-                      <div className="h-2 bg-gray-300 dark:bg-gray-600 rounded mb-1"></div>
-                      <div className="h-4 bg-[#01ae79]/40 rounded"></div>
-                    </div>
-                    <div className="bg-white/50 dark:bg-gray-800/50 p-3 rounded-lg">
-                      <div className="h-2 bg-gray-300 dark:bg-gray-600 rounded mb-1"></div>
-                      <div className="h-4 bg-[#01ae79]/40 rounded"></div>
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-full"></div>
-                    <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-4/5"></div>
-                    <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-3/5"></div>
-                  </div>
-                </div>
-              </div>
-            </div>
+          {/* Desktop Athlete Profile Screenshot */}
+          <div className="absolute right-[-475px] top-16 transform rotate-6 opacity-[0.35] dark:opacity-[0.35]">
+            <Image
+              src="/hero/athlete-light-desktop.png"
+              alt="Athlete Profile Desktop"
+              width={800}
+              height={500}
+              className="w-[500px] h-auto sm:w-[600px] md:w-[700px] lg:w-[800px] rounded-2xl shadow-2xl block dark:hidden"
+              priority={false}
+              quality={75}
+            />
+            <Image
+              src="/hero/athlete-dark-desktop.png"
+              alt="Athlete Profile Desktop Dark"
+              width={800}
+              height={500}
+              className="w-[500px] h-auto sm:w-[600px] md:w-[700px] lg:w-[800px] rounded-2xl shadow-2xl hidden dark:block"
+              priority={false}
+              quality={75}
+            />
           </div>
 
-          {/* Coach Dashboard/Search Interface - Left Side */}
-          <div className="absolute left-[-200px] bottom-16 md:left-[-150px] md:bottom-20 lg:left-[-100px] lg:bottom-24 transform -rotate-3 opacity-[0.15] sm:opacity-[0.25] dark:opacity-[0.25] dark:sm:opacity-[0.3]">
-            <div className="w-[400px] h-[300px] sm:w-[500px] sm:h-[350px] md:w-[600px] md:h-[400px] lg:w-[700px] lg:h-[450px] bg-gradient-to-br from-gray-100 to-gray-300 dark:from-gray-800 dark:to-gray-600 rounded-2xl shadow-2xl">
-              {/* Horizontal Coach Dashboard Layout */}
-              <div className="p-4 h-full flex">
-                {/* Left sidebar - filters/navigation */}
-                <div className="w-32 space-y-2 mr-4">
-                  <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-full"></div>
-                  <div className="h-8 bg-white/70 dark:bg-gray-700/70 rounded"></div>
-                  <div className="h-8 bg-white/70 dark:bg-gray-700/70 rounded"></div>
-                  <div className="h-8 bg-white/70 dark:bg-gray-700/70 rounded"></div>
-                </div>
-                {/* Main content - athlete cards in grid */}
-                <div className="flex-1 space-y-3">
-                  <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-1/3"></div>
-                  <div className="grid grid-cols-3 gap-3">
-                    {[...Array(6)].map((_, i) => (
-                      <div key={i} className="bg-white/80 dark:bg-gray-700/80 p-2 rounded">
-                        <div className="w-8 h-8 bg-[#01ae79]/30 rounded-full mx-auto mb-1"></div>
-                        <div className="h-2 bg-gray-200 dark:bg-gray-600 rounded w-full mb-1"></div>
-                        <div className="h-1.5 bg-gray-100 dark:bg-gray-700 rounded w-3/4 mx-auto"></div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </div>
+          {/* Desktop Coach Dashboard Screenshot */}
+          <div className="absolute left-[-175px] bottom-10 transform -rotate-4 opacity-[0.35] dark:opacity-[0.38]">
+            <Image
+              src="/hero/coach-light-desktop.png"
+              alt="Coach Dashboard Desktop"
+              width={700}
+              height={450}
+              className="w-[400px] h-auto sm:w-[500px] md:w-[600px] lg:w-[700px] rounded-2xl shadow-2xl block dark:hidden"
+              priority={false}
+              quality={75}
+            />
+            <Image
+              src="/hero/coach-dark-desktop.png"
+              alt="Coach Dashboard Desktop Dark"
+              width={700}
+              height={450}
+              className="w-[400px] h-auto sm:w-[500px] md:w-[600px] lg:w-[700px] rounded-2xl shadow-2xl hidden dark:block"
+              priority={false}
+              quality={75}
+            />
           </div>
         </div>
         
@@ -226,7 +148,7 @@ function HomePageContent() {
             </div>
 
             {/* Trust Indicators */}
-            <div className="flex flex-col sm:flex-row sm:flex-wrap justify-center items-center gap-4 sm:gap-8 pt-12 text-sm text-gray-500 dark:text-gray-400 px-4 sm:px-0">
+            <div className="flex flex-col sm:flex-row sm:flex-wrap justify-center items-center gap-4 sm:gap-8 pt-12 text-sm text-black dark:text-gray-400 px-4 sm:px-0">
               <div className="flex items-center gap-2">
                 <CheckCircle className="h-4 w-4 text-[#01ae79]" />
                 <span>Free to Try & Explore</span>
