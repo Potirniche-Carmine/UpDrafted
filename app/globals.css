@@ -181,6 +181,13 @@
     animation: scroll 30s linear infinite;
   }
 
+  /* Faster animation on mobile */
+  @media (max-width: 768px) {
+    .animate-scroll {
+      animation: scroll 7.5s linear infinite;
+    }
+  }
+
   @keyframes scroll {
     0% {
       transform: translateX(0);
