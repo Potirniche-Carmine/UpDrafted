@@ -179,12 +179,27 @@
   /* University logos carousel animation */
   .animate-scroll {
     animation: scroll 30s linear infinite;
+    will-change: transform;
+  }
+
+  /* Pause animation on hover for better UX */
+  .animate-scroll:hover {
+    animation-play-state: paused;
   }
 
   /* Faster animation on mobile */
   @media (max-width: 768px) {
     .animate-scroll {
       animation: scroll 7.5s linear infinite;
+      will-change: transform;
+    }
+  }
+
+  /* Optimize for low-end devices */
+  @media (prefers-reduced-motion: reduce) {
+    .animate-scroll {
+      animation: none;
+      transform: translateX(-25%);
     }
   }
 

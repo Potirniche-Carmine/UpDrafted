@@ -22,7 +22,7 @@ function HomePageContent() {
               width={200}
               height={350}
               className="w-[200px] h-auto rounded-2xl shadow-2xl block dark:hidden"
-              priority={false}
+              priority={true}
               quality={75}
             />
             <Image
@@ -31,7 +31,7 @@ function HomePageContent() {
               width={200}
               height={350}
               className="w-[200px] h-auto rounded-2xl shadow-2xl hidden dark:block"
-              priority={false}
+              priority={true}
               quality={75}
             />
           </div>
@@ -44,7 +44,7 @@ function HomePageContent() {
               width={180}
               height={300}
               className="w-[180px] h-auto rounded-2xl shadow-2xl block dark:hidden"
-              priority={false}
+              priority={true}
               quality={75}
             />
             <Image
@@ -53,7 +53,7 @@ function HomePageContent() {
               width={180}
               height={300}
               className="w-[180px] h-auto rounded-2xl shadow-2xl hidden dark:block"
-              priority={false}
+              priority={true}
               quality={75}
             />
           </div>
@@ -63,14 +63,14 @@ function HomePageContent() {
                 {/* Desktop Profile Screenshots - Hidden on mobile, shown on larger screens */}
         <div className="absolute inset-0 pointer-events-none hidden sm:block">
           {/* Desktop Athlete Profile Screenshot */}
-          <div className="absolute right-[-475px] top-16 transform rotate-6 opacity-[0.35] dark:opacity-[0.35]">
+          <div className="absolute right-[-32%] top-16 transform rotate-6 opacity-[0.35] dark:opacity-[0.35]">
             <Image
               src="/hero/athlete-light-desktop.png"
               alt="Athlete Profile Desktop"
               width={800}
               height={500}
               className="w-[500px] h-auto sm:w-[600px] md:w-[700px] lg:w-[800px] rounded-2xl shadow-2xl block dark:hidden"
-              priority={false}
+              priority={true}
               quality={75}
             />
             <Image
@@ -79,7 +79,7 @@ function HomePageContent() {
               width={800}
               height={500}
               className="w-[500px] h-auto sm:w-[600px] md:w-[700px] lg:w-[800px] rounded-2xl shadow-2xl hidden dark:block"
-              priority={false}
+              priority={true}
               quality={75}
             />
           </div>
@@ -92,7 +92,7 @@ function HomePageContent() {
               width={700}
               height={450}
               className="w-[400px] h-auto sm:w-[500px] md:w-[600px] lg:w-[700px] rounded-2xl shadow-2xl block dark:hidden"
-              priority={false}
+              priority={true}
               quality={75}
             />
             <Image
@@ -101,7 +101,7 @@ function HomePageContent() {
               width={700}
               height={450}
               className="w-[400px] h-auto sm:w-[500px] md:w-[600px] lg:w-[700px] rounded-2xl shadow-2xl hidden dark:block"
-              priority={false}
+              priority={true}
               quality={75}
             />
           </div>

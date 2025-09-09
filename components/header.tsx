@@ -36,6 +36,29 @@ interface NavItem {
   onClick?: () => void;
 }
 
+// Helper functions for conditional rendering optimization
+const COMPANY_PAGES = ['/for-athletes', '/for-coaches', '/for-recruiters'];
+
+const shouldShowBackButton = (isSignedIn: boolean | undefined, hasCompletedOnboarding: boolean | string | undefined, pathname: string): boolean => {
+  return Boolean(isSignedIn && hasCompletedOnboarding && COMPANY_PAGES.includes(pathname));
+};
+
+const shouldShowMobileSearch = (isSignedIn: boolean | undefined, hasCompletedOnboarding: boolean | string | undefined): boolean => {
+  return Boolean(isSignedIn && hasCompletedOnboarding);
+};
+
+const getNavItemClassName = (isActive: boolean): string => {
+  const baseClasses = "flex items-center justify-between rounded-lg px-3 py-3 text-sm font-medium transition-colors";
+  const activeClasses = "bg-[#01ae79]/10 text-[#01ae79] dark:bg-[#01ae79]/20";
+  const inactiveClasses = "hover:bg-[#01ae79]/5 dark:hover:bg-[#01ae79]/10 hover:text-[#01ae79]";
+  
+  return `${baseClasses} ${isActive ? activeClasses : inactiveClasses}`;
+};
+
+const isNavItemActive = (pathname: string, itemHref: string): boolean => {
+  return pathname === itemHref || (itemHref !== '/' && pathname.startsWith(itemHref));
+};
+
 // Professional notification badge component
 function NotificationBadge({ count, className = "" }: { count: number; className?: string }) {
   if (count === 0) return null;
@@ -346,7 +369,7 @@ export function Header() {
 
               <div className="mt-6 space-y-4">
                 {/* Mobile Search - Only show for authenticated users with completed onboarding */}
-                {isSignedIn && hasCompletedOnboarding && (
+                {shouldShowMobileSearch(isSignedIn, hasCompletedOnboarding) && (
                   <div className="pb-4 border-b border-border">
                     <div className="px-1 min-w-0">
                       <SearchBar userRole={userRole} />
@@ -357,7 +380,7 @@ export function Header() {
                 {/* Mobile Navigation Links */}
                 <div className="space-y-2">
                   {/* Back button for company pages when signed in */}
-                  {isSignedIn && hasCompletedOnboarding && ['/for-athletes', '/for-coaches', '/for-recruiters'].includes(pathname) && (
+                  {shouldShowBackButton(isSignedIn, hasCompletedOnboarding, pathname) && (
                     <Link
                       href="/dashboard"
                       onClick={() => setMobileMenuOpen(false)}
@@ -368,19 +391,14 @@ export function Header() {
                   )}
                   
                   {navItemsToDisplay.map((item) => {
-                    const isActive = pathname === item.href || 
-                      (item.href !== '/' && pathname.startsWith(item.href));
+                    const isActive = isNavItemActive(pathname, item.href);
                       
                     return (
                       <Link
                         key={item.key}
                         href={item.href}
                         onClick={() => setMobileMenuOpen(false)}
-                        className={`flex items-center justify-between rounded-lg px-3 py-3 text-sm font-medium transition-colors ${
-                          isActive 
-                            ? 'bg-[#01ae79]/10 text-[#01ae79] dark:bg-[#01ae79]/20' 
-                            : 'hover:bg-[#01ae79]/5 dark:hover:bg-[#01ae79]/10 hover:text-[#01ae79]'
-                        }`}
+                        className={getNavItemClassName(isActive)}
                       >
                         <div className="flex items-center space-x-3 relative">
                           <div className="relative">
