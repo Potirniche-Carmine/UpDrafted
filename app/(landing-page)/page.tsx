@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import { CheckCircle, Search, Shield, Users, MessageCircle, Link2, ArrowRight, Ruler } from "lucide-react";
 import { AuthWrapper } from "../../components/auth-wrapper";
 import { pageMetadata } from "@/lib/seo";
@@ -10,8 +11,55 @@ function HomePageContent() {
   return (
     <div className="flex flex-col min-h-screen">
       {/* Hero Section */}
-      <section className="relative w-full py-16 md:py-24 lg:py-32">
-        <div className="container px-4 md:px-6 mx-auto max-w-7xl">
+      <section className="relative w-full py-16 md:py-24 lg:py-32 overflow-hidden">
+        {/* Background Screenshots - Positioned subtly */}
+        <div className="absolute inset-0 pointer-events-none">
+          {/* Athlete Profile Screenshot - Right Side */}
+          <div className="absolute right-[-100px] top-8 md:right-[-50px] md:top-16 lg:right-0 lg:top-20 transform rotate-12 opacity-[0.3] dark:opacity-[0.4]">
+            <div className="w-[400px] h-[600px] md:w-[500px] md:h-[750px] lg:w-[600px] lg:h-[900px] bg-gradient-to-br from-[#01ae79]/20 to-gray-200 dark:from-[#01ae79]/30 dark:to-gray-700 rounded-2xl shadow-2xl">
+              {/* Placeholder for athlete profile screenshot */}
+              <div className="p-6 space-y-4">
+                <div className="w-20 h-20 bg-gray-300 dark:bg-gray-600 rounded-full mx-auto"></div>
+                <div className="h-6 bg-gray-300 dark:bg-gray-600 rounded w-3/4 mx-auto"></div>
+                <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-1/2 mx-auto"></div>
+                <div className="space-y-2 pt-4">
+                  <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-full"></div>
+                  <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-4/5"></div>
+                  <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-3/5"></div>
+                </div>
+                <div className="grid grid-cols-2 gap-2 pt-4">
+                  <div className="h-12 bg-gray-200 dark:bg-gray-700 rounded"></div>
+                  <div className="h-12 bg-gray-200 dark:bg-gray-700 rounded"></div>
+                  <div className="h-12 bg-gray-200 dark:bg-gray-700 rounded"></div>
+                  <div className="h-12 bg-gray-200 dark:bg-gray-700 rounded"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Coach Dashboard/Search Interface - Left Side */}
+          <div className="absolute left-[-150px] bottom-8 md:left-[-100px] md:bottom-16 lg:left-[-50px] lg:bottom-20 transform -rotate-6 opacity-[0.2] dark:opacity-[0.3]">
+            <div className="w-[350px] h-[500px] md:w-[400px] md:h-[600px] lg:w-[450px] lg:h-[650px] bg-gradient-to-br from-gray-100 to-gray-300 dark:from-gray-800 dark:to-gray-600 rounded-2xl shadow-2xl">
+              {/* Placeholder for coach interface screenshot */}
+              <div className="p-4 space-y-3">
+                <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-1/3"></div>
+                <div className="space-y-2">
+                  {[...Array(6)].map((_, i) => (
+                    <div key={i} className="flex items-center space-x-3 p-2 bg-white dark:bg-gray-700 rounded">
+                      <div className="w-8 h-8 bg-gray-300 dark:bg-gray-600 rounded-full"></div>
+                      <div className="flex-1 space-y-1">
+                        <div className="h-2 bg-gray-200 dark:bg-gray-600 rounded w-3/4"></div>
+                        <div className="h-2 bg-gray-100 dark:bg-gray-700 rounded w-1/2"></div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div className="container px-4 md:px-6 mx-auto max-w-7xl relative z-10">
           <div className="text-center space-y-8">
             {/* Main Tagline */}
             <div className="space-y-4">
@@ -78,46 +126,46 @@ function HomePageContent() {
           </p>
           <div className="relative overflow-hidden">
             <div className="flex animate-scroll space-x-6 items-center">
-              {/* Sports with icons/styling */}
+              {/* Sports with professional styling */}
               <div className="flex-shrink-0 h-14 flex items-center justify-center px-6 bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 min-w-[140px]">
-                <span className="text-base font-semibold text-gray-700 dark:text-gray-300">🏈 Football</span>
+                <span className="text-base font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide">Football</span>
               </div>
               <div className="flex-shrink-0 h-14 flex items-center justify-center px-6 bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 min-w-[140px]">
-                <span className="text-base font-semibold text-gray-700 dark:text-gray-300">🏀 Basketball</span>
+                <span className="text-base font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide">Basketball</span>
               </div>
               <div className="flex-shrink-0 h-14 flex items-center justify-center px-6 bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 min-w-[140px]">
-                <span className="text-base font-semibold text-gray-700 dark:text-gray-300">⚾ Baseball</span>
+                <span className="text-base font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide">Baseball</span>
               </div>
               <div className="flex-shrink-0 h-14 flex items-center justify-center px-6 bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 min-w-[140px]">
-                <span className="text-base font-semibold text-gray-700 dark:text-gray-300">🥎 Softball</span>
+                <span className="text-base font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide">Softball</span>
               </div>
               <div className="flex-shrink-0 h-14 flex items-center justify-center px-6 bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 min-w-[140px]">
-                <span className="text-base font-semibold text-gray-700 dark:text-gray-300">⚽ Soccer</span>
+                <span className="text-base font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide">Soccer</span>
               </div>
               <div className="flex-shrink-0 h-14 flex items-center justify-center px-6 bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 min-w-[140px]">
-                <span className="text-base font-semibold text-gray-700 dark:text-gray-300">🏃 Track & Field</span>
+                <span className="text-base font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide">Track & Field</span>
               </div>
               <div className="flex-shrink-0 h-14 flex items-center justify-center px-6 bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 min-w-[140px]">
-                <span className="text-base font-semibold text-gray-700 dark:text-gray-300">🏊 Swimming</span>
+                <span className="text-base font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide">Swimming</span>
               </div>
               <div className="flex-shrink-0 h-14 flex items-center justify-center px-6 bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 min-w-[140px]">
-                <span className="text-base font-semibold text-gray-700 dark:text-gray-300">🎾 Tennis</span>
+                <span className="text-base font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide">Tennis</span>
               </div>
               <div className="flex-shrink-0 h-14 flex items-center justify-center px-6 bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 min-w-[140px]">
-                <span className="text-base font-semibold text-gray-700 dark:text-gray-300">🏐 Volleyball</span>
+                <span className="text-base font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide">Volleyball</span>
               </div>
               <div className="flex-shrink-0 h-14 flex items-center justify-center px-6 bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 min-w-[140px]">
-                <span className="text-base font-semibold text-gray-700 dark:text-gray-300">🥍 Lacrosse</span>
+                <span className="text-base font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide">Lacrosse</span>
               </div>
               {/* Duplicate for seamless loop */}
               <div className="flex-shrink-0 h-14 flex items-center justify-center px-6 bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 min-w-[140px]">
-                <span className="text-base font-semibold text-gray-700 dark:text-gray-300">🏈 Football</span>
+                <span className="text-base font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide">Football</span>
               </div>
               <div className="flex-shrink-0 h-14 flex items-center justify-center px-6 bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 min-w-[140px]">
-                <span className="text-base font-semibold text-gray-700 dark:text-gray-300">🏀 Basketball</span>
+                <span className="text-base font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide">Basketball</span>
               </div>
               <div className="flex-shrink-0 h-14 flex items-center justify-center px-6 bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 min-w-[140px]">
-                <span className="text-base font-semibold text-gray-700 dark:text-gray-300">⚾ Baseball</span>
+                <span className="text-base font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide">Baseball</span>
               </div>
             </div>
           </div>
@@ -169,7 +217,7 @@ function HomePageContent() {
       </section>
 
       {/* Features Section */}
-      <section className="w-full py-16 md:py-24 bg-gray-50 dark:bg-gray-900/50">
+      <section className="w-full py-16 md:py-24">
         <div className="container px-4 md:px-6 mx-auto max-w-6xl">
           <div className="text-center mb-16">
             <h2 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-4">
@@ -181,90 +229,118 @@ function HomePageContent() {
           </div>
 
           <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
-            <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
-              <div className="w-12 h-12 bg-[#01ae79]/10 dark:bg-[#01ae79]/20 rounded-lg flex items-center justify-center mb-4">
-                <Link2 className="h-6 w-6 text-[#01ae79]" />
-              </div>
-              <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-3">Centralized Profile</h3>
-              <p className="text-gray-600 dark:text-gray-300">
-                Hudl highlights, ESPN rankings, 247 Sports, social media, and stats all in one place. Coaches don&apos;t have to hunt for your information.
-              </p>
-            </div>
+            <Card className="border-0 shadow-lg hover:shadow-xl transition-shadow">
+              <CardContent className="p-6">
+                <div className="w-12 h-12 bg-[#01ae79]/10 dark:bg-[#01ae79]/20 rounded-lg flex items-center justify-center mb-4">
+                  <Link2 className="h-6 w-6 text-[#01ae79]" />
+                </div>
+                <h3 className="text-xl font-semibold mb-3">Centralized Profile</h3>
+                <p className="text-muted-foreground">
+                  Hudl highlights, ESPN rankings, 247 Sports, social media, and stats all in one place. Coaches don&apos;t have to hunt for your information.
+                </p>
+              </CardContent>
+            </Card>
 
-            <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
-              <div className="w-12 h-12 bg-[#01ae79]/10 dark:bg-[#01ae79]/20 rounded-lg flex items-center justify-center mb-4">
-                <Search className="h-6 w-6 text-[#01ae79]" />
-              </div>
-              <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-3">Easy Discovery</h3>
-              <p className="text-gray-600 dark:text-gray-300">
-                Athletes get found by the right programs. Coaches find talent that fits their needs. No more missed connections.
-              </p>
-            </div>
+            <Card className="border-0 shadow-lg hover:shadow-xl transition-shadow">
+              <CardContent className="p-6">
+                <div className="w-12 h-12 bg-[#01ae79]/10 dark:bg-[#01ae79]/20 rounded-lg flex items-center justify-center mb-4">
+                  <Search className="h-6 w-6 text-[#01ae79]" />
+                </div>
+                <h3 className="text-xl font-semibold mb-3">Easy Discovery</h3>
+                <p className="text-muted-foreground">
+                  Athletes get found by the right programs. Coaches find talent that fits their needs. No more missed connections.
+                </p>
+              </CardContent>
+            </Card>
 
-            <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
-              <div className="w-12 h-12 bg-[#01ae79]/10 dark:bg-[#01ae79]/20 rounded-lg flex items-center justify-center mb-4">
-                <MessageCircle className="h-6 w-6 text-[#01ae79]" />
-              </div>
-              <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-3">Streamlined Communication</h3>
-              <p className="text-gray-600 dark:text-gray-300">
-                Direct messaging keeps all conversations organized. Coaches can track their recruitment efforts in one place.
-              </p>
-            </div>
+            <Card className="border-0 shadow-lg hover:shadow-xl transition-shadow">
+              <CardContent className="p-6">
+                <div className="w-12 h-12 bg-[#01ae79]/10 dark:bg-[#01ae79]/20 rounded-lg flex items-center justify-center mb-4">
+                  <MessageCircle className="h-6 w-6 text-[#01ae79]" />
+                </div>
+                <h3 className="text-xl font-semibold mb-3">Streamlined Communication</h3>
+                <p className="text-muted-foreground">
+                  Direct messaging keeps all conversations organized. Coaches can track their recruitment efforts in one place.
+                </p>
+              </CardContent>
+            </Card>
 
-            <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
-              <div className="w-12 h-12 bg-[#01ae79]/10 dark:bg-[#01ae79]/20 rounded-lg flex items-center justify-center mb-4">
-                <Shield className="h-6 w-6 text-[#01ae79]" />
-              </div>
-              <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-3">Flexible Verification</h3>
-              <p className="text-gray-600 dark:text-gray-300">
-                Hudl verification for high school athletes, manual verification for college transfers, JUCO, and international athletes. Everyone gets verified.
-              </p>
-            </div>
+            <Card className="border-0 shadow-lg hover:shadow-xl transition-shadow">
+              <CardContent className="p-6">
+                <div className="w-12 h-12 bg-[#01ae79]/10 dark:bg-[#01ae79]/20 rounded-lg flex items-center justify-center mb-4">
+                  <Shield className="h-6 w-6 text-[#01ae79]" />
+                </div>
+                <h3 className="text-xl font-semibold mb-3">Flexible Verification</h3>
+                <p className="text-muted-foreground">
+                  Hudl verification for high school athletes, manual verification for college transfers, JUCO, and international athletes. Everyone gets verified.
+                </p>
+              </CardContent>
+            </Card>
 
-            <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
-              <div className="w-12 h-12 bg-[#01ae79]/10 dark:bg-[#01ae79]/20 rounded-lg flex items-center justify-center mb-4">
-                <Ruler className="h-6 w-6 text-[#01ae79]" />
-              </div>
-              <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-3">Complete Athletic Picture</h3>
-              <p className="text-gray-600 dark:text-gray-300">
-                Stats, measurables, rankings, and highlights give coaches everything they need to evaluate talent efficiently.
-              </p>
-            </div>
+            <Card className="border-0 shadow-lg hover:shadow-xl transition-shadow">
+              <CardContent className="p-6">
+                <div className="w-12 h-12 bg-[#01ae79]/10 dark:bg-[#01ae79]/20 rounded-lg flex items-center justify-center mb-4">
+                  <Ruler className="h-6 w-6 text-[#01ae79]" />
+                </div>
+                <h3 className="text-xl font-semibold mb-3">Complete Athletic Picture</h3>
+                <p className="text-muted-foreground">
+                  Stats, measurables, rankings, and highlights give coaches everything they need to evaluate talent efficiently.
+                </p>
+              </CardContent>
+            </Card>
 
-            <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
-              <div className="w-12 h-12 bg-[#01ae79]/10 dark:bg-[#01ae79]/20 rounded-lg flex items-center justify-center mb-4">
-                <CheckCircle className="h-6 w-6 text-[#01ae79]" />
-              </div>
-              <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-3">Free to Start</h3>
-              <p className="text-gray-600 dark:text-gray-300">
-                Try the platform completely free. Upgrade to premium for more connection requests when you&apos;re ready to get serious.
-              </p>
-            </div>
+            <Card className="border-0 shadow-lg hover:shadow-xl transition-shadow">
+              <CardContent className="p-6">
+                <div className="w-12 h-12 bg-[#01ae79]/10 dark:bg-[#01ae79]/20 rounded-lg flex items-center justify-center mb-4">
+                  <CheckCircle className="h-6 w-6 text-[#01ae79]" />
+                </div>
+                <h3 className="text-xl font-semibold mb-3">Free to Start</h3>
+                <p className="text-muted-foreground">
+                  Try the platform completely free. Upgrade to premium for more connection requests when you&apos;re ready to get serious.
+                </p>
+              </CardContent>
+            </Card>
           </div>
         </div>
       </section>
 
       {/* Final CTA Section */}
-      <section className="w-full py-20 md:py-32 bg-[#01ae79]">
-        <div className="container px-4 md:px-6 mx-auto max-w-4xl text-center">
-          <div className="space-y-8 text-white">
-            <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold">
-              Ready to Get Recruited?
-            </h2>
-            <p className="text-xl md:text-2xl opacity-90 font-light">
-              Join high school, college transfer, JUCO, and international athletes making their next move. Coaches and recruiters are here too.
-            </p>
-            <div className="pt-4">
-              <Link href="/sign-up">
-                <Button size="lg" variant="secondary" className="px-10 py-4 text-lg font-semibold bg-white text-[#01ae79] hover:bg-gray-100 rounded-lg">
-                  Start Free Today
-                  <ArrowRight className="ml-2 h-5 w-5" />
-                </Button>
-              </Link>
+      <section className="w-full py-20 md:py-32 bg-gray-50 dark:bg-gray-900/50">
+        <div className="container px-4 md:px-6 mx-auto max-w-4xl">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 p-8 md:p-12 text-center">
+            <div className="space-y-6">
+              <div className="w-16 h-16 bg-[#01ae79]/10 dark:bg-[#01ae79]/20 rounded-2xl flex items-center justify-center mx-auto mb-6">
+                <ArrowRight className="h-8 w-8 text-[#01ae79]" />
+              </div>
+              <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-gray-900 dark:text-white">
+                Ready to Get Recruited?
+              </h2>
+              <p className="text-lg md:text-xl text-gray-600 dark:text-gray-300 font-light max-w-2xl mx-auto">
+                Join high school, college transfer, JUCO, and international athletes making their next move. Coaches and recruiters are here too.
+              </p>
+              <div className="pt-4">
+                <Link href="/sign-up">
+                  <Button size="lg" className="px-10 py-4 text-lg font-semibold bg-[#01ae79] hover:bg-[#01ae79]/90 text-white rounded-lg shadow-lg hover:shadow-xl transition-all duration-200">
+                    Start Free Today
+                    <ArrowRight className="ml-2 h-5 w-5" />
+                  </Button>
+                </Link>
+              </div>
+              <div className="flex flex-wrap justify-center items-center gap-6 pt-6 text-sm text-gray-500 dark:text-gray-400">
+                <div className="flex items-center gap-2">
+                  <CheckCircle className="h-4 w-4 text-[#01ae79]" />
+                  <span>No credit card required</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <CheckCircle className="h-4 w-4 text-[#01ae79]" />
+                  <span>Free to explore</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <CheckCircle className="h-4 w-4 text-[#01ae79]" />
+                  <span>Premium features when ready</span>
+                </div>
+              </div>
             </div>
-            <p className="text-sm opacity-75 pt-4">
-              No credit card required • Free to explore • Premium features available when you&apos;re ready
-            </p>
           </div>
         </div>
       </section>

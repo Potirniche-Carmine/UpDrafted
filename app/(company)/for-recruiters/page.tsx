@@ -1,7 +1,7 @@
 "use client";
 
 import Link from 'next/link';
-import { Button } from '@/components/ui/button';
+import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { ArrowRight, Target, Users, Search, Shield, CheckCircle } from 'lucide-react';
@@ -19,13 +19,13 @@ export default function ForRecruitersPage() {
               For Recruiters
             </Badge>
             <h1 className="text-4xl font-bold tracking-tight sm:text-5xl xl:text-6xl/none">
-              Find Your Next{" "}
+              Recruit Across{" "}
               <span className="bg-clip-text text-transparent bg-gradient-to-r from-[#01ae79] to-[#01ae79]/80">
-                Star Athletes
+                Multiple Sports
               </span>
             </h1>
             <p className="max-w-3xl mx-auto text-lg text-muted-foreground md:text-xl">
-              UpDrafted empowers school recruiters and scouts to discover talent across multiple sports, build trusted relationships, and connect with promising prospects for their institutions.
+              Unlike coaches who focus on one sport, recruiters need to find talent across multiple programs. UpDrafted is your centralized hub for discovering athletes in all sports with complete profiles in one place.
             </p>
           </div>
         </div>
@@ -43,9 +43,9 @@ export default function ForRecruitersPage() {
                       <Users className="h-8 w-8 text-emerald-600 dark:text-emerald-400" />
                     </div>
                     <div>
-                      <h3 className="text-xl font-semibold mb-3">Multi-Sport Recruiting</h3>
+                      <h3 className="text-xl font-semibold mb-3">Multi-Sport Recruiting Hub</h3>
                       <p className="text-muted-foreground">
-                        Recruit for multiple sports under one profile. Access and manage prospects across different athletic programs, making it easier to build diverse talent pools for your institution.
+                        Unlike coaches who focus on one sport, you recruit across multiple programs. One profile gives you access to football, basketball, soccer, track, and every sport your institution needs.
                       </p>
                     </div>
                   </div>
@@ -59,9 +59,9 @@ export default function ForRecruitersPage() {
                       <Search className="h-8 w-8 text-emerald-600 dark:text-emerald-400" />
                     </div>
                     <div>
-                      <h3 className="text-xl font-semibold mb-3">Advanced Talent Discovery</h3>
+                      <h3 className="text-xl font-semibold mb-3">Complete Athlete Profiles</h3>
                       <p className="text-muted-foreground">
-                        Use powerful filters to find athletes across different sports. View comprehensive profiles with stats, highlights, and measurables specific to each sport you&apos;re recruiting for.
+                        Everything you need in one place - Hudl highlights, ESPN rankings, 247 Sports, social media, stats, and contact info. No more jumping between platforms to evaluate talent.
                       </p>
                     </div>
                   </div>
@@ -91,9 +91,9 @@ export default function ForRecruitersPage() {
                       <CheckCircle className="h-8 w-8 text-emerald-600 dark:text-emerald-400" />
                     </div>
                     <div>
-                      <h3 className="text-xl font-semibold mb-3">Streamlined Communication</h3>
+                      <h3 className="text-xl font-semibold mb-3">Organized Communication</h3>
                       <p className="text-muted-foreground">
-                        Efficiently manage communications with prospects across different sports. Keep track of your recruiting pipeline and maintain organized conversations with potential recruits.
+                        Manage all recruiting conversations across multiple sports in one platform. Track your pipeline and never lose touch with prospects in any sport.
                       </p>
                     </div>
                   </div>
@@ -105,24 +105,42 @@ export default function ForRecruitersPage() {
       </section>
 
       {/* CTA Section */}
-      <section className="w-full py-20 md:py-32 bg-gradient-to-r from-[#01ae79] via-[#01ae79]/90 to-[#01ae79]/80">
-        <div className="container px-4 md:px-6">
-          <div className="text-center space-y-8 text-white">
-            <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center mx-auto">
-              <Search className="h-8 w-8 text-white" />
+      <section className="w-full py-20 md:py-32 bg-gray-50 dark:bg-gray-900/50">
+        <div className="container px-4 md:px-6 mx-auto max-w-4xl">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 p-8 md:p-12 text-center">
+            <div className="space-y-6">
+              <div className="w-16 h-16 bg-[#01ae79]/10 dark:bg-[#01ae79]/20 rounded-2xl flex items-center justify-center mx-auto mb-6">
+                <Search className="h-8 w-8 text-[#01ae79]" />
+              </div>
+              <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-gray-900 dark:text-white">
+                Start Your Multi-Sport Recruiting
+              </h2>
+              <p className="text-lg md:text-xl text-gray-600 dark:text-gray-300 font-light max-w-2xl mx-auto">
+                Join recruiters using UpDrafted to find talent across every sport. One platform, unlimited possibilities.
+              </p>
+              <div className="pt-4">
+                <Link href="/sign-up">
+                  <Button size="lg" className="px-12 py-4 text-lg font-semibold bg-[#01ae79] hover:bg-[#01ae79]/90 text-white rounded-lg shadow-lg hover:shadow-xl transition-all duration-200">
+                    Start Recruiting
+                    <ArrowRight className="ml-2 h-5 w-5" />
+                  </Button>
+                </Link>
+              </div>
+              <div className="flex flex-wrap justify-center items-center gap-6 pt-6 text-sm text-gray-500 dark:text-gray-400">
+                <div className="flex items-center gap-2">
+                  <CheckCircle className="h-4 w-4 text-[#01ae79]" />
+                  <span>Free to start</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <CheckCircle className="h-4 w-4 text-[#01ae79]" />
+                  <span>Multi-sport recruiting</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <CheckCircle className="h-4 w-4 text-[#01ae79]" />
+                  <span>Premium features when ready</span>
+                </div>
+              </div>
             </div>
-            <h2 className="text-3xl font-bold tracking-tight sm:text-4xl md:text-5xl">
-              Ready to Discover Exceptional Talent?
-            </h2>
-            <p className="max-w-3xl mx-auto text-lg opacity-90">
-              Join college programs already using UpDrafted to find and recruit the next generation of student-athletes.
-            </p>
-            <Link href="/sign-up">
-              <Button size="lg" variant="secondary" className="px-12 py-4 text-xl group bg-white text-[#01ae79] hover:bg-gray-100">
-                Start Recruiting
-                <ArrowRight className="ml-2 h-6 w-6 group-hover:translate-x-1 transition-transform" />
-              </Button>
-            </Link>
           </div>
         </div>
       </section>
