@@ -3,11 +3,11 @@
 import Link from "next/link";
 import { UserButton, SignedIn, SignedOut, SignInButton, SignUpButton, useUser } from "@clerk/nextjs";
 import { Button } from "@/components/ui/button";
-import { Users, MessageSquare, Bell, LogIn, ChevronDown, Search, Menu, Sun, Moon } from "lucide-react";
+import { Users, MessageSquare, Bell, LogIn, ChevronDown, Search, Menu, Sun, Moon, Home, UserCheck, GraduationCap } from "lucide-react";
 import { useTheme } from "next-themes";
 import Image from "next/image";
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -36,6 +36,29 @@ interface NavItem {
   onClick?: () => void;
 }
 
+// Helper functions for conditional rendering optimization
+const COMPANY_PAGES = ['/for-athletes', '/for-coaches', '/for-recruiters'];
+
+const shouldShowBackButton = (isSignedIn: boolean | undefined, hasCompletedOnboarding: boolean | string | undefined, pathname: string): boolean => {
+  return Boolean(isSignedIn && hasCompletedOnboarding && COMPANY_PAGES.includes(pathname));
+};
+
+const shouldShowMobileSearch = (isSignedIn: boolean | undefined, hasCompletedOnboarding: boolean | string | undefined): boolean => {
+  return Boolean(isSignedIn && hasCompletedOnboarding);
+};
+
+const getNavItemClassName = (isActive: boolean): string => {
+  const baseClasses = "flex items-center justify-between rounded-lg px-3 py-3 text-sm font-medium transition-colors";
+  const activeClasses = "bg-[#01ae79]/10 text-[#01ae79] dark:bg-[#01ae79]/20";
+  const inactiveClasses = "hover:bg-[#01ae79]/5 dark:hover:bg-[#01ae79]/10 hover:text-[#01ae79]";
+  
+  return `${baseClasses} ${isActive ? activeClasses : inactiveClasses}`;
+};
+
+const isNavItemActive = (pathname: string, itemHref: string): boolean => {
+  return pathname === itemHref || (itemHref !== '/' && pathname.startsWith(itemHref));
+};
+
 // Professional notification badge component
 function NotificationBadge({ count, className = "" }: { count: number; className?: string }) {
   if (count === 0) return null;
@@ -58,18 +81,24 @@ function NavItem({
   item,
   notificationCount = 0,
   className = "",
-  onClick
+  onClick,
+  isActive = false
 }: {
   item: NavItem;
   notificationCount?: number;
   className?: string;
   onClick?: () => void;
+  isActive?: boolean;
 }) {
   return (
     <Link
       href={item.href}
       onClick={onClick}
-      className={`transition-colors flex items-center px-2 md:px-3 py-2 group rounded-lg text-muted-foreground hover:text-[#01ae79] hover:bg-[#01ae79]/5 dark:hover:bg-[#01ae79]/10 relative ${className}`}
+      className={`transition-colors flex items-center px-2 md:px-3 py-2 group rounded-lg relative ${
+        isActive 
+          ? 'text-[#01ae79] bg-[#01ae79]/10 dark:bg-[#01ae79]/20' 
+          : 'text-muted-foreground hover:text-[#01ae79] hover:bg-[#01ae79]/5 dark:hover:bg-[#01ae79]/10'
+      } ${className}`}
       title={item.label}
     >
       <div className="relative">
@@ -81,6 +110,9 @@ function NavItem({
       <span className="ml-2 text-sm font-medium hidden xl:inline">
         {item.label}
       </span>
+      {isActive && (
+        <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 w-1 h-1 bg-[#01ae79] rounded-full"></div>
+      )}
     </Link>
   );
 }
@@ -118,6 +150,7 @@ export function Header() {
   const { navigateToProfile, isNavigating: profileNavigating } = useProfileNavigation();
   const { unreadCount: notificationCount } = useNotifications();
   const router = useRouter();
+  const pathname = usePathname();
 
   // Check if user has completed onboarding (has a role)
   const userRole = user?.publicMetadata?.role as string;
@@ -155,8 +188,23 @@ export function Header() {
     { key: "notifications", href: "/notifications", label: "Notifications", icon: <Bell className="h-5 w-5" />, requiresAuth: true }
   ];
 
-  // Only show navigation if user is signed in AND has completed onboarding
-  const navItemsToDisplay = isSignedIn && hasCompletedOnboarding ? navItems : [];
+  // Public navigation items for non-authenticated users or company pages
+  const publicNavItems: NavItem[] = [
+    { key: "home", href: "/", label: "Home", icon: <Home className="h-5 w-5" />, requiresAuth: false },
+    { key: "for-athletes", href: "/for-athletes", label: "For Athletes", icon: <UserCheck className="h-5 w-5" />, requiresAuth: false },
+    { key: "for-coaches", href: "/for-coaches", label: "For Coaches", icon: <GraduationCap className="h-5 w-5" />, requiresAuth: false },
+    { key: "for-recruiters", href: "/for-recruiters", label: "For Recruiters", icon: <Search className="h-5 w-5" />, requiresAuth: false },
+  ];
+
+  // Determine which navigation items to show
+  let navItemsToDisplay: NavItem[] = [];
+  if (isSignedIn && hasCompletedOnboarding) {
+    // Show app navigation for authenticated users
+    navItemsToDisplay = navItems;
+  } else {
+    // Show public navigation for non-authenticated users or those without completed onboarding
+    navItemsToDisplay = publicNavItems;
+  }
 
   const userButtonAppearance = {
     elements: {
@@ -205,16 +253,33 @@ export function Header() {
 
         {/* Desktop/Tablet Navigation - Show on medium screens and up, with labels only on xl+ */}
         <nav className="hidden md:flex items-center space-x-0.5 lg:space-x-1 xl:space-x-2">
-          {navItemsToDisplay.map((item) => (
-            <NavItem
-              key={item.key}
-              item={item}
-              notificationCount={item.key === 'notifications' ? notificationCount : 0}
-            />
-          ))}
+          {navItemsToDisplay.map((item) => {
+            const isActive = pathname === item.href || 
+              (item.href !== '/' && pathname.startsWith(item.href));
+            
+            return (
+              <NavItem
+                key={item.key}
+                item={item}
+                notificationCount={item.key === 'notifications' ? notificationCount : 0}
+                isActive={isActive}
+              />
+            );
+          })}
 
           {/* Theme Toggle */}
           <ThemeToggle />
+
+          {/* Back button for logged-in users on company pages */}
+          <SignedIn>
+            {['/for-athletes', '/for-coaches', '/for-recruiters'].includes(pathname) && hasCompletedOnboarding && (
+              <Link href="/dashboard">
+                <Button variant="ghost" size="sm" className="text-gray-500 dark:text-gray-400 hover:text-[#01ae79] hover:bg-[#01ae79]/5 ml-2">
+                  ← Dashboard
+                </Button>
+              </Link>
+            )}
+          </SignedIn>
 
           <SignedIn>
             <div className="relative flex items-center ml-2">
@@ -285,53 +350,76 @@ export function Header() {
         <div className="md:hidden flex items-center space-x-2">
           <ThemeToggle />
 
-          <SignedIn>
-            {hasCompletedOnboarding && (
-              <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
-                <SheetTrigger asChild>
-                  <Button variant="ghost" size="sm" className="h-9 w-9 p-0 relative">
-                    <Menu className="h-5 w-5" />
-                    <span className="sr-only">Toggle menu</span>
-                  </Button>
-                </SheetTrigger>
-                <SheetContent side="right" className="w-[300px] sm:w-[400px] z-[60]">
-                  <SheetHeader>
-                    <SheetTitle className="text-left">Menu</SheetTitle>
-                    <SheetDescription className="text-left">
-                      Navigate to different sections of UpDrafted
-                    </SheetDescription>
-                  </SheetHeader>
+          {/* Mobile menu for all users */}
+          <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
+            <SheetTrigger asChild>
+              <Button variant="ghost" size="sm" className="h-9 w-9 p-0 relative">
+                <Menu className="h-5 w-5" />
+                <span className="sr-only">Toggle menu</span>
+              </Button>
+            </SheetTrigger>
+            
+            <SheetContent side="right" className="w-[300px] sm:w-[400px] z-[60]">
+              <SheetHeader>
+                <SheetTitle className="text-left">Menu</SheetTitle>
+                <SheetDescription className="text-left">
+                  Navigate to different sections of UpDrafted
+                </SheetDescription>
+              </SheetHeader>
 
-                  <div className="mt-6 space-y-4">
-                    {/* Mobile Search */}
-                    <div className="pb-4 border-b border-border">
-                      <div className="px-1 min-w-0">
-                        <SearchBar userRole={userRole} />
-                      </div>
+              <div className="mt-6 space-y-4">
+                {/* Mobile Search - Only show for authenticated users with completed onboarding */}
+                {shouldShowMobileSearch(isSignedIn, hasCompletedOnboarding) && (
+                  <div className="pb-4 border-b border-border">
+                    <div className="px-1 min-w-0">
+                      <SearchBar userRole={userRole} />
                     </div>
+                  </div>
+                )}
 
-                    {/* Mobile Navigation Links */}
-                    <div className="space-y-2">
-                      {navItemsToDisplay.map((item) => (
-                        <Link
-                          key={item.key}
-                          href={item.href}
-                          onClick={() => setMobileMenuOpen(false)}
-                          className="flex items-center justify-between rounded-lg px-3 py-3 text-sm font-medium transition-colors hover:bg-[#01ae79]/5 dark:hover:bg-[#01ae79]/10 hover:text-[#01ae79]"
-                        >
-                          <div className="flex items-center space-x-3 relative">
-                            <div className="relative">
-                              {item.icon}
-                              {item.key === 'notifications' && notificationCount > 0 && (
-                                <NotificationBadge count={notificationCount} />
-                              )}
-                            </div>
-                            <span>{item.label}</span>
+                {/* Mobile Navigation Links */}
+                <div className="space-y-2">
+                  {/* Back button for company pages when signed in */}
+                  {shouldShowBackButton(isSignedIn, hasCompletedOnboarding, pathname) && (
+                    <Link
+                      href="/dashboard"
+                      onClick={() => setMobileMenuOpen(false)}
+                      className="flex items-center rounded-lg px-3 py-3 text-sm font-medium transition-colors hover:bg-[#01ae79]/5 dark:hover:bg-[#01ae79]/10 hover:text-[#01ae79] text-gray-500 dark:text-gray-400"
+                    >
+                      <span>← Back to Dashboard</span>
+                    </Link>
+                  )}
+                  
+                  {navItemsToDisplay.map((item) => {
+                    const isActive = isNavItemActive(pathname, item.href);
+                      
+                    return (
+                      <Link
+                        key={item.key}
+                        href={item.href}
+                        onClick={() => setMobileMenuOpen(false)}
+                        className={getNavItemClassName(isActive)}
+                      >
+                        <div className="flex items-center space-x-3 relative">
+                          <div className="relative">
+                            {item.icon}
+                            {item.key === 'notifications' && notificationCount > 0 && (
+                              <NotificationBadge count={notificationCount} />
+                            )}
                           </div>
-                        </Link>
-                      ))}
-                    </div>
+                          <span>{item.label}</span>
+                        </div>
+                        {isActive && (
+                          <div className="w-2 h-2 bg-[#01ae79] rounded-full"></div>
+                        )}
+                      </Link>
+                    );
+                  })}
+                </div>
 
+                {/* Additional options for authenticated users */}
+                {isSignedIn && hasCompletedOnboarding && (
+                  <>
                     {/* Admin Button (Mobile) */}
                     {isAdmin && (
                       <div className="pt-4 border-t border-border">
@@ -342,7 +430,7 @@ export function Header() {
                           }}
                           className="flex items-center space-x-3 rounded-lg px-3 py-3 text-sm font-medium transition-colors hover:bg-[#01ae79]/5 dark:hover:bg-[#01ae79]/10 hover:text-[#01ae79] w-full text-left border border-[#01ae79]/20"
                         >
-                          <span>🔧 Admin Panel</span>
+                          <span>Admin Panel</span>
                         </button>
                       </div>
                     )}
@@ -360,32 +448,34 @@ export function Header() {
                         <span>{profileNavigating ? "Loading..." : "View Profile"}</span>
                       </button>
                     </div>
+                  </>
+                )}
+
+                {/* Sign in/Sign up for non-authenticated users */}
+                {!isSignedIn && (
+                  <div className="border-t border-gray-200 dark:border-gray-700 pt-4 mt-4 px-3">
+                    <SignInButton mode="modal">
+                      <Button variant="default" className="w-full bg-[#01ae79] hover:bg-[#01ae79]/90 text-white mb-3 py-3 text-base font-medium">
+                        Sign In
+                      </Button>
+                    </SignInButton>
+                    <SignUpButton mode="modal">
+                      <Button variant="outline" className="w-full border-[#01ae79]/30 hover:bg-[#01ae79]/5 text-[#01ae79] py-3 text-base font-medium">
+                        Sign Up
+                      </Button>
+                    </SignUpButton>
                   </div>
-                </SheetContent>
-              </Sheet>
-            )}
+                )}
+              </div>
+            </SheetContent>
+          </Sheet>
+
+          {/* User button only shows for signed in users */}
+          <SignedIn>
             <UserButton
               appearance={userButtonAppearance}
             />
           </SignedIn>
-
-          <SignedOut>
-            {/* Mobile: Only show Sign In icon, hide Sign Up */}
-            <SignInButton mode="modal">
-              <Button variant="default" size="sm" className="bg-[#01ae79] hover:bg-[#01ae79]/90 text-white md:flex md:items-center">
-                <LogIn className="h-4 w-4" />
-                <span className="hidden md:inline ml-2">Sign In</span>
-              </Button>
-            </SignInButton>
-            {/* Only show Sign Up on md+ screens */}
-            <div className="hidden md:block">
-              <SignUpButton mode="modal">
-                <Button variant="outline" size="sm" className="ml-2 border-[#01ae79]/30 hover:bg-[#01ae79]/5 dark:border-[#01ae79]/30 dark:hover:bg-[#01ae79]/10 text-[#01ae79] hover:text-[#01ae79]">
-                  <span>Sign Up</span>
-                </Button>
-              </SignUpButton>
-            </div>
-          </SignedOut>
         </div>
       </div>
     </header>

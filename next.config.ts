@@ -31,6 +31,10 @@ const nextConfig: NextConfig = {
         pathname: '/icons/**',
         search: '',
       },
+      {
+        pathname: '/hero/**',
+        search: '',
+      },
     ],
     remotePatterns: [
       {
