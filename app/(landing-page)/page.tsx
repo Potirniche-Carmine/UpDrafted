@@ -17,7 +17,7 @@ function HomePageContent() {
           {/* Mobile Athlete Profile Screenshot - Right Side */}
           <div className="absolute right-[-80px] top-20 transform rotate-12 opacity-[0.15] dark:opacity-[0.18]">
             <Image
-              src="/hero/athlete-light-mobile.png"
+              src="/hero/athlete-light-mobile.webp"
               alt="Athlete Profile Mobile"
               width={200}
               height={350}
@@ -26,7 +26,7 @@ function HomePageContent() {
               quality={75}
             />
             <Image
-              src="/hero/athlete-dark-mobile.png"
+              src="/hero/athlete-dark-mobile.webp"
               alt="Athlete Profile Mobile Dark"
               width={200}
               height={350}
@@ -39,7 +39,7 @@ function HomePageContent() {
           {/* Mobile Coach Dashboard Screenshot - Left Side */}
           <div className="absolute left-[-60px] bottom-32 transform -rotate-8 opacity-[0.15] dark:opacity-[0.18]">
             <Image
-              src="/hero/coach-light-mobile.png"
+              src="/hero/coach-light-mobile.webp"
               alt="Coach Dashboard Mobile"
               width={180}
               height={300}
@@ -48,7 +48,7 @@ function HomePageContent() {
               quality={75}
             />
             <Image
-              src="/hero/coach-dark-mobile.png"
+              src="/hero/coach-dark-mobile.webp"
               alt="Coach Dashboard Mobile Dark"
               width={180}
               height={300}
@@ -65,7 +65,7 @@ function HomePageContent() {
           {/* Desktop Athlete Profile Screenshot */}
           <div className="absolute right-[-50%] sm:right-[-45%] md:right-[-40%] lg:right-[-35%] xl:right-[-30%] 2xl:right-[-30%] top-8 sm:top-12 md:top-16 lg:top-20 xl:top-24 transform rotate-2 sm:rotate-3 md:rotate-4 opacity-[0.12] sm:opacity-[0.15] md:opacity-[0.18] lg:opacity-[0.20] dark:opacity-[0.15] dark:sm:opacity-[0.18] dark:md:opacity-[0.20] dark:lg:opacity-[0.22]">
             <Image
-              src="/hero/athlete-light-desktop.png"
+              src="/hero/athlete-light-desktop.webp"
               alt="Athlete Profile Desktop"
               width={800}
               height={500}
@@ -74,7 +74,7 @@ function HomePageContent() {
               quality={70}
             />
             <Image
-              src="/hero/athlete-dark-desktop.png"
+              src="/hero/athlete-dark-desktop.webp"
               alt="Athlete Profile Desktop Dark"
               width={800}
               height={500}
@@ -87,7 +87,7 @@ function HomePageContent() {
           {/* Desktop Coach Dashboard Screenshot */}
           <div className="absolute left-[-45%] sm:left-[-40%] md:left-[-35%] lg:left-[-30%] xl:left-[-25%] 2xl:left-[-20%] bottom-4 sm:bottom-6 md:bottom-10 lg:bottom-12 xl:bottom-16 transform -rotate-1 sm:-rotate-2 md:-rotate-3 opacity-[0.12] sm:opacity-[0.15] md:opacity-[0.18] lg:opacity-[0.20] dark:opacity-[0.15] dark:sm:opacity-[0.18] dark:md:opacity-[0.20] dark:lg:opacity-[0.22]">
             <Image
-              src="/hero/coach-light-desktop.png"
+              src="/hero/coach-light-desktop.webp"
               alt="Coach Dashboard Desktop"
               width={700}
               height={450}
@@ -96,7 +96,7 @@ function HomePageContent() {
               quality={70}
             />
             <Image
-              src="/hero/coach-dark-desktop.png"
+              src="/hero/coach-dark-desktop.webp"
               alt="Coach Dashboard Desktop Dark"
               width={700}
               height={450}
