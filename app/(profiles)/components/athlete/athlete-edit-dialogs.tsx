@@ -1240,9 +1240,10 @@ export function AthleteEditDialogs({
             <div className="space-y-6 max-h-[70vh] overflow-y-auto pr-2">
               <div className="space-y-2">
                 <Label htmlFor="edit-fullName" className={cn(
-                  "Full Name *",
+                  "text-sm font-medium",
                   shouldLockFields() && "text-muted-foreground"
                 )}>
+                  Full Name *
                   {shouldLockFields() && <span className="text-xs text-muted-foreground block">(Locked during verification)</span>}
                 </Label>
                 <Input
@@ -1270,9 +1271,10 @@ export function AthleteEditDialogs({
               
               <div className="space-y-2">
                 <Label htmlFor="edit-sport" className={cn(
-                  "Primary Sport *",
+                  "text-sm font-medium",
                   shouldLockFields() && "text-muted-foreground"
                 )}>
+                  Primary Sport *
                   {shouldLockFields() && <span className="text-xs text-muted-foreground block">(Locked during verification)</span>}
                 </Label>
                 <Select
@@ -1300,9 +1302,10 @@ export function AthleteEditDialogs({
 
               <div className="space-y-2">
                 <Label htmlFor="edit-educationLevel" className={cn(
-                  "Education Level *",
+                  "text-sm font-medium",
                   shouldLockFields() && "text-muted-foreground"
                 )}>
+                  Education Level *
                   {shouldLockFields() && <span className="text-xs text-muted-foreground block">(Locked during verification)</span>}
                 </Label>
                 <Select
@@ -1332,9 +1335,10 @@ export function AthleteEditDialogs({
               {editData.educationLevel === 'high_school' && (
                 <div className="space-y-4">
                   <Label className={cn(
-                    "Team Level",
+                    "text-sm font-medium",
                     shouldLockFields() && "text-muted-foreground"
                   )}>
+                    Team Level
                     {shouldLockFields() && <span className="text-xs text-muted-foreground block">(Locked during verification)</span>}
                   </Label>
                   <div className="grid grid-cols-1 gap-3">
@@ -1503,9 +1507,10 @@ export function AthleteEditDialogs({
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="edit-division" className={cn(
-                      "Division",
+                      "text-sm font-medium",
                       shouldLockFields() && "text-muted-foreground"
                     )}>
+                      Division
                       {shouldLockFields() && <span className="text-xs text-muted-foreground block">(Locked during verification)</span>}
                     </Label>
                     <Select
@@ -1539,9 +1544,10 @@ export function AthleteEditDialogs({
                   {editData.division && divisionHasConferences(editData.division) && (
                     <div className="space-y-2">
                       <Label htmlFor="edit-conference" className={cn(
-                        "Conference",
+                        "text-sm font-medium",
                         shouldLockFields() && "text-muted-foreground"
                       )}>
+                        Conference
                         {shouldLockFields() && <span className="text-xs text-muted-foreground block">(Locked during verification)</span>}
                       </Label>
                       <ConferenceSelector
@@ -1566,9 +1572,10 @@ export function AthleteEditDialogs({
               {/* Secondary Sports */}
               <div className="space-y-2">
                 <Label htmlFor="edit-secondarySports" className={cn(
-                  "Secondary Sports",
+                  "text-sm font-medium",
                   shouldLockFields() && "text-muted-foreground"
                 )}>
+                  Secondary Sports
                   {shouldLockFields() && <span className="text-xs text-muted-foreground block">(Locked during verification)</span>}
                 </Label>
                 <div className="space-y-2">
@@ -1619,9 +1626,10 @@ export function AthleteEditDialogs({
               {availablePositions.length > 0 && (
                 <div className="space-y-2">
                   <Label className={cn(
-                    "Positions *",
+                    "text-sm font-medium",
                     shouldLockFields() && "text-muted-foreground"
                   )}>
+                    Positions *
                     {shouldLockFields() && <span className="text-xs text-muted-foreground block">(Locked during verification)</span>}
                   </Label>
                   <div className="grid grid-cols-2 gap-2 max-h-32 overflow-y-auto">
@@ -1652,9 +1660,10 @@ export function AthleteEditDialogs({
               {/* Country select field */}
               <div className="space-y-2">
                 <Label htmlFor="edit-country" className={cn(
-                  "Country *",
+                  "text-sm font-medium",
                   shouldLockFields() && "text-muted-foreground"
                 )}>
+                  Country *
                   {shouldLockFields() && <span className="text-xs text-muted-foreground block">(Locked during verification)</span>}
                 </Label>
                 <Select
@@ -1683,9 +1692,10 @@ export function AthleteEditDialogs({
               <div className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="edit-city" className={cn(
-                    "City *",
+                    "text-sm font-medium",
                     shouldLockFields() && "text-muted-foreground"
                   )}>
+                    City *
                     {shouldLockFields() && <span className="text-xs text-muted-foreground block">(Locked during verification)</span>}
                   </Label>
                   <Input
@@ -1715,9 +1725,10 @@ export function AthleteEditDialogs({
                 {(!editData.country || editData.country === 'United States') && (
                   <div className="space-y-2">
                     <Label htmlFor="edit-state" className={cn(
-                      "State *",
+                      "text-sm font-medium",
                       shouldLockFields() && "text-muted-foreground"
                     )}>
+                      State *
                       {shouldLockFields() && <span className="text-xs text-muted-foreground block">(Locked during verification)</span>}
                     </Label>
                     <Select
@@ -1775,9 +1786,10 @@ export function AthleteEditDialogs({
 
               <div className="space-y-2">
                 <Label htmlFor="edit-graduationYear" className={cn(
-                  "Graduation Year *",
+                  "text-sm font-medium",
                   shouldLockFields() && "text-muted-foreground"
                 )}>
+                  Graduation Year *
                   {shouldLockFields() && <span className="text-xs text-muted-foreground block">(Locked during verification)</span>}
                 </Label>
                 <Select
@@ -1806,9 +1818,10 @@ export function AthleteEditDialogs({
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label className={cn(
-                    "Height *",
+                    "text-sm font-medium",
                     shouldLockFields() && "text-muted-foreground"
                   )}>
+                    Height *
                     {shouldLockFields() && <span className="text-xs text-muted-foreground block">(Locked during verification)</span>}
                   </Label>
                   <div className="flex gap-2">
@@ -1863,9 +1876,10 @@ export function AthleteEditDialogs({
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="edit-weight" className={cn(
-                    "Weight *",
+                    "text-sm font-medium",
                     shouldLockFields() && "text-muted-foreground"
                   )}>
+                    Weight *
                     {shouldLockFields() && <span className="text-xs text-muted-foreground block">(Locked during verification)</span>}
                   </Label>
                   <Input
