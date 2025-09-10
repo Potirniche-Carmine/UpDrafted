@@ -32,7 +32,7 @@ function SocialInput({ value, onChange, className, ...props }: React.ComponentPr
 
   return (
     <div className={cn("relative flex items-center", className)} style={{ background: "none" }}>
-      <span className="absolute left-3 text-muted-foreground pointer-events-none select-none">@</span>
+      <span className="absolute left-3 text-muted-foreground pointer-events-none select-none z-50">@</span>
       <Input
         {...props}
         value={typeof value === "string" ? value.replace(/@/g, "") : value}
