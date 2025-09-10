@@ -178,7 +178,7 @@
 
   /* University logos carousel animation */
   .animate-scroll {
-    animation: scroll 30s linear infinite;
+    animation: scroll 40s linear infinite;
     will-change: transform;
   }
 
@@ -187,11 +187,31 @@
     animation-play-state: paused;
   }
 
-  /* Faster animation on mobile */
-  @media (max-width: 768px) {
+  /* Mobile - faster animation */
+  @media (max-width: 640px) {
     .animate-scroll {
-      animation: scroll 7.5s linear infinite;
-      will-change: transform;
+      animation: scroll 10s linear infinite;
+    }
+  }
+
+  /* Tablet - medium speed */
+  @media (min-width: 641px) and (max-width: 1024px) {
+    .animate-scroll {
+      animation: scroll 30s linear infinite;
+    }
+  }
+
+  /* Large screens - slower for better visibility */
+  @media (min-width: 1025px) {
+    .animate-scroll {
+      animation: scroll 32s linear infinite;
+    }
+  }
+
+  /* Extra large screens - even slower */
+  @media (min-width: 1536px) {
+    .animate-scroll {
+      animation: scroll 32s linear infinite;
     }
   }
 
