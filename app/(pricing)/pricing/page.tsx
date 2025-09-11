@@ -1,8 +1,9 @@
 "use client";
 
 import { AuthWrapper } from "../../../components/auth-wrapper";
+import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { ArrowLeft, ChevronDown, ChevronUp } from "lucide-react";
+import { Crown, ArrowLeft, ChevronDown, ChevronUp } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
@@ -186,6 +187,25 @@ export default function PricingPage() {
               </Card>
             </div>
           )}
+
+          <div className="text-center max-w-4xl mx-auto mb-12">
+            <Badge variant="outline" className="mb-4 bg-[#01ae79]/5 dark:bg-[#01ae79]/10 text-[#01ae79] border-[#01ae79]/30">
+              <Crown className="w-4 h-4 mr-2" />
+              {userRole === 'coach' ? 'Coach Plans' : userRole === 'recruiter' ? 'Recruiter Plans' : userRole === 'athlete' ? 'Athlete Plans' : 'Pro Plans'}
+            </Badge>
+            
+            <h1 className="text-4xl font-bold tracking-tight sm:text-5xl xl:text-6xl/none mb-6">
+              Unlock Your{" "}
+              <span className="bg-clip-text text-transparent bg-gradient-to-r from-[#01ae79] to-[#01ae79]/80">
+                Potential
+              </span>
+            </h1>
+            
+            <p className="text-xl text-muted-foreground mb-8 leading-relaxed">
+              {roleContent.description} Get {roleContent.features} to accelerate your recruiting success.
+            </p>
+          </div>
+
           {/* Role-Specific Pricing Cards */}
           <div className="max-w-4xl mx-auto mb-16">
             <div className="text-center mb-8">

@@ -294,35 +294,18 @@ export const defaultFeatureLimits = {
   free: {
     maxConnectionsPerMonth: 5,
     maxActiveConnections: 20,
-    maxSearchesPerDay: 10,
     advancedSearchEnabled: false,
     analyticsEnabled: false,
     profileViewInsights: false,
     activityTracking: false,
-    priorityProfileRanking: false,
-    customProfileThemes: false,
-    videoUploadsEnabled: true,
-    maxVideoUploads: 1,
-    priorityMessaging: false,
-    messageRequestsEnabled: true,
-    prioritySupport: false,
-    dataExportEnabled: false,
   },
   premium_monthly: {
     maxConnectionsPerMonth: -1, // unlimited
     maxActiveConnections: -1,
-    maxSearchesPerDay: -1,
     advancedSearchEnabled: true,
     analyticsEnabled: true,
     profileViewInsights: true,
     activityTracking: true,
-    priorityProfileRanking: true,
-    customProfileThemes: true,
-    videoUploadsEnabled: true,
-    maxVideoUploads: 10,
-    priorityMessaging: true,
-    messageRequestsEnabled: true,
-    prioritySupport: true,
-    dataExportEnabled: true,
+
   }
 } as const
