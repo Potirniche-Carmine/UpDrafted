@@ -39,7 +39,7 @@ export function useRoleView() {
 
   // Fetch verification status for current role with deduplication
   const fetchVerificationStatus = useCallback(async (role: ViewRole): Promise<void> => {
-    if (!isAdmin || !isMounted.current) return;
+    if (!isAdmin || !isMounted.current || !user?.id) return;
 
     // Check if there's already a pending request for this role
     const existingRequest = pendingVerificationRequests.get(role);
@@ -60,7 +60,7 @@ export function useRoleView() {
           return false;
         }
 
-        const response = await fetch(`/api/admin/verification?role=${role}`, {
+        const response = await fetch(`/api/admin/verification?role=${role}&targetUserId=${user.id}`, {
           headers: {
             'Authorization': `Bearer ${token}`,
             'Accept': 'application/json',
@@ -86,7 +86,7 @@ export function useRoleView() {
     if (isMounted.current) {
       setVerificationStatus(isVerified);
     }
-  }, [isAdmin, getToken]);
+  }, [isAdmin, getToken, user?.id]);
 
   // Fetch admin preferences from database with deduplication
   const fetchAdminPreferences = useCallback(async (): Promise<void> => {
@@ -160,7 +160,7 @@ export function useRoleView() {
 
   // Update verification status in database
   const updateVerificationStatus = useCallback(async (role: ViewRole, isVerified: boolean): Promise<void> => {
-    if (!isAdmin || !isMounted.current) return;
+    if (!isAdmin || !isMounted.current || !user?.id) return;
 
     try {
       const token = await getToken();
@@ -178,7 +178,8 @@ export function useRoleView() {
         },
         body: JSON.stringify({
           role,
-          isVerified
+          isVerified,
+          targetUserId: user.id
         })
       });
 
@@ -188,7 +189,7 @@ export function useRoleView() {
     } catch (error) {
       console.error('Failed to update verification status:', error);
     }
-  }, [isAdmin, getToken]);
+  }, [isAdmin, getToken, user?.id]);
 
   // Update admin preferences in database with deduplication
   const updateAdminPreferences = useCallback(async (
