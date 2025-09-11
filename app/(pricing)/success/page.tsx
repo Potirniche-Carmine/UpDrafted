@@ -4,7 +4,7 @@ import { AuthWrapper } from '@/components/auth-wrapper'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import Link from 'next/link'
-import { CheckCircle, Crown, ArrowRight } from 'lucide-react'
+import { CheckCircle, Crown, ArrowRight, Search, MessageSquare, Eye, BarChart3, Users } from 'lucide-react'
 
 interface SuccessPageProps {
   searchParams: Promise<{ session_id?: string }>
@@ -48,9 +48,9 @@ export default async function SuccessPage({ searchParams }: SuccessPageProps) {
               <div className="inline-flex items-center justify-center w-16 h-16 bg-green-100 dark:bg-green-900/20 rounded-full mb-4">
                 <CheckCircle className="h-8 w-8 text-green-600 dark:text-green-400" />
               </div>
-              <h1 className="text-3xl font-bold mb-2">Payment Successful!</h1>
+              <h1 className="text-3xl font-bold mb-2">Welcome to Premium!</h1>
               <p className="text-muted-foreground text-lg">
-                Thank you for {isSubscription ? 'subscribing to' : 'purchasing'} UpDrafted Premium
+                Your {isSubscription ? 'subscription' : 'purchase'} was successful. Time to unlock your recruiting potential!
               </p>
             </div>
 
@@ -63,39 +63,73 @@ export default async function SuccessPage({ searchParams }: SuccessPageProps) {
                 {customerEmail && (
                   <>A confirmation email has been sent to <strong>{customerEmail}</strong>. </>
                 )}
-                You now have access to all premium features!
+                Your premium features are ready to use immediately!
               </p>
+              <div className="mt-4 flex items-center justify-center space-x-6 text-sm">
+                <div className="flex items-center">
+                  <BarChart3 className="h-4 w-4 text-[#01ae79] mr-1" />
+                  <span>Advanced Analytics</span>
+                </div>
+                <div className="flex items-center">
+                  <Users className="h-4 w-4 text-[#01ae79] mr-1" />
+                  <span>Unlimited Connections</span>
+                </div>
+              </div>
             </div>
 
             <div className="space-y-4 mb-8">
-              <h2 className="text-xl font-semibold mb-4">What&apos;s Next?</h2>
+              <h2 className="text-xl font-semibold mb-4">Your Premium Features Are Now Active!</h2>
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="text-left p-4 rounded-lg bg-card border border-border/50">
-                  <h3 className="font-medium mb-2">Explore Premium Features</h3>
+                  <div className="flex items-center mb-2">
+                    <Users className="h-5 w-5 text-[#01ae79] mr-2" />
+                    <h3 className="font-medium">Unlimited Connections</h3>
+                  </div>
                   <p className="text-sm text-muted-foreground">
-                    Access advanced analytics, activity tracking, and priority support
+                    Connect with unlimited athletes, coaches, or recruiters - no monthly limits
                   </p>
                 </div>
                 <div className="text-left p-4 rounded-lg bg-card border border-border/50">
-                  <h3 className="font-medium mb-2">Complete Your Profile</h3>
+                  <div className="flex items-center mb-2">
+                    <Search className="h-5 w-5 text-[#01ae79] mr-2" />
+                    <h3 className="font-medium">Advanced Search Filters</h3>
+                  </div>
                   <p className="text-sm text-muted-foreground">
-                    Enhance your profile with premium tools and insights
+                    Find your perfect match with detailed filtering by sport, location, and more
+                  </p>
+                </div>
+                <div className="text-left p-4 rounded-lg bg-card border border-border/50">
+                  <div className="flex items-center mb-2">
+                    <MessageSquare className="h-5 w-5 text-[#01ae79] mr-2" />
+                    <h3 className="font-medium">Read Receipts</h3>
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    Know when your messages are seen and get better response rates
+                  </p>
+                </div>
+                <div className="text-left p-4 rounded-lg bg-card border border-border/50">
+                  <div className="flex items-center mb-2">
+                    <Eye className="h-5 w-5 text-[#01ae79] mr-2" />
+                    <h3 className="font-medium">Profile Analytics</h3>
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    See who&apos;s viewing your profile and track your recruiting success
                   </p>
                 </div>
               </div>
             </div>
 
             <div className="space-y-3">
-              <Link href="/dashboard" className="block">
+              <Link href="/discover" className="block">
                 <Button className="w-full bg-[#01ae79] hover:bg-[#01ae79]/90 text-white">
-                  Go to Dashboard
+                  Start Discovering
                   <ArrowRight className="h-4 w-4 ml-2" />
                 </Button>
               </Link>
               
-              <Link href="/profile" className="block">
+              <Link href="/dashboard" className="block">
                 <Button variant="outline" className="w-full border-[#01ae79]/30 hover:bg-[#01ae79]/5">
-                  Update Profile
+                  View Dashboard
                 </Button>
               </Link>
             </div>
@@ -103,8 +137,8 @@ export default async function SuccessPage({ searchParams }: SuccessPageProps) {
             <div className="mt-8 pt-6 border-t border-border/50">
               <p className="text-sm text-muted-foreground">
                 Need help? Contact our support team at{' '}
-                <Link href="/contact" className="text-[#01ae79] hover:underline">
-                  support
+                <Link href="mailto:support@updrafted.us" className="text-[#01ae79] hover:underline">
+                  support@updrafted.us
                 </Link>
               </p>
             </div>

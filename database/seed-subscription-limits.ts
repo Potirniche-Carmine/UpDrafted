@@ -6,44 +6,44 @@ export async function seedSubscriptionFeatureLimits() {
   console.log('🌱 Seeding subscription feature limits...')
 
   const featureLimits = [
-    // Free tier
+    // Free tier - Same for all roles
     {
       tier: 'free' as const,
       maxConnectionsPerMonth: 5,
-      maxActiveConnections: 20,
-      maxSearchesPerDay: 10,
+      maxActiveConnections: 5, // 5 incoming connections
+      maxSearchesPerDay: -1, // unlimited basic search
       advancedSearchEnabled: false,
       analyticsEnabled: false,
       profileViewInsights: false,
       activityTracking: false,
       priorityProfileRanking: false,
       customProfileThemes: false,
-      videoUploadsEnabled: true,
-      maxVideoUploads: 1,
+      videoUploadsEnabled: false,
+      maxVideoUploads: 0,
       priorityMessaging: false,
       messageRequestsEnabled: true,
       prioritySupport: false,
       dataExportEnabled: false,
     },
     
-    // Pro Athlete Monthly
+    // Pro Athlete Monthly - 25 connection requests, unlimited incoming
     {
       tier: 'pro_athlete_monthly' as const,
       maxConnectionsPerMonth: 25,
-      maxActiveConnections: -1, // unlimited
+      maxActiveConnections: -1, // unlimited incoming
       maxSearchesPerDay: -1, // unlimited
       advancedSearchEnabled: true,
-      analyticsEnabled: true,
-      profileViewInsights: true,
-      activityTracking: true,
-      priorityProfileRanking: true,
-      customProfileThemes: true,
-      videoUploadsEnabled: true,
-      maxVideoUploads: 10,
-      priorityMessaging: true,
+      analyticsEnabled: false, // Not mentioned in pricing
+      profileViewInsights: true, // "See Who Has Viewed Your Profile"
+      activityTracking: false, // Not mentioned in pricing
+      priorityProfileRanking: false, // Not mentioned in pricing
+      customProfileThemes: false, // Not mentioned in pricing
+      videoUploadsEnabled: false, // Not mentioned in pricing
+      maxVideoUploads: 0,
+      priorityMessaging: true, // "Read Receipts"
       messageRequestsEnabled: true,
-      prioritySupport: true,
-      dataExportEnabled: true,
+      prioritySupport: false, // Not mentioned in pricing
+      dataExportEnabled: false, // Not mentioned in pricing
     },
     
     // Pro Athlete Yearly (same features as monthly)
@@ -53,37 +53,37 @@ export async function seedSubscriptionFeatureLimits() {
       maxActiveConnections: -1,
       maxSearchesPerDay: -1,
       advancedSearchEnabled: true,
-      analyticsEnabled: true,
+      analyticsEnabled: false,
       profileViewInsights: true,
-      activityTracking: true,
-      priorityProfileRanking: true,
-      customProfileThemes: true,
-      videoUploadsEnabled: true,
-      maxVideoUploads: 10,
+      activityTracking: false,
+      priorityProfileRanking: false,
+      customProfileThemes: false,
+      videoUploadsEnabled: false,
+      maxVideoUploads: 0,
       priorityMessaging: true,
       messageRequestsEnabled: true,
-      prioritySupport: true,
-      dataExportEnabled: true,
+      prioritySupport: false,
+      dataExportEnabled: false,
     },
     
-    // Pro Coach Monthly
+    // Pro Coach Monthly - Unlimited connections
     {
       tier: 'pro_coach_monthly' as const,
       maxConnectionsPerMonth: -1, // unlimited
-      maxActiveConnections: -1,
+      maxActiveConnections: -1, // unlimited incoming
       maxSearchesPerDay: -1,
       advancedSearchEnabled: true,
-      analyticsEnabled: true,
+      analyticsEnabled: true, // "Advanced Analytics Dashboard"
       profileViewInsights: true,
-      activityTracking: true,
-      priorityProfileRanking: true,
-      customProfileThemes: true,
-      videoUploadsEnabled: true,
-      maxVideoUploads: -1, // unlimited
+      activityTracking: false,
+      priorityProfileRanking: false,
+      customProfileThemes: false,
+      videoUploadsEnabled: false,
+      maxVideoUploads: 0,
       priorityMessaging: true,
       messageRequestsEnabled: true,
-      prioritySupport: true,
-      dataExportEnabled: true,
+      prioritySupport: false,
+      dataExportEnabled: false,
     },
     
     // Pro Coach Yearly (same features as monthly)
@@ -95,38 +95,38 @@ export async function seedSubscriptionFeatureLimits() {
       advancedSearchEnabled: true,
       analyticsEnabled: true,
       profileViewInsights: true,
-      activityTracking: true,
-      priorityProfileRanking: true,
-      customProfileThemes: true,
-      videoUploadsEnabled: true,
-      maxVideoUploads: -1,
+      activityTracking: false,
+      priorityProfileRanking: false,
+      customProfileThemes: false,
+      videoUploadsEnabled: false,
+      maxVideoUploads: 0,
       priorityMessaging: true,
       messageRequestsEnabled: true,
-      prioritySupport: true,
-      dataExportEnabled: true,
+      prioritySupport: false,
+      dataExportEnabled: false,
     },
     
     // Pro Recruiter Monthly (same as Pro Coach)
     {
       tier: 'pro_recruiter_monthly' as const,
-      maxConnectionsPerMonth: -1,
-      maxActiveConnections: -1,
+      maxConnectionsPerMonth: -1, // unlimited
+      maxActiveConnections: -1, // unlimited incoming
       maxSearchesPerDay: -1,
       advancedSearchEnabled: true,
-      analyticsEnabled: true,
+      analyticsEnabled: true, // "Advanced Analytics & Reporting Dashboard"
       profileViewInsights: true,
-      activityTracking: true,
-      priorityProfileRanking: true,
-      customProfileThemes: true,
-      videoUploadsEnabled: true,
-      maxVideoUploads: -1,
+      activityTracking: false,
+      priorityProfileRanking: false,
+      customProfileThemes: false,
+      videoUploadsEnabled: false,
+      maxVideoUploads: 0,
       priorityMessaging: true,
       messageRequestsEnabled: true,
-      prioritySupport: true,
-      dataExportEnabled: true,
+      prioritySupport: false,
+      dataExportEnabled: false,
     },
     
-    // Pro Recruiter Yearly (same as Pro Coach)
+    // Pro Recruiter Yearly (same as monthly)
     {
       tier: 'pro_recruiter_yearly' as const,
       maxConnectionsPerMonth: -1,
@@ -135,15 +135,15 @@ export async function seedSubscriptionFeatureLimits() {
       advancedSearchEnabled: true,
       analyticsEnabled: true,
       profileViewInsights: true,
-      activityTracking: true,
-      priorityProfileRanking: true,
-      customProfileThemes: true,
-      videoUploadsEnabled: true,
-      maxVideoUploads: -1,
+      activityTracking: false,
+      priorityProfileRanking: false,
+      customProfileThemes: false,
+      videoUploadsEnabled: false,
+      maxVideoUploads: 0,
       priorityMessaging: true,
       messageRequestsEnabled: true,
-      prioritySupport: true,
-      dataExportEnabled: true,
+      prioritySupport: false,
+      dataExportEnabled: false,
     },
   ]
 

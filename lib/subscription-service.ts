@@ -69,13 +69,20 @@ export class SubscriptionService {
     stripeSubscription: StripeSubscriptionData,
     stripeCustomerId?: string
   ): Promise<UserSubscription> {
+    // Price ID to tier mapping using environment variables
+    // These MUST match the priceId values in your pricing-config.ts file
     const tierMapping: Record<string, SubscriptionTier> = {
-      'price_athlete_monthly_example': 'pro_athlete_monthly',
-      'price_athlete_yearly_example': 'pro_athlete_yearly',
-      'price_coach_monthly_example': 'pro_coach_monthly',
-      'price_coach_yearly_example': 'pro_coach_yearly',
-      'price_recruiter_monthly_example': 'pro_recruiter_monthly',
-      'price_recruiter_yearly_example': 'pro_recruiter_yearly',
+      // Athlete plans
+      [process.env.NEXT_PUBLIC_STRIPE_PRICE_ATHLETE_MONTHLY || '']: 'pro_athlete_monthly',
+      [process.env.NEXT_PUBLIC_STRIPE_PRICE_ATHLETE_YEARLY || '']: 'pro_athlete_yearly',
+      
+      // Coach plans
+      [process.env.NEXT_PUBLIC_STRIPE_PRICE_COACH_MONTHLY || '']: 'pro_coach_monthly',
+      [process.env.NEXT_PUBLIC_STRIPE_PRICE_COACH_YEARLY || '']: 'pro_coach_yearly',
+      
+      // Recruiter plans
+      [process.env.NEXT_PUBLIC_STRIPE_PRICE_RECRUITER_MONTHLY || '']: 'pro_recruiter_monthly', 
+      [process.env.NEXT_PUBLIC_STRIPE_PRICE_RECRUITER_YEARLY || '']: 'pro_recruiter_yearly',
     }
 
     const priceId = stripeSubscription.items.data[0]?.price.id
@@ -153,25 +160,22 @@ export class SubscriptionService {
     const limits = await this.getFeatureLimits(tier)
     if (!limits) return false
 
-    // Type-safe feature access check
+    // Type-safe feature access check based on pricing page features
     switch (feature) {
-      case 'analytics':
-        return Boolean(limits.analyticsEnabled)
       case 'advancedSearch':
         return Boolean(limits.advancedSearchEnabled)
-      case 'prioritySupport':
-        return Boolean(limits.prioritySupport)
-      case 'dataExport':
-        return Boolean(limits.dataExportEnabled)
+      case 'profileViewInsights':
+        return Boolean(limits.profileViewInsights)
+      case 'analytics':
+        return Boolean(limits.analyticsEnabled)
       default:
         return false
     }
   }
 
-  // Check if user has reached usage limit for a feature
-  static async checkUsageLimit(
-    userId: string, 
-    usageType: 'connectionsRequested' | 'searchesPerformed' | 'analyticsViews'
+  // Check if user has reached usage limit for connection requests
+  static async checkConnectionRequestLimit(
+    userId: string
   ): Promise<{ allowed: boolean; limit: number; current: number }> {
     const subscription = await this.getUserSubscription(userId)
     const usage = await this.getUserUsage(userId)
@@ -179,24 +183,42 @@ export class SubscriptionService {
     
     const limits = await this.getFeatureLimits(tier)
     
-    // Default limits for free tier
-    const defaultLimits = {
-      connectionsRequested: 5,
-      searchesPerformed: 10,
-      analyticsViews: 0
-    }
-    
-    const limitValue = usageType === 'connectionsRequested' ? limits?.maxConnectionsPerMonth :
-                      usageType === 'searchesPerformed' ? limits?.maxSearchesPerDay :
-                      0
-    
-    const limit = limitValue || defaultLimits[usageType]
-    const current = usage?.[usageType] || 0
+    // Default limit for free tier is 5 connections per month
+    const limitValue = limits?.maxConnectionsPerMonth || 5
+    const current = usage?.connectionsRequested || 0
     
     // -1 means unlimited
-    const allowed = limit === -1 || current < limit
+    const allowed = limitValue === -1 || current < limitValue
     
-    return { allowed, limit: limit === -1 ? -1 : limit, current }
+    return { allowed, limit: limitValue === -1 ? -1 : limitValue, current }
+  }
+
+  // Helper method to get connection limits based on role and tier
+  static getConnectionLimitsByRole(role: 'athlete' | 'coach' | 'recruiter', isPro: boolean): {
+    outgoingConnections: number;
+    incomingConnections: number;
+  } {
+    if (!isPro) {
+      // Free tier: 5 outgoing, 5 incoming for all roles
+      return {
+        outgoingConnections: 5,
+        incomingConnections: 5
+      }
+    }
+
+    // Pro tier
+    if (role === 'athlete') {
+      return {
+        outgoingConnections: 25,
+        incomingConnections: -1 // unlimited
+      }
+    } else {
+      // Coach and Recruiter get unlimited for both
+      return {
+        outgoingConnections: -1, // unlimited
+        incomingConnections: -1 // unlimited
+      }
+    }
   }
 
   // Increment usage counter
@@ -289,23 +311,20 @@ export class SubscriptionService {
   }
 }
 
-// Default feature limits for each tier
+// Feature access based on pricing page descriptions
 export const defaultFeatureLimits = {
   free: {
+    // All roles get 5 connection requests per month for free
     maxConnectionsPerMonth: 5,
-    maxActiveConnections: 20,
     advancedSearchEnabled: false,
-    analyticsEnabled: false,
     profileViewInsights: false,
-    activityTracking: false,
+    analyticsEnabled: false,
   },
-  premium_monthly: {
-    maxConnectionsPerMonth: -1, // unlimited
-    maxActiveConnections: -1,
+  pro: {
+    // Athletes get 25 connections, Coaches/Recruiters get unlimited
+    // This is handled dynamically based on user role
     advancedSearchEnabled: true,
-    analyticsEnabled: true,
     profileViewInsights: true,
-    activityTracking: true,
-
+    analyticsEnabled: true,
   }
 } as const
