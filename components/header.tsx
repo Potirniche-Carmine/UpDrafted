@@ -224,7 +224,7 @@ export function Header() {
         {/* Logo */}
         <a href="#" onClick={handleLogoClick} className="flex items-center space-x-2 flex-shrink-0 logo-no-flash min-w-0">
           <Image
-            src="/updrafted-logo.png"
+            src="/updrafted-logo.webp"
             alt="UpDrafted Logo"
             width={150}
             height={50}

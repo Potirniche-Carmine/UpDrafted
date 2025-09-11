@@ -16,7 +16,7 @@ const nextConfig: NextConfig = {
     // Add local patterns for static assets
     localPatterns: [
       {
-        pathname: '/updrafted-logo.png',
+        pathname: '/updrafted-logo.webp',
         search: '',
       },
       {
