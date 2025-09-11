@@ -1,9 +1,9 @@
 import { generateMetadata } from "@/lib/seo";
 
 export const metadata = generateMetadata({
-  title: 'Activity',
-  description: 'Track your recent activities and stay updated with the latest interactions. Monitor your progress and engagement all in one place.',
-  path: '/activity'
+  title: 'Pricing',
+  description: 'Choose the perfect plan for your college recruitment journey. Premium features for serious athletes and coaches.',
+  path: '/pricing'
 });
 
 export default function PremiumLayout({
