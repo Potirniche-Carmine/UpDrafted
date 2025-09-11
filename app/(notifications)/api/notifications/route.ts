@@ -7,6 +7,7 @@ import { profileOperations, notificationOperations } from '@/database/db-utils';
 import { withRateLimit } from '@/utils/security';
 import { createErrorResponse } from '@/utils/security';
 import { generateProfileUrl } from '@/lib/utils';
+import { SubscriptionService } from '@/lib/subscription-service';
 
 type Operation = 'getNotifications' | 'markAsRead' | 'markAllAsRead' | 'getUnreadCount' | 'dismissAllNotifications';
 
@@ -185,9 +186,17 @@ async function handleGetNotifications(userId: string, body: GetNotificationsRequ
 
     const userNotifications = await Promise.race([queryPromise, queryTimeout]);
 
+    // Check if user has premium access to profile view insights
+    const hasProfileViewInsights = await SubscriptionService.hasFeatureAccess(userId, 'profileViewInsights');
+    
+    // Filter out profile view notifications for free users
+    const filteredNotifications = hasProfileViewInsights 
+      ? userNotifications 
+      : userNotifications.filter(notification => notification.type !== 'profileView');
+
     // Get unique actor user IDs to batch fetch profile info
     const actorUserIds = new Set<string>();
-    userNotifications.forEach(notification => {
+    filteredNotifications.forEach(notification => {
       if (notification.metadata) {
         const metadata = notification.metadata as Record<string, unknown>;
         if (metadata.actorUserId && typeof metadata.actorUserId === 'string') {
@@ -252,7 +261,7 @@ async function handleGetNotifications(userId: string, body: GetNotificationsRequ
     }
 
     // Enhance notifications with cached profile data
-    const enhancedNotifications = userNotifications.map((notification) => {
+    const enhancedNotifications = filteredNotifications.map((notification) => {
       let enhancedData = {};
 
       if (notification.metadata) {

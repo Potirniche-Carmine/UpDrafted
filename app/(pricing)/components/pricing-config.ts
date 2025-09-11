@@ -63,6 +63,7 @@ export const pricingPlans: PricingPlan[] = [
       'Advanced Search Filters to Find Your Perfect Coach',
       'Read Receipts - Know When Coaches See Your Messages',
       'See Who Has Viewed Your Profile',
+      'Priority Profile Ranking - Higher Chance to Be Seen'
     ],
     popular: true,
     role: 'athlete'
@@ -82,6 +83,7 @@ export const pricingPlans: PricingPlan[] = [
       'Advanced Search Filters to Find Your Perfect Coach',
       'Read Receipts - Know When Coaches See Your Messages',
       'See Who Has Viewed Your Profile',
+      'Priority Profile Ranking - Higher Chance to Be Seen',
       'Save $36 per year'
     ],
     role: 'athlete'
@@ -102,7 +104,8 @@ export const pricingPlans: PricingPlan[] = [
       'Advanced Search Filters to Find Perfect Athletes',
       'Read Receipts - Know When Athletes See Your Messages',
       'See Who Has Viewed Your Profile',
-      'Advanced Analytics Dashboard'
+      'Advanced Analytics Dashboard',
+      'Priority Profile Ranking - Higher Chance to Be Seen'
     ],
     popular: true,
     role: 'coach'
@@ -123,6 +126,7 @@ export const pricingPlans: PricingPlan[] = [
       'Read Receipts - Know When Athletes See Your Messages',
       'See Who Has Viewed Your Profile',
       'Advanced Analytics Dashboard',
+      'Priority Profile Ranking - Higher Chance to Be Seen',
       'Save $300 per year'
     ],
     role: 'coach'
@@ -143,7 +147,8 @@ export const pricingPlans: PricingPlan[] = [
       'Advanced Search & Filtering for Talent Discovery',
       'Read Receipts - Know When Athletes See Your Messages',
       'See Who Has Viewed Your Profile',
-      'Advanced Analytics & Reporting Dashboard'
+      'Advanced Analytics & Reporting Dashboard',
+      'Priority Profile Ranking - Higher Chance to Be Seen'
     ],
     popular: true,
     role: 'recruiter'
@@ -164,6 +169,7 @@ export const pricingPlans: PricingPlan[] = [
       'Read Receipts - Know When Athletes See Your Messages',
       'See Who Has Viewed Your Profile',
       'Advanced Analytics & Reporting Dashboard',
+      'Priority Profile Ranking - Higher Chance to Be Seen',
       'Save $300 per year'
     ],
     role: 'recruiter'

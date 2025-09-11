@@ -6,6 +6,7 @@ import { and, eq, or, not, ilike, isNull, exists, ne, arrayOverlaps } from 'driz
 import { sanitizeText, sanitizeNumber } from '@/utils/sanitization';
 import { withRateLimit } from '@/utils/security';
 import { filterByHeight, filterByWeight } from '@/database/db-utils';
+import { SubscriptionService } from '@/lib/subscription-service';
 
 // Force Node.js runtime
 export const runtime = 'nodejs';
@@ -28,7 +29,7 @@ const MAX_BODY_SIZE = 1024 * 10; // 10KB limit for POST request bodies
 const MAX_QUERY_PARAMS = 300;
 // Per-array caps for POST bodies
 const MAX_FILTER_ITEMS = 200;
-const ALLOWED_BODY_KEYS = new Set(['query', 'page', 'pageSize', 'role', 'sports', 'divisions', 'countries', 'states', 'positions', 'graduatingClasses', 'conferences', 'minHeight', 'minWeight']);
+const ALLOWED_BODY_KEYS = new Set(['query', 'page', 'pageSize', 'role', 'sports', 'divisions', 'countries', 'states', 'positions', 'graduatingClasses', 'conferences', 'minHeight', 'minWeight', 'verified']);
 
 // Helper function to parse search parameters from either GET query params or POST body
 async function parseSearchParams(request: NextRequest) {
@@ -52,8 +53,9 @@ async function parseSearchParams(request: NextRequest) {
       positions: searchParams.getAll('positions').map(p => sanitizeText(p)).filter(Boolean),
       graduatingClasses: searchParams.getAll('graduatingClasses').map(gc => sanitizeText(gc)).filter(Boolean),
       conferences: searchParams.getAll('conferences').map(c => sanitizeText(c)).filter(Boolean),
-      minHeight: sanitizeNumber(searchParams.get('minHeight'), 60, 96),
-      minWeight: sanitizeNumber(searchParams.get('minWeight'), 100, 500)
+      minHeight: sanitizeNumber(searchParams.get('minHeight'), 48, 96), // 4ft (48 inches) to 8ft
+      minWeight: sanitizeNumber(searchParams.get('minWeight'), 50, 500), // 50lbs to 500lbs,
+      verified: searchParams.get('verified') === 'true' ? true : searchParams.get('verified') === 'false' ? false : null
     };
   } else {
     // POST request - parse from body
@@ -110,11 +112,11 @@ async function parseSearchParams(request: NextRequest) {
       if (body.conferences !== undefined && !Array.isArray(body.conferences)) {
         throw new RequestValidationError('Invalid conferences: must be an array of strings');
       }
-      if (body.minHeight !== undefined && sanitizeNumber(body.minHeight, 60, 96) === null) {
-        throw new RequestValidationError('Invalid minHeight: must be a number between 60 and 96 inches');
+      if (body.minHeight !== undefined && sanitizeNumber(body.minHeight, 48, 96) === null) {
+        throw new RequestValidationError('Invalid minHeight: must be a number between 48 and 96 inches (4ft to 8ft)');
       }
-      if (body.minWeight !== undefined && sanitizeNumber(body.minWeight, 100, 500) === null) {
-        throw new RequestValidationError('Invalid minWeight: must be a number between 100 and 500 pounds');
+      if (body.minWeight !== undefined && sanitizeNumber(body.minWeight, 50, 500) === null) {
+        throw new RequestValidationError('Invalid minWeight: must be a number between 50 and 500 pounds');
       }
 
       if (sportsArray.length > MAX_FILTER_ITEMS) {
@@ -170,8 +172,9 @@ async function parseSearchParams(request: NextRequest) {
         positions: positionsArray.map((p: string) => sanitizeText(p)).filter(Boolean),
         graduatingClasses: graduatingClassesArray.map((gc: string) => sanitizeText(gc)).filter(Boolean),
         conferences: conferencesArray.map((c: string) => sanitizeText(c)).filter(Boolean),
-        minHeight: sanitizeNumber(body.minHeight, 60, 96),
-        minWeight: sanitizeNumber(body.minWeight, 100, 500)
+        minHeight: sanitizeNumber(body.minHeight, 48, 96), // 4ft to 8ft
+        minWeight: sanitizeNumber(body.minWeight, 50, 500), // 50lbs to 500lbs
+        verified: body.verified === true ? true : body.verified === false ? false : null
       };
     } catch (err) {
       if (err instanceof RequestValidationError) {
@@ -246,8 +249,22 @@ async function handleDiscoverRequest(request: NextRequest) {
       graduatingClasses,
       conferences,
       minHeight,
-      minWeight
+      minWeight,
+      verified
     } = await parseSearchParams(request);
+
+    // Check premium access for advanced search features
+    const hasAdvancedSearch = await SubscriptionService.hasFeatureAccess(userId, 'advancedSearch');
+    
+    // Instead of blocking premium features, we'll return them as locked
+    // The frontend can show them blurred with upgrade prompts
+    let premiumFeaturesUsed = false;
+    
+    // Track if user is trying to use premium-only filters
+    if ((minHeight || minWeight || verified !== null || graduatingClasses.length > 0) && !hasAdvancedSearch) {
+      premiumFeaturesUsed = true;
+      // Don't apply these filters for free users, but don't block the request
+    }
 
     // Validate role if specified
     if (requestedRole && !['athlete', 'coach', 'recruiter'].includes(requestedRole)) {
@@ -426,8 +443,8 @@ async function handleDiscoverRequest(request: NextRequest) {
       );
     }
 
-    // Graduating classes filter - only for athletes
-    if (graduatingClasses.length > 0) {
+    // Graduating classes filter - only for athletes and premium users
+    if (graduatingClasses.length > 0 && hasAdvancedSearch) {
       const graduationYears = graduatingClasses.map((gc: string) => parseInt(gc, 10)).filter((year: number) => !isNaN(year));
       if (graduationYears.length > 0) {
         filterConditions.push(
@@ -720,19 +737,26 @@ async function handleDiscoverRequest(request: NextRequest) {
     // Apply height and weight filtering at the application level for security
     let filteredResults = processedResults;
     
-    // Filter by height (athletes only)
-    if (minHeight && minHeight > 60) {
+    // Filter by height (athletes only) - only for premium users
+    if (minHeight && minHeight > 48 && hasAdvancedSearch) { // Changed from 60 to 48 (4ft)
       filteredResults = filteredResults.filter(user => {
         if (user.role !== 'athlete' || !user.height) return true; // Keep non-athletes and those without height
         return filterByHeight(user.height, minHeight);
       });
     }
     
-    // Filter by weight (athletes only)
-    if (minWeight && minWeight > 100) {
+    // Filter by weight (athletes only) - only for premium users
+    if (minWeight && minWeight > 50 && hasAdvancedSearch) { // Changed from 100 to 50
       filteredResults = filteredResults.filter(user => {
         if (user.role !== 'athlete' || !user.weight) return true; // Keep non-athletes and those without weight
         return filterByWeight(user.weight, minWeight);
+      });
+    }
+    
+    // Filter by verified status - only for premium users
+    if (verified !== null && hasAdvancedSearch) {
+      filteredResults = filteredResults.filter(user => {
+        return user.isVerified === verified;
       });
     }
 
@@ -754,7 +778,17 @@ async function handleDiscoverRequest(request: NextRequest) {
         success: true,
         results: filteredResults,
         total: filteredResults.length,
-        hasMore: filteredResults.length === pageSize
+        hasMore: filteredResults.length === pageSize,
+        premiumInfo: {
+          hasAdvancedSearch,
+          premiumFeaturesUsed,
+          availableFeatures: hasAdvancedSearch ? null : {
+            physicalRequirements: 'Filter by height and weight',
+            verifiedStatus: 'Filter by verified profiles only',
+            graduatingClasses: 'Filter by graduation year',
+            upgradeMessage: 'Unlock premium to access advanced search filters'
+          }
+        }
       }),
       { 
         status: 200,

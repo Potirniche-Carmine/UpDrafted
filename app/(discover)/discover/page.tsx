@@ -4,9 +4,8 @@ import React, { useState, useEffect, Suspense, useCallback, useMemo, useRef } fr
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { User, Users, Target, MapPin, Shield, GraduationCap, Send, ChevronDown, X, Clock, Building2, Filter, Search } from "lucide-react";
+import { User, Users, Target, MapPin, Shield, GraduationCap, Send, ChevronDown, X, Clock, Building2, Filter, Search, Lock, Crown } from "lucide-react";
 import { useSearchParams, useRouter } from 'next/navigation';
-
 import { AuthWrapper } from '@/components/auth-wrapper';
 import { useUser } from "@clerk/nextjs";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -256,6 +255,8 @@ interface HeightWeightFilterProps {
   onHeightChange: (height: number) => void;
   onWeightChange: (weight: number) => void;
   className?: string;
+  isPremium?: boolean;
+  onUpgradeClick?: () => void;
 }
 
 function HeightWeightFilter({
@@ -263,44 +264,187 @@ function HeightWeightFilter({
   minWeight,
   onHeightChange,
   onWeightChange,
-  className
+  className,
+  isPremium = false,
+  onUpgradeClick
 }: HeightWeightFilterProps) {
+  const isLocked = !isPremium;
+  
   return (
     <div className={cn("space-y-4", className)}>
       <div className="space-y-2">
-        <Label className="text-sm font-medium text-foreground">
-          Minimum Height: {inchesToFeetString(minHeight)}
-        </Label>
-        <Slider
-          value={[minHeight]}
-          onValueChange={(value: number[]) => onHeightChange(value[0])}
-          min={60} // 5'0"
-          max={96} // 8'0"
-          step={1}
-          className="w-full"
-        />
+        <div className="flex items-center justify-between">
+          <Label className="text-sm font-medium text-foreground">
+            Minimum Height: {inchesToFeetString(minHeight)}
+          </Label>
+          {isLocked && (
+            <div 
+              className="flex items-center gap-1 text-xs text-amber-600 cursor-pointer hover:text-amber-700 transition-colors" 
+              onClick={onUpgradeClick}
+            >
+              <Crown className="h-3 w-3" />
+              <span>Premium</span>
+            </div>
+          )}
+        </div>
+        <div className={cn("relative", isLocked && "pointer-events-none opacity-50")}>
+          <Slider
+            value={[minHeight]}
+            onValueChange={(value: number[]) => onHeightChange(value[0])}
+            min={48} // 4'0" (updated from 60)
+            max={96} // 8'0"
+            step={1}
+            className="w-full"
+            disabled={isLocked}
+          />
+          {isLocked && (
+            <div className="absolute inset-0 flex items-center justify-center bg-background/80 backdrop-blur-sm rounded-md">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={onUpgradeClick}
+                className="text-xs"
+              >
+                <Lock className="h-3 w-3 mr-1" />
+                Upgrade for Height Filter
+              </Button>
+            </div>
+          )}
+        </div>
         <div className="flex justify-between text-xs text-muted-foreground">
-          <span>5&apos;0&quot;</span>
+          <span>4&apos;0&quot;</span>
           <span>8&apos;0&quot;</span>
         </div>
       </div>
       
       <div className="space-y-2">
-        <Label className="text-sm font-medium text-foreground">
-          Minimum Weight: {minWeight} lbs
-        </Label>
-        <Slider
-          value={[minWeight]}
-          onValueChange={(value: number[]) => onWeightChange(value[0])}
-          min={100}
-          max={500}
-          step={5}
-          className="w-full"
-        />
+        <div className="flex items-center justify-between">
+          <Label className="text-sm font-medium text-foreground">
+            Minimum Weight: {minWeight} lbs
+          </Label>
+          {isLocked && (
+            <div 
+              className="flex items-center gap-1 text-xs text-amber-600 cursor-pointer hover:text-amber-700 transition-colors" 
+              onClick={onUpgradeClick}
+            >
+              <Crown className="h-3 w-3" />
+              <span>Premium</span>
+            </div>
+          )}
+        </div>
+        <div className={cn("relative", isLocked && "pointer-events-none opacity-50")}>
+          <Slider
+            value={[minWeight]}
+            onValueChange={(value: number[]) => onWeightChange(value[0])}
+            min={50} // Updated from 100
+            max={500}
+            step={5}
+            className="w-full"
+            disabled={isLocked}
+          />
+          {isLocked && (
+            <div className="absolute inset-0 flex items-center justify-center bg-background/80 backdrop-blur-sm rounded-md">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={onUpgradeClick}
+                className="text-xs"
+              >
+                <Lock className="h-3 w-3 mr-1" />
+                Upgrade for Weight Filter
+              </Button>
+            </div>
+          )}
+        </div>
         <div className="flex justify-between text-xs text-muted-foreground">
-          <span>100 lbs</span>
+          <span>50 lbs</span>
           <span>500 lbs</span>
         </div>
+      </div>
+    </div>
+  );
+}
+
+// Verified Filter Component
+interface VerifiedFilterProps {
+  verifiedFilter: boolean | null;
+  onVerifiedChange: (verified: boolean | null) => void;
+  className?: string;
+  isPremium?: boolean;
+  onUpgradeClick?: () => void;
+}
+
+function VerifiedFilter({
+  verifiedFilter,
+  onVerifiedChange,
+  className,
+  isPremium = false,
+  onUpgradeClick
+}: VerifiedFilterProps) {
+  const isLocked = !isPremium;
+  
+  return (
+    <div className={cn("space-y-3", className)}>
+      <div className="flex items-center justify-between">
+        <Label className="text-sm font-medium text-foreground">
+          Verification Status
+        </Label>
+        {isLocked && (
+          <div 
+            className="flex items-center gap-1 text-xs text-amber-600 cursor-pointer hover:text-amber-700 transition-colors" 
+            onClick={onUpgradeClick}
+          >
+            <Crown className="h-3 w-3" />
+            <span>Premium</span>
+          </div>
+        )}
+      </div>
+      
+      <div className={cn("relative", isLocked && "pointer-events-none opacity-50")}>
+        <div className="flex gap-2">
+          <Button
+            variant={verifiedFilter === null ? "default" : "outline"}
+            size="sm"
+            onClick={() => onVerifiedChange(null)}
+            disabled={isLocked}
+            className="flex-1"
+          >
+            All Athletes
+          </Button>
+          <Button
+            variant={verifiedFilter === true ? "default" : "outline"}
+            size="sm"
+            onClick={() => onVerifiedChange(true)}
+            disabled={isLocked}
+            className="flex-1"
+          >
+            <Shield className="h-3 w-3 mr-1" />
+            Verified Only
+          </Button>
+          <Button
+            variant={verifiedFilter === false ? "default" : "outline"}
+            size="sm"
+            onClick={() => onVerifiedChange(false)}
+            disabled={isLocked}
+            className="flex-1"
+          >
+            Unverified Only
+          </Button>
+        </div>
+        
+        {isLocked && (
+          <div className="absolute inset-0 flex items-center justify-center bg-background/80 backdrop-blur-sm rounded-md">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onUpgradeClick}
+              className="text-xs"
+            >
+              <Lock className="h-3 w-3 mr-1" />
+              Upgrade for Verified Filter
+            </Button>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -444,8 +588,9 @@ function SearchPageContent() {
   const [selectedPositions, setSelectedPositions] = useState<FilterOption[]>([]);
   const [selectedGraduatingClasses, setSelectedGraduatingClasses] = useState<FilterOption[]>([]);
   const [selectedConferences, setSelectedConferences] = useState<FilterOption[]>([]);
-  const [minHeight, setMinHeight] = useState<number>(60); // 5'0" in inches
-  const [minWeight, setMinWeight] = useState<number>(100); // 100 lbs
+  const [minHeight, setMinHeight] = useState<number>(48); // 4'0" in inches (updated from 60)
+  const [minWeight, setMinWeight] = useState<number>(50); // 50 lbs (updated from 100)
+  const [verifiedFilter, setVerifiedFilter] = useState<boolean | null>(null); // null = all, true = verified only, false = unverified only
 
   // Data and loading states
   const [loading, setLoading] = useState(false);
@@ -453,6 +598,7 @@ function SearchPageContent() {
   const [hasMore, setHasMore] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [page, setPage] = useState(1);
+  const [hasAdvancedSearch, setHasAdvancedSearch] = useState(false); // Premium subscription status
 
   // Filter states
   const [showMobileFilters, setShowMobileFilters] = useState(false);
@@ -550,7 +696,8 @@ function SearchPageContent() {
         graduatingClasses: selectedGraduatingClasses.map(gc => sanitizeText(gc.value)),
         conferences: selectedConferences.map(conf => sanitizeText(conf.value)),
         minHeight: minHeight.toString(),
-        minWeight: minWeight.toString()
+        minWeight: minWeight.toString(),
+        verified: verifiedFilter
       };
 
       // Calculate approximate URL length if we were to use GET
@@ -568,8 +715,9 @@ function SearchPageContent() {
       searchParams.positions.forEach(pos => params.append('positions', pos));
       searchParams.graduatingClasses.forEach(gc => params.append('graduatingClasses', gc));
       searchParams.conferences.forEach(conf => params.append('conferences', conf));
-      if (minHeight > 60) params.append('minHeight', searchParams.minHeight);
-      if (minWeight > 100) params.append('minWeight', searchParams.minWeight);
+      if (minHeight > 48) params.append('minHeight', searchParams.minHeight); // Updated from 60 to 48
+      if (minWeight > 50) params.append('minWeight', searchParams.minWeight); // Updated from 100 to 50
+      if (verifiedFilter !== null) params.append('verified', verifiedFilter.toString());
 
       const baseUrl = '/api/discover';
       const estimatedUrlLength = baseUrl.length + params.toString().length + 1; // +1 for '?'
@@ -594,8 +742,9 @@ function SearchPageContent() {
             positions: selectedPositions.map(pos => sanitizeText(pos.value)),
             graduatingClasses: selectedGraduatingClasses.map(gc => sanitizeText(gc.value)),
             conferences: selectedConferences.map(conf => sanitizeText(conf.value)),
-            minHeight: minHeight > 60 ? minHeight : undefined,
-            minWeight: minWeight > 100 ? minWeight : undefined
+            minHeight: minHeight > 48 ? minHeight : undefined, // Updated from 60 to 48
+            minWeight: minWeight > 50 ? minWeight : undefined, // Updated from 100 to 50
+            verified: verifiedFilter
           })
         });
 
@@ -647,13 +796,13 @@ function SearchPageContent() {
       setLoading(false);
       setInitialLoading(false);
     }
-  }, [selectedSports, selectedDivisions, selectedCountries, selectedStates, selectedPositions, selectedGraduatingClasses, selectedConferences, minHeight, minWeight, showStatesFilter]);
+  }, [selectedSports, selectedDivisions, selectedCountries, selectedStates, selectedPositions, selectedGraduatingClasses, selectedConferences, minHeight, minWeight, verifiedFilter, showStatesFilter]);
 
   // Store all results from the search
   const [allUsers, setAllUsers] = useState<DiscoverUser[]>([]);
 
   // Cache key for search state
-  const CACHE_KEY = 'discover_search_state';
+  const CACHE_KEY = 'discover_search_state_v3';
 
   // Save current search state to cache (filters only, not user data)
   const saveSearchState = useCallback(() => {
@@ -695,8 +844,8 @@ function SearchPageContent() {
           setSelectedPositions(parsed.selectedPositions || []);
           setSelectedGraduatingClasses(parsed.selectedGraduatingClasses || []);
           setSelectedConferences(parsed.selectedConferences || []);
-          setMinHeight(parsed.minHeight || 60);
-          setMinWeight(parsed.minWeight || 100);
+          setMinHeight(parsed.minHeight || 48);
+          setMinWeight(parsed.minWeight || 50);
           setActiveTab(getValidTab(effectiveRole, parsed.activeTab));
           setHasSearched(parsed.hasSearched || false);
           return true; // Successfully loaded cache, but need to search fresh
@@ -732,6 +881,43 @@ function SearchPageContent() {
       router.push(`/profile/${userId}`);
     }
   }, [saveSearchState, router, allUsers, generateProfileUrl]);
+
+  // Check premium subscription status
+  useEffect(() => {
+    const checkSubscription = async () => {
+      try {
+        const windowWithClerk = window as unknown as {
+          Clerk?: {
+            session?: {
+              getToken: () => Promise<string>;
+            };
+          };
+        };
+        const token = await windowWithClerk.Clerk?.session?.getToken();
+        
+        const response = await fetch('/api/subscription/features', {
+          headers: createSecureHeaders(token || '')
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          setHasAdvancedSearch(data.features?.advancedSearch || false);
+        }
+      } catch (error) {
+        console.error('Error checking subscription:', error);
+        setHasAdvancedSearch(false);
+      }
+    };
+
+    if (user?.id) {
+      checkSubscription();
+    }
+  }, [user?.id]);
+
+  // Upgrade handler
+  const handleUpgradeClick = useCallback(() => {
+    router.push('/pricing');
+  }, [router]);
 
   // Auto-load results when the page first loads
   useEffect(() => {
@@ -808,8 +994,8 @@ function SearchPageContent() {
     setSelectedPositions([]);
     setSelectedGraduatingClasses([]);
     setSelectedConferences([]);
-    setMinHeight(60);
-    setMinWeight(100);
+    setMinHeight(48);
+    setMinWeight(50);
     setShowMobileFilters(false);
     setShowDiscoverButton(false);
     setError(null);
@@ -1147,8 +1333,8 @@ function SearchPageContent() {
                            selectedPositions.length +
                            selectedGraduatingClasses.length +
                            selectedConferences.length +
-                           (minHeight > 60 ? 1 : 0) +
-                           (minWeight > 100 ? 1 : 0);
+                           (minHeight > 48 ? 1 : 0) +
+                           (minWeight > 50 ? 1 : 0);
 
   return (
     <div className="bg-background p-4 md:p-6">
@@ -1272,75 +1458,203 @@ function SearchPageContent() {
                         minWeight={minWeight}
                         onHeightChange={setMinHeight}
                         onWeightChange={setMinWeight}
+                        isPremium={hasAdvancedSearch}
+                        onUpgradeClick={handleUpgradeClick}
+                      />
+                    </div>
+
+                    {/* Verified Status Filter */}
+                    <div className="border-t pt-4">
+                      <VerifiedFilter
+                        verifiedFilter={verifiedFilter}
+                        onVerifiedChange={setVerifiedFilter}
+                        isPremium={hasAdvancedSearch}
+                        onUpgradeClick={handleUpgradeClick}
                       />
                     </div>
 
                     {/* Graduating Class Filter */}
                     <div>
-                      <label className="block text-sm font-medium text-foreground mb-2">
-                        Graduating Class
-                      </label>
-                      <MultiSelectFilter
-                        options={graduatingClassOptions}
-                        selected={selectedGraduatingClasses}
-                        onSelectionChange={setSelectedGraduatingClasses}
-                        placeholder="Select graduation years..."
-                        searchPlaceholder="Search years..."
-                      />
+                      <div className="flex items-center justify-between">
+                        <label className="block text-sm font-medium text-foreground mb-2">
+                          Graduating Class
+                        </label>
+                        {!hasAdvancedSearch && (
+                          <div 
+                            className="flex items-center gap-1 text-xs text-amber-600 cursor-pointer hover:text-amber-700 transition-colors" 
+                            onClick={handleUpgradeClick}
+                          >
+                            <Crown className="h-3 w-3" />
+                            <span>Premium</span>
+                          </div>
+                        )}
+                      </div>
+                      <div className={cn("relative", !hasAdvancedSearch && "pointer-events-none opacity-50")}>
+                        <MultiSelectFilter
+                          options={graduatingClassOptions}
+                          selected={hasAdvancedSearch ? selectedGraduatingClasses : []}
+                          onSelectionChange={hasAdvancedSearch ? setSelectedGraduatingClasses : () => {}}
+                          placeholder="Select graduation years..."
+                          searchPlaceholder="Search years..."
+                        />
+                        {!hasAdvancedSearch && (
+                          <div className="absolute inset-0 flex items-center justify-center bg-background/80 backdrop-blur-sm rounded-md">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={handleUpgradeClick}
+                              className="text-xs"
+                            >
+                              <Lock className="h-3 w-3 mr-1" />
+                              Upgrade for Graduation Filter
+                            </Button>
+                          </div>
+                        )}
+                      </div>
                     </div>
 
-                    {/* Positions Filter - Only show if sports are selected */}
-                    {selectedSports.length > 0 && positionsOptions.length > 0 && (
-                      <div>
+                    {/* Positions Filter - Always show */}
+                    <div>
+                      <div className="flex items-center justify-between">
                         <label className="block text-sm font-medium text-foreground mb-2">
                           Positions
                         </label>
-                        <MultiSelectFilter
-                          options={positionsOptions}
-                          selected={selectedPositions}
-                          onSelectionChange={setSelectedPositions}
-                          placeholder="Select positions..."
-                          searchPlaceholder="Search positions..."
-                        />
+                        {!hasAdvancedSearch && (
+                          <div 
+                            className="flex items-center gap-1 text-xs text-amber-600 cursor-pointer hover:text-amber-700 transition-colors" 
+                            onClick={handleUpgradeClick}
+                          >
+                            <Crown className="h-3 w-3" />
+                            <span>Premium</span>
+                          </div>
+                        )}
                       </div>
-                    )}
+                      {selectedSports.length > 0 && positionsOptions.length > 0 ? (
+                        <div className={cn("relative", !hasAdvancedSearch && "pointer-events-none opacity-50")}>
+                          <MultiSelectFilter
+                            options={positionsOptions}
+                            selected={selectedPositions}
+                            onSelectionChange={setSelectedPositions}
+                            placeholder="Select positions..."
+                            searchPlaceholder="Search positions..."
+                          />
+                          {!hasAdvancedSearch && (
+                            <div className="absolute inset-0 flex items-center justify-center bg-background/80 backdrop-blur-sm rounded-md">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={handleUpgradeClick}
+                                className="text-xs"
+                              >
+                                <Lock className="h-3 w-3 mr-1" />
+                                Upgrade for Positions Filter
+                              </Button>
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <div className="h-10 flex items-center px-3 py-2 border border-border rounded-md bg-muted/50 text-muted-foreground text-sm">
+                          {selectedSports.length === 0 ? 'Select sports to filter by positions' : 'No positions available'}
+                        </div>
+                      )}
+                    </div>
 
-                    {/* Conferences Filter - Only show if divisions are selected */}
-                    {selectedDivisions.length > 0 && conferencesOptions.length > 0 && (
-                      <div className="border-t pt-4">
+                    {/* Conferences Filter - Always show */}
+                    <div className="border-t pt-4">
+                      <div className="flex items-center justify-between">
                         <label className="block text-sm font-medium text-foreground mb-2">
                           Conferences
                         </label>
-                        <MultiSelectFilter
-                          options={conferencesOptions}
-                          selected={selectedConferences}
-                          onSelectionChange={setSelectedConferences}
-                          placeholder="Select conferences..."
-                          searchPlaceholder="Search conferences..."
-                        />
+                        {!hasAdvancedSearch && (
+                          <div 
+                            className="flex items-center gap-1 text-xs text-amber-600 cursor-pointer hover:text-amber-700 transition-colors" 
+                            onClick={handleUpgradeClick}
+                          >
+                            <Crown className="h-3 w-3" />
+                            <span>Premium</span>
+                          </div>
+                        )}
                       </div>
-                    )}
+                      {selectedDivisions.length > 0 && conferencesOptions.length > 0 ? (
+                        <div className={cn("relative", !hasAdvancedSearch && "pointer-events-none opacity-50")}>
+                          <MultiSelectFilter
+                            options={conferencesOptions}
+                            selected={selectedConferences}
+                            onSelectionChange={setSelectedConferences}
+                            placeholder="Select conferences..."
+                            searchPlaceholder="Search conferences..."
+                          />
+                          {!hasAdvancedSearch && (
+                            <div className="absolute inset-0 flex items-center justify-center bg-background/80 backdrop-blur-sm rounded-md">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={handleUpgradeClick}
+                                className="text-xs"
+                              >
+                                <Lock className="h-3 w-3 mr-1" />
+                                Upgrade for Conferences Filter
+                              </Button>
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <div className="h-10 flex items-center px-3 py-2 border border-border rounded-md bg-muted/50 text-muted-foreground text-sm">
+                          {selectedDivisions.length === 0 ? 'Select divisions to filter by conferences' : 'No conferences available'}
+                        </div>
+                      )}
+                    </div>
                   </>
                 )}
 
                 {/* Advanced Filters for Athletes viewing Coaches/Recruiters */}
                 {effectiveRole === 'athlete' && (
                   <>
-                    {/* Conferences Filter - Only show if divisions are selected */}
-                    {selectedDivisions.length > 0 && conferencesOptions.length > 0 && (
-                      <div className="border-t pt-4">
+                    {/* Conferences Filter - Always show */}
+                    <div className="border-t pt-4">
+                      <div className="flex items-center justify-between">
                         <label className="block text-sm font-medium text-foreground mb-2">
                           Conferences
                         </label>
-                        <MultiSelectFilter
-                          options={conferencesOptions}
-                          selected={selectedConferences}
-                          onSelectionChange={setSelectedConferences}
-                          placeholder="Select conferences..."
-                          searchPlaceholder="Search conferences..."
-                        />
+                        {!hasAdvancedSearch && (
+                          <div 
+                            className="flex items-center gap-1 text-xs text-amber-600 cursor-pointer hover:text-amber-700 transition-colors" 
+                            onClick={handleUpgradeClick}
+                          >
+                            <Crown className="h-3 w-3" />
+                            <span>Premium</span>
+                          </div>
+                        )}
                       </div>
-                    )}
+                      {selectedDivisions.length > 0 && conferencesOptions.length > 0 ? (
+                        <div className={cn("relative", !hasAdvancedSearch && "pointer-events-none opacity-50")}>
+                          <MultiSelectFilter
+                            options={conferencesOptions}
+                            selected={selectedConferences}
+                            onSelectionChange={setSelectedConferences}
+                            placeholder="Select conferences..."
+                            searchPlaceholder="Search conferences..."
+                          />
+                          {!hasAdvancedSearch && (
+                            <div className="absolute inset-0 flex items-center justify-center bg-background/80 backdrop-blur-sm rounded-md">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={handleUpgradeClick}
+                                className="text-xs"
+                              >
+                                <Lock className="h-3 w-3 mr-1" />
+                                Upgrade for Conferences Filter
+                              </Button>
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <div className="h-10 flex items-center px-3 py-2 border border-border rounded-md bg-muted/50 text-muted-foreground text-sm">
+                          {selectedDivisions.length === 0 ? 'Select divisions to filter by conferences' : 'No conferences available'}
+                        </div>
+                      )}
+                    </div>
                   </>
                 )}
 
@@ -1473,75 +1787,203 @@ function SearchPageContent() {
                           minWeight={minWeight}
                           onHeightChange={setMinHeight}
                           onWeightChange={setMinWeight}
+                          isPremium={hasAdvancedSearch}
+                          onUpgradeClick={handleUpgradeClick}
+                        />
+                      </div>
+
+                      {/* Verified Status Filter */}
+                      <div className="border-t pt-4">
+                        <VerifiedFilter
+                          verifiedFilter={verifiedFilter}
+                          onVerifiedChange={setVerifiedFilter}
+                          isPremium={hasAdvancedSearch}
+                          onUpgradeClick={handleUpgradeClick}
                         />
                       </div>
 
                       {/* Graduating Class Filter */}
                       <div>
-                        <label className="block text-sm font-medium text-foreground mb-2">
-                          Graduating Class
-                        </label>
-                        <MultiSelectFilter
-                          options={graduatingClassOptions}
-                          selected={selectedGraduatingClasses}
-                          onSelectionChange={setSelectedGraduatingClasses}
-                          placeholder="Select graduation years..."
-                          searchPlaceholder="Search years..."
-                        />
+                        <div className="flex items-center justify-between">
+                          <label className="block text-sm font-medium text-foreground mb-2">
+                            Graduating Class
+                          </label>
+                          {!hasAdvancedSearch && (
+                            <div 
+                              className="flex items-center gap-1 text-xs text-amber-600 cursor-pointer hover:text-amber-700 transition-colors" 
+                              onClick={handleUpgradeClick}
+                            >
+                              <Crown className="h-3 w-3" />
+                              <span>Premium</span>
+                            </div>
+                          )}
+                        </div>
+                        <div className={cn("relative", !hasAdvancedSearch && "pointer-events-none opacity-50")}>
+                          <MultiSelectFilter
+                            options={graduatingClassOptions}
+                            selected={selectedGraduatingClasses}
+                            onSelectionChange={setSelectedGraduatingClasses}
+                            placeholder="Select graduation years..."
+                            searchPlaceholder="Search years..."
+                          />
+                          {!hasAdvancedSearch && (
+                            <div className="absolute inset-0 flex items-center justify-center bg-background/80 backdrop-blur-sm rounded-md">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={handleUpgradeClick}
+                                className="text-xs"
+                              >
+                                <Lock className="h-3 w-3 mr-1" />
+                                Upgrade for Graduation Filter
+                              </Button>
+                            </div>
+                          )}
+                        </div>
                       </div>
 
-                      {/* Positions Filter - Only show if sports are selected */}
-                      {selectedSports.length > 0 && positionsOptions.length > 0 && (
-                        <div>
+                      {/* Positions Filter - Always show */}
+                      <div>
+                        <div className="flex items-center justify-between">
                           <label className="block text-sm font-medium text-foreground mb-2">
                             Positions
                           </label>
-                          <MultiSelectFilter
-                            options={positionsOptions}
-                            selected={selectedPositions}
-                            onSelectionChange={setSelectedPositions}
-                            placeholder="Select positions..."
-                            searchPlaceholder="Search positions..."
-                          />
+                          {!hasAdvancedSearch && (
+                            <div 
+                              className="flex items-center gap-1 text-xs text-amber-600 cursor-pointer hover:text-amber-700 transition-colors" 
+                              onClick={handleUpgradeClick}
+                            >
+                              <Crown className="h-3 w-3" />
+                              <span>Premium</span>
+                            </div>
+                          )}
                         </div>
-                      )}
+                        {selectedSports.length > 0 && positionsOptions.length > 0 ? (
+                          <div className={cn("relative", !hasAdvancedSearch && "pointer-events-none opacity-50")}>
+                            <MultiSelectFilter
+                              options={positionsOptions}
+                              selected={selectedPositions}
+                              onSelectionChange={setSelectedPositions}
+                              placeholder="Select positions..."
+                              searchPlaceholder="Search positions..."
+                            />
+                            {!hasAdvancedSearch && (
+                              <div className="absolute inset-0 flex items-center justify-center bg-background/80 backdrop-blur-sm rounded-md">
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={handleUpgradeClick}
+                                  className="text-xs"
+                                >
+                                  <Lock className="h-3 w-3 mr-1" />
+                                  Upgrade for Positions Filter
+                                </Button>
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          <div className="h-10 flex items-center px-3 py-2 border border-border rounded-md bg-muted/50 text-muted-foreground text-sm">
+                            {selectedSports.length === 0 ? 'Select sports to filter by positions' : 'No positions available'}
+                          </div>
+                        )}
+                      </div>
 
-                      {/* Conferences Filter - Only show if divisions are selected */}
-                      {selectedDivisions.length > 0 && conferencesOptions.length > 0 && (
-                        <div className="border-t pt-4">
+                      {/* Conferences Filter - Always show */}
+                      <div className="border-t pt-4">
+                        <div className="flex items-center justify-between">
                           <label className="block text-sm font-medium text-foreground mb-2">
                             Conferences
                           </label>
-                          <MultiSelectFilter
-                            options={conferencesOptions}
-                            selected={selectedConferences}
-                            onSelectionChange={setSelectedConferences}
-                            placeholder="Select conferences..."
-                            searchPlaceholder="Search conferences..."
-                          />
+                          {!hasAdvancedSearch && (
+                            <div 
+                              className="flex items-center gap-1 text-xs text-amber-600 cursor-pointer hover:text-amber-700 transition-colors" 
+                              onClick={handleUpgradeClick}
+                            >
+                              <Crown className="h-3 w-3" />
+                              <span>Premium</span>
+                            </div>
+                          )}
                         </div>
-                      )}
+                        {selectedDivisions.length > 0 && conferencesOptions.length > 0 ? (
+                          <div className={cn("relative", !hasAdvancedSearch && "pointer-events-none opacity-50")}>
+                            <MultiSelectFilter
+                              options={conferencesOptions}
+                              selected={selectedConferences}
+                              onSelectionChange={setSelectedConferences}
+                              placeholder="Select conferences..."
+                              searchPlaceholder="Search conferences..."
+                            />
+                            {!hasAdvancedSearch && (
+                              <div className="absolute inset-0 flex items-center justify-center bg-background/80 backdrop-blur-sm rounded-md">
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={handleUpgradeClick}
+                                  className="text-xs"
+                                >
+                                  <Lock className="h-3 w-3 mr-1" />
+                                  Upgrade for Conferences Filter
+                                </Button>
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          <div className="h-10 flex items-center px-3 py-2 border border-border rounded-md bg-muted/50 text-muted-foreground text-sm">
+                            {selectedDivisions.length === 0 ? 'Select divisions to filter by conferences' : 'No conferences available'}
+                          </div>
+                        )}
+                      </div>
                     </>
                   )}
 
                   {/* Advanced Filters for Athletes viewing Coaches/Recruiters */}
                   {effectiveRole === 'athlete' && (
                     <>
-                      {/* Conferences Filter - Only show if divisions are selected */}
-                      {selectedDivisions.length > 0 && conferencesOptions.length > 0 && (
-                        <div className="border-t pt-4">
+                      {/* Conferences Filter - Always show */}
+                      <div className="border-t pt-4">
+                        <div className="flex items-center justify-between">
                           <label className="block text-sm font-medium text-foreground mb-2">
                             Conferences
                           </label>
-                          <MultiSelectFilter
-                            options={conferencesOptions}
-                            selected={selectedConferences}
-                            onSelectionChange={setSelectedConferences}
-                            placeholder="Select conferences..."
-                            searchPlaceholder="Search conferences..."
-                          />
+                          {!hasAdvancedSearch && (
+                            <div 
+                              className="flex items-center gap-1 text-xs text-amber-600 cursor-pointer hover:text-amber-700 transition-colors" 
+                              onClick={handleUpgradeClick}
+                            >
+                              <Crown className="h-3 w-3" />
+                              <span>Premium</span>
+                            </div>
+                          )}
                         </div>
-                      )}
+                        {selectedDivisions.length > 0 && conferencesOptions.length > 0 ? (
+                          <div className={cn("relative", !hasAdvancedSearch && "pointer-events-none opacity-50")}>
+                            <MultiSelectFilter
+                              options={conferencesOptions}
+                              selected={selectedConferences}
+                              onSelectionChange={setSelectedConferences}
+                              placeholder="Select conferences..."
+                              searchPlaceholder="Search conferences..."
+                            />
+                            {!hasAdvancedSearch && (
+                              <div className="absolute inset-0 flex items-center justify-center bg-background/80 backdrop-blur-sm rounded-md">
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={handleUpgradeClick}
+                                  className="text-xs"
+                                >
+                                  <Lock className="h-3 w-3 mr-1" />
+                                  Upgrade for Conferences Filter
+                                </Button>
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          <div className="h-10 flex items-center px-3 py-2 border border-border rounded-md bg-muted/50 text-muted-foreground text-sm">
+                            {selectedDivisions.length === 0 ? 'Select divisions to filter by conferences' : 'No conferences available'}
+                          </div>
+                        )}
+                      </div>
                     </>
                   )}
 

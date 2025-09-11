@@ -91,7 +91,7 @@ export function SearchBar({ }: SearchBarProps) {
         <Input
           type="search"
           placeholder={placeholder}
-          className="w-full rounded-lg bg-background pl-10 pr-4 py-2 text-base md:text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 focus:ring-offset-background border-border/50 min-w-0 h-10"
+          className="w-full rounded-lg bg-background pl-10 pr-4 py-2 text-base md:text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 focus:ring-offset-background border-border min-w-0 h-10"
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           onKeyDown={handleKeyDown}
@@ -102,7 +102,7 @@ export function SearchBar({ }: SearchBarProps) {
       {/* Search Results Dropdown */}
       {isOpen && (
         <div 
-          className="fixed bg-card border border-border/50 rounded-lg shadow-lg z-[9999] min-w-[200px]"
+          className="fixed bg-card border border-border rounded-lg shadow-lg z-[9999] min-w-[200px]"
           style={{
             top: `${dropdownPosition.top}px`,
             left: `${dropdownPosition.left}px`,

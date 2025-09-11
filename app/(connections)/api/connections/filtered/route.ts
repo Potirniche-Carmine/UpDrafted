@@ -5,6 +5,7 @@ import { sanitizeText } from '@/utils/sanitization';
 import { withRateLimit } from '@/utils/security';
 import { getCachedWithType, setCachedWithType, createErrorResponse, createSuccessResponse } from '@/utils/security';
 import { parseHeightToInches, parseWeightToPounds } from '@/lib/parsing-utils';
+import { SubscriptionService } from '@/lib/subscription-service';
 
 export const runtime = 'nodejs';
 
@@ -63,6 +64,7 @@ interface RawFilterInput {
   requestTypes?: unknown;
   minHeight?: unknown;
   minWeight?: unknown;
+  verified?: unknown;
 }
 
 interface ValidatedFilters {
@@ -76,6 +78,7 @@ interface ValidatedFilters {
   requestTypes: string[];
   minHeight: number | undefined;
   minWeight: number | undefined;
+  verified: boolean | null;
 }
 
 // Validate and sanitize filter input
@@ -110,6 +113,13 @@ function validateAndSanitizeFilters(filters: RawFilterInput): ValidatedFilters {
     return Math.floor(numValue);
   };
 
+  const validateBoolean = (value: unknown): boolean | null => {
+    if (typeof value === 'boolean') return value;
+    if (value === 'true') return true;
+    if (value === 'false') return false;
+    return null;
+  };
+
   return {
     sports: validateArray(filters.sports),
     divisions: validateArray(filters.divisions),
@@ -119,8 +129,9 @@ function validateAndSanitizeFilters(filters: RawFilterInput): ValidatedFilters {
     graduatingClasses: validateArray(filters.graduatingClasses),
     conferences: validateArray(filters.conferences),
     requestTypes: validateArray(filters.requestTypes),
-    minHeight: validateNumber(filters.minHeight, 60, 96),
-    minWeight: validateNumber(filters.minWeight, 100, 500),
+    minHeight: validateNumber(filters.minHeight, 48, 96),
+    minWeight: validateNumber(filters.minWeight, 50, 500),
+    verified: validateBoolean(filters.verified),
   };
 }
 
@@ -158,6 +169,37 @@ export async function POST(request: NextRequest) {
 
     const sanitizedFilters = validateAndSanitizeFilters(body);
 
+    // Check subscription features for premium filters
+    const hasPhysicalRequirements = sanitizedFilters.minHeight || sanitizedFilters.minWeight;
+    const hasVerifiedFilter = sanitizedFilters.verified !== null;
+    
+    if (hasPhysicalRequirements || hasVerifiedFilter) {
+      const hasAdvancedSearchAccess = await SubscriptionService.hasFeatureAccess(
+        currentUserId,
+        'advancedSearch'
+      );
+      
+      if (!hasAdvancedSearchAccess) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: 'Premium subscription required for advanced search features',
+            premium: {
+              required: true,
+              feature: 'advancedSearch',
+              message: 'Upgrade to filter by physical requirements and verified status',
+              availableFeatures: [
+                'Physical requirement filters (height/weight)',
+                'Verified athlete status filtering',
+                'Advanced search capabilities'
+              ]
+            }
+          },
+          { status: 403, headers: rateLimitCheck.headers }
+        );
+      }
+    }
+
     // Check cache first (only if no filters applied)
     const hasBasicFilters = sanitizedFilters.sports.length > 0 ||
                            sanitizedFilters.divisions.length > 0 ||
@@ -167,7 +209,8 @@ export async function POST(request: NextRequest) {
                               sanitizedFilters.graduatingClasses.length > 0 ||
                               sanitizedFilters.conferences.length > 0 ||
                               sanitizedFilters.minHeight ||
-                              sanitizedFilters.minWeight;
+                              sanitizedFilters.minWeight ||
+                              sanitizedFilters.verified !== null;
     const hasFilters = hasBasicFilters || hasAdvancedFilters;
     
     const cacheKey = hasFilters ? null : `connections:${currentUserId}:all`;
@@ -257,6 +300,13 @@ export async function POST(request: NextRequest) {
             return; // Skip this connection
           }
         }
+        
+        if (sanitizedFilters.verified !== null && otherUser.role === 'athlete') {
+          const isVerified = Boolean(otherUser.athleteProfile?.isVerified);
+          if (sanitizedFilters.verified !== isVerified) {
+            return; // Skip this connection
+          }
+        }
       }
       
       const formattedConnection: FilteredConnectionData = {
@@ -336,6 +386,11 @@ export async function POST(request: NextRequest) {
       }
     });
 
+    // Get user's subscription features for response
+    const [hasAdvancedSearchAccess] = await Promise.all([
+      SubscriptionService.hasFeatureAccess(currentUserId, 'advancedSearch')
+    ]);
+
     const result: FilteredConnectionsResponse = {
       connected: connectedConnections,
       incoming: incomingPendingRequests,
@@ -354,7 +409,15 @@ export async function POST(request: NextRequest) {
 
     return createSuccessResponse({
       success: true,
-      ...result
+      ...result,
+      premium: {
+        hasAdvancedSearch: hasAdvancedSearchAccess,
+        availableFeatures: hasAdvancedSearchAccess ? [
+          'Physical requirement filters (height/weight)',
+          'Verified athlete status filtering',
+          'Advanced search capabilities'
+        ] : ['Upgrade to unlock advanced search features']
+      }
     }, rateLimitCheck.headers);
 
   } catch (error) {

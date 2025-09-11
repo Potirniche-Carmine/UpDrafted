@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireAnyRole } from '@/utils/roles';
 import { activityOperations, profileOperations } from '@/database/db-utils';
 import { withRateLimit } from '@/utils/security';
+import { SubscriptionService } from '@/lib/subscription-service';
 
 export async function GET(request: NextRequest) {
   try {
@@ -19,16 +20,16 @@ export async function GET(request: NextRequest) {
       return rateLimitCheck.response;
     }
 
-    // TODO: Check if user has "starter" plan - for now, allow all users
-    // In a real implementation, you would check the user's subscription here
-    // const hasStarterPlan = await checkUserSubscription(userId);
-    // if (!hasStarterPlan) {
-    //   return NextResponse.json({
-    //     success: false,
-    //     error: 'Premium subscription required',
-    //     requiresUpgrade: true
-    //   }, { status: 403 });
-    // }
+    // Check if user has premium access to profile view insights
+    const hasProfileViewInsights = await SubscriptionService.hasFeatureAccess(userId, 'profileViewInsights');
+    
+    if (!hasProfileViewInsights) {
+      return NextResponse.json({
+        success: false,
+        error: 'Premium subscription required for activity insights',
+        requiresUpgrade: true
+      }, { status: 403 });
+    }
 
     // Get activity data
     const activities = await activityOperations.getUserActivity(userId, 50);
