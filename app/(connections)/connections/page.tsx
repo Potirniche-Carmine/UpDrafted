@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo, useEffect, Suspense, useCallback } from 'react';
+import React, { useState, useMemo, useEffect, Suspense, useCallback, useRef } from 'react';
 import { Users, Search, MessageSquare, Shield, CheckCircle, X, Clock, MapPin, User, UserCheck, Users2, Send, Building2, Target, Filter, ChevronDown, Lock, Crown } from 'lucide-react';
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -16,6 +16,7 @@ import { sanitizeText } from '@/utils/sanitization';
 import { useUser } from "@clerk/nextjs";
 import { getSportsList, DIVISIONS, US_STATES, COUNTRIES, getPositionsForSport } from '@/lib/sports-data';
 import { CONFERENCES_BY_DIVISION } from '@/lib/conference-data';
+import { useSubscriptionFeatures } from '@/hooks/use-subscription-features';
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import {
@@ -1675,13 +1676,21 @@ function App() {
   const effectiveRole = user?.publicMetadata?.role as string;
   const searchParams = useSearchParams();
   
+  // Ref to prevent double mounting in React StrictMode
+  const hasInitializedRef = useRef(false);
+  // Request deduplication
+  const pendingRequestRef = useRef<Promise<{ connected: Connection[], incoming: PendingRequest[], outgoing: PendingRequest[] }> | null>(null);
+  
   const [searchTerm, setSearchTerm] = useState('');
   const [filter, setFilter] = useState('all');
   const [connections, setConnections] = useState<Connection[]>([]);
   const [pendingRequests, setPendingRequests] = useState<PendingRequest[]>([]);
   const [sentRequests, setSentRequests] = useState<PendingRequest[]>([]);
   const [loading, setLoading] = useState(true);
-  const [hasAdvancedSearch, setHasAdvancedSearch] = useState(false); // Premium subscription status
+  
+  // Get subscription features using the custom hook
+  const { features } = useSubscriptionFeatures();
+  const hasAdvancedSearch = features.advancedSearch;
 
   // Advanced filter states
   const [selectedSports, setSelectedSports] = useState<FilterOption[]>([]);
@@ -1715,83 +1724,91 @@ function App() {
   }
 
   const fetchConnections = useCallback(async (filters: FilterData = {}) => {
-    setLoading(true);
-    try {
-      const queryParams = new URLSearchParams();
-      
-      Object.entries(filters).forEach(([key, value]) => {
-        if (Array.isArray(value) && value.length > 0) {
-          value.forEach((v: FilterOption) => queryParams.append(key, v.value));
-        } else if (typeof value === 'number' && value > 0) {
-           if (key === 'minHeight' && value > 48) { // Updated from 60 to 48
-            queryParams.append(key, value.toString());
-          } else if (key === 'minWeight' && value > 50) { // Updated from 100 to 50
-            queryParams.append(key, value.toString());
-          }
-        } else if (key === 'verifiedFilter' && value !== null) {
-          queryParams.append(key, value.toString());
-        }
-      });
-
-      const response = await fetch(`/api/connections?${queryParams.toString()}`);
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to fetch connections');
-      }
-      const data = await response.json();
-      setConnections(data.connected || []);
-      setPendingRequests(data.incoming || []);
-      setSentRequests(data.outgoing || []);
-    } catch (err) {
-      console.error('Error fetching connections:', err);
-    } finally {
-      setLoading(false);
+    // Prevent duplicate requests
+    if (pendingRequestRef.current) {
+      return pendingRequestRef.current;
     }
-  }, []);
 
-  // Check premium subscription status
-  useEffect(() => {
-    const checkSubscription = async () => {
+    setLoading(true);
+    
+    const request = (async () => {
       try {
-        const windowWithClerk = window as unknown as {
-          Clerk?: {
-            session?: {
-              getToken: () => Promise<string>;
-            };
-          };
-        };
-        const token = await windowWithClerk.Clerk?.session?.getToken();
+        const queryParams = new URLSearchParams();
         
-        const response = await fetch('/api/subscription/features', {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
+        Object.entries(filters).forEach(([key, value]) => {
+          if (Array.isArray(value) && value.length > 0) {
+            value.forEach((v: FilterOption) => queryParams.append(key, v.value));
+          } else if (typeof value === 'number' && value > 0) {
+             if (key === 'minHeight' && value > 48) { // Updated from 60 to 48
+              queryParams.append(key, value.toString());
+            } else if (key === 'minWeight' && value > 50) { // Updated from 100 to 50
+              queryParams.append(key, value.toString());
+            }
+          } else if (key === 'verifiedFilter' && value !== null) {
+            queryParams.append(key, value.toString());
           }
         });
-        
-        if (response.ok) {
-          const data = await response.json();
-          setHasAdvancedSearch(data.features?.advancedSearch || false);
-        }
-      } catch (error) {
-        console.error('Error checking subscription:', error);
-        setHasAdvancedSearch(false);
-      }
-    };
 
-    if (user?.id) {
-      checkSubscription();
-    }
-  }, [user?.id]);
+        const response = await fetch(`/api/connections?${queryParams.toString()}`);
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || 'Failed to fetch connections');
+        }
+        const data = await response.json();
+        setConnections(data.connected || []);
+        setPendingRequests(data.incoming || []);
+        setSentRequests(data.outgoing || []);
+        return data;
+      } catch (err) {
+        if (process.env.NODE_ENV === 'development') {
+          console.error('Error fetching connections:', err);
+        }
+        throw err;
+      } finally {
+        setLoading(false);
+        // Clear the pending request
+        pendingRequestRef.current = null;
+      }
+    })();
+
+    pendingRequestRef.current = request;
+    return request;
+  }, []);
 
   // Upgrade handler
   const handleUpgradeClick = useCallback(() => {
     router.push('/pricing');
   }, [router]);
 
+  // Initial load effect - only runs once on mount
   useEffect(() => {
-    fetchConnections();
-  }, [fetchConnections]);
+    // Prevent double mounting in React StrictMode
+    if (hasInitializedRef.current) return;
+    hasInitializedRef.current = true;
+
+    const initialLoad = async () => {
+      setLoading(true);
+      try {
+        const response = await fetch('/api/connections?');
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || 'Failed to fetch connections');
+        }
+        const data = await response.json();
+        setConnections(data.connected || []);
+        setPendingRequests(data.incoming || []);
+        setSentRequests(data.outgoing || []);
+      } catch (err) {
+        if (process.env.NODE_ENV === 'development') {
+          console.error('Error fetching connections:', err);
+        }
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    initialLoad();
+  }, []); // Empty dependency array ensures this only runs once
 
   const handleApplyFilters = () => {
     const filters = {

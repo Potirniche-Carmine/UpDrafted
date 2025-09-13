@@ -18,6 +18,7 @@ import { CONFERENCES_BY_DIVISION } from '@/lib/conference-data';
 import { useProfileCompletenessSorting } from '../components/profile-completeness-sorter';
 import { AdvancedFilters } from '../components/advanced-filters';
 import { MultiSelectFilter, HeightWeightFilter, VerifiedFilter, type FilterOption } from '../components/filter-components';
+import { useSubscriptionFeatures } from '@/hooks/use-subscription-features';
 
 // API response types
 interface DiscoverUser {
@@ -255,7 +256,10 @@ function SearchPageContent() {
   const [hasMore, setHasMore] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [page, setPage] = useState(1);
-  const [hasAdvancedSearch, setHasAdvancedSearch] = useState(false); // Premium subscription status
+  
+  // Get subscription features using the custom hook
+  const { features } = useSubscriptionFeatures();
+  const hasAdvancedSearch = features.advancedSearch;
 
   // Filter states
   const [showMobileFilters, setShowMobileFilters] = useState(false);
@@ -538,38 +542,6 @@ function SearchPageContent() {
       router.push(`/profile/${userId}`);
     }
   }, [saveSearchState, router, allUsers, generateProfileUrl]);
-
-  // Check premium subscription status
-  useEffect(() => {
-    const checkSubscription = async () => {
-      try {
-        const windowWithClerk = window as unknown as {
-          Clerk?: {
-            session?: {
-              getToken: () => Promise<string>;
-            };
-          };
-        };
-        const token = await windowWithClerk.Clerk?.session?.getToken();
-        
-        const response = await fetch('/api/subscription/features', {
-          headers: createSecureHeaders(token || '')
-        });
-        
-        if (response.ok) {
-          const data = await response.json();
-          setHasAdvancedSearch(data.features?.advancedSearch || false);
-        }
-      } catch (error) {
-        console.error('Error checking subscription:', error);
-        setHasAdvancedSearch(false);
-      }
-    };
-
-    if (user?.id) {
-      checkSubscription();
-    }
-  }, [user?.id]);
 
   // Upgrade handler
   const handleUpgradeClick = useCallback(() => {

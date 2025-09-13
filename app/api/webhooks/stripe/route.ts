@@ -4,6 +4,20 @@ import { stripe } from '@/lib/stripe'
 import { SubscriptionService } from '@/lib/subscription-service'
 import Stripe from 'stripe'
 
+// Extended types for Stripe objects with correct property names
+interface StripeSubscriptionExtended extends Stripe.Subscription {
+  current_period_start: number;
+  current_period_end: number;
+  cancel_at_period_end: boolean;
+  canceled_at: number | null;
+  trial_start: number | null;
+  trial_end: number | null;
+}
+
+interface StripeInvoiceExtended extends Stripe.Invoice {
+  subscription: string | null;
+}
+
 export async function POST(req: NextRequest) {
   let event: Stripe.Event
 
@@ -44,20 +58,21 @@ export async function POST(req: NextRequest) {
         if (userId && session.subscription) {
           // Fetch the subscription details from Stripe
           const stripeSubscription = await stripe.subscriptions.retrieve(session.subscription as string)
+          const subscription = stripeSubscription as unknown as StripeSubscriptionExtended
           
           // Convert to our format and update database
           const subscriptionData = {
-            id: stripeSubscription.id,
-            customer: stripeSubscription.customer as string,
-            status: stripeSubscription.status,
-            current_period_start: (stripeSubscription as any).current_period_start,
-            current_period_end: (stripeSubscription as any).current_period_end,
-            cancel_at_period_end: (stripeSubscription as any).cancel_at_period_end,
-            canceled_at: (stripeSubscription as any).canceled_at,
-            trial_start: (stripeSubscription as any).trial_start,
-            trial_end: (stripeSubscription as any).trial_end,
-            metadata: stripeSubscription.metadata,
-            items: stripeSubscription.items
+            id: subscription.id,
+            customer: subscription.customer as string,
+            status: subscription.status,
+            current_period_start: subscription.current_period_start,
+            current_period_end: subscription.current_period_end,
+            cancel_at_period_end: subscription.cancel_at_period_end,
+            canceled_at: subscription.canceled_at,
+            trial_start: subscription.trial_start,
+            trial_end: subscription.trial_end,
+            metadata: subscription.metadata,
+            items: subscription.items
           }
           
           await SubscriptionService.upsertSubscriptionFromStripe(
@@ -84,7 +99,7 @@ export async function POST(req: NextRequest) {
       case 'customer.subscription.created': 
       case 'customer.subscription.updated': 
       case 'customer.subscription.deleted': {
-        const subscription = event.data.object as Stripe.Subscription
+        const subscription = event.data.object as unknown as StripeSubscriptionExtended
         console.log(`Subscription ${event.type}: ${subscription.id}`)
         
         const userId = subscription.metadata?.userId
@@ -118,7 +133,7 @@ export async function POST(req: NextRequest) {
       }
       
       case 'invoice.payment_succeeded': {
-        const invoice = event.data.object as Stripe.Invoice
+        const invoice = event.data.object as unknown as StripeInvoiceExtended
         console.log(`Payment succeeded for invoice: ${invoice.id}`)
         
         // Get subscription if exists
@@ -148,7 +163,7 @@ export async function POST(req: NextRequest) {
       }
       
       case 'invoice.payment_failed': {
-        const invoice = event.data.object as Stripe.Invoice
+        const invoice = event.data.object as unknown as StripeInvoiceExtended
         console.log(`Payment failed for invoice: ${invoice.id}`)
         
         // Get subscription if exists

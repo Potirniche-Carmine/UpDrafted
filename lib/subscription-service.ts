@@ -152,8 +152,53 @@ export class SubscriptionService {
     return usage
   }
 
-  // Check if user has access to a premium feature
+  // Check if user has access to a premium feature (with enhanced security)
   static async hasFeatureAccess(userId: string, feature: string): Promise<boolean> {
+    try {
+      // Import here to avoid circular dependencies
+      const { SubscriptionSecurityService } = await import('./subscription-security');
+      
+      // Use secure validation instead of basic database lookup
+      const validation = await SubscriptionSecurityService.validateSubscriptionAccess(userId);
+      
+      // Log any security issues but don't block access for minor ones
+      if (validation.securityFlags.length > 0) {
+        if (process.env.NODE_ENV === 'development') {
+          console.warn(`Security flags detected for user ${userId} feature access:`, validation.securityFlags);
+        }
+        
+        // Block access for serious violations
+        const seriousViolations = validation.securityFlags.filter(flag => 
+          flag.includes('integrity_violation') || 
+          flag.includes('inactive_status') ||
+          flag.includes('subscription_expired')
+        );
+        
+        if (seriousViolations.length > 0) {
+          return false;
+        }
+      }
+      
+      // Return feature access based on secure validation
+      switch (feature) {
+        case 'advancedSearch':
+          return validation.features.advancedSearch;
+        case 'profileViewInsights':
+          return validation.features.profileViewInsights;
+        case 'analytics':
+          return validation.features.analytics;
+        default:
+          return false;
+      }
+    } catch (error) {
+      console.error(`Feature access check failed for user ${userId}:`, error);
+      // Fall back to basic check if security service fails
+      return this.hasFeatureAccessBasic(userId, feature);
+    }
+  }
+
+  // Fallback method for basic feature access checking
+  private static async hasFeatureAccessBasic(userId: string, feature: string): Promise<boolean> {
     const subscription = await this.getUserSubscription(userId)
     const tier = subscription?.tier || 'free'
     
