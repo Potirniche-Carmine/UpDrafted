@@ -1504,36 +1504,6 @@ const AdvancedFilters: React.FC<AdvancedFiltersProps> = ({
               )}
             </div>
 
-            {/* Graduating Class Filter - Reserve space for coaches/recruiters */}
-            {(userRole === 'coach' || userRole === 'recruiter' || isAdmin) && (
-              <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <Label className="text-sm font-medium">Graduating Class</Label>
-                  {!hasAdvancedSearch && (
-                    <Crown className="w-4 h-4 text-amber-500" />
-                  )}
-                </div>
-                {hasAdvancedSearch ? (
-                  <MultiSelectFilter
-                    options={graduatingClassOptions}
-                    selected={selectedGraduatingClasses}
-                    onSelectionChange={setSelectedGraduatingClasses}
-                    placeholder="Select graduation years..."
-                    searchPlaceholder="Search years..."
-                  />
-                ) : (
-                  <button
-                    onClick={onUpgradeClick}
-                    className="w-full h-10 flex items-center justify-center gap-2 px-3 py-2 border border-amber-300 rounded-md bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400 text-sm hover:bg-amber-100 dark:hover:bg-amber-900/30 transition-colors"
-                  >
-                    <Lock className="w-4 h-4" />
-                    <Crown className="w-4 h-4" />
-                    Upgrade to filter by graduation year
-                  </button>
-                )}
-              </div>
-            )}
-
             {/* Request Type Filter - Reserve space for pending/sent requests tabs */}
             {(activeTab === 'requests' || activeTab === 'sent-requests') ? (
               <div className="space-y-2">
@@ -1561,10 +1531,76 @@ const AdvancedFilters: React.FC<AdvancedFiltersProps> = ({
           {/* Advanced Filters for Coaches/Recruiters - Fixed positioning */}
           {(userRole === 'coach' || userRole === 'recruiter' || isAdmin) && (
             <div className="space-y-4">
-              {/* Physical Requirements */}
-              <div className="border-t border-border pt-4">
-                <Label className="text-sm font-medium mb-4 block">Physical Requirements</Label>
+              {/* Advanced Filters */}
+              <div className="border-t border-border pt-4 relative">
+                <Label className="text-sm font-medium mb-4 block">Advanced Filters</Label>
                 <div className="space-y-4">
+                  {/* Graduating Class - First in advanced filters */}
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium">Graduating Class</Label>
+                    {hasAdvancedSearch ? (
+                      <MultiSelectFilter
+                        options={graduatingClassOptions}
+                        selected={selectedGraduatingClasses}
+                        onSelectionChange={setSelectedGraduatingClasses}
+                        placeholder="Select graduation years..."
+                        searchPlaceholder="Search years..."
+                      />
+                    ) : (
+                      <div className="h-10 flex items-center px-3 py-2 border border-border rounded-md bg-muted/50 text-muted-foreground text-sm">
+                        Premium feature - Upgrade to filter by graduation year
+                      </div>
+                    )}
+                  </div>
+                  
+                  {/* Positions Filter */}
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium">Positions</Label>
+                    {selectedSports.length > 0 && positionsOptions.length > 0 ? (
+                      hasAdvancedSearch ? (
+                        <MultiSelectFilter
+                          options={positionsOptions}
+                          selected={selectedPositions}
+                          onSelectionChange={setSelectedPositions}
+                          placeholder="Select positions..."
+                          searchPlaceholder="Search positions..."
+                        />
+                      ) : (
+                        <div className="h-10 flex items-center px-3 py-2 border border-border rounded-md bg-muted/50 text-muted-foreground text-sm">
+                          Premium feature - Upgrade to filter by positions
+                        </div>
+                      )
+                    ) : (
+                      <div className="h-10 flex items-center px-3 py-2 border border-border rounded-md bg-muted/50 text-muted-foreground text-sm">
+                        {selectedSports.length === 0 ? 'Select sports to filter by positions' : 'No positions available'}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Conferences Filter */}
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium">Conferences</Label>
+                    {selectedDivisions.length > 0 && conferencesOptions.length > 0 ? (
+                      hasAdvancedSearch ? (
+                        <MultiSelectFilter
+                          options={conferencesOptions}
+                          selected={selectedConferences}
+                          onSelectionChange={setSelectedConferences}
+                          placeholder="Select conferences..."
+                          searchPlaceholder="Search conferences..."
+                        />
+                      ) : (
+                        <div className="h-10 flex items-center px-3 py-2 border border-border rounded-md bg-muted/50 text-muted-foreground text-sm">
+                          Premium feature - Upgrade to filter by conferences
+                        </div>
+                      )
+                    ) : (
+                      <div className="h-10 flex items-center px-3 py-2 border border-border rounded-md bg-muted/50 text-muted-foreground text-sm">
+                        {selectedDivisions.length === 0 ? 'Select divisions to filter by conferences' : 'No conferences available'}
+                      </div>
+                    )}
+                  </div>
+                  
                   <HeightWeightFilter
                     minHeight={minHeight}
                     minWeight={minWeight}
@@ -1580,99 +1616,32 @@ const AdvancedFilters: React.FC<AdvancedFiltersProps> = ({
                     onUpgradeClick={onUpgradeClick}
                   />
                 </div>
-              </div>
-
-              {/* Positions and Conferences in a separate grid to prevent layout shift */}
-              <div className="border-t border-border pt-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {/* Positions Filter - Always reserve space */}
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <Label className="text-sm font-medium">Positions</Label>
-                      {!hasAdvancedSearch && (
-                        <div 
-                          className="flex items-center gap-1 text-xs text-amber-600 cursor-pointer hover:text-amber-700 transition-colors" 
-                          onClick={onUpgradeClick}
+                
+                {/* Professional Premium Overlay */}
+                {!hasAdvancedSearch && (
+                  <div className="absolute inset-0 bg-gradient-to-br from-background/20 via-background/15 to-background/20 backdrop-blur-[1px] rounded-lg border border-border/30 flex items-center justify-center">
+                    <div className="text-center space-y-3 p-6 bg-background/90 rounded-lg border border-border/50 shadow-lg backdrop-blur-sm">
+                      <div className="flex items-center justify-center space-x-2">
+                        <Crown className="h-6 w-6 text-amber-500" />
+                        <span className="text-lg font-semibold bg-gradient-to-r from-amber-600 to-amber-500 bg-clip-text text-transparent">
+                          Advanced Filters
+                        </span>
+                      </div>
+                      <p className="text-sm text-muted-foreground max-w-xs mx-auto">
+                        Unlock graduation year, positions, conferences, height/weight requirements, and verification status
+                      </p>
+                      <div className="flex justify-center">
+                        <Button
+                          onClick={() => window.location.href = '/pricing'}
+                          className="bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white border-0 shadow-lg hover:shadow-xl transition-all duration-200"
                         >
-                          <Crown className="h-3 w-3" />
-                          <span>Premium</span>
-                        </div>
-                      )}
+                          <Crown className="h-4 w-4 mr-2" />
+                          Upgrade for Advanced Filters
+                        </Button>
+                      </div>
                     </div>
-                    {selectedSports.length > 0 && positionsOptions.length > 0 ? (
-                      <div className={cn("relative", !hasAdvancedSearch && "pointer-events-none opacity-50")}>
-                        <MultiSelectFilter
-                          options={positionsOptions}
-                          selected={selectedPositions}
-                          onSelectionChange={setSelectedPositions}
-                          placeholder="Select positions..."
-                          searchPlaceholder="Search positions..."
-                        />
-                        {!hasAdvancedSearch && (
-                          <div className="absolute inset-0 flex items-center justify-center bg-background/80 backdrop-blur-sm rounded-md">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={onUpgradeClick}
-                              className="text-xs"
-                            >
-                              <Lock className="h-3 w-3 mr-1" />
-                              Upgrade for Positions Filter
-                            </Button>
-                          </div>
-                        )}
-                      </div>
-                    ) : (
-                      <div className="h-10 flex items-center px-3 py-2 border border-border rounded-md bg-muted/50 text-muted-foreground text-sm">
-                        {selectedSports.length === 0 ? 'Select sports to filter by positions' : 'No positions available'}
-                      </div>
-                    )}
                   </div>
-
-                  {/* Conferences Filter - Always reserve space */}
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <Label className="text-sm font-medium">Conferences</Label>
-                      {!hasAdvancedSearch && (
-                        <div 
-                          className="flex items-center gap-1 text-xs text-amber-600 cursor-pointer hover:text-amber-700 transition-colors" 
-                          onClick={onUpgradeClick}
-                        >
-                          <Crown className="h-3 w-3" />
-                          <span>Premium</span>
-                        </div>
-                      )}
-                    </div>
-                    {selectedDivisions.length > 0 && conferencesOptions.length > 0 ? (
-                      <div className={cn("relative", !hasAdvancedSearch && "pointer-events-none opacity-50")}>
-                        <MultiSelectFilter
-                          options={conferencesOptions}
-                          selected={selectedConferences}
-                          onSelectionChange={setSelectedConferences}
-                          placeholder="Select conferences..."
-                          searchPlaceholder="Search conferences..."
-                        />
-                        {!hasAdvancedSearch && (
-                          <div className="absolute inset-0 flex items-center justify-center bg-background/80 backdrop-blur-sm rounded-md">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={onUpgradeClick}
-                              className="text-xs"
-                            >
-                              <Lock className="h-3 w-3 mr-1" />
-                              Upgrade for Conferences Filter
-                            </Button>
-                          </div>
-                        )}
-                      </div>
-                    ) : (
-                      <div className="h-10 flex items-center px-3 py-2 border border-border rounded-md bg-muted/50 text-muted-foreground text-sm">
-                        {selectedDivisions.length === 0 ? 'Select divisions to filter by conferences' : 'No conferences available'}
-                      </div>
-                    )}
-                  </div>
-                </div>
+                )}
               </div>
             </div>
           )}
