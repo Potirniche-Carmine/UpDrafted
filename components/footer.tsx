@@ -27,14 +27,15 @@ export function Footer() {
   const currentYear = new Date().getFullYear();
 
   const footerLinks = [
-    { href: "/about", label: "About Us" },
-    { href: "/for-athletes", label: "For Athletes" },
-    { href: "/for-coaches", label: "For Coaches" },
-    { href: "/for-recruiters", label: "For Recruiters" },
-    { href: "/contact", label: "Contact Us" },
-    { href: "/terms-of-service", label: "Terms of Service" },
-    { href: "/privacy-policy", label: "Privacy Policy" },
+    { href: "/about", label: "About" },
+    { href: "/for-athletes", label: "Athletes" },
+    { href: "/for-coaches", label: "Coaches" },
+    { href: "/for-recruiters", label: "Recruiters" },
+    { href: "/contact", label: "Contact" },
+    { href: "/privacy-policy", label: "Privacy" },
+    { href: "/terms-of-service", label: "Terms" },
   ];
+  
   const socialLinks = [
     { href: "https://x.com/UpDrafted_us", label: "X", icon: <TwitterXIcon /> },
     { href: "https://www.instagram.com/updrafted.us", label: "Instagram", icon: <InstagramIcon /> },
@@ -42,36 +43,40 @@ export function Footer() {
   ];
 
   return (
-    <footer className="w-full bg-gradient-to-br from-slate-50/50 to-[#01ae79]/5 dark:from-slate-950/50 dark:to-[#01ae79]/10 border-t border-border/40">
-      <div className="container mx-auto max-w-screen-xl px-4 sm:px-6 lg:px-8 py-12 md:py-16">
-        {/* Main footer content */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-8 lg:gap-12 mb-8">
-          {/* Brand section - spans 2 columns on desktop */}
-          <div className="space-y-4 md:col-span-2">
-            <Link href="/" className="flex items-center space-x-2">
-              <Image 
-                src="/updrafted-logo.png" 
-                alt="UpDrafted Logo" 
-                width={150} 
-                height={40} 
-                className="h-auto w-[140px] sm:w-[160px]" 
-              />
-            </Link>
-            <p className="text-base text-muted-foreground max-w-md leading-relaxed">
-              Connecting athletes and college programs for a brighter future in college sports. Join the premier platform where talent meets opportunity.
-            </p>
-            
-            {/* Social links moved to brand section */}
-            <div className="pt-4">
-              <h5 className="font-semibold text-foreground mb-4">Connect With Us</h5>
-              <div className="flex space-x-3">
+    <footer className="w-full bg-white/95 dark:bg-gray-950/95 backdrop-blur supports-[backdrop-filter]:bg-white/80 dark:supports-[backdrop-filter]:bg-gray-950/80 border-t border-[#01ae79]/20 dark:border-[#01ae79]/30">
+      <div className="container mx-auto max-w-screen-xl px-3 sm:px-4 lg:px-6 xl:px-8 py-6">
+        {/* Main footer content - responsive layout */}
+        <div className="space-y-6 lg:space-y-0 mb-4">
+          {/* Mobile and tablet layout */}
+          <div className="block lg:hidden space-y-6">
+            {/* Top row: Brand and Social links */}
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+              {/* Brand and tagline */}
+              <div className="flex flex-col space-y-2">
+                <Link href="/" className="flex items-center">
+                  <Image 
+                    src="/updrafted-logo.webp" 
+                    alt="UpDrafted Logo" 
+                    width={140} 
+                    height={36} 
+                    className="h-auto w-[120px] sm:w-[140px]" 
+                  />
+                </Link>
+                <p className="text-sm text-muted-foreground max-w-sm leading-relaxed">
+                  Connecting athletes and college programs.<br className="sm:hidden" />
+                  <span className="hidden sm:inline"> </span>Your talent. Their radar. Our platform.
+                </p>
+              </div>
+
+              {/* Social links - positioned better on mobile */}
+              <div className="flex items-center space-x-3 sm:space-x-2">
                 {socialLinks.map(social => (
                   <Link 
                     key={social.label} 
                     href={social.href} 
                     target="_blank" 
                     rel="noopener noreferrer"
-                    className="flex items-center justify-center w-10 h-10 rounded-lg bg-white/60 dark:bg-gray-800/60 text-muted-foreground hover:text-[#01ae79] dark:hover:text-[#01ae79] hover:bg-[#01ae79]/5 dark:hover:bg-[#01ae79]/10 transition-all duration-200 shadow-sm hover:shadow-md border border-border/50"
+                    className="flex items-center justify-center w-9 h-9 sm:w-8 sm:h-8 rounded-full bg-white/80 dark:bg-gray-800/80 text-muted-foreground hover:text-[#01ae79] hover:bg-[#01ae79]/10 transition-all duration-200 border border-[#01ae79]/20 dark:border-[#01ae79]/30"
                     title={social.label}
                   >
                     {social.icon}
@@ -80,53 +85,76 @@ export function Footer() {
                 ))}
               </div>
             </div>
+
+            {/* Navigation links - mobile grid */}
+            <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-x-4 gap-y-3 sm:gap-x-6 sm:gap-y-2 sm:justify-center">
+              {footerLinks.map(link => (
+                <Link 
+                  key={link.label} 
+                  href={link.href} 
+                  className="text-sm text-muted-foreground hover:text-[#01ae79] transition-colors duration-200 font-medium text-left"
+                >
+                  {link.label}
+                </Link>
+              ))}
+            </div>
           </div>
 
-          {/* Platform links */}
-          <div className="space-y-4">
-            <h5 className="font-semibold text-foreground text-lg">Platform</h5>
-            <ul className="space-y-3">
-              {footerLinks.slice(0, 4).map(link => (
-                <li key={link.label}>
-                  <Link 
-                    href={link.href} 
-                    className="text-muted-foreground hover:text-[#01ae79] transition-colors duration-200 text-sm font-medium"
-                  >
-                    {link.label}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </div>
+          {/* Desktop layout - clean single row */}
+          <div className="hidden lg:flex justify-between items-center">
+            {/* Brand and tagline */}
+            <div className="flex flex-col space-y-2">
+              <Link href="/" className="flex items-center">
+                <Image 
+                  src="/updrafted-logo.webp" 
+                  alt="UpDrafted Logo" 
+                  width={140} 
+                  height={36} 
+                  className="h-auto w-[140px]" 
+                />
+              </Link>
+              <p className="text-sm text-muted-foreground max-w-sm">
+                Connecting athletes and college programs. Your talent. Their radar. Our platform.
+              </p>
+            </div>
 
-          {/* Company links */}
-          <div className="space-y-4">
-            <h5 className="font-semibold text-foreground text-lg">Company</h5>
-            <ul className="space-y-3">
-              {footerLinks.slice(4).map(link => (
-                <li key={link.label}>
-                  <Link 
-                    href={link.href} 
-                    className="text-muted-foreground hover:text-[#01ae79] transition-colors duration-200 text-sm font-medium"
-                  >
-                    {link.label}
-                  </Link>
-                </li>
+            {/* Centered navigation links */}
+            <div className="flex items-center space-x-8">
+              {footerLinks.map(link => (
+                <Link 
+                  key={link.label} 
+                  href={link.href} 
+                  className="text-sm text-muted-foreground hover:text-[#01ae79] transition-colors duration-200 font-medium"
+                >
+                  {link.label}
+                </Link>
               ))}
-            </ul>
+            </div>
+
+            {/* Social links */}
+            <div className="flex items-center space-x-2">
+              {socialLinks.map(social => (
+                <Link 
+                  key={social.label} 
+                  href={social.href} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="flex items-center justify-center w-8 h-8 rounded-full bg-white/80 dark:bg-gray-800/80 text-muted-foreground hover:text-[#01ae79] hover:bg-[#01ae79]/10 transition-all duration-200 border border-[#01ae79]/20 dark:border-[#01ae79]/30"
+                  title={social.label}
+                >
+                  {social.icon}
+                  <span className="sr-only">{social.label}</span>
+                </Link>
+              ))}
+            </div>
           </div>
         </div>
 
-        {/* Copyright section with better spacing and positioning */}
-        <div className="pt-6 border-t border-border/40">
-          <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
-            <p className="text-sm text-muted-foreground text-center sm:text-left">
-              &copy; {currentYear} UpDrafted. All rights reserved.
-            </p>
-            <div className="flex items-center gap-6 text-xs text-muted-foreground">
-              <span>Your Talent. Their Radar. Our Platform.</span>
-            </div>
-          </div>
+        {/* Copyright - minimal */}
+        <div className="pt-3 border-t border-[#01ae79]/20 dark:border-[#01ae79]/30">
+          <p className="text-xs text-muted-foreground text-center lg:text-left">
+            &copy; {currentYear} UpDrafted. All rights reserved.
+          </p>
         </div>
       </div>
     </footer>
