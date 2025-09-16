@@ -80,42 +80,54 @@ export default async function SuccessPage({ searchParams }: SuccessPageProps) {
             <div className="space-y-4 mb-8">
               <h2 className="text-xl font-semibold mb-4">Your Premium Features Are Now Active!</h2>
               <div className="grid gap-4 md:grid-cols-2">
-                <div className="text-left p-4 rounded-lg bg-card border border-border/50">
-                  <div className="flex items-center mb-2">
-                    <Users className="h-5 w-5 text-[#01ae79] mr-2" />
-                    <h3 className="font-medium">Unlimited Connections</h3>
+                <Link href="/connections" className="block group">
+                  <div className="text-left p-4 rounded-lg bg-card border border-border/50 hover:border-[#01ae79]/50 hover:bg-[#01ae79]/5 transition-all duration-200 cursor-pointer">
+                    <div className="flex items-center mb-2">
+                      <Users className="h-5 w-5 text-[#01ae79] mr-2" />
+                      <h3 className="font-medium group-hover:text-[#01ae79] transition-colors">Unlimited Connections</h3>
+                      <ArrowRight className="h-4 w-4 ml-auto text-muted-foreground group-hover:text-[#01ae79] transition-colors" />
+                    </div>
+                    <p className="text-sm text-muted-foreground">
+                      Connect with unlimited athletes, coaches, or recruiters - no monthly limits
+                    </p>
                   </div>
-                  <p className="text-sm text-muted-foreground">
-                    Connect with unlimited athletes, coaches, or recruiters - no monthly limits
-                  </p>
-                </div>
-                <div className="text-left p-4 rounded-lg bg-card border border-border/50">
-                  <div className="flex items-center mb-2">
-                    <Search className="h-5 w-5 text-[#01ae79] mr-2" />
-                    <h3 className="font-medium">Advanced Search Filters</h3>
+                </Link>
+                <Link href="/discover" className="block group">
+                  <div className="text-left p-4 rounded-lg bg-card border border-border/50 hover:border-[#01ae79]/50 hover:bg-[#01ae79]/5 transition-all duration-200 cursor-pointer">
+                    <div className="flex items-center mb-2">
+                      <Search className="h-5 w-5 text-[#01ae79] mr-2" />
+                      <h3 className="font-medium group-hover:text-[#01ae79] transition-colors">Advanced Search Filters</h3>
+                      <ArrowRight className="h-4 w-4 ml-auto text-muted-foreground group-hover:text-[#01ae79] transition-colors" />
+                    </div>
+                    <p className="text-sm text-muted-foreground">
+                      Find your perfect match with detailed filtering by sport, location, and more
+                    </p>
                   </div>
-                  <p className="text-sm text-muted-foreground">
-                    Find your perfect match with detailed filtering by sport, location, and more
-                  </p>
-                </div>
-                <div className="text-left p-4 rounded-lg bg-card border border-border/50">
-                  <div className="flex items-center mb-2">
-                    <MessageSquare className="h-5 w-5 text-[#01ae79] mr-2" />
-                    <h3 className="font-medium">Read Receipts</h3>
+                </Link>
+                <Link href="/messages" className="block group">
+                  <div className="text-left p-4 rounded-lg bg-card border border-border/50 hover:border-[#01ae79]/50 hover:bg-[#01ae79]/5 transition-all duration-200 cursor-pointer">
+                    <div className="flex items-center mb-2">
+                      <MessageSquare className="h-5 w-5 text-[#01ae79] mr-2" />
+                      <h3 className="font-medium group-hover:text-[#01ae79] transition-colors">Read Receipts</h3>
+                      <ArrowRight className="h-4 w-4 ml-auto text-muted-foreground group-hover:text-[#01ae79] transition-colors" />
+                    </div>
+                    <p className="text-sm text-muted-foreground">
+                      Know when your messages are seen and get better response rates
+                    </p>
                   </div>
-                  <p className="text-sm text-muted-foreground">
-                    Know when your messages are seen and get better response rates
-                  </p>
-                </div>
-                <div className="text-left p-4 rounded-lg bg-card border border-border/50">
-                  <div className="flex items-center mb-2">
-                    <Eye className="h-5 w-5 text-[#01ae79] mr-2" />
-                    <h3 className="font-medium">Profile Analytics</h3>
+                </Link>
+                <Link href="/activity" className="block group">
+                  <div className="text-left p-4 rounded-lg bg-card border border-border/50 hover:border-[#01ae79]/50 hover:bg-[#01ae79]/5 transition-all duration-200 cursor-pointer">
+                    <div className="flex items-center mb-2">
+                      <Eye className="h-5 w-5 text-[#01ae79] mr-2" />
+                      <h3 className="font-medium group-hover:text-[#01ae79] transition-colors">Profile Analytics</h3>
+                      <ArrowRight className="h-4 w-4 ml-auto text-muted-foreground group-hover:text-[#01ae79] transition-colors" />
+                    </div>
+                    <p className="text-sm text-muted-foreground">
+                      See who&apos;s viewing your profile and track your recruiting success
+                    </p>
                   </div>
-                  <p className="text-sm text-muted-foreground">
-                    See who&apos;s viewing your profile and track your recruiting success
-                  </p>
-                </div>
+                </Link>
               </div>
             </div>
 
