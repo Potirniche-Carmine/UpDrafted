@@ -1333,7 +1333,7 @@ export function AthleteEditDialogs({
 
               {/* Team Level - Only show for high school students */}
               {editData.educationLevel === 'high_school' && (
-                <div className="space-y-4">
+                <div className="space-y-2">
                   <Label className={cn(
                     "text-sm font-medium",
                     shouldLockFields() && "text-muted-foreground"
@@ -1341,9 +1341,9 @@ export function AthleteEditDialogs({
                     Team Level
                     {shouldLockFields() && <span className="text-xs text-muted-foreground block">(Locked during verification)</span>}
                   </Label>
-                  <div className="grid grid-cols-1 gap-3">
+                  <div className="grid grid-cols-1 gap-2">
                     <div className={cn(
-                      "relative border-2 rounded-lg p-4 transition-all",
+                      "relative border-2 rounded-lg p-3 transition-all",
                       editData.teamLevel && editData.teamLevel === 'varsity' 
                         ? 'border-orange-500 bg-orange-50 dark:bg-orange-950/20' 
                         : 'border-border',
@@ -1357,7 +1357,7 @@ export function AthleteEditDialogs({
                       }
                     }}
                     >
-                      <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-2.5">
                         <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
                           editData.teamLevel && editData.teamLevel === 'varsity' 
                             ? 'border-orange-500 bg-orange-500' 
@@ -1369,10 +1369,10 @@ export function AthleteEditDialogs({
                         </div>
                         <div className="flex-1">
                           <div className="flex items-center gap-2 mb-1">
-                            <Trophy className="w-5 h-5 text-orange-600" />
-                            <h3 className="font-semibold text-lg">Varsity</h3>
+                            <Trophy className="w-4 h-4 text-orange-600" />
+                            <h3 className="font-medium text-base">Varsity</h3>
                           </div>
-                          <p className="text-sm text-muted-foreground">
+                          <p className="text-xs text-muted-foreground">
                             Top-level team representing your school in official competitions
                           </p>
                         </div>
@@ -1380,7 +1380,7 @@ export function AthleteEditDialogs({
                     </div>
 
                     <div className={cn(
-                      "relative border-2 rounded-lg p-4 transition-all",
+                      "relative border-2 rounded-lg p-3 transition-all",
                       editData.teamLevel && editData.teamLevel === 'jv' 
                         ? 'border-blue-500 bg-blue-50 dark:bg-blue-950/20' 
                         : 'border-border',
@@ -1394,7 +1394,7 @@ export function AthleteEditDialogs({
                       }
                     }}
                     >
-                      <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-2.5">
                         <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
                           editData.teamLevel && editData.teamLevel === 'jv' 
                             ? 'border-blue-500 bg-blue-500' 
@@ -1406,10 +1406,10 @@ export function AthleteEditDialogs({
                         </div>
                         <div className="flex-1">
                           <div className="flex items-center gap-2 mb-1">
-                            <Trophy className="w-5 h-5 text-blue-600" />
-                            <h3 className="font-semibold text-lg">Junior Varsity</h3>
+                            <Trophy className="w-4 h-4 text-blue-600" />
+                            <h3 className="font-medium text-base">Junior Varsity</h3>
                           </div>
-                          <p className="text-sm text-muted-foreground">
+                          <p className="text-xs text-muted-foreground">
                             Development team for athletes working toward varsity level
                           </p>
                         </div>
@@ -1417,7 +1417,7 @@ export function AthleteEditDialogs({
                     </div>
 
                     <div className={cn(
-                      "relative border-2 rounded-lg p-4 transition-all",
+                      "relative border-2 rounded-lg p-3 transition-all",
                       editData.teamLevel && editData.teamLevel === 'freshman' 
                         ? 'border-green-500 bg-green-50 dark:bg-green-950/20' 
                         : 'border-border',
@@ -1431,7 +1431,7 @@ export function AthleteEditDialogs({
                       }
                     }}
                     >
-                      <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-2.5">
                         <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
                           editData.teamLevel && editData.teamLevel === 'freshman' 
                             ? 'border-green-500 bg-green-500' 
@@ -1443,17 +1443,17 @@ export function AthleteEditDialogs({
                         </div>
                         <div className="flex-1">
                           <div className="flex items-center gap-2 mb-1">
-                            <Trophy className="w-5 h-5 text-green-600" />
-                            <h3 className="font-semibold text-lg">Freshman</h3>
+                            <Trophy className="w-4 h-4 text-green-600" />
+                            <h3 className="font-medium text-base">Freshman</h3>
                           </div>
-                          <p className="text-sm text-muted-foreground">
+                          <p className="text-xs text-muted-foreground">
                             Entry-level team for first-year high school athletes
                           </p>
                         </div>
                       </div>
                     </div>
                     <div className={cn(
-                      "relative border-2 rounded-lg p-4 transition-all",
+                      "relative border-2 rounded-lg p-3 transition-all",
                       editData.teamLevel === 'none' 
                         ? 'border-gray-500 bg-gray-50 dark:bg-gray-950/20' 
                         : 'border-border',
@@ -1467,7 +1467,7 @@ export function AthleteEditDialogs({
                       }
                     }}
                     >
-                      <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-2.5">
                         <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
                           editData.teamLevel === 'none' 
                             ? 'border-gray-500 bg-gray-500' 
@@ -1479,10 +1479,10 @@ export function AthleteEditDialogs({
                         </div>
                         <div className="flex-1">
                           <div className="flex items-center gap-2 mb-1">
-                            <Trophy className="w-5 h-5 text-gray-600" />
-                            <h3 className="font-semibold text-lg">None</h3>
+                            <Trophy className="w-4 h-4 text-gray-600" />
+                            <h3 className="font-medium text-base">None</h3>
                           </div>
-                          <p className="text-sm text-muted-foreground">
+                          <p className="text-xs text-muted-foreground">
                             No official school team; club or recreational participation
                           </p>
                         </div>
@@ -1490,7 +1490,7 @@ export function AthleteEditDialogs({
                     </div>
                   </div>
 
-                  <div className="bg-muted/50 rounded-lg p-4">
+                  <div className="bg-muted/50 rounded-lg p-3">
                     <h4 className="font-medium text-sm mb-2">About Team Levels</h4>
                     <ul className="text-xs text-muted-foreground space-y-1">
                       <li>• <strong>Varsity:</strong> Highest level, represents school in official competitions</li>
