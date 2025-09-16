@@ -734,14 +734,27 @@ export function AthleteEditDialogs({
     return null;
   };
 
+  // Helper: Title case without trimming or collapsing spaces (preserves user-typed spaces)
+  function toTitleCasePreserveSpaces(input: string): string {
+    if (typeof input !== 'string') return input as unknown as string;
+    return input.replace(/\b([A-Za-zÀ-ÖØ-öø-ÿ])([A-Za-zÀ-ÖØ-öø-ÿ]*)/g, (_match, first: string, rest: string) => {
+      return first.toUpperCase() + rest.toLowerCase();
+    });
+  }
+
   // Modify handleFieldChange to track dirty state
   const handleFieldChange = (field: string, value: string | number) => {
     setIsDirty(true);
     
     // Apply title case to city and state fields
     let processedValue = value;
-    if (typeof value === 'string' && (field === 'city' || field === 'state')) {
-      processedValue = toTitleCase(value);
+    if (typeof value === 'string') {
+      if (field === 'city') {
+        // Preserve spaces while capitalizing each word
+        processedValue = toTitleCasePreserveSpaces(value);
+      } else if (field === 'state') {
+        processedValue = toTitleCase(value);
+      }
     }
     
     setEditData(prev => ({ ...prev, [field]: processedValue }));
