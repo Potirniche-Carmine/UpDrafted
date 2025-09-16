@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { headers } from 'next/headers'
 import { stripe } from '@/lib/stripe'
 import { SubscriptionService } from '@/lib/subscription-service'
+import { clerkClient } from '@clerk/nextjs/server'
 import Stripe from 'stripe'
 
 // Extended types for Stripe objects with correct property names
@@ -55,7 +56,73 @@ export async function POST(req: NextRequest) {
         console.log(`Payment successful for session: ${session.id}`)
         
         const userId = session.metadata?.userId
+        const clerkEmail = session.metadata?.clerkEmail
+
         if (userId && session.subscription) {
+          // Security check: Verify the email used in checkout matches the Clerk user's email
+          try {
+            const clerk = await clerkClient()
+            const clerkUser = await clerk.users.getUser(userId)
+            const primaryEmailAddress = clerkUser.emailAddresses.find(
+              (email) => email.id === clerkUser.primaryEmailAddressId
+            )
+            const userEmail = primaryEmailAddress?.emailAddress
+
+            // Check if the email in the session matches the user's Clerk email
+            if (session.customer_details?.email && userEmail && session.customer_details.email !== userEmail) {
+              console.error(`EMAIL MISMATCH DETECTED: User ${userId} session email ${session.customer_details.email} != Clerk email ${userEmail}`)
+              
+              // Log this as a security incident
+              await SubscriptionService.logBillingEvent({
+                userId,
+                stripeEventId: event.id,
+                eventType: 'security_email_mismatch',
+                status: 'security_violation',
+                eventTimestamp: new Date(event.created * 1000),
+                eventData: {
+                  ...session,
+                  securityNote: 'Email mismatch between Stripe checkout and Clerk user'
+                }
+              })
+              
+              // Don't process the subscription - this is a potential security issue
+              console.log(`Subscription processing blocked for user ${userId} due to email mismatch`)
+              break
+            }
+
+            // Additional check: verify the stored Clerk email matches current email
+            if (clerkEmail && clerkEmail !== userEmail) {
+              console.error(`CLERK EMAIL CHANGED: Stored ${clerkEmail} != Current ${userEmail} for user ${userId}`)
+              
+              await SubscriptionService.logBillingEvent({
+                userId,
+                stripeEventId: event.id,
+                eventType: 'security_email_change_detected',
+                status: 'security_warning',
+                eventTimestamp: new Date(event.created * 1000),
+                eventData: {
+                  ...session,
+                  securityNote: 'Clerk email changed between checkout creation and completion'
+                }
+              })
+            }
+          } catch (clerkError) {
+            console.error(`Failed to verify user email for ${userId}:`, clerkError)
+            
+            // Log the error but don't block processing in case Clerk is temporarily down
+            await SubscriptionService.logBillingEvent({
+              userId,
+              stripeEventId: event.id,
+              eventType: 'clerk_verification_failed',
+              status: 'verification_error',
+              eventTimestamp: new Date(event.created * 1000),
+              eventData: {
+                ...session,
+                error: clerkError instanceof Error ? clerkError.message : 'Unknown error'
+              }
+            })
+          }
+
           // Fetch the subscription details from Stripe
           const stripeSubscription = await stripe.subscriptions.retrieve(session.subscription as string)
           const subscription = stripeSubscription as unknown as StripeSubscriptionExtended

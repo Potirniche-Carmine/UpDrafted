@@ -6,13 +6,15 @@ import { Button } from '@/components/ui/button'
 import { PremiumUpgradeButton } from '@/app/(pricing)/components/stripe-checkout-button'
 import { Check, Crown } from 'lucide-react'
 import { PricingPlan, formatPrice } from '@/app/(pricing)/components/pricing-config'
+import { SubscriptionStatus } from '@/hooks/use-subscription-status'
 
 interface PricingCardProps {
   plan: PricingPlan
   className?: string
+  subscription?: SubscriptionStatus | null
 }
 
-export function PricingCard({ plan, className }: PricingCardProps) {
+export function PricingCard({ plan, className, subscription }: PricingCardProps) {
   const monthlyPrice = plan.price.monthly
   const yearlyPrice = plan.price.yearly
   const isYearly = plan.interval === 'year'
@@ -24,8 +26,15 @@ export function PricingCard({ plan, className }: PricingCardProps) {
     ? Math.round(((monthlyPrice * 12 - yearlyPrice) / (monthlyPrice * 12)) * 100)
     : 0
 
+  // Check if this is the user's current plan
+  const isCurrentPlan = subscription?.stripePriceId === plan.priceId || 
+    (plan.isFree && subscription?.tier === 'free')
+
+  // Check if user has premium subscription
+  const hasPremiumSubscription = subscription?.isPremium && subscription?.status === 'active'
+
   return (
-    <Card className={`relative overflow-hidden transition-all duration-300 hover:shadow-lg border-border/50 h-full flex flex-col ${plan.popular ? 'ring-2 ring-[#01ae79] ring-opacity-50' : ''} ${className}`}>
+    <Card className={`relative overflow-hidden transition-all duration-300 hover:shadow-lg border-border/50 h-full flex flex-col ${plan.popular ? 'ring-2 ring-[#01ae79] ring-opacity-50' : ''} ${isCurrentPlan ? 'border-[#01ae79]' : ''} ${className}`}>
       {/* Reserve space for "Most Popular" badge on all cards to prevent layout shift */}
       <div className="h-10 relative">
         {plan.popular && (
@@ -33,6 +42,13 @@ export function PricingCard({ plan, className }: PricingCardProps) {
             <div className="bg-gradient-to-r from-[#01ae79] to-[#01ae79]/80 text-white text-center py-2 text-sm font-medium">
               <Crown className="inline h-4 w-4 mr-1" />
               Most Popular
+            </div>
+          </div>
+        )}
+        {isCurrentPlan && !plan.popular && (
+          <div className="absolute top-0 left-0 right-0">
+            <div className="bg-[#01ae79] text-white text-center py-2 text-sm font-medium">
+              Current Plan
             </div>
           </div>
         )}
@@ -89,13 +105,21 @@ export function PricingCard({ plan, className }: PricingCardProps) {
             </div>
           )}
           
-          {plan.isFree ? (
+          {isCurrentPlan ? (
             <Button
               className="w-full"
               variant="outline"
               disabled
             >
-              Current Plan
+              {plan.isFree ? 'Current Plan' : 'Current Subscription'}
+            </Button>
+          ) : plan.isFree ? (
+            <Button
+              className="w-full"
+              variant="outline"
+              disabled={hasPremiumSubscription}
+            >
+              {hasPremiumSubscription ? 'Upgrade Required' : 'Current Plan'}
             </Button>
           ) : (
             <PremiumUpgradeButton

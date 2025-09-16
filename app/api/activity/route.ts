@@ -27,7 +27,7 @@ export async function GET(request: NextRequest) {
     const activities = await activityOperations.getUserActivity(userId, 50);
     
     // Filter to only profile view activities
-    const profileViewActivities = activities.filter(activity => activity.action === 'profileView');
+    const profileViewActivities = activities.filter(activity => activity.action === 'profile_view');
     
     if (!hasProfileViewInsights) {
       // For free users, return just counts and time ranges without revealing who viewed

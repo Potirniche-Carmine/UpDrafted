@@ -1892,7 +1892,7 @@ export const notificationOperations = {
           where: and(
             eq(activityLog.viewerId, viewerUserId),
             eq(activityLog.viewedUserId, viewedUserId),
-            eq(activityLog.action, 'profileView')
+            eq(activityLog.action, 'profile_view')
           )
         });
 

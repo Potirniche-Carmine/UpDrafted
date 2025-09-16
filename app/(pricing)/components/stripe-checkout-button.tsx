@@ -5,6 +5,8 @@ import { Button } from '@/components/ui/button'
 import { Loader2, Crown } from 'lucide-react'
 import { useAuth } from '@clerk/nextjs'
 import { useRouter } from 'next/navigation'
+import { useSubscriptionStatus } from '@/hooks/use-subscription-status'
+import { Alert, AlertDescription } from '@/components/ui/alert'
 
 interface StripeCheckoutButtonProps {
   priceId: string
@@ -26,8 +28,10 @@ export function StripeCheckoutButton({
   disabled = false
 }: StripeCheckoutButtonProps) {
   const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   const { isSignedIn } = useAuth()
   const router = useRouter()
+  const { subscription } = useSubscriptionStatus()
 
   const handleCheckout = async () => {
     if (!isSignedIn) {
@@ -35,7 +39,14 @@ export function StripeCheckoutButton({
       return
     }
 
+    // Check if user already has an active premium subscription
+    if (subscription?.isPremium && subscription?.status === 'active') {
+      setError(`You already have an active ${subscription.tier} subscription. Please manage your existing subscription or contact support if you need to change plans.`)
+      return
+    }
+
     setIsLoading(true)
+    setError(null)
 
     try {
       const response = await fetch('/api/checkout-sessions', {
@@ -52,6 +63,11 @@ export function StripeCheckoutButton({
       const data = await response.json()
 
       if (!response.ok) {
+        if (response.status === 400 && data.subscription) {
+          // User already has an active subscription
+          setError(`You already have an active ${data.subscription.tier} subscription.`)
+          return
+        }
         throw new Error(data.error || 'Failed to create checkout session')
       }
 
@@ -59,30 +75,51 @@ export function StripeCheckoutButton({
       window.location.href = data.url
     } catch (error) {
       console.error('Checkout error:', error)
-      // You might want to show a toast notification here
-      alert(error instanceof Error ? error.message : 'An error occurred during checkout')
+      setError(error instanceof Error ? error.message : 'An error occurred during checkout')
     } finally {
       setIsLoading(false)
     }
   }
 
+  // Show different button states based on subscription status
+  if (subscription?.isPremium && subscription?.stripePriceId === priceId) {
+    return (
+      <Button
+        disabled
+        variant="outline"
+        size={size}
+        className={className}
+      >
+        Current Plan
+      </Button>
+    )
+  }
+
   return (
-    <Button
-      onClick={handleCheckout}
-      disabled={disabled || isLoading}
-      variant={variant}
-      size={size}
-      className={className}
-    >
-      {isLoading ? (
-        <>
-          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-          Processing...
-        </>
-      ) : (
-        children
+    <div className="space-y-3">
+      {error && (
+        <Alert variant="destructive">
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
       )}
-    </Button>
+      
+      <Button
+        onClick={handleCheckout}
+        disabled={disabled || isLoading}
+        variant={variant}
+        size={size}
+        className={className}
+      >
+        {isLoading ? (
+          <>
+            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            Processing...
+          </>
+        ) : (
+          children
+        )}
+      </Button>
+    </div>
   )
 }
 

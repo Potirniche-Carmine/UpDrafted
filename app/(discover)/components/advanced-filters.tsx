@@ -120,15 +120,17 @@ export function AdvancedFilters({
           
           {/* Positions and Conferences Preview - Individual lines for consistency */}
           <div className="space-y-4">
-            {/* Positions Filter Preview */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-foreground">
-                Positions
-              </label>
-              <div className="h-10 flex items-center px-3 py-2 border border-border rounded-md bg-muted/50 text-muted-foreground text-sm">
-                Upgrade to unlock positions
+            {/* Positions Filter Preview - Only for coaches/recruiters */}
+            {isCoachOrRecruiterOrAdmin && (
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-foreground">
+                  Positions
+                </label>
+                <div className="h-10 flex items-center px-3 py-2 border border-border rounded-md bg-muted/50 text-muted-foreground text-sm">
+                  Upgrade to unlock positions
+                </div>
               </div>
-            </div>
+            )}
             
             {/* Conferences Filter Preview */}
             <div className="space-y-2">
@@ -139,20 +141,33 @@ export function AdvancedFilters({
                 Upgrade to unlock conferences
               </div>
             </div>
+
+            {/* Verification Filter Preview - For all users */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-foreground">
+                Verification Status
+              </label>
+              <div className="h-10 flex items-center px-3 py-2 border border-border rounded-md bg-muted/50 text-muted-foreground text-sm">
+                Filter by verification...
+              </div>
+            </div>
           </div>
         </div>
         
         {/* Premium Overlay - Better contained to prevent scroll issues */}
-        <div className="absolute inset-0 bg-gradient-to-br from-background/20 via-background/15 to-background/20 backdrop-blur-[1px] rounded-lg border border-border/30 flex items-center justify-center z-10 overflow-hidden">
-          <div className="text-center space-y-3 p-4 sm:p-6 bg-background/95 rounded-lg border border-border/50 shadow-lg backdrop-blur-sm max-w-xs mx-auto">
+        <div className="absolute inset-x-0 top-0 bottom-8 sm:inset-0 bg-gradient-to-br from-background/20 via-background/15 to-background/20 backdrop-blur-[1px] rounded-lg border border-border/30 flex items-center justify-center z-10 overflow-hidden">
+          <div className="text-center space-y-2 sm:space-y-3 p-3 sm:p-4 md:p-6 bg-background/95 rounded-lg border border-border/50 shadow-lg backdrop-blur-sm max-w-xs mx-auto">
             <div className="flex items-center justify-center space-x-2">
-              <Crown className="h-5 w-5 sm:h-6 sm:w-6 text-amber-500" />
-              <span className="text-base sm:text-lg font-semibold bg-gradient-to-r from-amber-600 to-amber-500 bg-clip-text text-transparent">
+              <Crown className="h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6 text-amber-500" />
+              <span className="text-sm sm:text-base md:text-lg font-semibold bg-gradient-to-r from-amber-600 to-amber-500 bg-clip-text text-transparent">
                 Advanced Filters
               </span>
             </div>
             <p className="text-xs sm:text-sm text-muted-foreground">
-              Unlock powerful filtering options including graduation year, positions, conferences, and more
+              {effectiveRole === 'athlete' 
+                ? 'Filter coaches and recruiters by conferences and verification status' 
+                : 'Unlock powerful filtering options to find athletes by graduation year, playing positions, conferences, and more'
+              }
             </p>
             <div className="flex justify-center">
               <Button 
@@ -160,7 +175,7 @@ export function AdvancedFilters({
                 className="bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white border-0 shadow-lg hover:shadow-xl transition-all duration-200"
                 size="sm"
               >
-                <Crown className="h-4 w-4 mr-2" />
+                <Crown className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
                 Upgrade
               </Button>
             </div>
@@ -241,55 +256,57 @@ export function AdvancedFilters({
         </>
       )}
 
-      {/* Positions Filter - Individual filter like other premium features */}
-      <div className="mb-4">
-        <div className="flex items-center justify-between">
-          <label className="block text-sm font-medium text-foreground mb-2">
-            Positions
-          </label>
-          {!hasAdvancedSearch && (
-            <div 
-              className="flex items-center gap-1 text-xs text-amber-600 cursor-pointer hover:text-amber-700 transition-colors" 
-              onClick={handleUpgradeClick}
-            >
-              <Crown className="h-3 w-3" />
-              <span>Premium</span>
-            </div>
-          )}
-        </div>
-        {!hasAdvancedSearch ? (
-          <div className={cn("relative", "pointer-events-none opacity-50")}>
-            <MultiSelectFilter
-              options={[]}
-              selected={[]}
-              onSelectionChange={() => {}}
-              placeholder="Upgrade to unlock positions"
-              searchPlaceholder="Search positions..."
-            />
-            <div className="absolute inset-0 flex items-center justify-center bg-background/80 backdrop-blur-sm rounded-md">
-              <Button
-                variant="outline"
-                size="sm"
+      {/* Positions Filter - Individual filter like other premium features - Only for coaches/recruiters */}
+      {isCoachOrRecruiterOrAdmin && (
+        <div className="mb-4">
+          <div className="flex items-center justify-between">
+            <label className="block text-sm font-medium text-foreground mb-2">
+              Positions
+            </label>
+            {!hasAdvancedSearch && (
+              <div 
+                className="flex items-center gap-1 text-xs text-amber-600 cursor-pointer hover:text-amber-700 transition-colors" 
                 onClick={handleUpgradeClick}
-                className="text-xs"
               >
-                <Lock className="h-3 w-3 mr-1" />
-                Upgrade
-              </Button>
-            </div>
+                <Crown className="h-3 w-3" />
+                <span>Premium</span>
+              </div>
+            )}
           </div>
-        ) : (
-          <div className={cn("relative", !canUsePositions && "pointer-events-none opacity-50")}>
-            <MultiSelectFilter
-              options={canUsePositions ? positionsOptions : []}
-              selected={canUsePositions ? selectedPositions : []}
+          {!hasAdvancedSearch ? (
+            <div className={cn("relative", "pointer-events-none opacity-50")}>
+              <MultiSelectFilter
+                options={[]}
+                selected={[]}
+                onSelectionChange={() => {}}
+                placeholder="Upgrade to unlock positions"
+                searchPlaceholder="Search positions..."
+              />
+              <div className="absolute inset-0 flex items-center justify-center bg-background/80 backdrop-blur-sm rounded-md">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleUpgradeClick}
+                  className="text-xs"
+                >
+                  <Lock className="h-3 w-3 mr-1" />
+                  Upgrade
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <div className={cn("relative", !canUsePositions && "pointer-events-none opacity-50")}>
+              <MultiSelectFilter
+                options={canUsePositions ? positionsOptions : []}
+                selected={canUsePositions ? selectedPositions : []}
               onSelectionChange={canUsePositions ? setSelectedPositions : () => {}}
               placeholder={!canUsePositions ? "Select sports first..." : "Select positions..."}
               searchPlaceholder="Search positions..."
             />
           </div>
         )}
-      </div>
+        </div>
+      )}
 
       {/* Conferences Filter - Individual filter like other premium features */}
       <div className="mb-4">
@@ -340,6 +357,18 @@ export function AdvancedFilters({
           </div>
         )}
       </div>
+
+      {/* Verification Filter for Athletes */}
+      {effectiveRole === 'athlete' && (
+        <div className="mb-4">
+          <VerifiedFilter
+            verifiedFilter={verifiedFilter}
+            onVerifiedChange={setVerifiedFilter}
+            isPremium={hasAdvancedSearch}
+            onUpgradeClick={handleUpgradeClick}
+          />
+        </div>
+      )}
     </div>
   );
 }

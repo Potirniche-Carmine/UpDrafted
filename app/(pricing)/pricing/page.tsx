@@ -11,6 +11,7 @@ import { PricingCard } from "@/app/(pricing)/components/pricing-card";
 import { getPlansByRole } from "@/app/(pricing)/components/pricing-config";
 import { useSearchParams } from 'next/navigation';
 import { useUser } from "@clerk/nextjs";
+import { useSubscriptionStatus } from "@/hooks/use-subscription-status";
 
 // FAQ Accordion Component
 function FAQAccordion({ userRole }: { userRole: string }) {
@@ -122,6 +123,7 @@ export default function PricingPage() {
   const searchParams = useSearchParams();
   const canceled = searchParams.get('canceled');
   const { user } = useUser();
+  const { subscription } = useSubscriptionStatus();
   
   // Get user role from Clerk public metadata or default to 'athlete'
   const userRole = (user?.publicMetadata?.role as 'athlete' | 'coach' | 'recruiter') || 'athlete';
@@ -217,7 +219,7 @@ export default function PricingPage() {
             
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 mb-8 items-stretch">
               {availablePlans.map((plan) => (
-                <PricingCard key={plan.id} plan={plan} />
+                <PricingCard key={plan.id} plan={plan} subscription={subscription} />
               ))}
             </div>
           </div>

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useAuth } from "@clerk/nextjs";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -100,8 +100,19 @@ function ActivityLogContent() {
   const [isPremium, setIsPremium] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  
+  // Add ref to prevent duplicate calls
+  const isFetching = useRef(false);
+  const hasInitialized = useRef(false);
 
   const fetchActivityData = useCallback(async () => {
+    // Prevent duplicate calls
+    if (isFetching.current) {
+      return;
+    }
+
+    isFetching.current = true;
+    
     try {
       const token = await getToken();
       if (!token) {
@@ -125,7 +136,7 @@ function ActivityLogContent() {
         setError(data.error || 'Failed to fetch activity data');
         return;
       }
-
+      
       setIsPremium(data.isPremium);
       
       if (data.isPremium && data.activities) {
@@ -140,12 +151,14 @@ function ActivityLogContent() {
       setError('Failed to load activity data');
     } finally {
       setLoading(false);
+      isFetching.current = false;
     }
   }, [getToken]);
 
   useEffect(() => {
-    if (!isLoaded || !isSignedIn) return;
-
+    if (!isLoaded || !isSignedIn || hasInitialized.current) return;
+    
+    hasInitialized.current = true;
     fetchActivityData();
   }, [isLoaded, isSignedIn, fetchActivityData]);
 
@@ -179,7 +192,7 @@ function ActivityLogContent() {
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">Profile Views</p>
                   <p className="text-2xl font-bold text-foreground">
-                    {isPremium ? activities.length : insights?.totalViews || 0}
+                    {loading ? '...' : isPremium ? activities.length : (insights?.totalViews ?? 0)}
                   </p>
                 </div>
                 <div className="w-12 h-12 rounded-full bg-[#01ae79]/10 dark:bg-[#01ae79]/20 flex items-center justify-center">
@@ -197,9 +210,9 @@ function ActivityLogContent() {
                     {isPremium ? 'Unique Viewers' : 'This Week'}
                   </p>
                   <p className="text-2xl font-bold text-foreground">
-                    {isPremium 
+                    {loading ? '...' : isPremium 
                       ? new Set(activities.map(a => a.viewer.id)).size
-                      : insights?.viewsThisWeek || 0
+                      : (insights?.viewsThisWeek ?? 0)
                     }
                   </p>
                 </div>
@@ -218,12 +231,12 @@ function ActivityLogContent() {
                     {isPremium ? 'This Week' : 'Today'}
                   </p>
                   <p className="text-2xl font-bold text-foreground">
-                    {isPremium 
+                    {loading ? '...' : isPremium 
                       ? activities.filter(a => {
                           const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
                           return new Date(a.createdAt) > weekAgo;
                         }).length
-                      : insights?.viewsToday || 0
+                      : (insights?.viewsToday ?? 0)
                     }
                   </p>
                 </div>

@@ -353,11 +353,11 @@ function SearchPageContent() {
         divisions: selectedDivisions.map(div => sanitizeText(div.value)),
         countries: selectedCountries.map(country => sanitizeText(country.value)),
         states: showStatesFilter ? selectedStates.map(state => sanitizeText(state.value)) : [],
-        positions: selectedPositions.map(pos => sanitizeText(pos.value)),
-        graduatingClasses: selectedGraduatingClasses.map(gc => sanitizeText(gc.value)),
+        positions: effectiveRole !== 'athlete' ? selectedPositions.map(pos => sanitizeText(pos.value)) : [],
+        graduatingClasses: effectiveRole !== 'athlete' ? selectedGraduatingClasses.map(gc => sanitizeText(gc.value)) : [],
         conferences: selectedConferences.map(conf => sanitizeText(conf.value)),
-        minHeight: minHeight.toString(),
-        minWeight: minWeight.toString(),
+        minHeight: effectiveRole !== 'athlete' ? minHeight.toString() : '48',
+        minWeight: effectiveRole !== 'athlete' ? minWeight.toString() : '0',
         verified: verifiedFilter
       };
 
@@ -400,11 +400,11 @@ function SearchPageContent() {
             divisions: selectedDivisions.map(div => sanitizeText(div.value)),
             countries: selectedCountries.map(country => sanitizeText(country.value)),
             states: showStatesFilter ? selectedStates.map(state => sanitizeText(state.value)) : [],
-            positions: selectedPositions.map(pos => sanitizeText(pos.value)),
-            graduatingClasses: selectedGraduatingClasses.map(gc => sanitizeText(gc.value)),
+            positions: effectiveRole !== 'athlete' ? selectedPositions.map(pos => sanitizeText(pos.value)) : [],
+            graduatingClasses: effectiveRole !== 'athlete' ? selectedGraduatingClasses.map(gc => sanitizeText(gc.value)) : [],
             conferences: selectedConferences.map(conf => sanitizeText(conf.value)),
-            minHeight: minHeight > 48 ? minHeight : undefined, // Updated from 60 to 48
-            minWeight: minWeight > 50 ? minWeight : undefined, // Updated from 100 to 50
+            minHeight: effectiveRole !== 'athlete' && minHeight > 48 ? minHeight : undefined,
+            minWeight: effectiveRole !== 'athlete' && minWeight > 50 ? minWeight : undefined,
             verified: verifiedFilter
           })
         });
@@ -457,7 +457,7 @@ function SearchPageContent() {
       setLoading(false);
       setInitialLoading(false);
     }
-  }, [selectedSports, selectedDivisions, selectedCountries, selectedStates, selectedPositions, selectedGraduatingClasses, selectedConferences, minHeight, minWeight, verifiedFilter, showStatesFilter]);
+  }, [selectedSports, selectedDivisions, selectedCountries, selectedStates, selectedPositions, selectedGraduatingClasses, selectedConferences, minHeight, minWeight, verifiedFilter, showStatesFilter, effectiveRole]);
 
   // Store all results from the search
   const [allUsers, setAllUsers] = useState<DiscoverUser[]>([]);
@@ -753,9 +753,9 @@ function SearchPageContent() {
 
   // User card component
   const renderUserCard = (user: DiscoverUser) => (
-    <Card key={user.id} className="group hover:shadow-xl transition-all duration-300 border border-border shadow-md bg-card hover:bg-card/90 hover:border-[#01ae79]/50">
-      <CardContent className="p-4">
-        <div className="space-y-3">
+    <Card key={user.id} className="group hover:shadow-xl transition-all duration-300 border border-border shadow-md bg-card hover:bg-card/90 hover:border-[#01ae79]/50 h-full flex flex-col">
+      <CardContent className="p-4 flex-1 flex flex-col">
+        <div className="flex-1 space-y-3">
           {/* Header with Avatar, Name, and Badge */}
           <div className="flex items-start gap-3">
             {/* Avatar - Clickable */}
@@ -915,40 +915,41 @@ function SearchPageContent() {
               </div>
             )}
           </div>
+        </div>
 
-          {/* Action Button - Always at bottom with consistent positioning */}
-          <div className="pt-2">
-            {user.hasPendingRequest ? (
-              <div className="w-full bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 border-0 shadow-sm transition-all duration-200 font-medium py-2 text-sm rounded-md flex items-center justify-center">
-                <Clock className="h-4 w-4 mr-2" />
-                Request Sent
-              </div>
-            ) : user.hasIncomingRequest ? (
-              <a
-                href={generateProfileUrl(user)}
-                className="w-full bg-amber-100 hover:bg-amber-200 text-amber-700 dark:bg-amber-900/30 dark:hover:bg-amber-900/40 dark:text-amber-400 border border-amber-200 dark:border-amber-700 shadow-sm hover:shadow-md transition-all duration-200 font-medium py-2 text-sm rounded-md flex items-center justify-center no-underline"
-                onClick={(e) => {
-                  e.preventDefault();
-                  handleViewProfile(user.id);
-                }}
-              >
-                <Users className="h-4 w-4 mr-2" />
-                Connection Request Received - View Profile
-              </a>
-            ) : (
-              <a
-                href={generateProfileUrl(user)}
-                className="w-full bg-[#01ae79] hover:bg-[#01ae79]/90 text-white border-0 shadow-sm hover:shadow-md transition-all duration-200 font-medium py-2 text-sm rounded-md flex items-center justify-center no-underline"
-                onClick={(e) => {
-                  e.preventDefault();
-                  handleViewProfile(user.id);
-                }}
-              >
-                <Send className="h-4 w-4 mr-2" />
-                View Profile
-              </a>
-            )}
-          </div>
+        {/* Action Button - Always at bottom with consistent positioning */}
+        <div className="pt-2 mt-auto">
+          {user.hasPendingRequest ? (
+            <div className="w-full bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 border-0 shadow-sm transition-all duration-200 font-medium py-2 text-sm rounded-md flex items-center justify-center">
+              <Clock className="h-4 w-4 mr-2" />
+              Request Sent
+            </div>
+          ) : user.hasIncomingRequest ? (
+            <a
+              href={generateProfileUrl(user)}
+              className="w-full bg-amber-100 hover:bg-amber-200 text-amber-700 dark:bg-amber-900/30 dark:hover:bg-amber-900/40 dark:text-amber-400 border border-amber-200 dark:border-amber-700 shadow-sm hover:shadow-md transition-all duration-200 font-medium py-2 text-sm rounded-md flex items-center justify-center no-underline"
+              onClick={(e) => {
+                e.preventDefault();
+                handleViewProfile(user.id);
+              }}
+            >
+              <Users className="h-4 w-4 mr-2" />
+              <span className="hidden sm:inline">Connection Request Received - View Profile</span>
+              <span className="sm:hidden">Request Received</span>
+            </a>
+          ) : (
+            <a
+              href={generateProfileUrl(user)}
+              className="w-full bg-[#01ae79] hover:bg-[#01ae79]/90 text-white border-0 shadow-sm hover:shadow-md transition-all duration-200 font-medium py-2 text-sm rounded-md flex items-center justify-center no-underline"
+              onClick={(e) => {
+                e.preventDefault();
+                handleViewProfile(user.id);
+              }}
+            >
+              <Send className="h-4 w-4 mr-2" />
+              View Profile
+            </a>
+          )}
         </div>
       </CardContent>
     </Card>
@@ -959,11 +960,12 @@ function SearchPageContent() {
                            selectedDivisions.length + 
                            (selectedCountries.length > 1 ? selectedCountries.length : 0) + // Only count if more than United States
                            selectedStates.length +
-                           selectedPositions.length +
-                           selectedGraduatingClasses.length +
+                           (effectiveRole !== 'athlete' ? selectedPositions.length : 0) +
+                           (effectiveRole !== 'athlete' ? selectedGraduatingClasses.length : 0) +
                            selectedConferences.length +
-                           (minHeight > 48 ? 1 : 0) +
-                           (minWeight > 50 ? 1 : 0);
+                           (effectiveRole !== 'athlete' && minHeight > 48 ? 1 : 0) +
+                           (effectiveRole !== 'athlete' && minWeight > 50 ? 1 : 0) +
+                           (verifiedFilter !== null ? 1 : 0);
 
   return (
     <div className="bg-background p-4 md:p-6">
@@ -1279,7 +1281,7 @@ function SearchPageContent() {
                                 </span>
                               </div>
                               <p className="text-xs text-muted-foreground">
-                                Unlock powerful filtering options including graduation year, positions, conferences, and more
+                                Unlock powerful filtering options to find athletes by graduation year, playing positions, conferences, and more
                               </p>
                               <div className="flex justify-center">
                                 <Button 
@@ -1408,19 +1410,29 @@ function SearchPageContent() {
                             Upgrade to unlock conferences
                           </div>
                         </div>
+
+                        {/* Verification Preview */}
+                        <div className="space-y-2">
+                          <label className="text-sm font-medium text-foreground">
+                            Verification Status
+                          </label>
+                          <div className="h-10 flex items-center px-3 py-2 border border-border rounded-md bg-muted/50 text-muted-foreground text-sm">
+                            Filter by verification status
+                          </div>
+                        </div>
                       </div>
 
                       {/* Premium Overlay - Better contained */}
                       <div className="absolute inset-0 bg-gradient-to-br from-background/20 via-background/15 to-background/20 backdrop-blur-[1px] rounded-lg border border-border/30 flex items-center justify-center z-10 overflow-hidden">
-                        <div className="text-center space-y-3 p-4 bg-background/95 rounded-lg border border-border/50 shadow-lg backdrop-blur-sm max-w-xs mx-auto">
+                        <div className="text-center space-y-2 p-3 bg-background/95 rounded-lg border border-border/50 shadow-lg backdrop-blur-sm max-w-xs mx-auto">
                           <div className="flex items-center justify-center space-x-2">
-                            <Crown className="h-5 w-5 text-amber-500" />
-                            <span className="text-base font-semibold bg-gradient-to-r from-amber-600 to-amber-500 bg-clip-text text-transparent">
+                            <Crown className="h-4 w-4 text-amber-500" />
+                            <span className="text-sm font-semibold bg-gradient-to-r from-amber-600 to-amber-500 bg-clip-text text-transparent">
                               Advanced Filters
                             </span>
                           </div>
                           <p className="text-xs text-muted-foreground">
-                            Unlock powerful filtering options including conferences and more
+                            Filter coaches and recruiters by conferences and verification status
                           </p>
                           <div className="flex justify-center">
                             <Button 
@@ -1428,7 +1440,7 @@ function SearchPageContent() {
                               className="bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white border-0 shadow-lg hover:shadow-xl transition-all duration-200"
                               size="sm"
                             >
-                              <Crown className="h-4 w-4 mr-2" />
+                              <Crown className="h-3 w-3 mr-1" />
                               Upgrade
                             </Button>
                           </div>
@@ -1461,6 +1473,16 @@ function SearchPageContent() {
                             {selectedDivisions.length === 0 ? 'Select divisions to filter by conferences' : 'No conferences available'}
                           </div>
                         )}
+                      </div>
+
+                      {/* Verified Status Filter for Athletes */}
+                      <div className="pt-4">
+                        <VerifiedFilter
+                          verifiedFilter={verifiedFilter}
+                          onVerifiedChange={setVerifiedFilter}
+                          isPremium={hasAdvancedSearch}
+                          onUpgradeClick={handleUpgradeClick}
+                        />
                       </div>
                     </>
                   )}
