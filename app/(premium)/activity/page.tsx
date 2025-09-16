@@ -2,15 +2,13 @@
 
 import React, { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@clerk/nextjs";
-import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { Eye, Users, Calendar, Crown, ArrowRight, TrendingUp, Lock, Star } from "lucide-react";
+import { Eye, Users, Calendar, ArrowRight, TrendingUp, Lock, Star } from "lucide-react";
 import Link from "next/link";
 import { AuthWrapper } from "../../../components/auth-wrapper";
-import { Protect } from "@clerk/nextjs";
 import { generateProfileUrl } from "@/lib/utils";
 
 interface ActivityItem {
@@ -31,7 +29,15 @@ interface ActivityItem {
 
 interface ActivityResponse {
   success: boolean;
-  activities: ActivityItem[];
+  isPremium: boolean;
+  activities?: ActivityItem[];
+  insights?: {
+    totalViews: number;
+    viewsToday: number;
+    viewsThisWeek: number;
+    viewsThisMonth: number;
+    message: string;
+  };
   requiresUpgrade?: boolean;
   error?: string;
 }
@@ -80,126 +86,18 @@ const getTimeAgo = (dateString: string) => {
   return date.toLocaleDateString();
 };
 
-// Placeholder data for demo purposes
-const placeholderActivities: ActivityItem[] = [
-  {
-    id: 1,
-    action: 'profile_view',
-    createdAt: new Date(Date.now() - 1000 * 60 * 5).toISOString(), // 5 minutes ago
-    viewer: {
-      id: 'demo1',
-      name: 'Coach Sarah Johnson',
-      profileImage: null,
-      role: 'coach'
-    }
-  },
-  {
-    id: 2,
-    action: 'profile_view',
-    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString(), // 2 hours ago
-    viewer: {
-      id: 'demo2',
-      name: 'Recruiter Mike Davis',
-      profileImage: null,
-      role: 'recruiter'
-    }
-  },
-  {
-    id: 3,
-    action: 'profile_view',
-    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString(), // 1 day ago
-    viewer: {
-      id: 'demo3',
-      name: 'Alex Thompson',
-      profileImage: null,
-      role: 'athlete'
-    }
-  }
-];
-
-// Premium Banner Component
-function PremiumBanner({ onDismiss }: { onDismiss: () => void }) {
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-      <Card className="max-w-2xl mx-4 border-2 border-amber-300 dark:border-amber-600 bg-gradient-to-br from-amber-50 via-white to-orange-50 dark:from-amber-950/90 dark:via-gray-900 dark:to-orange-950/90 shadow-2xl relative">
-        {/* X Button */}
-        <button
-          onClick={onDismiss}
-          className="absolute top-4 right-4 w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 flex items-center justify-center transition-colors z-10"
-          aria-label="Close"
-        >
-          <svg className="w-4 h-4 text-gray-600 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-          </svg>
-        </button>
-        
-        <CardContent className="p-8 text-center">
-          <div className="flex justify-center mb-6">
-            <div className="w-20 h-20 rounded-full bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center shadow-lg">
-              <Crown className="h-10 w-10 text-white" />
-            </div>
-          </div>
-          
-          <h2 className="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-4">
-            Unlock Activity Insights
-          </h2>
-          
-          <p className="text-lg text-gray-700 dark:text-gray-300 mb-6 leading-relaxed">
-            See who&apos;s viewing your profile, track engagement metrics, and gain valuable insights into your visibility on the platform.
-          </p>
-          
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-            <div className="flex items-center gap-3 p-4 bg-white/70 dark:bg-gray-800/70 rounded-lg border border-amber-200 dark:border-amber-700">
-              <Eye className="h-6 w-6 text-amber-600" />
-              <div className="text-left">
-                <p className="font-semibold text-gray-900 dark:text-gray-100">Profile Views</p>
-                <p className="text-sm text-gray-600 dark:text-gray-400">See who visited</p>
-              </div>
-            </div>
-            
-            <div className="flex items-center gap-3 p-4 bg-white/70 dark:bg-gray-800/70 rounded-lg border border-amber-200 dark:border-amber-700">
-              <Users className="h-6 w-6 text-amber-600" />
-              <div className="text-left">
-                <p className="font-semibold text-gray-900 dark:text-gray-100">Engagement</p>
-                <p className="text-sm text-gray-600 dark:text-gray-400">Track interactions</p>
-              </div>
-            </div>
-            
-            <div className="flex items-center gap-3 p-4 bg-white/70 dark:bg-gray-800/70 rounded-lg border border-amber-200 dark:border-amber-700">
-              <TrendingUp className="h-6 w-6 text-amber-600" />
-              <div className="text-left">
-                <p className="font-semibold text-gray-900 dark:text-gray-100">Analytics</p>
-                <p className="text-sm text-gray-600 dark:text-gray-400">Growth insights</p>
-              </div>
-            </div>
-          </div>
-          
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Link href="/pricing">
-              <Button className="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white px-8 py-3 text-lg font-semibold shadow-lg hover:shadow-xl transition-all duration-200">
-                <Star className="mr-2 h-5 w-5" />
-                Upgrade Now
-                <ArrowRight className="ml-2 h-5 w-5" />
-              </Button>
-            </Link>
-            <Button 
-              onClick={onDismiss}
-              variant="outline" 
-              className="px-8 py-3 text-lg border-2 border-amber-300 dark:border-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950/30"
-            >
-              Maybe Later
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-    </div>
-  );
-}
-
-// Protected Activity Content
+// Activity Content Component
 function ActivityLogContent() {
   const { getToken, isSignedIn, isLoaded } = useAuth();
   const [activities, setActivities] = useState<ActivityItem[]>([]);
+  const [insights, setInsights] = useState<{
+    totalViews: number;
+    viewsToday: number;
+    viewsThisWeek: number;
+    viewsThisMonth: number;
+    message: string;
+  } | null>(null);
+  const [isPremium, setIsPremium] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -228,7 +126,15 @@ function ActivityLogContent() {
         return;
       }
 
-      setActivities(data.activities);
+      setIsPremium(data.isPremium);
+      
+      if (data.isPremium && data.activities) {
+        setActivities(data.activities);
+        setInsights(null);
+      } else if (!data.isPremium && data.insights) {
+        setInsights(data.insights);
+        setActivities([]);
+      }
     } catch (err) {
       console.error('Error fetching activity:', err);
       setError('Failed to load activity data');
@@ -272,10 +178,12 @@ function ActivityLogContent() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">Profile Views</p>
-                  <p className="text-2xl font-bold text-foreground">{activities.length}</p>
+                  <p className="text-2xl font-bold text-foreground">
+                    {isPremium ? activities.length : insights?.totalViews || 0}
+                  </p>
                 </div>
-                <div className="w-12 h-12 rounded-full bg-blue-500/10 dark:bg-blue-500/20 flex items-center justify-center">
-                  <Eye className="h-6 w-6 text-blue-600" />
+                <div className="w-12 h-12 rounded-full bg-[#01ae79]/10 dark:bg-[#01ae79]/20 flex items-center justify-center">
+                  <Eye className="h-6 w-6 text-[#01ae79]" />
                 </div>
               </div>
             </CardContent>
@@ -285,13 +193,18 @@ function ActivityLogContent() {
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-muted-foreground">Unique Viewers</p>
+                  <p className="text-sm font-medium text-muted-foreground">
+                    {isPremium ? 'Unique Viewers' : 'This Week'}
+                  </p>
                   <p className="text-2xl font-bold text-foreground">
-                    {new Set(activities.map(a => a.viewer.id)).size}
+                    {isPremium 
+                      ? new Set(activities.map(a => a.viewer.id)).size
+                      : insights?.viewsThisWeek || 0
+                    }
                   </p>
                 </div>
-                <div className="w-12 h-12 rounded-full bg-green-500/10 dark:bg-green-500/20 flex items-center justify-center">
-                  <Users className="h-6 w-6 text-green-600" />
+                <div className="w-12 h-12 rounded-full bg-[#01ae79]/10 dark:bg-[#01ae79]/20 flex items-center justify-center">
+                  <Users className="h-6 w-6 text-[#01ae79]" />
                 </div>
               </div>
             </CardContent>
@@ -301,16 +214,21 @@ function ActivityLogContent() {
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-muted-foreground">This Week</p>
+                  <p className="text-sm font-medium text-muted-foreground">
+                    {isPremium ? 'This Week' : 'Today'}
+                  </p>
                   <p className="text-2xl font-bold text-foreground">
-                    {activities.filter(a => {
-                      const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
-                      return new Date(a.createdAt) > weekAgo;
-                    }).length}
+                    {isPremium 
+                      ? activities.filter(a => {
+                          const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+                          return new Date(a.createdAt) > weekAgo;
+                        }).length
+                      : insights?.viewsToday || 0
+                    }
                   </p>
                 </div>
-                <div className="w-12 h-12 rounded-full bg-purple-500/10 dark:bg-purple-500/20 flex items-center justify-center">
-                  <TrendingUp className="h-6 w-6 text-purple-600" />
+                <div className="w-12 h-12 rounded-full bg-[#01ae79]/10 dark:bg-[#01ae79]/20 flex items-center justify-center">
+                  <TrendingUp className="h-6 w-6 text-[#01ae79]" />
                 </div>
               </div>
             </CardContent>
@@ -333,6 +251,36 @@ function ActivityLogContent() {
               <Button onClick={fetchActivityData} className="mt-4" variant="outline">
                 Try Again
               </Button>
+            </div>
+          ) : !isPremium ? (
+            /* Free user view - show upgrade prompt */
+            <div className="text-center py-12">
+              <div className="w-20 h-20 rounded-full bg-gradient-to-br from-amber-100 to-orange-100 dark:from-amber-900/20 dark:to-orange-900/20 flex items-center justify-center mx-auto mb-6">
+                <Lock className="h-10 w-10 text-amber-600 dark:text-amber-400" />
+              </div>
+              <h3 className="text-xl font-semibold text-foreground mb-2">
+                {insights?.message || 'Upgrade to see who viewed your profile'}
+              </h3>
+              <p className="text-muted-foreground mb-6 max-w-md mx-auto">
+                Get detailed insights about who&apos;s viewing your profile, when they visited, and more with premium access.
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-lg mx-auto mb-6">
+                <div className="p-4 bg-amber-50 dark:bg-amber-950/20 rounded-lg">
+                  <h4 className="font-medium text-amber-900 dark:text-amber-100 mb-1">Who Viewed</h4>
+                  <p className="text-sm text-amber-700 dark:text-amber-300">See names and profiles</p>
+                </div>
+                <div className="p-4 bg-orange-50 dark:bg-orange-950/20 rounded-lg">
+                  <h4 className="font-medium text-orange-900 dark:text-orange-100 mb-1">When</h4>
+                  <p className="text-sm text-orange-700 dark:text-orange-300">View timestamps</p>
+                </div>
+              </div>
+              <Link href="/pricing">
+                <Button className="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white px-8 py-3 text-lg font-semibold shadow-lg hover:shadow-xl transition-all duration-200">
+                  <Star className="mr-2 h-5 w-5" />
+                  Upgrade to Premium
+                  <ArrowRight className="ml-2 h-5 w-5" />
+                </Button>
+              </Link>
             </div>
           ) : activities.length === 0 ? (
             <div className="text-center py-8">
@@ -391,108 +339,10 @@ function ActivityLogContent() {
   );
 }
 
-// Demo Content with placeholder data
-function DemoActivityContent() {
-  const router = useRouter();
-
-  const handleDismissBanner = () => {
-    // Navigate back to dashboard instead of just hiding the banner
-    router.push('/dashboard');
-  };
-
-  return (
-    <div className="relative">
-      <div className="container mx-auto px-4 py-8 max-w-4xl opacity-30 pointer-events-none">
-        {/* Header */}
-        <div className="mb-8">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-12 h-12 rounded-full bg-[#01ae79]/10 dark:bg-[#01ae79]/20 flex items-center justify-center">
-              <Lock className="h-6 w-6 text-[#01ae79]" />
-            </div>
-            <div>
-              <h1 className="text-3xl font-bold text-foreground">Activity Log</h1>
-              <p className="text-muted-foreground">Premium feature - upgrade to unlock</p>
-            </div>
-          </div>
-
-          {/* Demo Stats Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-            {[1, 2, 3].map(i => (
-              <Card key={i}>
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium text-muted-foreground">•••</p>
-                      <p className="text-2xl font-bold text-foreground">••</p>
-                    </div>
-                    <div className="w-12 h-12 rounded-full bg-gray-500/10 dark:bg-gray-500/20 flex items-center justify-center">
-                      <Lock className="h-6 w-6 text-gray-600" />
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </div>
-
-        {/* Demo Activity List */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Lock className="h-5 w-5" />
-              Recent Activity (Preview)
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {placeholderActivities.map((activity) => (
-                <div
-                  key={activity.id}
-                  className="flex items-center justify-between p-4 rounded-lg border border-border/50 bg-card/50"
-                >
-                  <div className="flex items-center gap-4">
-                    <Avatar className="w-12 h-12">
-                      <AvatarFallback className="text-sm font-semibold bg-gradient-to-br from-[#01ae79]/10 to-[#01ae79]/20 text-[#01ae79]">
-                        {activity.viewer.name.split(' ').map(n => n[0]).join('').toUpperCase()}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <p className="font-medium text-foreground">{activity.viewer.name}</p>
-                        {getRoleBadge(activity.viewer.role)}
-                      </div>
-                      <p className="text-sm text-muted-foreground">
-                        Viewed your profile
-                      </p>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-sm text-muted-foreground">
-                      {getTimeAgo(activity.createdAt)}
-                    </p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-      
-      {/* Premium Banner Overlay */}
-      <PremiumBanner onDismiss={handleDismissBanner} />
-    </div>
-  );
-}
-
 export default function ActivityLogPage() {
   return (
     <AuthWrapper>
-      <Protect
-        feature="activity"
-        fallback={<DemoActivityContent />}
-      >
-        <ActivityLogContent />
-      </Protect>
+      <ActivityLogContent />
     </AuthWrapper>
   );
 } 

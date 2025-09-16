@@ -3,7 +3,7 @@
 import { Button } from '@/components/ui/button';
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Bell, UserPlus, MessageCircle, Trash2, Circle, Check, User } from 'lucide-react';
+import { Bell, UserPlus, MessageCircle, Trash2, Circle, Check, User, Lock } from 'lucide-react';
 import { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { AuthWrapper } from '../../../components/auth-wrapper';
 import { useNotifications } from '@/hooks/use-notifications';
@@ -24,13 +24,18 @@ interface Notification {
   actorImageUrl?: string;
   actorRole?: string;
   link?: string;
+  isLocked?: boolean;
 }
 
-const getNotificationIcon = (type: Notification['type']) => {
+const getNotificationIcon = (type: Notification['type'], isLocked?: boolean) => {
+  if (isLocked) {
+    return <Lock className="h-5 w-5 text-amber-500" />;
+  }
+  
   switch (type) {
     case 'newConnection': return <UserPlus className="h-5 w-5 text-green-500" />;
     case 'newMessage': return <MessageCircle className="h-5 w-5 text-purple-500" />;
-    case 'profileView': return <User className="h-5 w-5 text-blue-500" />;
+    case 'profileView': return <User className="h-5 w-5 text-[#01ae79]" />;
     default: return <Bell className="h-5 w-5 text-gray-500" />;
   }
 };
@@ -214,7 +219,7 @@ export default function NotificationsPage() {
   }, [fetchNotifications, setUnreadCount]);
 
   const handleNotificationClick = useCallback((notification: Notification) => {
-    // Mark as read if not already read
+    // Mark as read if not already read (for all notification types)
     if (!notification.isRead) {
       markAsRead(notification.id);
     }
@@ -351,7 +356,9 @@ export default function NotificationsPage() {
                       key={notification.id}
                       onClick={() => handleNotificationClick(notification)}
                       className={`group p-4 rounded-lg border transition-all duration-200 cursor-pointer hover:shadow-sm ${
-                        notification.isRead 
+                        notification.isLocked
+                          ? 'bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-950/20 dark:to-orange-950/20 border-amber-200 dark:border-amber-800/40 hover:border-amber-300 dark:hover:border-amber-700/60'
+                          : notification.isRead 
                           ? 'bg-card/70 dark:bg-card/50 hover:bg-card border-border/40 hover:border-[#01ae79]/20 dark:hover:border-[#01ae79]/30' 
                           : 'bg-[#01ae79]/5 dark:bg-[#01ae79]/10 hover:bg-[#01ae79]/10 dark:hover:bg-[#01ae79]/20 border-[#01ae79]/30 dark:border-[#01ae79]/40'
                       }`}
@@ -368,7 +375,7 @@ export default function NotificationsPage() {
                         )}
                         
                         <div className="flex-shrink-0 mt-0.5">
-                          {notification.actorImageUrl && 
+                          {!notification.isLocked && notification.actorImageUrl && 
                            notification.actorImageUrl !== 'undefined' && 
                            !notification.actorImageUrl.startsWith('undefined/') &&
                            (notification.actorImageUrl.startsWith('http://') || 
@@ -381,27 +388,46 @@ export default function NotificationsPage() {
                                 className="object-cover"
                               />
                               <AvatarFallback className="bg-[#01ae79]/10 dark:bg-[#01ae79]/20">
-                                {getNotificationIcon(notification.type)}
+                                {getNotificationIcon(notification.type, notification.isLocked)}
                               </AvatarFallback>
                             </Avatar>
                           ) : (
-                            <div className="w-10 h-10 rounded-full bg-[#01ae79]/10 dark:bg-[#01ae79]/20 flex items-center justify-center ring-2 ring-[#01ae79]/30 dark:ring-[#01ae79]/40">
-                              {getNotificationIcon(notification.type)}
+                            <div className={`w-10 h-10 rounded-full flex items-center justify-center ring-2 transition-colors ${
+                              notification.isLocked 
+                                ? 'bg-amber-100 dark:bg-amber-900/20 ring-amber-200 dark:ring-amber-800/40'
+                                : 'bg-[#01ae79]/10 dark:bg-[#01ae79]/20 ring-[#01ae79]/30 dark:ring-[#01ae79]/40'
+                            }`}>
+                              {getNotificationIcon(notification.type, notification.isLocked)}
                             </div>
                           )}
                         </div>
                         
                         <div className="flex-1 min-w-0">
                           <p className="text-sm text-foreground leading-relaxed">
-                            {notification.actorName && (
-                              <span className="font-semibold text-[#01ae79] dark:text-[#01ae79]">
-                                {notification.actorName}
+                            {notification.isLocked ? (
+                              <span>
+                                <span className="font-semibold text-amber-600 dark:text-amber-400">
+                                  {notification.message}
+                                </span>
+                                <span className="ml-2 text-xs bg-gradient-to-r from-amber-500 to-orange-500 text-white px-2 py-1 rounded-full font-medium">
+                                  VIEW INSIGHTS
+                                </span>
                               </span>
-                            )} {notification.message}
+                            ) : (
+                              <span>
+                                {notification.actorName && (
+                                  <span className="font-semibold text-[#01ae79] dark:text-[#01ae79]">
+                                    {notification.actorName}
+                                  </span>
+                                )} {notification.message}
+                              </span>
+                            )}
                           </p>
                           <p className={`text-xs mt-1 ${
                             notification.isRead 
                               ? 'text-muted-foreground' 
+                              : notification.isLocked
+                              ? 'text-amber-600 dark:text-amber-400 font-medium'
                               : 'text-[#01ae79] dark:text-[#01ae79] font-medium'
                           }`}>
                             {notification.timestamp}

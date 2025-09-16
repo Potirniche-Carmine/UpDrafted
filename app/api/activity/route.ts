@@ -23,20 +23,42 @@ export async function GET(request: NextRequest) {
     // Check if user has premium access to profile view insights
     const hasProfileViewInsights = await SubscriptionService.hasFeatureAccess(userId, 'profileViewInsights');
     
-    if (!hasProfileViewInsights) {
-      return NextResponse.json({
-        success: false,
-        error: 'Premium subscription required for activity insights',
-        requiresUpgrade: true
-      }, { status: 403 });
-    }
-
     // Get activity data
     const activities = await activityOperations.getUserActivity(userId, 50);
     
-    // Get profile info for each viewer
+    // Filter to only profile view activities
+    const profileViewActivities = activities.filter(activity => activity.action === 'profileView');
+    
+    if (!hasProfileViewInsights) {
+      // For free users, return just counts and time ranges without revealing who viewed
+      const totalViews = profileViewActivities.length;
+      
+      // Count views in different time periods
+      const now = new Date();
+      const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+      const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+      const oneMonthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+      
+      const viewsToday = profileViewActivities.filter(a => a.createdAt >= oneDayAgo).length;
+      const viewsThisWeek = profileViewActivities.filter(a => a.createdAt >= oneWeekAgo).length;
+      const viewsThisMonth = profileViewActivities.filter(a => a.createdAt >= oneMonthAgo).length;
+      
+      return NextResponse.json({
+        success: true,
+        isPremium: false,
+        insights: {
+          totalViews,
+          viewsToday,
+          viewsThisWeek,
+          viewsThisMonth,
+          message: 'Upgrade to premium to see who viewed your profile'
+        }
+      });
+    }
+
+    // For premium users, return detailed information
     const enrichedActivities = await Promise.all(
-      activities.map(async (activity) => {
+      profileViewActivities.map(async (activity) => {
         const viewerProfile = await profileOperations.getUserProfileInfo(activity.viewerId);
         return {
           id: activity.id,
@@ -55,6 +77,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
+      isPremium: true,
       activities: enrichedActivities
     });
 
