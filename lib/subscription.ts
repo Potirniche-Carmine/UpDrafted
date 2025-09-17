@@ -137,6 +137,14 @@ export class SubscriptionManager {
     try {
       const tier = this.getPriceIdToTier(stripeData.items.data[0]?.price?.id)
       
+      // Handle invalid/undefined dates with fallbacks
+      const now = new Date()
+      const currentPeriodStart = this.createValidDate(stripeData.current_period_start, now)
+      const currentPeriodEnd = this.createValidDate(stripeData.current_period_end, 
+        tier.includes('yearly') ? new Date(now.getTime() + 365 * 24 * 60 * 60 * 1000) : 
+        new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000)
+      )
+      
       await db
         .insert(userSubscriptions)
         .values({
@@ -146,11 +154,11 @@ export class SubscriptionManager {
           stripeSubscriptionId: stripeData.id,
           stripeCustomerId: stripeData.customer,
           stripePriceId: stripeData.items.data[0]?.price?.id,
-          currentPeriodStart: new Date(stripeData.current_period_start * 1000),
-          currentPeriodEnd: new Date(stripeData.current_period_end * 1000),
+          currentPeriodStart,
+          currentPeriodEnd,
           cancelAtPeriodEnd: stripeData.cancel_at_period_end,
-          trialStart: stripeData.trial_start ? new Date(stripeData.trial_start * 1000) : null,
-          trialEnd: stripeData.trial_end ? new Date(stripeData.trial_end * 1000) : null,
+          trialStart: stripeData.trial_start ? this.createValidDate(stripeData.trial_start) : null,
+          trialEnd: stripeData.trial_end ? this.createValidDate(stripeData.trial_end) : null,
         })
         .onConflictDoUpdate({
           target: userSubscriptions.userId,
@@ -160,11 +168,11 @@ export class SubscriptionManager {
             stripeSubscriptionId: stripeData.id,
             stripeCustomerId: stripeData.customer,
             stripePriceId: stripeData.items.data[0]?.price?.id,
-            currentPeriodStart: new Date(stripeData.current_period_start * 1000),
-            currentPeriodEnd: new Date(stripeData.current_period_end * 1000),
+            currentPeriodStart,
+            currentPeriodEnd,
             cancelAtPeriodEnd: stripeData.cancel_at_period_end,
-            trialStart: stripeData.trial_start ? new Date(stripeData.trial_start * 1000) : null,
-            trialEnd: stripeData.trial_end ? new Date(stripeData.trial_end * 1000) : null,
+            trialStart: stripeData.trial_start ? this.createValidDate(stripeData.trial_start) : null,
+            trialEnd: stripeData.trial_end ? this.createValidDate(stripeData.trial_end) : null,
             updatedAt: new Date(),
           }
         })
@@ -199,6 +207,13 @@ export class SubscriptionManager {
   }
 
   /**
+   * Manually invalidate cache for a user (useful for immediate updates)
+   */
+  static invalidateUserCache(userId: string): void {
+    this.invalidateCache(userId)
+  }
+
+  /**
    * Get connection usage
    */
   static async getConnectionUsage(userId: string): Promise<{ current: number; limit: number }> {
@@ -222,6 +237,19 @@ export class SubscriptionManager {
   }
 
   // Private helper methods
+
+  private static createValidDate(timestamp: number | null | undefined, fallback?: Date): Date {
+    if (timestamp == null || isNaN(timestamp)) {
+      return fallback || new Date()
+    }
+    
+    const date = new Date(timestamp * 1000)
+    if (isNaN(date.getTime())) {
+      return fallback || new Date()
+    }
+    
+    return date
+  }
 
   private static getFeatures(subscription: SubscriptionData): SubscriptionFeatures {
     const isPremium = subscription.isPremium && subscription.isActive
@@ -278,16 +306,26 @@ export class SubscriptionManager {
   }
 
   private static getPriceIdToTier(priceId: string): "free" | "pro_athlete_monthly" | "pro_athlete_yearly" | "pro_coach_monthly" | "pro_coach_yearly" | "pro_recruiter_monthly" | "pro_recruiter_yearly" {
-    // Map your Stripe price IDs to tiers
+    // Map your Stripe price IDs to tiers using environment variables
     const priceMap: Record<string, "free" | "pro_athlete_monthly" | "pro_athlete_yearly" | "pro_coach_monthly" | "pro_coach_yearly" | "pro_recruiter_monthly" | "pro_recruiter_yearly"> = {
-      // Add your actual Stripe price IDs here
-      'price_athlete_monthly': 'pro_athlete_monthly',
-      'price_athlete_yearly': 'pro_athlete_yearly',
-      'price_coach_monthly': 'pro_coach_monthly',
-      'price_coach_yearly': 'pro_coach_yearly',
-      'price_recruiter_monthly': 'pro_recruiter_monthly',
-      'price_recruiter_yearly': 'pro_recruiter_yearly',
+      [process.env.NEXT_PUBLIC_STRIPE_PRICE_ATHLETE_MONTHLY || '']: 'pro_athlete_monthly',
+      [process.env.NEXT_PUBLIC_STRIPE_PRICE_ATHLETE_YEARLY || '']: 'pro_athlete_yearly',
+      [process.env.NEXT_PUBLIC_STRIPE_PRICE_COACH_MONTHLY || '']: 'pro_coach_monthly',
+      [process.env.NEXT_PUBLIC_STRIPE_PRICE_COACH_YEARLY || '']: 'pro_coach_yearly',
+      [process.env.NEXT_PUBLIC_STRIPE_PRICE_RECRUITER_MONTHLY || '']: 'pro_recruiter_monthly',
+      [process.env.NEXT_PUBLIC_STRIPE_PRICE_RECRUITER_YEARLY || '']: 'pro_recruiter_yearly',
     }
+    
+    // Debug logging to help identify mapping issues
+    console.log('Available price mappings:', {
+      athlete_monthly: process.env.NEXT_PUBLIC_STRIPE_PRICE_ATHLETE_MONTHLY,
+      athlete_yearly: process.env.NEXT_PUBLIC_STRIPE_PRICE_ATHLETE_YEARLY,
+      coach_monthly: process.env.NEXT_PUBLIC_STRIPE_PRICE_COACH_MONTHLY,
+      coach_yearly: process.env.NEXT_PUBLIC_STRIPE_PRICE_COACH_YEARLY,
+      recruiter_monthly: process.env.NEXT_PUBLIC_STRIPE_PRICE_RECRUITER_MONTHLY,
+      recruiter_yearly: process.env.NEXT_PUBLIC_STRIPE_PRICE_RECRUITER_YEARLY,
+    })
+    console.log(`Mapping price ID ${priceId} to tier:`, priceMap[priceId] || 'free')
     
     return priceMap[priceId] || 'free'
   }

@@ -52,29 +52,32 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Rate limited' }, { status: 429 })
     }
 
-    console.log(`Processing webhook: ${event.type}`)
-
     // Handle subscription events
     switch (event.type) {
       case 'customer.subscription.created':
       case 'customer.subscription.updated':
+        console.log(`Processing webhook: ${event.type}`)
         await handleSubscriptionUpdate(event.data.object as Stripe.Subscription)
         break
 
       case 'customer.subscription.deleted':
+        console.log(`Processing webhook: ${event.type}`)
         await handleSubscriptionDeleted(event.data.object as Stripe.Subscription)
         break
 
       case 'invoice.payment_failed':
+        console.log(`Processing webhook: ${event.type}`)
         await handlePaymentFailed(event.data.object as Stripe.Invoice)
         break
 
       case 'checkout.session.completed':
+        console.log(`Processing webhook: ${event.type}`)
         await handleCheckoutCompleted(event.data.object as Stripe.Checkout.Session)
         break
 
       default:
-        console.log(`Unhandled webhook type: ${event.type}`)
+        // Silently ignore unhandled webhook types (they're not configured for production)
+        break
     }
 
     return NextResponse.json({ received: true })
@@ -99,6 +102,8 @@ async function handleSubscriptionUpdate(subscription: Stripe.Subscription) {
 
   try {
     const webhookData = subscription as StripeSubscriptionWebhook
+    console.log(`Updating subscription for user ${userId} with price ID: ${subscription.items.data[0]?.price?.id}`)
+    
     await SubscriptionManager.updateSubscriptionFromStripe(userId, {
       id: subscription.id,
       customer: subscription.customer as string,
@@ -147,6 +152,36 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
 
   console.log(`Checkout completed for user ${userId}`)
   
-  // If this is a subscription checkout, the subscription webhook will handle the update
-  // For one-time payments, you could handle those here
+  // If this is a subscription checkout, handle the subscription creation
+  if (session.mode === 'subscription' && session.subscription) {
+    try {
+      // Retrieve the full subscription object
+      const subscription = await stripe.subscriptions.retrieve(session.subscription as string)
+      const subWithPeriods = subscription as unknown as StripeSubscriptionWebhook
+      
+      console.log(`Creating subscription from checkout for user ${userId} with price ID: ${subscription.items.data[0]?.price?.id}`)
+      console.log('Subscription object properties:', {
+        current_period_start: subWithPeriods.current_period_start,
+        current_period_end: subWithPeriods.current_period_end,
+        status: subscription.status
+      })
+      
+      await SubscriptionManager.updateSubscriptionFromStripe(userId, {
+        id: subscription.id,
+        customer: subscription.customer as string,
+        status: subscription.status,
+        current_period_start: subWithPeriods.current_period_start || Math.floor(Date.now() / 1000),
+        current_period_end: subWithPeriods.current_period_end || Math.floor((Date.now() + 30 * 24 * 60 * 60 * 1000) / 1000),
+        cancel_at_period_end: subscription.cancel_at_period_end,
+        canceled_at: subscription.canceled_at,
+        trial_start: subscription.trial_start,
+        trial_end: subscription.trial_end,
+        items: subscription.items
+      })
+      
+      console.log(`Subscription created from checkout for user ${userId}`)
+    } catch (error) {
+      console.error(`Error creating subscription from checkout for user ${userId}:`, error)
+    }
+  }
 }
