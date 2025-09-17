@@ -18,7 +18,7 @@ import { CONFERENCES_BY_DIVISION } from '@/lib/conference-data';
 import { useProfileCompletenessSorting } from '../components/profile-completeness-sorter';
 import { AdvancedFilters } from '../components/advanced-filters';
 import { MultiSelectFilter, HeightWeightFilter, VerifiedFilter, type FilterOption } from '../components/filter-components';
-import { useSubscriptionFeatures } from '@/hooks/use-subscription-features';
+import { useFeatureAccess } from '@/hooks/use-subscription';
 
 // API response types
 interface DiscoverUser {
@@ -258,7 +258,7 @@ function SearchPageContent() {
   const [page, setPage] = useState(1);
   
   // Get subscription features using the custom hook
-  const { features } = useSubscriptionFeatures();
+  const features = useFeatureAccess();
   const hasAdvancedSearch = features.advancedSearch;
 
   // Filter states

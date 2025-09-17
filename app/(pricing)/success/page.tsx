@@ -5,8 +5,6 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import Link from 'next/link'
 import { CheckCircle, Crown, ArrowRight, Search, MessageSquare, Eye, BarChart3, Users } from 'lucide-react'
-import { SimpleSubscriptionService } from '@/lib/simple-subscription'
-import { currentUser } from '@clerk/nextjs/server'
 
 interface SuccessPageProps {
   searchParams: Promise<{ session_id?: string }>
@@ -39,12 +37,7 @@ export default async function SuccessPage({ searchParams }: SuccessPageProps) {
     redirect('/pricing')
   }
 
-  // Invalidate subscription cache after successful checkout
-  const user = await currentUser()
-  if (user?.id && isSubscription) {
-    SimpleSubscriptionService.invalidateCache(user.id)
-  }
-
+  // Note: Subscription cache will refresh within 24 hours automatically
   const customerEmail = session.customer_details?.email
 
   return (

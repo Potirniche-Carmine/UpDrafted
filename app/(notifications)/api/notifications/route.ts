@@ -7,7 +7,7 @@ import { profileOperations, notificationOperations } from '@/database/db-utils';
 import { withRateLimit } from '@/utils/security';
 import { createErrorResponse } from '@/utils/security';
 import { generateProfileUrl } from '@/lib/utils';
-import { SubscriptionService } from '@/lib/subscription-service';
+import { SubscriptionManager } from '@/lib/subscription';
 
 type Operation = 'getNotifications' | 'markAsRead' | 'markAllAsRead' | 'getUnreadCount' | 'dismissAllNotifications';
 
@@ -187,7 +187,7 @@ async function handleGetNotifications(userId: string, body: GetNotificationsRequ
     const userNotifications = await Promise.race([queryPromise, queryTimeout]);
 
     // Check if user has premium access to profile view insights
-    const hasProfileViewInsights = await SubscriptionService.hasFeatureAccess(userId, 'profileViewInsights');
+    const hasProfileViewInsights = await SubscriptionManager.hasPremiumAccess(userId);
     
     // Keep all notifications (including profile views), but we'll modify the metadata later
     const filteredNotifications = userNotifications;

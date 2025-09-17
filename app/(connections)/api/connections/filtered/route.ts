@@ -5,7 +5,7 @@ import { sanitizeText } from '@/utils/sanitization';
 import { withRateLimit } from '@/utils/security';
 import { getCachedWithType, setCachedWithType, createErrorResponse, createSuccessResponse } from '@/utils/security';
 import { parseHeightToInches, parseWeightToPounds } from '@/lib/parsing-utils';
-import { SubscriptionService } from '@/lib/subscription-service';
+import { SubscriptionManager } from '@/lib/subscription';
 
 export const runtime = 'nodejs';
 
@@ -174,10 +174,7 @@ export async function POST(request: NextRequest) {
     const hasVerifiedFilter = sanitizedFilters.verified !== null;
     
     if (hasPhysicalRequirements || hasVerifiedFilter) {
-      const hasAdvancedSearchAccess = await SubscriptionService.hasFeatureAccess(
-        currentUserId,
-        'advancedSearch'
-      );
+      const hasAdvancedSearchAccess = await SubscriptionManager.hasPremiumAccess(currentUserId);
       
       if (!hasAdvancedSearchAccess) {
         return NextResponse.json(
@@ -388,7 +385,7 @@ export async function POST(request: NextRequest) {
 
     // Get user's subscription features for response
     const [hasAdvancedSearchAccess] = await Promise.all([
-      SubscriptionService.hasFeatureAccess(currentUserId, 'advancedSearch')
+      SubscriptionManager.hasPremiumAccess(currentUserId)
     ]);
 
     const result: FilteredConnectionsResponse = {

@@ -6,7 +6,7 @@ import { and, eq, or, not, ilike, isNull, exists, ne, arrayOverlaps } from 'driz
 import { sanitizeText, sanitizeNumber } from '@/utils/sanitization';
 import { withRateLimit } from '@/utils/security';
 import { filterByHeight, filterByWeight } from '@/database/db-utils';
-import { SubscriptionService } from '@/lib/subscription-service';
+import { SubscriptionManager } from '@/lib/subscription';
 
 // Force Node.js runtime
 export const runtime = 'nodejs';
@@ -254,7 +254,7 @@ async function handleDiscoverRequest(request: NextRequest) {
     } = await parseSearchParams(request);
 
     // Check premium access for advanced search features
-    const hasAdvancedSearch = await SubscriptionService.hasFeatureAccess(userId, 'advancedSearch');
+    const hasAdvancedSearch = await SubscriptionManager.hasPremiumAccess(userId);
     
     // Instead of blocking premium features, we'll return them as locked
     // The frontend can show them blurred with upgrade prompts

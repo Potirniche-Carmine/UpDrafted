@@ -1,6 +1,6 @@
 "use client"
 
-import { useSubscriptionStatus } from '@/hooks/use-subscription-status'
+import { useSubscription } from '@/components/providers/subscription-provider'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -12,7 +12,7 @@ interface SubscriptionManagerProps {
 }
 
 export function SubscriptionManager({ className }: SubscriptionManagerProps) {
-  const { subscription, loading, error } = useSubscriptionStatus()
+  const { subscription, loading, error } = useSubscription()
 
   if (loading) {
     return (

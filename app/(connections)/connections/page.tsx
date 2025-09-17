@@ -16,7 +16,7 @@ import { sanitizeText } from '@/utils/sanitization';
 import { useUser } from "@clerk/nextjs";
 import { getSportsList, DIVISIONS, US_STATES, COUNTRIES, getPositionsForSport } from '@/lib/sports-data';
 import { CONFERENCES_BY_DIVISION } from '@/lib/conference-data';
-import { useSubscriptionFeatures } from '@/hooks/use-subscription-features';
+import { useFeatureAccess } from '@/hooks/use-subscription';
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import {
@@ -1689,7 +1689,7 @@ function App() {
   const [loading, setLoading] = useState(true);
   
   // Get subscription features using the custom hook
-  const { features } = useSubscriptionFeatures();
+  const features = useFeatureAccess();
   const hasAdvancedSearch = features.advancedSearch;
 
   // Advanced filter states

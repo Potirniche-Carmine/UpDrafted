@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { headers } from 'next/headers'
 import { auth, clerkClient } from '@clerk/nextjs/server'
 import { stripe } from '@/lib/stripe'
-import { SubscriptionService } from '@/lib/subscription-service'
+import { SubscriptionManager } from '@/lib/subscription'
 
 export async function POST(req: NextRequest) {
   try {
@@ -29,16 +29,17 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    // Check if user already has an active subscription
-    const existingSubscription = await SubscriptionService.getUserSubscription(userId)
-    if (existingSubscription && existingSubscription.status === 'active' && existingSubscription.tier !== 'free') {
+    // Check if user already has an active subscription (prevents double checkout)
+    const hasActiveSubscription = await SubscriptionManager.hasActiveSubscription(userId)
+    if (hasActiveSubscription) {
+      const subscription = await SubscriptionManager.getUserSubscription(userId)
       return NextResponse.json(
         { 
           error: 'You already have an active subscription',
           subscription: {
-            tier: existingSubscription.tier,
-            status: existingSubscription.status,
-            currentPeriodEnd: existingSubscription.currentPeriodEnd
+            tier: subscription.tier,
+            status: subscription.status,
+            currentPeriodEnd: subscription.currentPeriodEnd
           }
         },
         { status: 400 }
