@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
-import { SubscriptionService } from '@/lib/subscription-service'
+import { SimpleSubscriptionService } from '@/lib/simple-subscription'
 
 export async function GET() {
   try {
@@ -12,19 +12,19 @@ export async function GET() {
       )
     }
 
-    // Get current subscription status
-    const subscriptionStatus = await SubscriptionService.getSubscriptionStatus(userId)
-    const subscription = await SubscriptionService.getUserSubscription(userId)
+    // Use cached subscription lookup for faster response
+    const subscription = await SimpleSubscriptionService.getUserSubscription(userId)
+    const features = await SimpleSubscriptionService.getUserFeatures(userId)
 
     return NextResponse.json({
       success: true,
       subscription: {
-        tier: subscriptionStatus.tier,
-        status: subscriptionStatus.status,
-        isActive: subscriptionStatus.isActive,
-        isPremium: subscriptionStatus.isPremium,
-        currentPeriodEnd: subscriptionStatus.currentPeriodEnd,
-        cancelAtPeriodEnd: subscriptionStatus.cancelAtPeriodEnd,
+        tier: subscription?.tier || 'free',
+        status: subscription?.status || 'active',
+        isActive: features.hasAccess,
+        isPremium: features.tier !== 'free',
+        currentPeriodEnd: subscription?.currentPeriodEnd,
+        cancelAtPeriodEnd: subscription?.cancelAtPeriodEnd || false,
         stripeCustomerId: subscription?.stripeCustomerId,
         stripeSubscriptionId: subscription?.stripeSubscriptionId,
         stripePriceId: subscription?.stripePriceId

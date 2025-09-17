@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Loader2, Crown } from 'lucide-react'
 import { useAuth } from '@clerk/nextjs'
 import { useRouter } from 'next/navigation'
-import { useSubscriptionStatus } from '@/hooks/use-subscription-status'
+import { useSubscription } from '@/components/providers/subscription-provider'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 
 interface StripeCheckoutButtonProps {
@@ -31,7 +31,7 @@ export function StripeCheckoutButton({
   const [error, setError] = useState<string | null>(null)
   const { isSignedIn } = useAuth()
   const router = useRouter()
-  const { subscription } = useSubscriptionStatus()
+  const { subscription } = useSubscription()
 
   const handleCheckout = async () => {
     if (!isSignedIn) {

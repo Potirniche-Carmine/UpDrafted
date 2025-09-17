@@ -6,6 +6,7 @@ import { ClerkProviderWrapper } from "@/components/clerk-theme-wrapper";
 import { Header } from "@/components/header";
 import { Footer } from "@/components/footer";
 import { QueryProvider } from '@/components/providers/query-provider'
+import { SubscriptionProvider } from '@/components/providers/subscription-provider'
 import { generateMetadata } from "@/lib/seo";
 import { ToastContainer } from "@/components/ui/toast";
 import Script from "next/script";
@@ -100,12 +101,14 @@ export default function RootLayout({
               afterSignOutUrl="/"
               appearanceVariables={{ colorPrimary: 'green' }} 
             >
-              <Header />
-              <main className="flex-grow container mx-auto max-w-screen-2xl px-4 sm:px-6 lg:px-8 py-8">
-                {children}
-              </main>
-              <Footer />
-              <ToastContainer />
+              <SubscriptionProvider>
+                <Header />
+                <main className="flex-grow container mx-auto max-w-screen-2xl px-4 sm:px-6 lg:px-8 py-8">
+                  {children}
+                </main>
+                <Footer />
+                <ToastContainer />
+              </SubscriptionProvider>
             </ClerkProviderWrapper>
           </ThemeProvider>
         </QueryProvider>

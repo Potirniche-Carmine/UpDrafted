@@ -6,15 +6,15 @@ import { Button } from '@/components/ui/button'
 import { PremiumUpgradeButton } from '@/app/(pricing)/components/stripe-checkout-button'
 import { Check, Crown } from 'lucide-react'
 import { PricingPlan, formatPrice } from '@/app/(pricing)/components/pricing-config'
-import { SubscriptionStatus } from '@/hooks/use-subscription-status'
+import { useSubscription } from '@/components/providers/subscription-provider'
 
 interface PricingCardProps {
   plan: PricingPlan
   className?: string
-  subscription?: SubscriptionStatus | null
 }
 
-export function PricingCard({ plan, className, subscription }: PricingCardProps) {
+export function PricingCard({ plan, className }: PricingCardProps) {
+  const { subscription, loading } = useSubscription()
   const monthlyPrice = plan.price.monthly
   const yearlyPrice = plan.price.yearly
   const isYearly = plan.interval === 'year'
@@ -33,8 +33,18 @@ export function PricingCard({ plan, className, subscription }: PricingCardProps)
   // Check if user has premium subscription
   const hasPremiumSubscription = subscription?.isPremium && subscription?.status === 'active'
 
+  // Check if subscription is canceled (will end at period end or already canceled)
+  const isSubscriptionCanceled = subscription?.cancelAtPeriodEnd === true || subscription?.status === 'cancelled'
+
+  // For canceled subscriptions, we want to show resubscribe option instead of current plan
+  // BUT only for premium plans, not for free plans
+  const shouldShowAsCurrentPlan = isCurrentPlan && (!isSubscriptionCanceled || plan.isFree)
+
+  // Check if this is a canceled premium plan that user previously had
+  const isCanceledPremiumPlan = isCurrentPlan && isSubscriptionCanceled && !plan.isFree
+
   return (
-    <Card className={`relative overflow-hidden transition-all duration-300 hover:shadow-lg border-border/50 h-full flex flex-col ${plan.popular ? 'ring-2 ring-[#01ae79] ring-opacity-50' : ''} ${isCurrentPlan ? 'border-[#01ae79]' : ''} ${className}`}>
+    <Card className={`relative overflow-hidden transition-all duration-300 hover:shadow-lg border-border/50 h-full flex flex-col ${plan.popular ? 'ring-2 ring-[#01ae79] ring-opacity-50' : ''} ${shouldShowAsCurrentPlan ? 'border-[#01ae79]' : ''} ${isCanceledPremiumPlan ? 'border-2 border-orange-500 ring-2 ring-orange-500 ring-opacity-30' : ''} ${className}`}>
       {/* Reserve space for "Most Popular" badge on all cards to prevent layout shift */}
       <div className="h-10 relative">
         {plan.popular && (
@@ -45,13 +55,7 @@ export function PricingCard({ plan, className, subscription }: PricingCardProps)
             </div>
           </div>
         )}
-        {isCurrentPlan && !plan.popular && (
-          <div className="absolute top-0 left-0 right-0">
-            <div className="bg-[#01ae79] text-white text-center py-2 text-sm font-medium">
-              Current Plan
-            </div>
-          </div>
-        )}
+        {/* Removed Current Plan and Canceled Subscription badges */}
       </div>
       
       <CardHeader className="text-center pt-2 pb-6">{/* Consistent padding for all cards */}
@@ -105,7 +109,15 @@ export function PricingCard({ plan, className, subscription }: PricingCardProps)
             </div>
           )}
           
-          {isCurrentPlan ? (
+          {loading ? (
+            <Button
+              className="w-full"
+              variant="outline"
+              disabled
+            >
+              Loading...
+            </Button>
+          ) : shouldShowAsCurrentPlan ? (
             <Button
               className="w-full"
               variant="outline"
@@ -113,6 +125,15 @@ export function PricingCard({ plan, className, subscription }: PricingCardProps)
             >
               {plan.isFree ? 'Current Plan' : 'Current Subscription'}
             </Button>
+          ) : isCanceledPremiumPlan ? (
+            <PremiumUpgradeButton
+              priceId={plan.priceId}
+              mode="subscription"
+              className="w-full bg-orange-500 hover:bg-orange-600 text-white"
+            >
+              <Crown className="h-4 w-4 mr-2" />
+              {subscription?.status === 'cancelled' ? 'Resubscribe' : 'Resubscribe - Restore Access'}
+            </PremiumUpgradeButton>
           ) : plan.isFree ? (
             <Button
               className="w-full"

@@ -5,6 +5,8 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import Link from 'next/link'
 import { CheckCircle, Crown, ArrowRight, Search, MessageSquare, Eye, BarChart3, Users } from 'lucide-react'
+import { SimpleSubscriptionService } from '@/lib/simple-subscription'
+import { currentUser } from '@clerk/nextjs/server'
 
 interface SuccessPageProps {
   searchParams: Promise<{ session_id?: string }>
@@ -37,11 +39,17 @@ export default async function SuccessPage({ searchParams }: SuccessPageProps) {
     redirect('/pricing')
   }
 
+  // Invalidate subscription cache after successful checkout
+  const user = await currentUser()
+  if (user?.id && isSubscription) {
+    SimpleSubscriptionService.invalidateCache(user.id)
+  }
+
   const customerEmail = session.customer_details?.email
 
   return (
     <AuthWrapper>
-      <div className="min-h-screen bg-gradient-to-br from-background via-background to-[#01ae79]/5 dark:to-[#01ae79]/10 flex items-center justify-center p-4">
+      <div className="container mx-auto px-4 py-16 max-w-4xl">
         <Card className="max-w-2xl w-full border border-border/50 shadow-xl">
           <CardContent className="p-8 text-center">
             <div className="mb-6">

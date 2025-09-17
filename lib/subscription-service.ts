@@ -14,8 +14,65 @@ import {
 import { eq } from 'drizzle-orm'
 import { stripe } from '@/lib/stripe'
 
+// Helper function to safely convert Stripe timestamps to Date objects
+function safeTimestampToDate(timestamp: number | null): Date | null {
+  if (timestamp === null || timestamp === undefined) {
+    return null
+  }
+  
+  // Debug logging in development
+  if (process.env.NODE_ENV === 'development') {
+    console.log(`Converting timestamp: ${timestamp}`)
+  }
+  
+  // Validate that timestamp is a reasonable value
+  // Stripe uses Unix timestamps in seconds, so we expect values roughly between 2020-2040
+  // 1577836800 = Jan 1, 2020 and 2208988800 = Jan 1, 2040
+  if (typeof timestamp !== 'number' || timestamp < 1577836800 || timestamp > 2208988800) {
+    console.warn(`Invalid timestamp value: ${timestamp}`)
+    return null
+  }
+  
+  try {
+    const date = new Date(timestamp * 1000)
+    // Check if the date is valid
+    if (isNaN(date.getTime())) {
+      console.warn(`Failed to create valid date from timestamp: ${timestamp}`)
+      return null
+    }
+    
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`Converted ${timestamp} to ${date.toISOString()}`)
+    }
+    
+    return date
+  } catch (error) {
+    console.warn(`Error converting timestamp ${timestamp} to date:`, error)
+    return null
+  }
+}
+
 // Subscription tier type for better type safety
 export type SubscriptionTier = 'free' | 'pro_athlete_monthly' | 'pro_athlete_yearly' | 'pro_coach_monthly' | 'pro_coach_yearly' | 'pro_recruiter_monthly' | 'pro_recruiter_yearly'
+
+// Map Stripe subscription status to our database enum
+function mapStripeStatusToDbStatus(stripeStatus: string): 'active' | 'cancelled' | 'past_due' | 'trialing' | 'incomplete' | 'incomplete_expired' | 'unpaid' {
+  // Stripe uses 'canceled' but our DB uses 'cancelled'
+  if (stripeStatus === 'canceled') {
+    return 'cancelled'
+  }
+  
+  // Validate that the status is one we expect
+  const validStatuses: Array<'active' | 'cancelled' | 'past_due' | 'trialing' | 'incomplete' | 'incomplete_expired' | 'unpaid'> = 
+    ['active', 'cancelled', 'past_due', 'trialing', 'incomplete', 'incomplete_expired', 'unpaid']
+  
+  if (validStatuses.includes(stripeStatus as typeof validStatuses[number])) {
+    return stripeStatus as 'active' | 'cancelled' | 'past_due' | 'trialing' | 'incomplete' | 'incomplete_expired' | 'unpaid'
+  }
+  
+  console.warn(`Unknown Stripe subscription status: ${stripeStatus}, defaulting to 'cancelled'`)
+  return 'cancelled'
+}
 
 // Extended Stripe Subscription type with correct property names
 export interface StripeSubscriptionData {
@@ -88,19 +145,28 @@ export class SubscriptionService {
     const priceId = stripeSubscription.items.data[0]?.price.id
     const tier = priceId ? tierMapping[priceId] || 'free' : 'free'
 
+    // Debug logging in development
+    if (process.env.NODE_ENV === 'development') {
+      console.log('Stripe subscription data:', {
+        current_period_start: stripeSubscription.current_period_start,
+        current_period_end: stripeSubscription.current_period_end,
+        status: stripeSubscription.status
+      })
+    }
+
     const subscriptionData: NewUserSubscription = {
       userId,
       stripeCustomerId: stripeCustomerId || stripeSubscription.customer,
       stripeSubscriptionId: stripeSubscription.id,
       stripePriceId: priceId,
       tier,
-      status: stripeSubscription.status as 'active' | 'cancelled' | 'past_due' | 'trialing' | 'incomplete' | 'incomplete_expired' | 'unpaid',
-      currentPeriodStart: new Date(stripeSubscription.current_period_start * 1000),
-      currentPeriodEnd: new Date(stripeSubscription.current_period_end * 1000),
+      status: mapStripeStatusToDbStatus(stripeSubscription.status),
+      currentPeriodStart: safeTimestampToDate(stripeSubscription.current_period_start) || new Date(),
+      currentPeriodEnd: safeTimestampToDate(stripeSubscription.current_period_end) || new Date(),
       cancelAtPeriodEnd: stripeSubscription.cancel_at_period_end,
-      canceledAt: stripeSubscription.canceled_at ? new Date(stripeSubscription.canceled_at * 1000) : null,
-      trialStart: stripeSubscription.trial_start ? new Date(stripeSubscription.trial_start * 1000) : null,
-      trialEnd: stripeSubscription.trial_end ? new Date(stripeSubscription.trial_end * 1000) : null,
+      canceledAt: safeTimestampToDate(stripeSubscription.canceled_at),
+      trialStart: safeTimestampToDate(stripeSubscription.trial_start),
+      trialEnd: safeTimestampToDate(stripeSubscription.trial_end),
       metadata: stripeSubscription.metadata,
       updatedAt: new Date(),
     }
@@ -119,6 +185,45 @@ export class SubscriptionService {
     await this.initializeUsageTracking(userId, subscription.currentPeriodStart!, subscription.currentPeriodEnd!)
 
     return subscription
+  }
+
+  // Handle subscription deletion/cancellation
+  static async handleSubscriptionDeletion(
+    userId: string,
+    stripeSubscription: StripeSubscriptionData
+  ): Promise<UserSubscription | null> {
+    try {
+      // For cancelled subscriptions, we typically want to:
+      // 1. Update the status to 'cancelled'
+      // 2. Reset tier to 'free' (immediate loss of premium features)
+      // 3. Keep the record for billing history
+      
+      const subscriptionData: Partial<NewUserSubscription> = {
+        status: 'cancelled',
+        tier: 'free', // Reset to free tier immediately
+        cancelAtPeriodEnd: stripeSubscription.cancel_at_period_end,
+        canceledAt: safeTimestampToDate(stripeSubscription.canceled_at),
+        updatedAt: new Date(),
+      }
+
+      // Update existing subscription
+      const [updatedSubscription] = await db
+        .update(userSubscriptions)
+        .set(subscriptionData)
+        .where(eq(userSubscriptions.userId, userId))
+        .returning()
+
+      if (updatedSubscription) {
+        console.log(`Subscription cancelled for user: ${userId}`)
+        return updatedSubscription
+      } else {
+        console.warn(`No subscription found to cancel for user: ${userId}`)
+        return null
+      }
+    } catch (error) {
+      console.error(`Error handling subscription deletion for user ${userId}:`, error)
+      throw error
+    }
   }
 
   // Initialize usage tracking for a user
@@ -152,47 +257,15 @@ export class SubscriptionService {
     return usage
   }
 
-  // Check if user has access to a premium feature (with enhanced security)
+  // Simplified feature access check
   static async hasFeatureAccess(userId: string, feature: string): Promise<boolean> {
     try {
-      // Import here to avoid circular dependencies
-      const { SubscriptionSecurityService } = await import('./subscription-security');
-      
-      // Use secure validation instead of basic database lookup
-      const validation = await SubscriptionSecurityService.validateSubscriptionAccess(userId);
-      
-      // Log any security issues but don't block access for minor ones
-      if (validation.securityFlags.length > 0) {
-        if (process.env.NODE_ENV === 'development') {
-          console.warn(`Security flags detected for user ${userId} feature access:`, validation.securityFlags);
-        }
-        
-        // Block access for serious violations
-        const seriousViolations = validation.securityFlags.filter(flag => 
-          flag.includes('integrity_violation') || 
-          flag.includes('inactive_status') ||
-          flag.includes('subscription_expired')
-        );
-        
-        if (seriousViolations.length > 0) {
-          return false;
-        }
-      }
-      
-      // Return feature access based on secure validation
-      switch (feature) {
-        case 'advancedSearch':
-          return validation.features.advancedSearch;
-        case 'profileViewInsights':
-          return validation.features.profileViewInsights;
-        case 'analytics':
-          return validation.features.analytics;
-        default:
-          return false;
-      }
+      // Use simple subscription service instead of complex security validation
+      const { SimpleSubscriptionService } = await import('./simple-subscription');
+      return await SimpleSubscriptionService.hasPremiumAccess(userId);
     } catch (error) {
       console.error(`Feature access check failed for user ${userId}:`, error);
-      // Fall back to basic check if security service fails
+      // Fall back to basic check if simple service fails
       return this.hasFeatureAccessBasic(userId, feature);
     }
   }
@@ -299,6 +372,14 @@ export class SubscriptionService {
       .returning()
 
     return event
+  }
+
+  // Find billing event by Stripe event ID (for idempotency)
+  static async findBillingEventByStripeId(stripeEventId: string): Promise<BillingEvent | null> {
+    const event = await db.query.billingEvents.findFirst({
+      where: eq(billingEvents.stripeEventId, stripeEventId)
+    })
+    return event || null
   }
 
   // Cancel subscription

@@ -29,6 +29,8 @@ export async function GET(request: NextRequest) {
     
     // Log security events if there are any flags
     if (validationResult.securityFlags.length > 0) {
+      console.log(`Security flags detected for user ${userId} feature access:`, validationResult.securityFlags);
+      
       await SubscriptionSecurityService.logSecurityEvent();
       
       // If security flags indicate serious violations, deny access
