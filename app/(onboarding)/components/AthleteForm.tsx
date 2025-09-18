@@ -231,6 +231,19 @@ function CountryCombobox({
 export default function AthleteForm({ data, onInputChange }: AthleteFormProps) {
   const [validationErrors, setValidationErrors] = useState<{[key: string]: string}>({});
 
+  // Normalize Hudl URLs to always include https://www.
+  function normalizeHudlUrl(input: string): string {
+    if (typeof input !== 'string') return input as unknown as string;
+    const trimmed = input.trim();
+    if (!trimmed) return trimmed;
+    if (!/hudl\.com/i.test(trimmed)) return trimmed;
+    let withoutProtocol = trimmed.replace(/^\s*https?:\/\//i, '');
+    if (!withoutProtocol.toLowerCase().startsWith('www.')) {
+      withoutProtocol = 'www.' + withoutProtocol;
+    }
+    return `https://${withoutProtocol}`;
+  }
+
   const addSecondarySport = (sport: string) => {
     if (sport && !data.secondarySports.includes(sport) && sport !== data.sport) {
       onInputChange('secondarySports', [...data.secondarySports, sport]);
@@ -247,6 +260,10 @@ export default function AthleteForm({ data, onInputChange }: AthleteFormProps) {
     let newFullName = data.fullName;
     if (field === 'fullName') {
       newFullName = value as string;
+    }
+    // Normalize HUDL URL before validation and state update
+    if (field === 'hudlUrl' && typeof value === 'string') {
+      value = normalizeHudlUrl(value);
     }
     switch (field) {
       case 'fullName': {
