@@ -508,34 +508,19 @@ function VerifiedFilter({
       </div>
       
       <div className={cn("relative", isLocked && "pointer-events-none opacity-50")}>
-        <div className="flex gap-2">
-          <Button
-            variant={verifiedFilter === null ? "default" : "outline"}
-            size="sm"
-            onClick={() => onVerifiedChange(null)}
-            disabled={isLocked}
-            className="flex-1"
-          >
-            All Athletes
-          </Button>
+        <div className="flex items-center justify-between p-3 border border-border rounded-md bg-background">
+          <div className="flex items-center gap-2">
+            <Shield className="h-4 w-4 text-muted-foreground" />
+            <span className="text-sm font-medium">Verified Only</span>
+          </div>
           <Button
             variant={verifiedFilter === true ? "default" : "outline"}
             size="sm"
-            onClick={() => onVerifiedChange(true)}
+            onClick={() => onVerifiedChange(verifiedFilter === true ? null : true)}
             disabled={isLocked}
-            className="flex-1"
+            className="min-w-16"
           >
-            <Shield className="h-3 w-3 mr-1" />
-            Verified Only
-          </Button>
-          <Button
-            variant={verifiedFilter === false ? "default" : "outline"}
-            size="sm"
-            onClick={() => onVerifiedChange(false)}
-            disabled={isLocked}
-            className="flex-1"
-          >
-            Unverified Only
+            {verifiedFilter === true ? "On" : "Off"}
           </Button>
         </div>
         
@@ -618,9 +603,13 @@ const UserCard: React.FC<UserCardProps> = ({ connection, onRemoveConnection }) =
                       {otherUser.fullName.split(' ').map(n => n[0]).join('').toUpperCase()}
                     </AvatarFallback>
                   </Avatar>
-                  {otherUser.isVerified && (
-                    <div className="absolute -top-1 -right-1 w-4 h-4 sm:w-5 sm:h-5 bg-green-500 rounded-full flex items-center justify-center shadow-md">
-                      <Shield className="w-2 h-2 sm:w-3 sm:h-3 text-white" />
+                  {otherUser.isVerified ? (
+                    <div className="absolute -bottom-1 -right-1 bg-[#01ae79] rounded-full p-1 border-2 border-background">
+                      <Shield className="h-3 w-3 text-white" />
+                    </div>
+                  ) : (
+                    <div className="absolute -bottom-1 -right-1 bg-[#f59e0b] rounded-full p-1 border-2 border-background">
+                      <Shield className="h-3 w-3 text-white" />
                     </div>
                   )}
                 </div>
@@ -637,6 +626,17 @@ const UserCard: React.FC<UserCardProps> = ({ connection, onRemoveConnection }) =
                   
                   <div className="flex items-center gap-2 flex-wrap pt-1">
                     {getRoleBadge(otherUser.role, otherUser.division, otherUser.educationLevel)}
+                    {otherUser.isVerified ? (
+                      <Badge variant="outline" className="text-xs font-medium px-2 py-0.5 border bg-[#01ae79]/10 text-[#01ae79] border-[#01ae79]/20 dark:bg-[#01ae79]/20 dark:text-[#01ae79] dark:border-[#01ae79]/30 whitespace-nowrap">
+                        <Shield className="h-3 w-3 mr-1" />
+                        Verified
+                      </Badge>
+                    ) : (
+                      <Badge variant="outline" className="text-xs font-medium px-2 py-0.5 border bg-gray-100 text-gray-600 border-gray-200 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-700 whitespace-nowrap">
+                        <Shield className="h-3 w-3 mr-1 opacity-50" />
+                        Unverified
+                      </Badge>
+                    )}
                   </div>
 
                   <p className="text-sm font-medium text-muted-foreground truncate">
@@ -838,9 +838,13 @@ const PendingRequestCard: React.FC<PendingRequestCardProps> = ({ request, onAcce
                       {otherUser.fullName.split(' ').map(n => n[0]).join('').toUpperCase()}
                     </AvatarFallback>
                   </Avatar>
-                  {otherUser.isVerified && (
-                    <div className="absolute -top-1 -right-1 w-4 h-4 sm:w-5 sm:h-5 bg-green-500 rounded-full flex items-center justify-center shadow-md">
-                      <Shield className="w-2 h-2 sm:w-3 sm:h-3 text-white" />
+                  {otherUser.isVerified ? (
+                    <div className="absolute -bottom-1 -right-1 bg-[#01ae79] rounded-full p-1 border-2 border-background">
+                      <Shield className="h-3 w-3 text-white" />
+                    </div>
+                  ) : (
+                    <div className="absolute -bottom-1 -right-1 bg-[#f59e0b] rounded-full p-1 border-2 border-background">
+                      <Shield className="h-3 w-3 text-white" />
                     </div>
                   )}
                 </div>
@@ -1076,9 +1080,13 @@ const SentRequestCard: React.FC<SentRequestCardProps> = ({ request, onWithdraw, 
                       {otherUser.fullName.split(' ').map(n => n[0]).join('').toUpperCase()}
                     </AvatarFallback>
                   </Avatar>
-                  {otherUser.isVerified && (
-                    <div className="absolute -top-1 -right-1 w-4 h-4 sm:w-5 sm:h-5 bg-green-500 rounded-full flex items-center justify-center shadow-md">
-                      <Shield className="w-2 h-2 sm:w-3 sm:h-3 text-white" />
+                  {otherUser.isVerified ? (
+                    <div className="absolute -bottom-1 -right-1 bg-[#01ae79] rounded-full p-1 border-2 border-background">
+                      <Shield className="h-3 w-3 text-white" />
+                    </div>
+                  ) : (
+                    <div className="absolute -bottom-1 -right-1 bg-[#f59e0b] rounded-full p-1 border-2 border-background">
+                      <Shield className="h-3 w-3 text-white" />
                     </div>
                   )}
                 </div>
@@ -1392,6 +1400,7 @@ const AdvancedFilters: React.FC<AdvancedFiltersProps> = ({
     selectedGraduatingClasses.length > 0 ||
     selectedConferences.length > 0 ||
     selectedRequestTypes.length > 0 ||
+    verifiedFilter !== null || // Include verification filter
     (isAdmin && (minHeight > 48 || minWeight > 50)); // Include height/weight for admin
 
   return (
@@ -1431,6 +1440,7 @@ const AdvancedFilters: React.FC<AdvancedFiltersProps> = ({
             classes: selectedGraduatingClasses.length,
             conferences: selectedConferences.length,
             requestTypes: selectedRequestTypes.length,
+            verified: verifiedFilter !== null ? 1 : 0, // Include verification filter
             height: (userRole === 'coach' || userRole === 'recruiter' || isAdmin) && minHeight > 48 ? 1 : 0, // Updated from 60 to 48
             weight: (userRole === 'coach' || userRole === 'recruiter' || isAdmin) && minWeight > 50 ? 1 : 0 // Updated from 100 to 50
           }).reduce((a, b) => a + b, 0)})</span>}
@@ -1647,6 +1657,91 @@ const AdvancedFilters: React.FC<AdvancedFiltersProps> = ({
             </div>
           )}
 
+          {/* Advanced Filters for Athletes - Similar to discover page */}
+          {userRole === 'athlete' && (
+            <div className="space-y-4">
+              {/* Advanced Filters */}
+              <div className="border-t border-border pt-4 relative">
+                <Label className="text-sm font-medium mb-4 block">Advanced Filters</Label>
+                
+                {!hasAdvancedSearch ? (
+                  <div className="relative">
+                    {/* Preview/Locked State */}
+                    <div className="space-y-4 pointer-events-none opacity-50">
+                      {/* Conferences Filter Preview */}
+                      <div className="space-y-2">
+                        <Label className="text-sm font-medium">Conferences</Label>
+                        <div className="h-10 flex items-center px-3 py-2 border border-border rounded-md bg-muted/50 text-muted-foreground text-sm">
+                          Filter by conferences...
+                        </div>
+                      </div>
+                      
+                      {/* Verification Filter Preview */}
+                      <div className="space-y-2">
+                        <Label className="text-sm font-medium">Verification Status</Label>
+                        <div className="h-10 flex items-center px-3 py-2 border border-border rounded-md bg-muted/50 text-muted-foreground text-sm">
+                          Filter by verification...
+                        </div>
+                      </div>
+                    </div>
+                    
+                    {/* Premium Overlay */}
+                    <div className="absolute inset-0 bg-gradient-to-br from-background/20 via-background/15 to-background/20 backdrop-blur-[1px] rounded-lg border border-border/30 flex items-center justify-center">
+                      <div className="text-center space-y-3 p-6 bg-background/90 rounded-lg border border-border/50 shadow-lg backdrop-blur-sm">
+                        <div className="flex items-center justify-center space-x-2">
+                          <Crown className="h-6 w-6 text-amber-500" />
+                          <span className="text-lg font-semibold bg-gradient-to-r from-amber-600 to-amber-500 bg-clip-text text-transparent">
+                            Advanced Filters
+                          </span>
+                        </div>
+                        <p className="text-sm text-muted-foreground max-w-xs mx-auto">
+                          Filter coaches and recruiters by conferences and verification status
+                        </p>
+                        <div className="flex justify-center">
+                          <Button
+                            onClick={() => window.location.href = '/pricing'}
+                            className="bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white border-0 shadow-lg hover:shadow-xl transition-all duration-200"
+                          >
+                            <Crown className="h-4 w-4 mr-2" />
+                            Upgrade
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {/* Conferences Filter */}
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium">Conferences</Label>
+                      {selectedDivisions.length > 0 && conferencesOptions.length > 0 ? (
+                        <MultiSelectFilter
+                          options={conferencesOptions}
+                          selected={selectedConferences}
+                          onSelectionChange={setSelectedConferences}
+                          placeholder="Select conferences..."
+                          searchPlaceholder="Search conferences..."
+                        />
+                      ) : (
+                        <div className="h-10 flex items-center px-3 py-2 border border-border rounded-md bg-muted/50 text-muted-foreground text-sm">
+                          {selectedDivisions.length === 0 ? 'Select divisions to filter by conferences' : 'No conferences available'}
+                        </div>
+                      )}
+                    </div>
+                    
+                    {/* Verification Filter */}
+                    <VerifiedFilter
+                      verifiedFilter={verifiedFilter}
+                      onVerifiedChange={setVerifiedFilter}
+                      isPremium={hasAdvancedSearch}
+                      onUpgradeClick={onUpgradeClick}
+                    />
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
           {/* Action Buttons */}
           <div className="flex gap-2 pt-2">
             <Button
@@ -1707,7 +1802,8 @@ function App() {
   // Height/Weight filters (for admin users)
   const [minHeight, setMinHeight] = useState(48); // 4'0" (updated from 60)
   const [minWeight, setMinWeight] = useState(50); // 50 lbs (updated from 100)
-  const [verifiedFilter, setVerifiedFilter] = useState<boolean | null>(null); // null = all, true = verified only, false = unverified only
+  const [verifiedFilter, setVerifiedFilter] = useState<boolean | null>(null); // null = all, true = verified only
+  const [clearingFilters, setClearingFilters] = useState(false);
 
   interface FilterData {
     sports?: FilterOption[];
@@ -1733,32 +1829,63 @@ function App() {
     
     const request = (async () => {
       try {
-        const queryParams = new URLSearchParams();
-        
-        Object.entries(filters).forEach(([key, value]) => {
-          if (Array.isArray(value) && value.length > 0) {
-            value.forEach((v: FilterOption) => queryParams.append(key, v.value));
-          } else if (typeof value === 'number' && value > 0) {
-             if (key === 'minHeight' && value > 48) { // Updated from 60 to 48
-              queryParams.append(key, value.toString());
-            } else if (key === 'minWeight' && value > 50) { // Updated from 100 to 50
-              queryParams.append(key, value.toString());
-            }
-          } else if (key === 'verifiedFilter' && value !== null) {
-            queryParams.append(key, value.toString());
-          }
-        });
+        // Check if we need to use the filtered API
+        const hasAdvancedFilters = filters.sports?.length || 
+          filters.divisions?.length || 
+          filters.states?.length || 
+          filters.countries?.length || 
+          filters.positions?.length ||
+          filters.graduatingClasses?.length ||
+          filters.conferences?.length ||
+          filters.requestTypes?.length ||
+          (filters.minHeight && filters.minHeight > 48) ||
+          (filters.minWeight && filters.minWeight > 50) ||
+          filters.verifiedFilter !== null;
 
-        const response = await fetch(`/api/connections?${queryParams.toString()}`);
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.error || 'Failed to fetch connections');
+        if (hasAdvancedFilters) {
+          // Use filtered API for advanced filters
+          const response = await fetch('/api/connections/filtered', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              sports: filters.sports?.map(s => s.value) || [],
+              divisions: filters.divisions?.map(d => d.value) || [],
+              states: filters.states?.map(s => s.value) || [],
+              countries: filters.countries?.map(c => c.value) || [],
+              positions: filters.positions?.map(p => p.value) || [],
+              graduatingClasses: filters.graduatingClasses?.map(g => g.value) || [],
+              conferences: filters.conferences?.map(c => c.value) || [],
+              requestTypes: filters.requestTypes?.map(r => r.value) || [],
+              minHeight: filters.minHeight && filters.minHeight > 48 ? filters.minHeight : undefined,
+              minWeight: filters.minWeight && filters.minWeight > 50 ? filters.minWeight : undefined,
+              verified: filters.verifiedFilter,
+            }),
+          });
+
+          if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error || 'Failed to fetch filtered connections');
+          }
+          const data = await response.json();
+          setConnections(data.connected || []);
+          setPendingRequests(data.incoming || []);
+          setSentRequests(data.outgoing || []);
+          return data;
+        } else {
+          // Use regular API for basic connections (no filters)
+          const response = await fetch('/api/connections');
+          if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error || 'Failed to fetch connections');
+          }
+          const data = await response.json();
+          setConnections(data.connected || []);
+          setPendingRequests(data.incoming || []);
+          setSentRequests(data.outgoing || []);
+          return data;
         }
-        const data = await response.json();
-        setConnections(data.connected || []);
-        setPendingRequests(data.incoming || []);
-        setSentRequests(data.outgoing || []);
-        return data;
       } catch (err) {
         if (process.env.NODE_ENV === 'development') {
           console.error('Error fetching connections:', err);
@@ -1810,6 +1937,14 @@ function App() {
     initialLoad();
   }, []); // Empty dependency array ensures this only runs once
 
+  // Handle clearing filters - reload when filters are cleared
+  useEffect(() => {
+    if (clearingFilters) {
+      setClearingFilters(false);
+      fetchConnections(); // Fetch with no filters
+    }
+  }, [clearingFilters, fetchConnections]);
+
   const handleApplyFilters = () => {
     const filters = {
       sports: selectedSports,
@@ -1828,6 +1963,7 @@ function App() {
   };
 
   const handleResetFilters = () => {
+    setClearingFilters(true);
     setSearchTerm('');
     setSelectedSports([]);
     setSelectedDivisions([]);
@@ -1840,7 +1976,6 @@ function App() {
     setMinHeight(48);
     setMinWeight(50);
     setVerifiedFilter(null);
-    fetchConnections(); // Fetch with no filters
   };
 
   const useFilteredConnections = (

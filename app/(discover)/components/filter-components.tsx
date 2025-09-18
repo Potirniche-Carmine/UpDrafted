@@ -301,34 +301,19 @@ export function VerifiedFilter({
       </div>
       
       <div className={cn("relative", isLocked && "pointer-events-none opacity-50")}>
-        <div className="flex gap-2">
-          <Button
-            variant={verifiedFilter === null ? "default" : "outline"}
-            size="sm"
-            onClick={() => onVerifiedChange(null)}
-            disabled={isLocked}
-            className="flex-1"
-          >
-            All Athletes
-          </Button>
+        <div className="flex items-center justify-between p-3 border border-border rounded-md bg-background">
+          <div className="flex items-center gap-2">
+            <Shield className="h-4 w-4 text-muted-foreground" />
+            <span className="text-sm font-medium">Verified Only</span>
+          </div>
           <Button
             variant={verifiedFilter === true ? "default" : "outline"}
             size="sm"
-            onClick={() => onVerifiedChange(true)}
+            onClick={() => onVerifiedChange(verifiedFilter === true ? null : true)}
             disabled={isLocked}
-            className="flex-1"
+            className="min-w-16"
           >
-            <Shield className="h-3 w-3 mr-1" />
-            Verified Only
-          </Button>
-          <Button
-            variant={verifiedFilter === false ? "default" : "outline"}
-            size="sm"
-            onClick={() => onVerifiedChange(false)}
-            disabled={isLocked}
-            className="flex-1"
-          >
-            Unverified Only
+            {verifiedFilter === true ? "On" : "Off"}
           </Button>
         </div>
         

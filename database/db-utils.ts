@@ -624,6 +624,7 @@ export const connectionOperations = {
                 city: true,
                 state: true,
                 division: true,
+                conference: true,
                 isVerified: true,
               },
               with: {
@@ -646,6 +647,7 @@ export const connectionOperations = {
                 city: true,
                 state: true,
                 division: true,
+                conference: true,
                 isVerified: true,
               },
               with: {
@@ -698,6 +700,7 @@ export const connectionOperations = {
                 city: true,
                 state: true,
                 division: true,
+                conference: true,
                 isVerified: true,
               },
               with: {
@@ -720,6 +723,7 @@ export const connectionOperations = {
                 city: true,
                 state: true,
                 division: true,
+                conference: true,
                 isVerified: true,
               },
               with: {

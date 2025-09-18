@@ -248,7 +248,7 @@ function SearchPageContent() {
   const [selectedConferences, setSelectedConferences] = useState<FilterOption[]>([]);
   const [minHeight, setMinHeight] = useState<number>(48); // 4'0" in inches (updated from 60)
   const [minWeight, setMinWeight] = useState<number>(50); // 50 lbs (updated from 100)
-  const [verifiedFilter, setVerifiedFilter] = useState<boolean | null>(null); // null = all, true = verified only, false = unverified only
+  const [verifiedFilter, setVerifiedFilter] = useState<boolean | null>(null); // null = all, true = verified only
 
   // Data and loading states
   const [loading, setLoading] = useState(false);
@@ -265,6 +265,7 @@ function SearchPageContent() {
   const [showMobileFilters, setShowMobileFilters] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
   const [showDiscoverButton, setShowDiscoverButton] = useState(false);
+  const [clearingFilters, setClearingFilters] = useState(false);
 
   // Refs for infinite scroll and preventing double initial load
   const observerRef = useRef<IntersectionObserver | null>(null);
@@ -577,7 +578,7 @@ function SearchPageContent() {
     // Always show the button if user has searched at least once, regardless of filters
     // This allows users to go back to default filters or reapply changes
     setShowDiscoverButton(hasSearched);
-  }, [selectedSports, selectedDivisions, selectedCountries, selectedStates, selectedPositions, selectedGraduatingClasses, selectedConferences, minHeight, minWeight, hasSearched]);
+  }, [selectedSports, selectedDivisions, selectedCountries, selectedStates, selectedPositions, selectedGraduatingClasses, selectedConferences, minHeight, minWeight, hasSearched, verifiedFilter]);
 
   // Save search state whenever important data changes
   useEffect(() => {
@@ -585,6 +586,14 @@ function SearchPageContent() {
       saveSearchState();
     }
   }, [selectedSports, selectedDivisions, selectedStates, selectedPositions, selectedGraduatingClasses, selectedConferences, minHeight, minWeight, allUsers, activeTab, page, hasSearched, saveSearchState]);
+
+  // Handle clearing filters - reload when filters are cleared
+  useEffect(() => {
+    if (clearingFilters) {
+      setClearingFilters(false);
+      loadUsers(1, true);
+    }
+  }, [clearingFilters, loadUsers]);
 
   // Filter displayed users based on active tab
   const filteredUsers = useMemo(() => {
@@ -610,12 +619,13 @@ function SearchPageContent() {
   // Discover/Search function
   const handleDiscover = () => {
     setShowMobileFilters(false);
-    setShowDiscoverButton(false);
+    // Keep showDiscoverButton as true to always show the button
     loadUsers(1, true);
   };
 
   // Clear filters
   const clearFilters = () => {
+    setClearingFilters(true);
     setSelectedSports([]);
     setSelectedDivisions([]);
     setSelectedCountries([{ value: 'United States', label: 'United States' }]); // Reset to default
@@ -625,11 +635,9 @@ function SearchPageContent() {
     setSelectedConferences([]);
     setMinHeight(48);
     setMinWeight(50);
+    setVerifiedFilter(null); // Reset verification filter
     setShowMobileFilters(false);
-    setShowDiscoverButton(false);
     setError(null);
-    // Re-load results without filters
-    loadUsers(1, true);
   };
 
   // Infinite scroll setup
@@ -1103,13 +1111,23 @@ function SearchPageContent() {
                 />
 
                 {showDiscoverButton && (
-                  <Button
-                    onClick={handleDiscover}
-                    className="w-full bg-[#01ae79] hover:bg-[#01ae79]/90 text-white"
-                  >
-                    <Search className="h-4 w-4 mr-2" />
-                    Apply Filters
-                  </Button>
+                  <div className="flex gap-3">
+                    <Button
+                      onClick={clearFilters}
+                      variant="outline"
+                      className="flex-1"
+                      disabled={activeFiltersCount === 0}
+                    >
+                      Clear All
+                    </Button>
+                    <Button
+                      onClick={handleDiscover}
+                      className="flex-1 bg-[#01ae79] hover:bg-[#01ae79]/90 text-white"
+                    >
+                      <Search className="h-4 w-4 mr-2" />
+                      Apply Filters
+                    </Button>
+                  </div>
                 )}
               </div>
             </div>
@@ -1492,6 +1510,7 @@ function SearchPageContent() {
                       onClick={clearFilters}
                       variant="outline"
                       className="flex-1"
+                      disabled={activeFiltersCount === 0}
                     >
                       Clear All
                     </Button>

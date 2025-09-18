@@ -9,6 +9,58 @@ import { SubscriptionManager } from '@/lib/subscription';
 
 export const runtime = 'nodejs';
 
+// Extended profile types to include conference field
+interface AthleteProfileWithConference {
+  fullName: string;
+  profileImageR3Key: string | null;
+  sport: string;
+  graduationYear: number;
+  educationLevel: string;
+  city: string;
+  state: string;
+  isVerified: boolean;
+  height?: string;
+  weight?: string;
+  positions?: string[];
+  conference?: string;
+  school?: {
+    id: number;
+    name: string;
+  };
+}
+
+interface CoachProfileWithConference {
+  fullName: string;
+  profileImageR3Key: string | null;
+  title: string;
+  sportCoaching: string;
+  city: string;
+  state: string;
+  division: string;
+  isVerified: boolean;
+  conference?: string;
+  school?: {
+    id: number;
+    name: string;
+  };
+}
+
+interface RecruitingProfileWithConference {
+  fullName: string;
+  profileImageR3Key: string | null;
+  title: string;
+  sportRecruiting: string;
+  city: string;
+  state: string;
+  division: string;
+  isVerified: boolean;
+  conference?: string;
+  school?: {
+    id: number;
+    name: string;
+  };
+}
+
 interface FilteredConnectionData {
   id: number;
   status: string;
@@ -29,6 +81,7 @@ interface FilteredConnectionData {
     graduationYear: number | null;
     educationLevel: string;
     division: string;
+    conference?: string;
     isVerified: boolean;
     role: string;
     height?: string;
@@ -278,10 +331,19 @@ export async function POST(request: NextRequest) {
           }
         }
         
-        if (sanitizedFilters.conferences.length > 0 && 
-            (otherUser.role === 'coach' || otherUser.role === 'recruiter')) {
-          // Conference filtering is not yet available in the current schema
-          // Skip this filter for now
+        if (sanitizedFilters.conferences.length > 0) {
+          let userConference = null;
+          if (otherUser.role === 'athlete' && otherUser.athleteProfile) {
+            userConference = (otherUser.athleteProfile as AthleteProfileWithConference).conference;
+          } else if (otherUser.role === 'coach' && otherUser.coachProfile) {
+            userConference = (otherUser.coachProfile as CoachProfileWithConference).conference;
+          } else if (otherUser.role === 'recruiter' && otherUser.recruitingProfile) {
+            userConference = (otherUser.recruitingProfile as RecruitingProfileWithConference).conference;
+          }
+          
+          if (!userConference || !sanitizedFilters.conferences.includes(userConference)) {
+            return; // Skip this connection
+          }
         }
         
         if (sanitizedFilters.minHeight && otherUser.role === 'athlete') {
@@ -298,8 +360,16 @@ export async function POST(request: NextRequest) {
           }
         }
         
-        if (sanitizedFilters.verified !== null && otherUser.role === 'athlete') {
-          const isVerified = Boolean(otherUser.athleteProfile?.isVerified);
+        if (sanitizedFilters.verified !== null) {
+          let isVerified = false;
+          if (otherUser.role === 'athlete') {
+            isVerified = Boolean(otherUser.athleteProfile?.isVerified);
+          } else if (otherUser.role === 'coach') {
+            isVerified = Boolean(otherUser.coachProfile?.isVerified);
+          } else if (otherUser.role === 'recruiter') {
+            isVerified = Boolean(otherUser.recruitingProfile?.isVerified);
+          }
+          
           if (sanitizedFilters.verified !== isVerified) {
             return; // Skip this connection
           }
@@ -340,6 +410,9 @@ export async function POST(request: NextRequest) {
           educationLevel: otherUser.athleteProfile?.educationLevel || '',
           division: otherUser.coachProfile?.division || 
                     otherUser.recruitingProfile?.division || '',
+          conference: (otherUser.athleteProfile as AthleteProfileWithConference)?.conference || 
+                     (otherUser.coachProfile as CoachProfileWithConference)?.conference || 
+                     (otherUser.recruitingProfile as RecruitingProfileWithConference)?.conference || undefined,
           isVerified: otherUser.athleteProfile?.isVerified || 
                      otherUser.coachProfile?.isVerified || 
                      otherUser.recruitingProfile?.isVerified || false,
