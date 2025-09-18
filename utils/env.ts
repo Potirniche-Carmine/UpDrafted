@@ -87,6 +87,11 @@ const serverEnvSchema = z.object({
   NEXT_PUBLIC_STRIPE_PRICE_COACH_YEARLY: z.string().optional(),
   NEXT_PUBLIC_STRIPE_PRICE_RECRUITER_MONTHLY: z.string().optional(),
   NEXT_PUBLIC_STRIPE_PRICE_RECRUITER_YEARLY: z.string().optional(),
+  
+  // Stripe Product IDs for portal configurations (optional in development)
+  STRIPE_PRODUCT_ATHLETE_ID: z.string().optional(),
+  STRIPE_PRODUCT_COACH_ID: z.string().optional(),
+  STRIPE_PRODUCT_RECRUITER_ID: z.string().optional(),
 });
 
 // Type for validated environment variables

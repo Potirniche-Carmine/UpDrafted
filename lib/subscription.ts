@@ -317,15 +317,7 @@ export class SubscriptionManager {
     }
     
     // Debug logging to help identify mapping issues
-    console.log('Available price mappings:', {
-      athlete_monthly: process.env.NEXT_PUBLIC_STRIPE_PRICE_ATHLETE_MONTHLY,
-      athlete_yearly: process.env.NEXT_PUBLIC_STRIPE_PRICE_ATHLETE_YEARLY,
-      coach_monthly: process.env.NEXT_PUBLIC_STRIPE_PRICE_COACH_MONTHLY,
-      coach_yearly: process.env.NEXT_PUBLIC_STRIPE_PRICE_COACH_YEARLY,
-      recruiter_monthly: process.env.NEXT_PUBLIC_STRIPE_PRICE_RECRUITER_MONTHLY,
-      recruiter_yearly: process.env.NEXT_PUBLIC_STRIPE_PRICE_RECRUITER_YEARLY,
-    })
-    console.log(`Mapping price ID ${priceId} to tier:`, priceMap[priceId] || 'free')
+    // Removed console logs for production
     
     return priceMap[priceId] || 'free'
   }

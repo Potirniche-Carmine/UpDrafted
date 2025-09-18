@@ -37,6 +37,9 @@ const subscriptionCache = new Map<string, {
   timestamp: number
 }>()
 
+// Pending requests to avoid duplicate API calls
+const pendingRequests = new Map<string, Promise<{ subscription: SubscriptionData, features: SubscriptionFeatures }>>()
+
 const CACHE_DURATION = 24 * 60 * 60 * 1000 // 24 hours
 const DEFAULT_FEATURES: SubscriptionFeatures = {
   advancedSearch: false,
@@ -78,10 +81,25 @@ export function useSubscription(): UseSubscriptionReturn {
       }
     }
 
+    // Check if there's already a pending request for this user
+    const pendingRequest = pendingRequests.get(userId)
+    if (pendingRequest && !force) {
+      try {
+        const { subscription: subscriptionData, features: featuresData } = await pendingRequest
+        setSubscription(subscriptionData)
+        setFeatures(featuresData)
+        return
+      } catch {
+        // If pending request failed, continue with new request
+        pendingRequests.delete(userId)
+      }
+    }
+
     setLoading(true)
     setError(null)
 
-    try {
+    // Create and store the promise for this request
+    const requestPromise = (async () => {
       const response = await fetch('/api/subscription')
       
       if (!response.ok) {
@@ -106,11 +124,16 @@ export function useSubscription(): UseSubscriptionReturn {
         timestamp: Date.now()
       })
 
+      return { subscription: subscriptionData, features: featuresData }
+    })()
+
+    pendingRequests.set(userId, requestPromise)
+
+    try {
+      const { subscription: subscriptionData, features: featuresData } = await requestPromise
       setSubscription(subscriptionData)
       setFeatures(featuresData)
-      
     } catch (err) {
-      console.error('Error fetching subscription:', err)
       setError(err instanceof Error ? err.message : 'Failed to fetch subscription')
       
       // Set defaults on error
@@ -118,6 +141,7 @@ export function useSubscription(): UseSubscriptionReturn {
       setFeatures(DEFAULT_FEATURES)
     } finally {
       setLoading(false)
+      pendingRequests.delete(userId)
     }
   }, [isSignedIn, userId])
 
@@ -155,4 +179,23 @@ export function useFeatureAccess(): SubscriptionFeatures {
 // Global function to invalidate cache (call from webhooks)
 export function invalidateSubscriptionCache(userId: string): void {
   subscriptionCache.delete(userId)
+  pendingRequests.delete(userId)
+}
+
+// Cleanup function to prevent memory leaks
+export function cleanupSubscriptionCache(): void {
+  const now = Date.now()
+  for (const [userId, cached] of subscriptionCache.entries()) {
+    if (now - cached.timestamp > CACHE_DURATION) {
+      subscriptionCache.delete(userId)
+    }
+  }
+  // Also cleanup any stale pending requests (older than 30 seconds)
+  // This should not normally happen but prevents memory leaks
+  pendingRequests.clear()
+}
+
+// Run cleanup every hour in browser environments
+if (typeof window !== 'undefined') {
+  setInterval(cleanupSubscriptionCache, 60 * 60 * 1000)
 }

@@ -20,6 +20,7 @@ import { useProfileNavigation } from '@/hooks/use-profile-navigation'
 import { DashboardHeader } from '../components/dashboard-header'
 import { AuthWrapper } from '../../../components/auth-wrapper'
 import { PWAInstallPrompt } from '../../../components/pwa-install-prompt'
+import { SubscriptionManager } from '@/components/subscription-manager'
 
 // TypeScript interfaces for navigation items
 interface NavItemWithHref {
@@ -382,8 +383,11 @@ function DashboardContent({
             </Card>
           </div>
 
-          {/* Side Content - Calendar and NCAA Rules */}
+          {/* Side Content - Subscription, Calendar and NCAA Rules */}
           <div className="space-y-6">
+            {/* Subscription Management */}
+            <SubscriptionManager />
+
             {/* Calendar Date */}
             <Card className="border shadow-sm bg-card/80 backdrop-blur-sm">
               <CardHeader className="pb-3">
