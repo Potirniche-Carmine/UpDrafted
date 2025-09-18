@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useUser } from '@clerk/nextjs'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -16,11 +16,25 @@ interface SubscriptionManagerProps {
 
 export function SubscriptionManager({ className }: SubscriptionManagerProps) {
   const { user } = useUser()
-  const { subscription, loading } = useSubscription()
+  const { subscription, loading, refetch } = useSubscription()
   const { error: showError } = useToast()
   const [isCreatingSession, setIsCreatingSession] = useState(false)
 
   const userRole = user?.publicMetadata?.role as string
+
+  // Listen for when user returns from Stripe portal
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible' && subscription?.isPremium) {
+        // Refetch subscription when user returns to the page
+        // This catches changes made in the Stripe portal
+        refetch()
+      }
+    }
+
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange)
+  }, [refetch, subscription?.isPremium])
 
   const handleManageSubscription = async () => {
     if (!subscription?.isPremium) return
@@ -146,20 +160,24 @@ export function SubscriptionManager({ className }: SubscriptionManagerProps) {
               <Badge className={getStatusColor(subscription.status)}>
                 {subscription.status.charAt(0).toUpperCase() + subscription.status.slice(1)}
               </Badge>
-              {subscription.isPremium && subscription.cancelAtPeriodEnd && (
-                <Badge variant="outline" className="text-orange-600">
-                  Cancels {subscription.currentPeriodEnd ? formatDate(subscription.currentPeriodEnd) : 'soon'}
-                </Badge>
-              )}
             </div>
           </div>
         </div>
 
         {subscription.isPremium && subscription.currentPeriodEnd && (
-          <div className="text-sm text-muted-foreground">
+          <div className="text-sm text-muted-foreground bg-muted/30 rounded-md p-3 border-l-2 border-muted-foreground/20">
             {subscription.cancelAtPeriodEnd 
-              ? `Access until ${formatDate(subscription.currentPeriodEnd)}`
-              : `Renews on ${formatDate(subscription.currentPeriodEnd)}`
+              ? (
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
+                  <span>Your subscription will end on <span className="font-medium text-foreground">{formatDate(subscription.currentPeriodEnd)}</span></span>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                  <span>Renews automatically on <span className="font-medium text-foreground">{formatDate(subscription.currentPeriodEnd)}</span></span>
+                </div>
+              )
             }
           </div>
         )}

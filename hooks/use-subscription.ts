@@ -148,9 +148,20 @@ export function useSubscription(): UseSubscriptionReturn {
   const refetch = useCallback(async () => {
     if (userId) {
       subscriptionCache.delete(userId) // Clear cache
+      pendingRequests.delete(userId) // Clear any pending requests
       await fetchSubscription(true)
     }
   }, [fetchSubscription, userId])
+
+  // Auto-refetch when user changes (for admin switching views)
+  useEffect(() => {
+    if (userId) {
+      const cached = subscriptionCache.get(userId)
+      if (!cached) {
+        fetchSubscription()
+      }
+    }
+  }, [userId, fetchSubscription])
 
   useEffect(() => {
     fetchSubscription()

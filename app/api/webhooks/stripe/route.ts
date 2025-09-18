@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { headers } from 'next/headers'
 import { stripe } from '@/lib/stripe'
 import { SubscriptionManager } from '@/lib/subscription'
+import { invalidateSubscriptionCache } from '@/hooks/use-subscription'
 import Stripe from 'stripe'
 
 // Simple rate limiting to prevent webhook storms
@@ -118,6 +119,9 @@ async function handleSubscriptionUpdate(subscription: Stripe.Subscription) {
     })
 
     console.log(`Subscription updated for user ${userId}`)
+    
+    // Force cache refresh for this user's subscription
+    invalidateSubscriptionCache(userId)
   } catch (error) {
     console.error(`Error updating subscription for user ${userId}:`, error)
   }
@@ -133,6 +137,9 @@ async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
   try {
     await SubscriptionManager.cancelSubscription(userId)
     console.log(`Subscription canceled for user ${userId}`)
+    
+    // Force cache refresh for this user's subscription
+    invalidateSubscriptionCache(userId)
   } catch (error) {
     console.error(`Error canceling subscription for user ${userId}:`, error)
   }
@@ -180,6 +187,9 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
       })
       
       console.log(`Subscription created from checkout for user ${userId}`)
+      
+      // Force cache refresh for this user's subscription
+      invalidateSubscriptionCache(userId)
     } catch (error) {
       console.error(`Error creating subscription from checkout for user ${userId}:`, error)
     }

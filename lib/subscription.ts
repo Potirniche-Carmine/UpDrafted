@@ -177,7 +177,7 @@ export class SubscriptionManager {
           }
         })
 
-      // Invalidate cache
+      // Invalidate cache for real-time updates
       this.invalidateCache(userId)
     } catch (error) {
       console.error(`Error updating subscription for user ${userId}:`, error)
@@ -185,7 +185,7 @@ export class SubscriptionManager {
     }
   }
 
-  /**
+    /**
    * Handle subscription cancellation
    */
   static async cancelSubscription(userId: string): Promise<void> {
@@ -199,6 +199,7 @@ export class SubscriptionManager {
         })
         .where(eq(userSubscriptions.userId, userId))
 
+      // Invalidate cache for real-time updates
       this.invalidateCache(userId)
     } catch (error) {
       console.error(`Error canceling subscription for user ${userId}:`, error)
