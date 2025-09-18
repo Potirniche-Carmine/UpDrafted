@@ -742,6 +742,19 @@ export function AthleteEditDialogs({
     });
   }
 
+  // Normalize Hudl URLs to always include https://www.
+  function normalizeHudlUrl(input: string): string {
+    if (typeof input !== 'string') return input as unknown as string;
+    const trimmed = input.trim();
+    if (!trimmed) return trimmed;
+    if (!/hudl\.com/i.test(trimmed)) return trimmed;
+    let withoutProtocol = trimmed.replace(/^\s*https?:\/\//i, '');
+    if (!withoutProtocol.toLowerCase().startsWith('www.')) {
+      withoutProtocol = 'www.' + withoutProtocol;
+    }
+    return `https://${withoutProtocol}`;
+  }
+
   // Modify handleFieldChange to track dirty state
   const handleFieldChange = (field: string, value: string | number) => {
     setIsDirty(true);
@@ -754,6 +767,8 @@ export function AthleteEditDialogs({
         processedValue = toTitleCasePreserveSpaces(value);
       } else if (field === 'state') {
         processedValue = toTitleCase(value);
+      } else if (field === 'hudlUrl') {
+        processedValue = normalizeHudlUrl(value);
       }
     }
     
