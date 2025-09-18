@@ -23,12 +23,20 @@ export function SubscriptionManager({ className }: SubscriptionManagerProps) {
   const userRole = user?.publicMetadata?.role as string
 
   // Listen for when user returns from Stripe portal
+  // Only refetch if they were away for more than 5 minutes to respect the 24-hour cache
   useEffect(() => {
+    let awayTime: number | null = null
+
     const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible' && subscription?.isPremium) {
-        // Refetch subscription when user returns to the page
-        // This catches changes made in the Stripe portal
-        refetch()
+      if (document.visibilityState === 'hidden') {
+        awayTime = Date.now()
+      } else if (document.visibilityState === 'visible' && subscription?.isPremium && awayTime) {
+        const timeAway = Date.now() - awayTime
+        // Only refetch if they were away for more than 5 minutes (indicating a potential Stripe portal visit)
+        if (timeAway > 5 * 60 * 1000) {
+          refetch()
+        }
+        awayTime = null
       }
     }
 

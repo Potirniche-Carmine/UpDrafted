@@ -37,6 +37,50 @@ const subscriptionCache = new Map<string, {
   timestamp: number
 }>()
 
+// In development, also use sessionStorage as backup to survive hot reloads
+const isDevMode = process.env.NODE_ENV === 'development'
+
+function getCachedData(userId: string) {
+  // First check memory cache
+  const memoryCache = subscriptionCache.get(userId)
+  if (memoryCache && Date.now() - memoryCache.timestamp < CACHE_DURATION) {
+    return memoryCache
+  }
+
+  // In dev mode, check sessionStorage as fallback
+  if (isDevMode && typeof window !== 'undefined') {
+    try {
+      const stored = sessionStorage.getItem(`subscription_${userId}`)
+      if (stored) {
+        const parsed = JSON.parse(stored)
+        if (Date.now() - parsed.timestamp < CACHE_DURATION) {
+          // Restore to memory cache
+          subscriptionCache.set(userId, parsed)
+          return parsed
+        }
+      }
+    } catch {
+      // Ignore sessionStorage errors
+    }
+  }
+
+  return null
+}
+
+function setCachedData(userId: string, data: { subscription: SubscriptionData, features: SubscriptionFeatures, timestamp: number }) {
+  // Set in memory cache
+  subscriptionCache.set(userId, data)
+  
+  // In dev mode, also set in sessionStorage
+  if (isDevMode && typeof window !== 'undefined') {
+    try {
+      sessionStorage.setItem(`subscription_${userId}`, JSON.stringify(data))
+    } catch {
+      // Ignore sessionStorage errors (quota exceeded, etc.)
+    }
+  }
+}
+
 // Pending requests to avoid duplicate API calls
 const pendingRequests = new Map<string, Promise<{ subscription: SubscriptionData, features: SubscriptionFeatures }>>()
 
@@ -62,19 +106,25 @@ export function useSubscription(): UseSubscriptionReturn {
   const [features, setFeatures] = useState<SubscriptionFeatures>(DEFAULT_FEATURES)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const { isSignedIn, userId } = useAuth()
+  const { isSignedIn, userId, isLoaded } = useAuth()
 
   const fetchSubscription = useCallback(async (force = false) => {
+    // Wait for Clerk to finish loading before making subscription decisions
+    if (!isLoaded) {
+      return
+    }
+
     if (!isSignedIn || !userId) {
       setSubscription(DEFAULT_SUBSCRIPTION)
       setFeatures(DEFAULT_FEATURES)
+      setLoading(false)
       return
     }
 
     // Check cache first (unless forced)
     if (!force) {
-      const cached = subscriptionCache.get(userId)
-      if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
+      const cached = getCachedData(userId)
+      if (cached) {
         setSubscription(cached.subscription)
         setFeatures(cached.features)
         return
@@ -118,11 +168,12 @@ export function useSubscription(): UseSubscriptionReturn {
       const featuresData: SubscriptionFeatures = data.features || DEFAULT_FEATURES
 
       // Cache for 24 hours
-      subscriptionCache.set(userId, {
+      const cacheData = {
         subscription: subscriptionData,
         features: featuresData,
         timestamp: Date.now()
-      })
+      }
+      setCachedData(userId, cacheData)
 
       return { subscription: subscriptionData, features: featuresData }
     })()
@@ -143,7 +194,7 @@ export function useSubscription(): UseSubscriptionReturn {
       setLoading(false)
       pendingRequests.delete(userId)
     }
-  }, [isSignedIn, userId])
+  }, [isSignedIn, userId, isLoaded])
 
   const refetch = useCallback(async () => {
     if (userId) {
@@ -155,17 +206,28 @@ export function useSubscription(): UseSubscriptionReturn {
 
   // Auto-refetch when user changes (for admin switching views)
   useEffect(() => {
+    // Wait for Clerk to finish loading
+    if (!isLoaded) {
+      return
+    }
+
     if (userId) {
-      const cached = subscriptionCache.get(userId)
+      const cached = getCachedData(userId)
       if (!cached) {
         fetchSubscription()
+      } else {
+        // Use cached data
+        setSubscription(cached.subscription)
+        setFeatures(cached.features)
+        setLoading(false)
       }
+    } else {
+      // No user, set defaults
+      setSubscription(DEFAULT_SUBSCRIPTION)
+      setFeatures(DEFAULT_FEATURES)
+      setLoading(false)
     }
-  }, [userId, fetchSubscription])
-
-  useEffect(() => {
-    fetchSubscription()
-  }, [fetchSubscription])
+  }, [userId, fetchSubscription, isLoaded])
 
   return {
     subscription,

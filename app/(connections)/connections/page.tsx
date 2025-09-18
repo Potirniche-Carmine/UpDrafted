@@ -16,7 +16,7 @@ import { sanitizeText } from '@/utils/sanitization';
 import { useUser } from "@clerk/nextjs";
 import { getSportsList, DIVISIONS, US_STATES, COUNTRIES, getPositionsForSport } from '@/lib/sports-data';
 import { CONFERENCES_BY_DIVISION } from '@/lib/conference-data';
-import { useFeatureAccess } from '@/hooks/use-subscription';
+import { useFeatureAccess } from '@/components/providers/subscription-provider';
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import {

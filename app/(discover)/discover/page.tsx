@@ -18,7 +18,7 @@ import { CONFERENCES_BY_DIVISION } from '@/lib/conference-data';
 import { useProfileCompletenessSorting } from '../components/profile-completeness-sorter';
 import { AdvancedFilters } from '../components/advanced-filters';
 import { MultiSelectFilter, HeightWeightFilter, VerifiedFilter, type FilterOption } from '../components/filter-components';
-import { useFeatureAccess } from '@/hooks/use-subscription';
+import { useFeatureAccess } from '@/components/providers/subscription-provider';
 
 // API response types
 interface DiscoverUser {
