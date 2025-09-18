@@ -360,12 +360,12 @@ export function AthleteEditDialogs({
   const [campForm, setCampForm] = useState({
     type: 'Camp' as 'Camp' | 'Club',
     name: '',
-    city: '',
-    state: '',
-    country: '',
+    city: profileData.city || '',
+    state: profileData.state || '',
+    country: profileData.country || '',
     startDate: undefined as Date | undefined,
     endDate: undefined as Date | undefined,
-    sport: '',
+    sport: profileData.sport || '',
     description: ''
   });
   const [campEndDateIsPresent, setCampEndDateIsPresent] = useState(false);
@@ -734,14 +734,27 @@ export function AthleteEditDialogs({
     return null;
   };
 
+  // Helper: Title case without trimming or collapsing spaces (preserves user-typed spaces)
+  function toTitleCasePreserveSpaces(input: string): string {
+    if (typeof input !== 'string') return '';
+    return input.replace(/\b([A-Za-zÀ-ÖØ-öø-ÿ])([A-Za-zÀ-ÖØ-öø-ÿ]*)/g, (_match, first: string, rest: string) => {
+      return first.toUpperCase() + rest.toLowerCase();
+    });
+  }
+
   // Modify handleFieldChange to track dirty state
   const handleFieldChange = (field: string, value: string | number) => {
     setIsDirty(true);
     
     // Apply title case to city and state fields
     let processedValue = value;
-    if (typeof value === 'string' && (field === 'city' || field === 'state')) {
-      processedValue = toTitleCase(value);
+    if (typeof value === 'string') {
+      if (field === 'city') {
+        // Preserve spaces while capitalizing each word
+        processedValue = toTitleCasePreserveSpaces(value);
+      } else if (field === 'state') {
+        processedValue = toTitleCase(value);
+      }
     }
     
     setEditData(prev => ({ ...prev, [field]: processedValue }));
@@ -1240,9 +1253,10 @@ export function AthleteEditDialogs({
             <div className="space-y-6 max-h-[70vh] overflow-y-auto pr-2">
               <div className="space-y-2">
                 <Label htmlFor="edit-fullName" className={cn(
-                  "Full Name *",
+                  "text-sm font-medium",
                   shouldLockFields() && "text-muted-foreground"
                 )}>
+                  Full Name *
                   {shouldLockFields() && <span className="text-xs text-muted-foreground block">(Locked during verification)</span>}
                 </Label>
                 <Input
@@ -1270,9 +1284,10 @@ export function AthleteEditDialogs({
               
               <div className="space-y-2">
                 <Label htmlFor="edit-sport" className={cn(
-                  "Primary Sport *",
+                  "text-sm font-medium",
                   shouldLockFields() && "text-muted-foreground"
                 )}>
+                  Primary Sport *
                   {shouldLockFields() && <span className="text-xs text-muted-foreground block">(Locked during verification)</span>}
                 </Label>
                 <Select
@@ -1300,9 +1315,10 @@ export function AthleteEditDialogs({
 
               <div className="space-y-2">
                 <Label htmlFor="edit-educationLevel" className={cn(
-                  "Education Level *",
+                  "text-sm font-medium",
                   shouldLockFields() && "text-muted-foreground"
                 )}>
+                  Education Level *
                   {shouldLockFields() && <span className="text-xs text-muted-foreground block">(Locked during verification)</span>}
                 </Label>
                 <Select
@@ -1330,16 +1346,17 @@ export function AthleteEditDialogs({
 
               {/* Team Level - Only show for high school students */}
               {editData.educationLevel === 'high_school' && (
-                <div className="space-y-4">
+                <div className="space-y-2">
                   <Label className={cn(
-                    "Team Level",
+                    "text-sm font-medium",
                     shouldLockFields() && "text-muted-foreground"
                   )}>
+                    Team Level
                     {shouldLockFields() && <span className="text-xs text-muted-foreground block">(Locked during verification)</span>}
                   </Label>
-                  <div className="grid grid-cols-1 gap-3">
+                  <div className="grid grid-cols-1 gap-2">
                     <div className={cn(
-                      "relative border-2 rounded-lg p-4 transition-all",
+                      "relative border-2 rounded-lg p-3 transition-all",
                       editData.teamLevel && editData.teamLevel === 'varsity' 
                         ? 'border-orange-500 bg-orange-50 dark:bg-orange-950/20' 
                         : 'border-border',
@@ -1353,7 +1370,7 @@ export function AthleteEditDialogs({
                       }
                     }}
                     >
-                      <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-2.5">
                         <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
                           editData.teamLevel && editData.teamLevel === 'varsity' 
                             ? 'border-orange-500 bg-orange-500' 
@@ -1365,10 +1382,10 @@ export function AthleteEditDialogs({
                         </div>
                         <div className="flex-1">
                           <div className="flex items-center gap-2 mb-1">
-                            <Trophy className="w-5 h-5 text-orange-600" />
-                            <h3 className="font-semibold text-lg">Varsity</h3>
+                            <Trophy className="w-4 h-4 text-orange-600" />
+                            <h3 className="font-medium text-base">Varsity</h3>
                           </div>
-                          <p className="text-sm text-muted-foreground">
+                          <p className="text-xs text-muted-foreground">
                             Top-level team representing your school in official competitions
                           </p>
                         </div>
@@ -1376,7 +1393,7 @@ export function AthleteEditDialogs({
                     </div>
 
                     <div className={cn(
-                      "relative border-2 rounded-lg p-4 transition-all",
+                      "relative border-2 rounded-lg p-3 transition-all",
                       editData.teamLevel && editData.teamLevel === 'jv' 
                         ? 'border-blue-500 bg-blue-50 dark:bg-blue-950/20' 
                         : 'border-border',
@@ -1390,7 +1407,7 @@ export function AthleteEditDialogs({
                       }
                     }}
                     >
-                      <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-2.5">
                         <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
                           editData.teamLevel && editData.teamLevel === 'jv' 
                             ? 'border-blue-500 bg-blue-500' 
@@ -1402,10 +1419,10 @@ export function AthleteEditDialogs({
                         </div>
                         <div className="flex-1">
                           <div className="flex items-center gap-2 mb-1">
-                            <Trophy className="w-5 h-5 text-blue-600" />
-                            <h3 className="font-semibold text-lg">Junior Varsity</h3>
+                            <Trophy className="w-4 h-4 text-blue-600" />
+                            <h3 className="font-medium text-base">Junior Varsity</h3>
                           </div>
-                          <p className="text-sm text-muted-foreground">
+                          <p className="text-xs text-muted-foreground">
                             Development team for athletes working toward varsity level
                           </p>
                         </div>
@@ -1413,7 +1430,7 @@ export function AthleteEditDialogs({
                     </div>
 
                     <div className={cn(
-                      "relative border-2 rounded-lg p-4 transition-all",
+                      "relative border-2 rounded-lg p-3 transition-all",
                       editData.teamLevel && editData.teamLevel === 'freshman' 
                         ? 'border-green-500 bg-green-50 dark:bg-green-950/20' 
                         : 'border-border',
@@ -1427,7 +1444,7 @@ export function AthleteEditDialogs({
                       }
                     }}
                     >
-                      <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-2.5">
                         <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
                           editData.teamLevel && editData.teamLevel === 'freshman' 
                             ? 'border-green-500 bg-green-500' 
@@ -1439,17 +1456,17 @@ export function AthleteEditDialogs({
                         </div>
                         <div className="flex-1">
                           <div className="flex items-center gap-2 mb-1">
-                            <Trophy className="w-5 h-5 text-green-600" />
-                            <h3 className="font-semibold text-lg">Freshman</h3>
+                            <Trophy className="w-4 h-4 text-green-600" />
+                            <h3 className="font-medium text-base">Freshman</h3>
                           </div>
-                          <p className="text-sm text-muted-foreground">
+                          <p className="text-xs text-muted-foreground">
                             Entry-level team for first-year high school athletes
                           </p>
                         </div>
                       </div>
                     </div>
                     <div className={cn(
-                      "relative border-2 rounded-lg p-4 transition-all",
+                      "relative border-2 rounded-lg p-3 transition-all",
                       editData.teamLevel === 'none' 
                         ? 'border-gray-500 bg-gray-50 dark:bg-gray-950/20' 
                         : 'border-border',
@@ -1463,7 +1480,7 @@ export function AthleteEditDialogs({
                       }
                     }}
                     >
-                      <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-2.5">
                         <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
                           editData.teamLevel === 'none' 
                             ? 'border-gray-500 bg-gray-500' 
@@ -1475,10 +1492,10 @@ export function AthleteEditDialogs({
                         </div>
                         <div className="flex-1">
                           <div className="flex items-center gap-2 mb-1">
-                            <Trophy className="w-5 h-5 text-gray-600" />
-                            <h3 className="font-semibold text-lg">None</h3>
+                            <Trophy className="w-4 h-4 text-gray-600" />
+                            <h3 className="font-medium text-base">None</h3>
                           </div>
-                          <p className="text-sm text-muted-foreground">
+                          <p className="text-xs text-muted-foreground">
                             No official school team; club or recreational participation
                           </p>
                         </div>
@@ -1486,7 +1503,7 @@ export function AthleteEditDialogs({
                     </div>
                   </div>
 
-                  <div className="bg-muted/50 rounded-lg p-4">
+                  <div className="bg-muted/50 rounded-lg p-3">
                     <h4 className="font-medium text-sm mb-2">About Team Levels</h4>
                     <ul className="text-xs text-muted-foreground space-y-1">
                       <li>• <strong>Varsity:</strong> Highest level, represents school in official competitions</li>
@@ -1503,9 +1520,10 @@ export function AthleteEditDialogs({
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="edit-division" className={cn(
-                      "Division",
+                      "text-sm font-medium",
                       shouldLockFields() && "text-muted-foreground"
                     )}>
+                      Division
                       {shouldLockFields() && <span className="text-xs text-muted-foreground block">(Locked during verification)</span>}
                     </Label>
                     <Select
@@ -1539,9 +1557,10 @@ export function AthleteEditDialogs({
                   {editData.division && divisionHasConferences(editData.division) && (
                     <div className="space-y-2">
                       <Label htmlFor="edit-conference" className={cn(
-                        "Conference",
+                        "text-sm font-medium",
                         shouldLockFields() && "text-muted-foreground"
                       )}>
+                        Conference
                         {shouldLockFields() && <span className="text-xs text-muted-foreground block">(Locked during verification)</span>}
                       </Label>
                       <ConferenceSelector
@@ -1566,9 +1585,10 @@ export function AthleteEditDialogs({
               {/* Secondary Sports */}
               <div className="space-y-2">
                 <Label htmlFor="edit-secondarySports" className={cn(
-                  "Secondary Sports",
+                  "text-sm font-medium",
                   shouldLockFields() && "text-muted-foreground"
                 )}>
+                  Secondary Sports
                   {shouldLockFields() && <span className="text-xs text-muted-foreground block">(Locked during verification)</span>}
                 </Label>
                 <div className="space-y-2">
@@ -1619,9 +1639,10 @@ export function AthleteEditDialogs({
               {availablePositions.length > 0 && (
                 <div className="space-y-2">
                   <Label className={cn(
-                    "Positions *",
+                    "text-sm font-medium",
                     shouldLockFields() && "text-muted-foreground"
                   )}>
+                    Positions *
                     {shouldLockFields() && <span className="text-xs text-muted-foreground block">(Locked during verification)</span>}
                   </Label>
                   <div className="grid grid-cols-2 gap-2 max-h-32 overflow-y-auto">
@@ -1652,9 +1673,10 @@ export function AthleteEditDialogs({
               {/* Country select field */}
               <div className="space-y-2">
                 <Label htmlFor="edit-country" className={cn(
-                  "Country *",
+                  "text-sm font-medium",
                   shouldLockFields() && "text-muted-foreground"
                 )}>
+                  Country *
                   {shouldLockFields() && <span className="text-xs text-muted-foreground block">(Locked during verification)</span>}
                 </Label>
                 <Select
@@ -1683,9 +1705,10 @@ export function AthleteEditDialogs({
               <div className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="edit-city" className={cn(
-                    "City *",
+                    "text-sm font-medium",
                     shouldLockFields() && "text-muted-foreground"
                   )}>
+                    City *
                     {shouldLockFields() && <span className="text-xs text-muted-foreground block">(Locked during verification)</span>}
                   </Label>
                   <Input
@@ -1715,9 +1738,10 @@ export function AthleteEditDialogs({
                 {(!editData.country || editData.country === 'United States') && (
                   <div className="space-y-2">
                     <Label htmlFor="edit-state" className={cn(
-                      "State *",
+                      "text-sm font-medium",
                       shouldLockFields() && "text-muted-foreground"
                     )}>
+                      State *
                       {shouldLockFields() && <span className="text-xs text-muted-foreground block">(Locked during verification)</span>}
                     </Label>
                     <Select
@@ -1775,9 +1799,10 @@ export function AthleteEditDialogs({
 
               <div className="space-y-2">
                 <Label htmlFor="edit-graduationYear" className={cn(
-                  "Graduation Year *",
+                  "text-sm font-medium",
                   shouldLockFields() && "text-muted-foreground"
                 )}>
+                  Graduation Year *
                   {shouldLockFields() && <span className="text-xs text-muted-foreground block">(Locked during verification)</span>}
                 </Label>
                 <Select
@@ -1806,9 +1831,10 @@ export function AthleteEditDialogs({
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label className={cn(
-                    "Height *",
+                    "text-sm font-medium",
                     shouldLockFields() && "text-muted-foreground"
                   )}>
+                    Height *
                     {shouldLockFields() && <span className="text-xs text-muted-foreground block">(Locked during verification)</span>}
                   </Label>
                   <div className="flex gap-2">
@@ -1863,9 +1889,10 @@ export function AthleteEditDialogs({
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="edit-weight" className={cn(
-                    "Weight *",
+                    "text-sm font-medium",
                     shouldLockFields() && "text-muted-foreground"
                   )}>
+                    Weight *
                     {shouldLockFields() && <span className="text-xs text-muted-foreground block">(Locked during verification)</span>}
                   </Label>
                   <Input
@@ -2768,13 +2795,13 @@ export function AthleteEditDialogs({
                             }
                             setTempCampExperience(updated);
                             setCampEditIndex(null);
-                            setCampForm({ type: 'Camp', name: '', city: '', state: '', country: '', startDate: undefined, endDate: undefined, sport: '', description: '' });
+                            setCampForm({ type: 'Camp', name: '', city: profileData.city || '', state: profileData.state || '', country: profileData.country || '', startDate: undefined, endDate: undefined, sport: profileData.sport || '', description: '' });
                             setCampEndDateIsPresent(false);
                             setIsDirty(true);
                           }}>Save</Button>
                           <Button size="sm" variant="outline" onClick={() => {
                             setCampEditIndex(null);
-                            setCampForm({ type: 'Camp', name: '', city: '', state: '', country: '', startDate: undefined, endDate: undefined, sport: '', description: '' });
+                            setCampForm({ type: 'Camp', name: '', city: profileData.city || '', state: profileData.state || '', country: profileData.country || '', startDate: undefined, endDate: undefined, sport: profileData.sport || '', description: '' });
                             setCampEndDateIsPresent(false);
                             setCampFormError(null);
                           }}>Cancel</Button>
@@ -3006,13 +3033,13 @@ export function AthleteEditDialogs({
                         updated.push(newExperience);
                         setTempCampExperience(updated);
                         setCampEditIndex(null);
-                        setCampForm({ type: 'Camp', name: '', city: '', state: '', country: '', startDate: undefined, endDate: undefined, sport: '', description: '' });
+                        setCampForm({ type: 'Camp', name: '', city: profileData.city || '', state: profileData.state || '', country: profileData.country || '', startDate: undefined, endDate: undefined, sport: profileData.sport || '', description: '' });
                         setCampEndDateIsPresent(false);
                         setIsDirty(true);
                       }}>Save</Button>
                       <Button size="sm" variant="outline" onClick={() => {
                         setCampEditIndex(null);
-                        setCampForm({ type: 'Camp', name: '', city: '', state: '', country: '', startDate: undefined, endDate: undefined, sport: '', description: '' });
+                        setCampForm({ type: 'Camp', name: '', city: profileData.city || '', state: profileData.state || '', country: profileData.country || '', startDate: undefined, endDate: undefined, sport: profileData.sport || '', description: '' });
                         setCampEndDateIsPresent(false);
                         setCampFormError(null);
                       }}>Cancel</Button>
@@ -3024,7 +3051,7 @@ export function AthleteEditDialogs({
                   <div className="pt-2">
                     <Button size="sm" variant="outline" onClick={() => {
                       setCampEditIndex(tempCampExperience.length);
-                      setCampForm({ type: 'Camp', name: '', city: '', state: '', country: '', startDate: undefined, endDate: undefined, sport: '', description: '' });
+                      setCampForm({ type: 'Camp', name: '', city: profileData.city || '', state: profileData.state || '', country: profileData.country || '', startDate: undefined, endDate: undefined, sport: profileData.sport || '', description: '' });
                       setCampEndDateIsPresent(false);
                       setCampFormError(null);
                     }}>
@@ -3099,7 +3126,17 @@ export function AthleteEditDialogs({
           : []
       );
       setCampEditIndex(null);
-      setCampForm({ type: 'Camp', name: '', city: '', state: '', country: '', startDate: undefined, endDate: undefined, sport: '', description: '' });
+      setCampForm({
+        type: 'Camp',
+        name: '',
+        city: profileData.city || '',
+        state: profileData.state || '',
+        country: profileData.country || '',
+        startDate: undefined,
+        endDate: undefined,
+        sport: profileData.sport || '',
+        description: ''
+      });
       setCampEndDateIsPresent(false);
       setCampFormError(null);
       campExperienceInitializedRef.current = true;
