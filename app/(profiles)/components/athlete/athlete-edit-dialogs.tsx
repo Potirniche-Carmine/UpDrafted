@@ -360,12 +360,12 @@ export function AthleteEditDialogs({
   const [campForm, setCampForm] = useState({
     type: 'Camp' as 'Camp' | 'Club',
     name: '',
-    city: '',
-    state: '',
-    country: '',
+    city: profileData.city || '',
+    state: profileData.state || '',
+    country: profileData.country || '',
     startDate: undefined as Date | undefined,
     endDate: undefined as Date | undefined,
-    sport: '',
+    sport: profileData.sport || '',
     description: ''
   });
   const [campEndDateIsPresent, setCampEndDateIsPresent] = useState(false);
@@ -736,7 +736,7 @@ export function AthleteEditDialogs({
 
   // Helper: Title case without trimming or collapsing spaces (preserves user-typed spaces)
   function toTitleCasePreserveSpaces(input: string): string {
-    if (typeof input !== 'string') return input as unknown as string;
+    if (typeof input !== 'string') return '';
     return input.replace(/\b([A-Za-zÀ-ÖØ-öø-ÿ])([A-Za-zÀ-ÖØ-öø-ÿ]*)/g, (_match, first: string, rest: string) => {
       return first.toUpperCase() + rest.toLowerCase();
     });
@@ -2810,13 +2810,13 @@ export function AthleteEditDialogs({
                             }
                             setTempCampExperience(updated);
                             setCampEditIndex(null);
-                            setCampForm({ type: 'Camp', name: '', city: '', state: '', country: '', startDate: undefined, endDate: undefined, sport: '', description: '' });
+                            setCampForm({ type: 'Camp', name: '', city: profileData.city || '', state: profileData.state || '', country: profileData.country || '', startDate: undefined, endDate: undefined, sport: profileData.sport || '', description: '' });
                             setCampEndDateIsPresent(false);
                             setIsDirty(true);
                           }}>Save</Button>
                           <Button size="sm" variant="outline" onClick={() => {
                             setCampEditIndex(null);
-                            setCampForm({ type: 'Camp', name: '', city: '', state: '', country: '', startDate: undefined, endDate: undefined, sport: '', description: '' });
+                            setCampForm({ type: 'Camp', name: '', city: profileData.city || '', state: profileData.state || '', country: profileData.country || '', startDate: undefined, endDate: undefined, sport: profileData.sport || '', description: '' });
                             setCampEndDateIsPresent(false);
                             setCampFormError(null);
                           }}>Cancel</Button>
@@ -3048,13 +3048,13 @@ export function AthleteEditDialogs({
                         updated.push(newExperience);
                         setTempCampExperience(updated);
                         setCampEditIndex(null);
-                        setCampForm({ type: 'Camp', name: '', city: '', state: '', country: '', startDate: undefined, endDate: undefined, sport: '', description: '' });
+                        setCampForm({ type: 'Camp', name: '', city: profileData.city || '', state: profileData.state || '', country: profileData.country || '', startDate: undefined, endDate: undefined, sport: profileData.sport || '', description: '' });
                         setCampEndDateIsPresent(false);
                         setIsDirty(true);
                       }}>Save</Button>
                       <Button size="sm" variant="outline" onClick={() => {
                         setCampEditIndex(null);
-                        setCampForm({ type: 'Camp', name: '', city: '', state: '', country: '', startDate: undefined, endDate: undefined, sport: '', description: '' });
+                        setCampForm({ type: 'Camp', name: '', city: profileData.city || '', state: profileData.state || '', country: profileData.country || '', startDate: undefined, endDate: undefined, sport: profileData.sport || '', description: '' });
                         setCampEndDateIsPresent(false);
                         setCampFormError(null);
                       }}>Cancel</Button>
@@ -3066,7 +3066,7 @@ export function AthleteEditDialogs({
                   <div className="pt-2">
                     <Button size="sm" variant="outline" onClick={() => {
                       setCampEditIndex(tempCampExperience.length);
-                      setCampForm({ type: 'Camp', name: '', city: '', state: '', country: '', startDate: undefined, endDate: undefined, sport: '', description: '' });
+                      setCampForm({ type: 'Camp', name: '', city: profileData.city || '', state: profileData.state || '', country: profileData.country || '', startDate: undefined, endDate: undefined, sport: profileData.sport || '', description: '' });
                       setCampEndDateIsPresent(false);
                       setCampFormError(null);
                     }}>
@@ -3141,7 +3141,17 @@ export function AthleteEditDialogs({
           : []
       );
       setCampEditIndex(null);
-      setCampForm({ type: 'Camp', name: '', city: '', state: '', country: '', startDate: undefined, endDate: undefined, sport: '', description: '' });
+      setCampForm({
+        type: 'Camp',
+        name: '',
+        city: profileData.city || '',
+        state: profileData.state || '',
+        country: profileData.country || '',
+        startDate: undefined,
+        endDate: undefined,
+        sport: profileData.sport || '',
+        description: ''
+      });
       setCampEndDateIsPresent(false);
       setCampFormError(null);
       campExperienceInitializedRef.current = true;
