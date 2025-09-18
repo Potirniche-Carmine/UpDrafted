@@ -736,7 +736,7 @@ export function AthleteEditDialogs({
 
   // Helper: Title case without trimming or collapsing spaces (preserves user-typed spaces)
   function toTitleCasePreserveSpaces(input: string): string {
-    if (typeof input !== 'string') return input as unknown as string;
+    if (typeof input !== 'string') return '';
     return input.replace(/\b([A-Za-zÀ-ÖØ-öø-ÿ])([A-Za-zÀ-ÖØ-öø-ÿ]*)/g, (_match, first: string, rest: string) => {
       return first.toUpperCase() + rest.toLowerCase();
     });
