@@ -18,6 +18,7 @@ ARG NEXT_PUBLIC_CLERK_SIGN_UP_URL
 ARG NEXT_PUBLIC_APP_URL
 ARG R2_PUBLIC_URL
 ARG NEXT_PUBLIC_R2_PUBLIC_URL
+ARG NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
 
 # Set public environment variables
 ENV NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=$NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
@@ -26,12 +27,15 @@ ENV NEXT_PUBLIC_CLERK_SIGN_UP_URL=$NEXT_PUBLIC_CLERK_SIGN_UP_URL
 ENV NEXT_PUBLIC_APP_URL=$NEXT_PUBLIC_APP_URL
 ENV R2_PUBLIC_URL=$R2_PUBLIC_URL
 ENV NEXT_PUBLIC_R2_PUBLIC_URL=$NEXT_PUBLIC_R2_PUBLIC_URL
+ENV NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=$NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
 ENV NODE_ENV=production
 
 # Build with secrets mounted (more secure for sensitive data)
 RUN --mount=type=secret,id=database_url \
     --mount=type=secret,id=clerk_secret_key \
     --mount=type=secret,id=message_encryption_key \
+    --mount=type=secret,id=stripe_secret_key \
+    --mount=type=secret,id=stripe_webhook_secret \
     --mount=type=secret,id=r2_access_key_id \
     --mount=type=secret,id=r2_secret_access_key \
     --mount=type=secret,id=r2_account_id \
@@ -40,6 +44,8 @@ RUN --mount=type=secret,id=database_url \
     DATABASE_URL="$(cat /run/secrets/database_url)" \
     CLERK_SECRET_KEY="$(cat /run/secrets/clerk_secret_key)" \
     MESSAGE_ENCRYPTION_KEY="$(cat /run/secrets/message_encryption_key)" \
+    STRIPE_SECRET_KEY="$(cat /run/secrets/stripe_secret_key)" \
+    STRIPE_WEBHOOK_SECRET="$(cat /run/secrets/stripe_webhook_secret)" \
     R2_ACCESS_KEY_ID="$(cat /run/secrets/r2_access_key_id)" \
     R2_SECRET_ACCESS_KEY="$(cat /run/secrets/r2_secret_access_key)" \
     R2_ACCOUNT_ID="$(cat /run/secrets/r2_account_id)" \
