@@ -201,22 +201,14 @@ export async function POST(req: NextRequest) {
     switch (event.type) {
       case 'customer.subscription.created':
       case 'customer.subscription.updated':
-        console.log(`Processing webhook: ${event.type}`)
         await handleSubscriptionUpdate(event.data.object as Stripe.Subscription)
         break
 
       case 'customer.subscription.deleted':
-        console.log(`Processing webhook: ${event.type}`)
         await handleSubscriptionDeleted(event.data.object as Stripe.Subscription)
         break
 
-      case 'invoice.payment_failed':
-        console.log(`Processing webhook: ${event.type}`)
-        await handlePaymentFailed(event.data.object as Stripe.Invoice)
-        break
-
       case 'checkout.session.completed':
-        console.log(`Processing webhook: ${event.type}`)
         await handleCheckoutCompleted(event.data.object as Stripe.Checkout.Session)
         break
 
@@ -249,9 +241,7 @@ async function handleSubscriptionUpdate(subscription: Stripe.Subscription) {
   }
 
   try {
-    const webhookData = subscription as StripeSubscriptionWebhook
-    console.log(`Updating subscription for user ${userId} with price ID: ${subscription.items.data[0]?.price?.id}`)
-    
+    const webhookData = subscription as StripeSubscriptionWebhook    
     await SubscriptionManager.updateSubscriptionFromStripe(userId, {
       id: subscription.id,
       customer: subscription.customer as string,
@@ -264,8 +254,6 @@ async function handleSubscriptionUpdate(subscription: Stripe.Subscription) {
       trial_end: subscription.trial_end,
       items: subscription.items
     })
-
-    console.log(`Subscription updated for user ${userId}`)
     
     // Force cache refresh for this user's subscription
     invalidateSubscriptionCache(userId)
@@ -283,7 +271,6 @@ async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
 
   try {
     await SubscriptionManager.cancelSubscription(userId)
-    console.log(`Subscription canceled for user ${userId}`)
     
     // Force cache refresh for this user's subscription
     invalidateSubscriptionCache(userId)
@@ -292,19 +279,12 @@ async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
   }
 }
 
-async function handlePaymentFailed(invoice: Stripe.Invoice) {
-  console.log(`Payment failed for invoice ${invoice.id}`)
-  // Could send notification to user here
-}
-
 async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
   const userId = session.metadata?.userId
   if (!userId) {
     console.error('No userId in checkout session metadata')
     return
   }
-
-  console.log(`Checkout completed for user ${userId}`)
   
   // If this is a subscription checkout, handle the subscription creation
   if (session.mode === 'subscription' && session.subscription) {
@@ -312,13 +292,6 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
       // Retrieve the full subscription object
       const subscription = await stripe.subscriptions.retrieve(session.subscription as string)
       const subWithPeriods = subscription as unknown as StripeSubscriptionWebhook
-      
-      console.log(`Creating subscription from checkout for user ${userId} with price ID: ${subscription.items.data[0]?.price?.id}`)
-      console.log('Subscription object properties:', {
-        current_period_start: subWithPeriods.current_period_start,
-        current_period_end: subWithPeriods.current_period_end,
-        status: subscription.status
-      })
       
       await SubscriptionManager.updateSubscriptionFromStripe(userId, {
         id: subscription.id,
@@ -332,9 +305,7 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
         trial_end: subscription.trial_end,
         items: subscription.items
       })
-      
-      console.log(`Subscription created from checkout for user ${userId}`)
-      
+            
       // Force cache refresh for this user's subscription
       invalidateSubscriptionCache(userId)
     } catch (error) {
