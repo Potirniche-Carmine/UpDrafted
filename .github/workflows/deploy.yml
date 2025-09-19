@@ -34,6 +34,8 @@ jobs:
           echo "${{ secrets.DATABASE_URL }}" > /tmp/database_url
           echo "${{ secrets.CLERK_SECRET_KEY }}" > /tmp/clerk_secret_key
           echo "${{ secrets.MESSAGE_ENCRYPTION_KEY }}" > /tmp/message_encryption_key
+          echo "${{ secrets.STRIPE_SECRET_KEY }}" > /tmp/stripe_secret_key
+          echo "${{ secrets.STRIPE_WEBHOOK_SECRET }}" > /tmp/stripe_webhook_secret
           echo "${{ secrets.R2_ACCESS_KEY_ID }}" > /tmp/r2_access_key_id
           echo "${{ secrets.R2_SECRET_ACCESS_KEY }}" > /tmp/r2_secret_access_key
           echo "${{ secrets.R2_ACCOUNT_ID }}" > /tmp/r2_account_id
@@ -47,9 +49,12 @@ jobs:
             --build-arg NEXT_PUBLIC_APP_URL=${{ secrets.NEXT_PUBLIC_APP_URL }} \
             --build-arg R2_PUBLIC_URL=${{ secrets.R2_PUBLIC_URL }} \
             --build-arg NEXT_PUBLIC_R2_PUBLIC_URL=${{ secrets.NEXT_PUBLIC_R2_PUBLIC_URL }} \
+            --build-arg NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=${{ secrets.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY }} \
             --secret id=database_url,src=/tmp/database_url \
             --secret id=clerk_secret_key,src=/tmp/clerk_secret_key \
             --secret id=message_encryption_key,src=/tmp/message_encryption_key \
+            --secret id=stripe_secret_key,src=/tmp/stripe_secret_key \
+            --secret id=stripe_webhook_secret,src=/tmp/stripe_webhook_secret \
             --secret id=r2_access_key_id,src=/tmp/r2_access_key_id \
             --secret id=r2_secret_access_key,src=/tmp/r2_secret_access_key \
             --secret id=r2_account_id,src=/tmp/r2_account_id \
@@ -58,6 +63,7 @@ jobs:
             -t $IMAGE_ID:latest .
           # Clean up temporary files
           rm -f /tmp/database_url /tmp/clerk_secret_key /tmp/message_encryption_key
+          rm -f /tmp/stripe_secret_key /tmp/stripe_webhook_secret
           rm -f /tmp/r2_access_key_id /tmp/r2_secret_access_key /tmp/r2_account_id
           rm -f /tmp/r2_public_bucket_name /tmp/r2_private_bucket_name
           docker push $IMAGE_ID:latest
@@ -94,6 +100,8 @@ jobs:
           echo "${{ secrets.DEV_DATABASE_URL }}" > /tmp/database_url
           echo "${{ secrets.DEV_CLERK_SECRET_KEY }}" > /tmp/clerk_secret_key
           echo "${{ secrets.DEV_MESSAGE_ENCRYPTION_KEY }}" > /tmp/message_encryption_key
+          echo "${{ secrets.DEV_STRIPE_SECRET_KEY }}" > /tmp/stripe_secret_key
+          echo "${{ secrets.DEV_STRIPE_WEBHOOK_SECRET }}" > /tmp/stripe_webhook_secret
           echo "${{ secrets.DEV_R2_ACCESS_KEY_ID }}" > /tmp/r2_access_key_id
           echo "${{ secrets.DEV_R2_SECRET_ACCESS_KEY }}" > /tmp/r2_secret_access_key
           echo "${{ secrets.DEV_R2_ACCOUNT_ID }}" > /tmp/r2_account_id
@@ -108,9 +116,12 @@ jobs:
             --build-arg NEXT_PUBLIC_APP_URL=${{ secrets.DEV_NEXT_PUBLIC_APP_URL }} \
             --build-arg R2_PUBLIC_URL=${{ secrets.DEV_R2_PUBLIC_URL }} \
             --build-arg NEXT_PUBLIC_R2_PUBLIC_URL=${{ secrets.DEV_NEXT_PUBLIC_R2_PUBLIC_URL }} \
+            --build-arg NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=${{ secrets.DEV_NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY }} \
             --secret id=database_url,src=/tmp/database_url \
             --secret id=clerk_secret_key,src=/tmp/clerk_secret_key \
             --secret id=message_encryption_key,src=/tmp/message_encryption_key \
+            --secret id=stripe_secret_key,src=/tmp/stripe_secret_key \
+            --secret id=stripe_webhook_secret,src=/tmp/stripe_webhook_secret \
             --secret id=r2_access_key_id,src=/tmp/r2_access_key_id \
             --secret id=r2_secret_access_key,src=/tmp/r2_secret_access_key \
             --secret id=r2_account_id,src=/tmp/r2_account_id \
@@ -119,6 +130,7 @@ jobs:
             -t $IMAGE_ID:latest .
           # Clean up temporary files
           rm -f /tmp/database_url /tmp/clerk_secret_key /tmp/message_encryption_key
+          rm -f /tmp/stripe_secret_key /tmp/stripe_webhook_secret
           rm -f /tmp/r2_access_key_id /tmp/r2_secret_access_key /tmp/r2_account_id
           rm -f /tmp/r2_public_bucket_name /tmp/r2_private_bucket_name
           docker push $IMAGE_ID:latest

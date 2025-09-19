@@ -140,6 +140,15 @@ function validateEnv(): Env | ClientEnv {
           console.error(missingVars.map(v => v.split(':')[0] + '=your_value_here').join('\n'));
         }
         
+        // During build time in production (like Docker builds), allow missing secrets
+        // as they might be mounted during specific build steps
+        if (process.env.NODE_ENV === 'production' && process.env.SKIP_ENV_VALIDATION === 'true') {
+          console.warn('⚠️  Skipping strict environment validation during build time');
+          console.warn('Variables will be validated again at runtime when the application starts');
+          // Return a partial schema parse that doesn't enforce production requirements
+          return serverEnvSchema.partial().parse(process.env) as Env;
+        }
+        
         process.exit(1);
       } else {
         // On client-side, just return defaults for missing vars

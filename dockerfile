@@ -28,7 +28,10 @@ ENV NEXT_PUBLIC_APP_URL=$NEXT_PUBLIC_APP_URL
 ENV R2_PUBLIC_URL=$R2_PUBLIC_URL
 ENV NEXT_PUBLIC_R2_PUBLIC_URL=$NEXT_PUBLIC_R2_PUBLIC_URL
 ENV NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=$NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
+# Set NODE_ENV to production for build
 ENV NODE_ENV=production
+# Skip strict environment validation during build time
+ENV SKIP_ENV_VALIDATION=true
 
 # Build with secrets mounted (more secure for sensitive data)
 RUN --mount=type=secret,id=database_url \
