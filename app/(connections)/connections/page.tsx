@@ -765,7 +765,7 @@ const UserCard: React.FC<UserCardProps> = ({ connection, onRemoveConnection }) =
                 onRemoveConnection(connection.id, otherUser.userId);
               }}
               variant="outline"
-              className="w-full h-8 sm:h-8 md:h-9 text-xs sm:text-sm font-medium hover:bg-destructive hover:text-destructive-foreground hover:border-destructive"
+              className="w-full h-8 sm:h-8 md:h-9 text-xs sm:text-sm font-medium hover:bg-destructive/10 dark:hover:bg-destructive/50 hover:text-destructive-foreground hover:border-destructive"
             >
               <X size={14} className="mr-1.5 sm:mr-2" />  
               Remove Connection
