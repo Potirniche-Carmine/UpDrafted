@@ -73,6 +73,9 @@ const MAX_CACHE_SIZE = 5000 // Reduced from 10000 to prevent memory issues
 const CLEANUP_INTERVAL = 30 * 60 * 1000 // Cleanup every 30 minutes instead of 1 hour
 const LRU_EVICTION_BATCH_SIZE = 500 // Remove this many entries when cache is full
 
+// Track cleanup interval for proper cleanup
+let cleanupInterval: NodeJS.Timeout | null = null
+
 // Retry configuration
 const RETRY_CONFIG = {
   maxAttempts: 3,
@@ -210,13 +213,32 @@ export class SubscriptionManager {
 
       return subscriptionData
     } catch (error) {
-      // Log error without exposing sensitive user data
-      console.error('Error fetching subscription:', {
-        userId: userId ? '[REDACTED]' : undefined,
+      // Enhanced error logging with categorization for monitoring
+      const errorInfo = {
+        userId: '[REDACTED]', // Always redact userId
         errorMessage: error instanceof Error ? error.message : 'Unknown error',
         errorType: error instanceof Error ? error.constructor.name : typeof error,
-        isRetryable: error instanceof DatabaseError || error instanceof NetworkError
-      })
+        isRetryable: error instanceof DatabaseError || error instanceof NetworkError,
+        context: 'getUserSubscription',
+        timestamp: new Date().toISOString(),
+        severity: 'ERROR'
+      }
+      
+      console.error('Error fetching subscription:', errorInfo)
+      
+      // In production, consider sending critical errors to monitoring service
+      if (process.env.NODE_ENV === 'production' && 
+          !(error instanceof NetworkError) && 
+          !(error instanceof ValidationError)) {
+        // This would be where you'd send to your monitoring service
+        // e.g., Sentry, DataDog, etc.
+        console.error('CRITICAL: Subscription fetch failed in production', {
+          context: errorInfo.context,
+          errorType: errorInfo.errorType,
+          timestamp: errorInfo.timestamp
+        })
+      }
+      
       return this.getDefaultSubscription()
     }
   }
@@ -324,13 +346,28 @@ export class SubscriptionManager {
       // Invalidate cache for real-time updates
       this.invalidateCache(userId)
     } catch (error) {
-      // Log error without exposing sensitive user or subscription data
-      console.error('Error updating subscription:', {
-        userId: userId ? '[REDACTED]' : undefined,
+      // Enhanced error logging for update operations
+      const errorInfo = {
+        userId: '[REDACTED]', // Always redact userId
         errorMessage: error instanceof Error ? error.message : 'Unknown error',
         errorType: error instanceof Error ? error.constructor.name : typeof error,
-        isRetryable: error instanceof DatabaseError || error instanceof NetworkError
-      })
+        isRetryable: error instanceof DatabaseError || error instanceof NetworkError,
+        context: 'updateUserSubscription',
+        timestamp: new Date().toISOString(),
+        severity: 'ERROR'
+      }
+      
+      console.error('Error updating subscription:', errorInfo)
+      
+      // Critical error monitoring for subscription updates
+      if (process.env.NODE_ENV === 'production') {
+        console.error('CRITICAL: Subscription update failed in production', {
+          context: errorInfo.context,
+          errorType: errorInfo.errorType,
+          timestamp: errorInfo.timestamp
+        })
+      }
+      
       throw error
     }
   }
@@ -358,13 +395,28 @@ export class SubscriptionManager {
       // Invalidate cache for real-time updates
       this.invalidateCache(userId)
     } catch (error) {
-      // Log error without exposing sensitive user data
-      console.error('Error canceling subscription:', {
-        userId: userId ? '[REDACTED]' : undefined,
+      // Enhanced error logging for cancellation operations
+      const errorInfo = {
+        userId: '[REDACTED]', // Always redact userId
         errorMessage: error instanceof Error ? error.message : 'Unknown error',
         errorType: error instanceof Error ? error.constructor.name : typeof error,
-        isRetryable: error instanceof DatabaseError || error instanceof NetworkError
-      })
+        isRetryable: error instanceof DatabaseError || error instanceof NetworkError,
+        context: 'cancelUserSubscription',
+        timestamp: new Date().toISOString(),
+        severity: 'ERROR'
+      }
+      
+      console.error('Error canceling subscription:', errorInfo)
+      
+      // Critical error monitoring for subscription cancellations
+      if (process.env.NODE_ENV === 'production') {
+        console.error('CRITICAL: Subscription cancellation failed in production', {
+          context: errorInfo.context,
+          errorType: errorInfo.errorType,
+          timestamp: errorInfo.timestamp
+        })
+      }
+      
       throw error
     }
   }
@@ -402,13 +454,29 @@ export class SubscriptionManager {
         limit: features.maxConnectionsPerMonth
       }
     } catch (error) {
-      // Log error without exposing sensitive user data
-      console.error('Error fetching usage data:', {
-        userId: userId ? '[REDACTED]' : undefined,
+      // Enhanced error logging for usage tracking
+      const errorInfo = {
+        userId: '[REDACTED]', // Always redact userId
         errorMessage: error instanceof Error ? error.message : 'Unknown error',
         errorType: error instanceof Error ? error.constructor.name : typeof error,
-        isRetryable: error instanceof DatabaseError || error instanceof NetworkError
-      })
+        isRetryable: error instanceof DatabaseError || error instanceof NetworkError,
+        context: 'getUsageData',
+        timestamp: new Date().toISOString(),
+        severity: 'WARNING' // Usage errors are less critical than subscription errors
+      }
+      
+      console.error('Error fetching usage data:', errorInfo)
+      
+      // Only alert on repeated usage failures in production
+      if (process.env.NODE_ENV === 'production' && 
+          !(error instanceof NetworkError)) {
+        console.warn('Usage tracking failure in production', {
+          context: errorInfo.context,
+          errorType: errorInfo.errorType,
+          timestamp: errorInfo.timestamp
+        })
+      }
+      
       // Return safe fallback instead of throwing
       return { current: 0, limit: 5 }
     }
@@ -525,6 +593,11 @@ export class SubscriptionManager {
   // Global cache cleanup for memory management with improved efficiency
   static startCacheCleanup(): void {
     if (typeof window === 'undefined') { // Server-side only
+      // Clear any existing interval to prevent duplicates during hot reloads
+      if (cleanupInterval) {
+        clearInterval(cleanupInterval)
+      }
+      
       const cleanup = () => {
         const now = Date.now()
         let removedCount = 0
@@ -542,17 +615,30 @@ export class SubscriptionManager {
           this.evictLeastRecentlyUsed()
         }
         
-        // Log cleanup statistics (without sensitive data)
-        if (removedCount > 0) {
+        // Log cleanup statistics (without sensitive data) only in development
+        if (removedCount > 0 && process.env.NODE_ENV === 'development') {
           console.info(`Subscription cache cleanup: removed ${removedCount} expired entries, ${subscriptionCache.size} entries remaining`)
         }
       }
       
-      setInterval(cleanup, CLEANUP_INTERVAL)
+      cleanupInterval = setInterval(cleanup, CLEANUP_INTERVAL)
       
       // Run cleanup immediately on startup
       cleanup()
     }
+  }
+
+  // Add method to stop cleanup (useful for testing and hot reloads)
+  static stopCacheCleanup(): void {
+    if (cleanupInterval) {
+      clearInterval(cleanupInterval)
+      cleanupInterval = null
+    }
+  }
+
+  // Clear cache completely (useful for testing and memory management)
+  static clearCache(): void {
+    subscriptionCache.clear()
   }
 }
 

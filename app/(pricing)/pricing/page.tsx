@@ -6,7 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Crown, ArrowLeft, ChevronDown, ChevronUp } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { useState } from "react";
+import { useState, Suspense } from "react";
 import { PricingCard } from "@/app/(pricing)/components/pricing-card";
 import { getPlansByRole } from "@/app/(pricing)/components/pricing-config";
 import { useSearchParams } from 'next/navigation';
@@ -118,7 +118,8 @@ function FAQAccordion({ userRole }: { userRole: string }) {
   );
 }
 
-export default function PricingPage() {
+// Component that uses useSearchParams - needs to be wrapped in Suspense
+function PricingPageContent() {
   const searchParams = useSearchParams();
   const canceled = searchParams.get('canceled');
   const { user } = useUser();
@@ -251,5 +252,14 @@ export default function PricingPage() {
         </div>
       </div>
     </AuthWrapper>
+  );
+}
+
+// Main export with Suspense boundary
+export default function PricingPage() {
+  return (
+    <Suspense fallback={<div className="flex items-center justify-center min-h-screen">Loading...</div>}>
+      <PricingPageContent />
+    </Suspense>
   );
 } 

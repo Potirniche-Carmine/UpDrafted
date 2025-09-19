@@ -100,22 +100,32 @@ function isReplayAttack(signature: string, timestamp: number): boolean {
 }
 
 /**
- * Basic IP allowlist check (optional - can be disabled if using Stripe-signed webhooks only)
+ * Basic IP allowlist check with proper security defaults
  */
 function isAllowedIP(ip: string | null): boolean {
-  // If no IP filtering is desired, return true
-  if (process.env.STRIPE_WEBHOOK_IP_FILTERING !== 'true') {
+  // Require explicit opt-out for security - IP filtering is enabled by default
+  if (process.env.STRIPE_WEBHOOK_IP_FILTERING === 'false') {
+    console.warn('Webhook IP filtering is disabled - this is not recommended for production')
     return true
   }
   
-  if (!ip) return false
+  if (!ip) {
+    console.warn('No IP address provided for webhook request')
+    return false
+  }
   
   // Remove port if present
   const cleanIP = ip.split(':').slice(0, -1).join(':') || ip.split(':')[0]
   
-  return STRIPE_IP_RANGES.includes(cleanIP) || 
-         cleanIP === '127.0.0.1' || 
-         cleanIP === '::1' // Allow localhost for development
+  const isAllowed = STRIPE_IP_RANGES.includes(cleanIP) || 
+                   cleanIP === '127.0.0.1' || 
+                   cleanIP === '::1' // Allow localhost for development
+  
+  if (!isAllowed) {
+    console.warn(`Webhook request from unauthorized IP: ${cleanIP}`)
+  }
+  
+  return isAllowed
 }
 
 export async function POST(req: NextRequest) {
@@ -129,33 +139,55 @@ export async function POST(req: NextRequest) {
                      headersList.get('x-client-ip') ||
                      null
 
+    // Validate webhook secret is configured
+    if (!process.env.STRIPE_WEBHOOK_SECRET) {
+      console.error('STRIPE_WEBHOOK_SECRET environment variable is not configured')
+      return NextResponse.json({ error: 'Server configuration error' }, { status: 500 })
+    }
+
     if (!sig) {
       console.error('Missing Stripe signature')
       return NextResponse.json({ error: 'Missing signature' }, { status: 400 })
     }
 
-    // IP filtering (optional but recommended)
+    // IP filtering with proper security defaults
     if (!isAllowedIP(clientIP)) {
-      console.warn('Webhook request from unauthorized IP:', clientIP)
       return NextResponse.json({ error: 'Unauthorized IP' }, { status: 403 })
     }
 
     let event: Stripe.Event
 
     try {
-      event = stripe.webhooks.constructEvent(body, sig, process.env.STRIPE_WEBHOOK_SECRET!)
+      event = stripe.webhooks.constructEvent(body, sig, process.env.STRIPE_WEBHOOK_SECRET)
     } catch (err) {
-      console.error('Webhook signature verification failed:', err)
+      console.error('Webhook signature verification failed:', {
+        error: err instanceof Error ? err.message : 'Unknown error',
+        signaturePresent: !!sig,
+        bodyLength: body.length
+      })
       return NextResponse.json({ error: 'Invalid signature' }, { status: 400 })
     }
 
-    // Extract timestamp from signature for replay protection
-    const timestamp = sig.split(',').find(part => part.startsWith('t='))?.substring(2)
-    const webhookTimestamp = timestamp ? parseInt(timestamp, 10) : Math.floor(Date.now() / 1000)
+    // Enhanced timestamp extraction with proper validation
+    const timestampMatch = sig.match(/t=([0-9]+)/)
+    if (!timestampMatch) {
+      console.error('Unable to extract timestamp from webhook signature')
+      return NextResponse.json({ error: 'Invalid signature format' }, { status: 400 })
+    }
+    
+    const webhookTimestamp = parseInt(timestampMatch[1], 10)
+    if (isNaN(webhookTimestamp)) {
+      console.error('Invalid timestamp in webhook signature')
+      return NextResponse.json({ error: 'Invalid timestamp' }, { status: 400 })
+    }
 
-    // Replay attack protection
+    // Replay attack protection with proper signature validation
     if (isReplayAttack(sig, webhookTimestamp)) {
-      console.warn('Potential replay attack detected:', { eventType: event.type, timestamp: webhookTimestamp })
+      console.warn('Potential replay attack detected:', { 
+        eventType: event.type, 
+        timestamp: webhookTimestamp,
+        eventId: event.id 
+      })
       return NextResponse.json({ error: 'Replay attack detected' }, { status: 400 })
     }
 

@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import crypto from 'crypto';
 
 // ==================== CONFIGURATION ====================
 
@@ -475,7 +474,9 @@ function sanitizeFileName(fileName: string): string {
 
 function generateSecureFileKey(originalFileName: string): string {
   const timestamp = Date.now();
-  const random = crypto.randomBytes(8).toString('hex');
+  const randomArray = new Uint8Array(8);
+  crypto.getRandomValues(randomArray);
+  const random = Array.from(randomArray, byte => byte.toString(16).padStart(2, '0')).join('');
   const ext = originalFileName.split('.').pop() || '';
   return `${timestamp}_${random}.${ext}`;
 }
