@@ -15,6 +15,7 @@ export const SECURITY_CONFIG = {
     profileInfo: isDev ? 60 : 300, // 1min dev, 5min prod
     searchResults: isDev ? 30 : 180, // 30s dev, 3min prod
     userConnections: isDev ? 60 : 120, // 1min dev, 2min prod
+    usageLimits: isDev ? 120 : 900, // 2min dev, 15min prod
     notifications: isDev ? 30 : 60, // 30s dev, 1min prod
     discover: isDev ? 60 : 300, // 1min dev, 5min prod
   },

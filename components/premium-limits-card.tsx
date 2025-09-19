@@ -11,8 +11,9 @@ import { useSubscription } from '@/components/providers/subscription-provider'
 import { useUser } from '@clerk/nextjs'
 import { useToast } from '@/components/ui/toast'
 
-// Global request cache to prevent duplicate API calls
-const requestCache = new Map<string, Promise<UsageLimits>>()
+// Global request cache to prevent duplicate API calls with longer cache time
+const requestCache = new Map<string, { promise: Promise<UsageLimits>, timestamp: number }>()
+const CACHE_DURATION = 15 * 60 * 1000 // 15 minutes
 
 interface ConnectionUsage {
   current: number
@@ -34,9 +35,10 @@ interface UsageLimits {
 async function fetchUsageLimits(): Promise<UsageLimits> {
   const cacheKey = 'usage-limits'
   
-  // Check if there's already a request in progress
-  if (requestCache.has(cacheKey)) {
-    return requestCache.get(cacheKey)!
+  // Check if there's already a recent request in cache
+  const cached = requestCache.get(cacheKey)
+  if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
+    return cached.promise
   }
 
   // Create new request promise
@@ -45,13 +47,18 @@ async function fetchUsageLimits(): Promise<UsageLimits> {
       throw new Error(`HTTP ${response.status}`)
     }
     return response.json()
-  }).finally(() => {
-    // Remove from cache when complete to allow future requests
-    requestCache.delete(cacheKey)
   })
 
-  // Cache the promise
-  requestCache.set(cacheKey, requestPromise)
+  // Cache the promise with timestamp
+  requestCache.set(cacheKey, { 
+    promise: requestPromise, 
+    timestamp: Date.now() 
+  })
+  
+  // Clean up cache entry after completion (but keep successful results cached)
+  requestPromise.catch(() => {
+    requestCache.delete(cacheKey)
+  })
   
   return requestPromise
 }
@@ -149,7 +156,7 @@ export function PremiumLimitsCard() {
     }
 
     loadUsageData()
-  }, [user, loading, subscription?.tier])
+  }, [user, loading, subscription?.tier, subscription?.isPremium, subscription?.status])
 
   if (loading || fetchingUsage) {
     return (

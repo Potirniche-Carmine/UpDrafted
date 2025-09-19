@@ -753,7 +753,7 @@ const UserCard: React.FC<UserCardProps> = ({ connection, onRemoveConnection }) =
                 e.stopPropagation();
                 router.push('/messages');
               }}
-              className="w-full h-8 sm:h-8 md:h-9 bg-[#01ae79] hover:bg-[#01ae79]/90 text-whitetext-xs sm:text-sm font-medium transition-all duration-200 hover:scale-[1.02]"
+              className="w-full h-8 sm:h-8 md:h-9 bg-[#01ae79] hover:bg-[#01ae79]/90 text-white text-xs sm:text-sm font-medium transition-all duration-200 hover:scale-[1.02]"
             >
               <MessageSquare size={14} className="mr-1.5 sm:mr-2" />  
               Send Message
@@ -989,7 +989,7 @@ const PendingRequestCard: React.FC<PendingRequestCardProps> = ({ request, onAcce
                 e.stopPropagation();
                 onAccept(request.id);
               }}
-              className="flex-1 h-8 sm:h-9 bg-[#01ae79] hover:bg-[#01ae79]/90 text-whitetext-xs sm:text-sm font-medium"
+              className="flex-1 h-8 sm:h-9 bg-[#01ae79] hover:bg-[#01ae79]/90 text-white text-xs sm:text-sm font-medium"
             >
               <CheckCircle size={12} className="mr-1 sm:mr-2" />
               Accept
@@ -2179,7 +2179,7 @@ function App() {
                   <div className="relative">
                     <Users size={16} className="transition-colors group-data-[state=active]:text-[#01ae79]" />
                     {connections.length > 0 && (
-                      <div className="absolute -top-2 -right-2 flex items-center justify-center min-w-[16px] h-4 bg-[#01ae79] text-whitetext-[10px] font-semibold rounded-full px-1 border border-background shadow-sm">
+                      <div className="absolute -top-2 -right-2 flex items-center justify-center min-w-[16px] h-4 bg-[#01ae79] text-white text-[10px] font-semibold rounded-full px-1 border border-background shadow-sm">
                         {connections.length > 99 ? '99+' : connections.length}
                       </div>
                     )}
@@ -2203,7 +2203,7 @@ function App() {
                   <div className="relative">
                     <Clock size={16} className="transition-colors group-data-[state=active]:text-[#01ae79]" />
                     {pendingRequests.length > 0 && (
-                      <div className="absolute -top-2 -right-2 flex items-center justify-center min-w-[16px] h-4 bg-red-500 text-whitetext-[10px] font-semibold rounded-full px-1 border border-background shadow-sm animate-pulse">
+                      <div className="absolute -top-2 -right-2 flex items-center justify-center min-w-[16px] h-4 bg-red-500 text-white text-[10px] font-semibold rounded-full px-1 border border-background shadow-sm animate-pulse">
                         {pendingRequests.length > 99 ? '99+' : pendingRequests.length}
                       </div>
                     )}
@@ -2227,7 +2227,7 @@ function App() {
                   <div className="relative">
                     <Send size={16} className="transition-colors group-data-[state=active]:text-[#01ae79]" />
                     {sentRequests.length > 0 && (
-                      <div className="absolute -top-2 -right-2 flex items-center justify-center min-w-[16px] h-4 bg-blue-500 text-whitetext-[10px] font-semibold rounded-full px-1 border border-background shadow-sm">
+                      <div className="absolute -top-2 -right-2 flex items-center justify-center min-w-[16px] h-4 bg-blue-500 text-white text-[10px] font-semibold rounded-full px-1 border border-background shadow-sm">
                         {sentRequests.length > 99 ? '99+' : sentRequests.length}
                       </div>
                     )}
