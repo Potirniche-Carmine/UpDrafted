@@ -1,7 +1,7 @@
 "use client";
 
 import { Button } from '@/components/ui/button';
-import { MessageSquare, Send, Search, Users, ArrowLeft, Lock, Flag} from 'lucide-react';
+import { MessageSquare, Send, Search, Users, ArrowLeft, Lock, Flag, Crown, Eye} from 'lucide-react';
 import { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import { Badge } from "@/components/ui/badge";
 import Link from 'next/link';
@@ -18,6 +18,7 @@ import { ReportDialog } from '../../(profiles)/components/shared/report-dialog';
 import { OfflineIndicator } from '../../../components/offline-indicator';
 import { useOfflineStatus } from '../../../hooks/use-offline-status';
 import { formatMessageTimestamp } from '../../../lib/date-utils';
+import { useFeatureAccess } from '../../../components/providers/subscription-provider';
 
 // Define real API types
 interface Conversation {
@@ -167,6 +168,11 @@ export default function MessagingPage() {
   const [initialLoadComplete, setInitialLoadComplete] = useState(false);
   const [reportDialogOpen, setReportDialogOpen] = useState(false);
   const [targetConnectionId, setTargetConnectionId] = useState<string | null>(null);
+  const [showReadReceiptUpgrade, setShowReadReceiptUpgrade] = useState(false);
+  
+  // Get premium features
+  const features = useFeatureAccess();
+  const hasReadReceiptAccess = features.profileViewInsights; // Using profileViewInsights as proxy for read receipts premium feature
   
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
@@ -1061,14 +1067,27 @@ export default function MessagingPage() {
                               <Lock size={14} className="text-muted-foreground" />
                             </div>
                           </div>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => setReportDialogOpen(true)}
-                            className="hover:bg-red-50 dark:hover:bg-red-950 text-red-600 dark:text-red-400"
-                          >
-                            <Flag size={16} />
-                          </Button>
+                          <div className="flex items-center gap-2">
+                            {/* Read Receipt Premium Hint */}
+                            {!hasReadReceiptAccess && (
+                              <button
+                                onClick={() => setShowReadReceiptUpgrade(true)}
+                                className="flex items-center text-xs text-muted-foreground hover:text-[#01ae79] transition-colors group px-2 py-1 rounded border border-border/50 hover:border-[#01ae79]/30 bg-background/50 hover:bg-[#01ae79]/5"
+                                title={`See when ${activeConversation?.partnerRole === 'athlete' ? 'the athlete' : activeConversation?.partnerRole === 'coach' ? 'the coach' : activeConversation?.partnerRole === 'recruiter' ? 'the recruiter' : 'they'} read your messages`}
+                              >
+                                <Crown size={12} className="mr-1 group-hover:text-yellow-500" />
+                                <span>Read Status</span>
+                              </button>
+                            )}
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => setReportDialogOpen(true)}
+                              className="hover:bg-red-50 dark:hover:bg-red-950 text-red-600 dark:text-red-400"
+                            >
+                              <Flag size={16} />
+                            </Button>
+                          </div>
                         </div>
                         <div className="flex items-center gap-2 flex-wrap pt-1.5">
                           {activeConversation && getRoleBadge(activeConversation.partnerRole, activeConversation.division, activeConversation.educationLevel)}
@@ -1118,13 +1137,45 @@ export default function MessagingPage() {
                                   <div className="absolute -left-2 top-1/2 transform -translate-y-1/2 w-2 h-2 bg-[#01ae79] rounded-full transition-opacity duration-300"></div>
                                 )}
                                 <p className="text-sm leading-relaxed">{msg.content}</p>
-                                <p className={`text-xs mt-2 ${
-                                  msg.isFromCurrentUser 
-                                    ? 'text-white/80 text-right' 
-                                    : 'text-muted-foreground text-left'
-                                }`}>
-                                  {formatMessageTimestamp(msg.createdAt)}
-                                </p>
+                                <div className="flex items-center justify-between mt-2">
+                                  <p className={`text-xs ${
+                                    msg.isFromCurrentUser 
+                                      ? 'text-white/80' 
+                                      : 'text-muted-foreground'
+                                  }`}>
+                                    {formatMessageTimestamp(msg.createdAt)}
+                                  </p>
+                                  
+                                  {/* Read Receipt Display - Premium Feature */}
+                                  {msg.isFromCurrentUser && (
+                                    <div className="flex items-center ml-2">
+                                      {hasReadReceiptAccess ? (
+                                        // Premium users see actual read status
+                                        msg.isRead ? (
+                                          <div className="flex items-center text-xs text-white/80">
+                                            <Eye size={12} className="mr-1" />
+                                            <span>Read</span>
+                                          </div>
+                                        ) : (
+                                          <div className="flex items-center text-xs text-white/60">
+                                            <div className="w-3 h-3 border border-white/60 rounded-full mr-1"></div>
+                                            <span>Sent</span>
+                                          </div>
+                                        )
+                                      ) : (
+                                        // Free users see upgrade prompt
+                                        <button
+                                          onClick={() => setShowReadReceiptUpgrade(true)}
+                                          className="flex items-center text-xs text-white/60 hover:text-white/80 transition-colors group"
+                                          title="Read receipts available with UpDrafted Premium"
+                                        >
+                                          <Crown size={12} className="mr-1 group-hover:text-yellow-400" />
+                                          <span className="underline decoration-dotted">Status</span>
+                                        </button>
+                                      )}
+                                    </div>
+                                  )}
+                                </div>
                               </div>
                             </div>
                           ))}
@@ -1299,6 +1350,72 @@ export default function MessagingPage() {
             reportedUserId={activeConversation.partnerId}
           />
         )}
+
+        {/* Read Receipt Upgrade Dialog */}
+        <Dialog open={showReadReceiptUpgrade} onOpenChange={setShowReadReceiptUpgrade}>
+          <DialogContent className="max-w-md bg-card border-border/50">
+            <DialogHeader>
+              <DialogTitle className="flex items-center">
+                <Crown className="h-5 w-5 text-yellow-500 mr-2" />
+                Read Receipts - Premium Feature
+              </DialogTitle>
+              <DialogDescription>
+                {activeConversation?.partnerRole === 'athlete' 
+                  ? "See when the athlete has read your messages" 
+                  : activeConversation?.partnerRole === 'coach'
+                  ? "See when the coach has read your messages"
+                  : activeConversation?.partnerRole === 'recruiter'
+                  ? "See when the recruiter has read your messages"
+                  : "See when your messages have been read by other users"}
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div className="text-sm text-muted-foreground">
+                <p className="mb-3">With UpDrafted Premium, you can:</p>
+                <ul className="space-y-2 ml-4">
+                  <li className="flex items-center">
+                    <Eye className="h-4 w-4 text-[#01ae79] mr-2 flex-shrink-0" />
+                    See when recipients read your messages
+                  </li>
+                  <li className="flex items-center">
+                    <MessageSquare className="h-4 w-4 text-[#01ae79] mr-2 flex-shrink-0" />
+                    Track message delivery status
+                  </li>
+                  <li className="flex items-center">
+                    <Crown className="h-4 w-4 text-[#01ae79] mr-2 flex-shrink-0" />
+                    Access all premium communication features
+                  </li>
+                </ul>
+                
+                <div className="mt-4 p-3 bg-[#01ae79]/5 dark:bg-[#01ae79]/10 rounded-lg border border-[#01ae79]/20">
+                  <p className="text-xs text-[#01ae79] dark:text-[#01ae79]/90 font-medium">
+                    {activeConversation?.partnerRole === 'athlete'
+                      ? "Know if the athlete has seen your recruitment message or coaching advice!"
+                      : activeConversation?.partnerRole === 'coach' 
+                      ? "Track if the coach has read your athlete profile or collaboration request!"
+                      : activeConversation?.partnerRole === 'recruiter'
+                      ? "See if the recruiter has viewed your athlete showcase or partnership inquiry!"
+                      : "Never wonder if your important messages have been seen!"}
+                  </p>
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => setShowReadReceiptUpgrade(false)}
+                  className="flex-1"
+                >
+                  Not Now
+                </Button>
+                <Link href="/pricing" className="flex-1">
+                  <Button className="w-full bg-[#01ae79] hover:bg-[#01ae79]/90 text-white">
+                    Upgrade Now
+                  </Button>
+                </Link>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
     </AuthWrapper>
   );

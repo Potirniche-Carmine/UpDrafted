@@ -8,6 +8,58 @@ import { getPartnerUserId, getOriginalRequesterId } from '@/utils/connection-uti
 
 export const runtime = 'nodejs';
 
+// Extended profile types to include conference field
+interface AthleteProfileWithConference {
+  fullName: string;
+  profileImageR3Key: string | null;
+  sport: string;
+  graduationYear: number;
+  educationLevel: string;
+  city: string;
+  state: string;
+  isVerified: boolean;
+  height?: string;
+  weight?: string;
+  positions?: string[];
+  conference?: string;
+  school?: {
+    id: number;
+    name: string;
+  };
+}
+
+interface CoachProfileWithConference {
+  fullName: string;
+  profileImageR3Key: string | null;
+  title: string;
+  sportCoaching: string;
+  city: string;
+  state: string;
+  division: string;
+  isVerified: boolean;
+  conference?: string;
+  school?: {
+    id: number;
+    name: string;
+  };
+}
+
+interface RecruitingProfileWithConference {
+  fullName: string;
+  profileImageR3Key: string | null;
+  title: string;
+  sportRecruiting: string;
+  city: string;
+  state: string;
+  division: string;
+  isVerified: boolean;
+  conference?: string;
+  school?: {
+    id: number;
+    name: string;
+  };
+}
+
 interface ConnectionData {
   id: number;
   status: string;
@@ -27,6 +79,7 @@ interface ConnectionData {
     graduationYear: number | null;
     educationLevel: string;
     division: string;
+    conference?: string;
     isVerified: boolean;
     role: string;
     height?: string;
@@ -291,6 +344,9 @@ export async function GET(request: NextRequest) {
           educationLevel: otherUser.athleteProfile?.educationLevel || '',
           division: otherUser.coachProfile?.division || 
                     otherUser.recruitingProfile?.division || '',
+          conference: (otherUser.athleteProfile && (otherUser.athleteProfile as AthleteProfileWithConference).conference) || 
+                     (otherUser.coachProfile && (otherUser.coachProfile as CoachProfileWithConference).conference) || 
+                     (otherUser.recruitingProfile && (otherUser.recruitingProfile as RecruitingProfileWithConference).conference) || undefined,
           isVerified: otherUser.athleteProfile?.isVerified || 
                      otherUser.coachProfile?.isVerified || 
                      otherUser.recruitingProfile?.isVerified || false,

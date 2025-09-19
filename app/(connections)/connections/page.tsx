@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useState, useMemo, useEffect, Suspense, useCallback } from 'react';
-import { Users, Search, MessageSquare, Shield, CheckCircle, X, Clock, MapPin, User, UserCheck, Users2, Send, Building2, Target, Filter, ChevronDown } from 'lucide-react';
+import React, { useState, useMemo, useEffect, Suspense, useCallback, useRef } from 'react';
+import { Users, Search, MessageSquare, Shield, CheckCircle, X, Clock, MapPin, User, UserCheck, Users2, Send, Building2, Target, Filter, ChevronDown, Lock, Crown } from 'lucide-react';
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -16,6 +16,7 @@ import { sanitizeText } from '@/utils/sanitization';
 import { useUser } from "@clerk/nextjs";
 import { getSportsList, DIVISIONS, US_STATES, COUNTRIES, getPositionsForSport } from '@/lib/sports-data';
 import { CONFERENCES_BY_DIVISION } from '@/lib/conference-data';
+import { useFeatureAccess } from '@/components/providers/subscription-provider';
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import {
@@ -354,6 +355,8 @@ interface HeightWeightFilterProps {
   onHeightChange: (height: number) => void;
   onWeightChange: (weight: number) => void;
   className?: string;
+  isPremium?: boolean;
+  onUpgradeClick?: () => void;
 }
 
 // Helper functions for height/weight conversion
@@ -368,44 +371,183 @@ function HeightWeightFilter({
   minWeight,
   onHeightChange,
   onWeightChange,
-  className
+  className,
+  isPremium = false,
+  onUpgradeClick
 }: HeightWeightFilterProps) {
+  const isLocked = !isPremium;
+  
   return (
     <div className={cn("space-y-4", className)}>
       <div className="space-y-2">
-        <Label className="text-sm font-medium text-foreground">
-          Minimum Height: {inchesToFeetString(minHeight)}
-        </Label>
-        <Slider
-          value={[minHeight]}
-          onValueChange={(value: number[]) => onHeightChange(value[0])}
-          min={60} // 5'0"
-          max={96} // 8'0"
-          step={1}
-          className="w-full"
-        />
+        <div className="flex items-center justify-between">
+          <Label className="text-sm font-medium text-foreground">
+            Minimum Height: {inchesToFeetString(minHeight)}
+          </Label>
+          {isLocked && (
+            <div 
+              className="flex items-center gap-1 text-xs text-amber-600 cursor-pointer hover:text-amber-700 transition-colors" 
+              onClick={onUpgradeClick}
+            >
+              <Crown className="h-3 w-3" />
+              <span>Premium</span>
+            </div>
+          )}
+        </div>
+        <div className={cn("relative", isLocked && "pointer-events-none opacity-50")}>
+          <Slider
+            value={[minHeight]}
+            onValueChange={(value: number[]) => onHeightChange(value[0])}
+            min={48} // 4'0" (updated from 60)
+            max={96} // 8'0"
+            step={1}
+            className="w-full"
+            disabled={isLocked}
+          />
+          {isLocked && (
+            <div className="absolute inset-0 flex items-center justify-center bg-background/80 backdrop-blur-sm rounded-md">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={onUpgradeClick}
+                className="text-xs"
+              >
+                <Lock className="h-3 w-3 mr-1" />
+                Upgrade for Height Filter
+              </Button>
+            </div>
+          )}
+        </div>
         <div className="flex justify-between text-xs text-muted-foreground">
-          <span>5&apos;0&quot;</span>
+          <span>4&apos;0&quot;</span>
           <span>8&apos;0&quot;</span>
         </div>
       </div>
       
       <div className="space-y-2">
-        <Label className="text-sm font-medium text-foreground">
-          Minimum Weight: {minWeight} lbs
-        </Label>
-        <Slider
-          value={[minWeight]}
-          onValueChange={(value: number[]) => onWeightChange(value[0])}
-          min={100}
-          max={500}
-          step={5}
-          className="w-full"
-        />
+        <div className="flex items-center justify-between">
+          <Label className="text-sm font-medium text-foreground">
+            Minimum Weight: {minWeight} lbs
+          </Label>
+          {isLocked && (
+            <div 
+              className="flex items-center gap-1 text-xs text-amber-600 cursor-pointer hover:text-amber-700 transition-colors" 
+              onClick={onUpgradeClick}
+            >
+              <Crown className="h-3 w-3" />
+              <span>Premium</span>
+            </div>
+          )}
+        </div>
+        <div className={cn("relative", isLocked && "pointer-events-none opacity-50")}>
+          <Slider
+            value={[minWeight]}
+            onValueChange={(value: number[]) => onWeightChange(value[0])}
+            min={50} // Updated from 100
+            max={500}
+            step={5}
+            className="w-full"
+            disabled={isLocked}
+          />
+          {isLocked && (
+            <div className="absolute inset-0 flex items-center justify-center bg-background/80 backdrop-blur-sm rounded-md">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={onUpgradeClick}
+                className="text-xs"
+              >
+                <Lock className="h-3 w-3 mr-1" />
+                Upgrade for Weight Filter
+              </Button>
+            </div>
+          )}
+        </div>
         <div className="flex justify-between text-xs text-muted-foreground">
-          <span>100 lbs</span>
+          <span>50 lbs</span>
           <span>500 lbs</span>
         </div>
+      </div>
+    </div>
+  );
+}
+
+// Verified Filter Component
+interface VerifiedFilterProps {
+  verifiedFilter: boolean | null;
+  onVerifiedChange: (verified: boolean | null) => void;
+  className?: string;
+  isPremium?: boolean;
+  onUpgradeClick?: () => void;
+}
+
+function VerifiedFilter({
+  verifiedFilter,
+  onVerifiedChange,
+  className,
+  isPremium = false,
+  onUpgradeClick
+}: VerifiedFilterProps) {
+  const isLocked = !isPremium;
+  
+  return (
+    <div className={cn("space-y-3", className)}>
+      <div className="flex items-center justify-between">
+        <Label className="text-sm font-medium text-foreground">
+          Verification Status
+        </Label>
+        {isLocked && (
+          <div 
+            className="flex items-center gap-1 text-xs text-amber-600 cursor-pointer hover:text-amber-700 transition-colors" 
+            onClick={onUpgradeClick}
+          >
+            <Crown className="h-3 w-3" />
+            <span>Premium</span>
+          </div>
+        )}
+      </div>
+      
+      <div className={cn("relative", isLocked && "pointer-events-none opacity-50")}>
+        <div 
+          className={cn(
+            "flex items-center justify-between p-3 border rounded-md transition-all duration-200",
+            !isLocked && "cursor-pointer hover:bg-accent/50",
+            verifiedFilter === true 
+              ? "bg-primary/10 border-primary/20 hover:bg-primary/20" 
+              : "bg-background border-border hover:bg-accent/30"
+          )}
+          onClick={!isLocked ? () => onVerifiedChange(verifiedFilter === true ? null : true) : undefined}
+        >
+          <div className="flex items-center gap-2">
+            <Shield className={cn(
+              "h-4 w-4",
+              verifiedFilter === true ? "text-primary" : "text-muted-foreground"
+            )} />
+            <span className="text-sm font-medium">Verified Only</span>
+          </div>
+          <div className={cn(
+            "px-3 py-1 rounded text-xs font-medium transition-colors",
+            verifiedFilter === true 
+              ? "bg-primary text-primary-foreground" 
+              : "bg-muted text-muted-foreground"
+          )}>
+            {verifiedFilter === true ? "On" : "Off"}
+          </div>
+        </div>
+        
+        {isLocked && (
+          <div className="absolute inset-0 flex items-center justify-center bg-background/80 backdrop-blur-sm rounded-md">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onUpgradeClick}
+              className="text-xs"
+            >
+              <Lock className="h-3 w-3 mr-1" />
+              Upgrade for Verified Filter
+            </Button>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -472,9 +614,13 @@ const UserCard: React.FC<UserCardProps> = ({ connection, onRemoveConnection }) =
                       {otherUser.fullName.split(' ').map(n => n[0]).join('').toUpperCase()}
                     </AvatarFallback>
                   </Avatar>
-                  {otherUser.isVerified && (
-                    <div className="absolute -top-1 -right-1 w-4 h-4 sm:w-5 sm:h-5 bg-green-500 rounded-full flex items-center justify-center shadow-md">
-                      <Shield className="w-2 h-2 sm:w-3 sm:h-3 text-white" />
+                  {otherUser.isVerified ? (
+                    <div className="absolute -bottom-1 -right-1 bg-[#01ae79] rounded-full p-1 border-2 border-background">
+                      <Shield className="h-3 w-3 text-white" />
+                    </div>
+                  ) : (
+                    <div className="absolute -bottom-1 -right-1 bg-orange-500 rounded-full p-1 border-2 border-background">
+                      <Shield className="h-3 w-3 text-whiteopacity-95" />
                     </div>
                   )}
                 </div>
@@ -619,7 +765,7 @@ const UserCard: React.FC<UserCardProps> = ({ connection, onRemoveConnection }) =
                 onRemoveConnection(connection.id, otherUser.userId);
               }}
               variant="outline"
-              className="w-full h-8 sm:h-8 md:h-9 text-xs sm:text-sm font-medium hover:bg-destructive hover:text-destructive-foreground hover:border-destructive"
+              className="w-full h-8 sm:h-8 md:h-9 text-xs sm:text-sm font-medium hover:bg-destructive/10 dark:hover:bg-destructive/50 hover:text-destructive-foreground hover:border-destructive"
             >
               <X size={14} className="mr-1.5 sm:mr-2" />  
               Remove Connection
@@ -692,9 +838,13 @@ const PendingRequestCard: React.FC<PendingRequestCardProps> = ({ request, onAcce
                       {otherUser.fullName.split(' ').map(n => n[0]).join('').toUpperCase()}
                     </AvatarFallback>
                   </Avatar>
-                  {otherUser.isVerified && (
-                    <div className="absolute -top-1 -right-1 w-4 h-4 sm:w-5 sm:h-5 bg-green-500 rounded-full flex items-center justify-center shadow-md">
-                      <Shield className="w-2 h-2 sm:w-3 sm:h-3 text-white" />
+                  {otherUser.isVerified ? (
+                    <div className="absolute -bottom-1 -right-1 bg-[#01ae79] rounded-full p-1 border-2 border-background">
+                      <Shield className="h-3 w-3 text-white" />
+                    </div>
+                  ) : (
+                    <div className="absolute -bottom-1 -right-1 bg-orange-500 rounded-full p-1 border-2 border-background">
+                      <Shield className="h-3 w-3 text-whiteopacity-95" />
                     </div>
                   )}
                 </div>
@@ -930,9 +1080,13 @@ const SentRequestCard: React.FC<SentRequestCardProps> = ({ request, onWithdraw, 
                       {otherUser.fullName.split(' ').map(n => n[0]).join('').toUpperCase()}
                     </AvatarFallback>
                   </Avatar>
-                  {otherUser.isVerified && (
-                    <div className="absolute -top-1 -right-1 w-4 h-4 sm:w-5 sm:h-5 bg-green-500 rounded-full flex items-center justify-center shadow-md">
-                      <Shield className="w-2 h-2 sm:w-3 sm:h-3 text-white" />
+                  {otherUser.isVerified ? (
+                    <div className="absolute -bottom-1 -right-1 bg-[#01ae79] rounded-full p-1 border-2 border-background">
+                      <Shield className="h-3 w-3 text-white" />
+                    </div>
+                  ) : (
+                    <div className="absolute -bottom-1 -right-1 bg-orange-500 rounded-full p-1 border-2 border-background">
+                      <Shield className="h-3 w-3 text-whiteopacity-95" />
                     </div>
                   )}
                 </div>
@@ -1112,10 +1266,14 @@ interface AdvancedFiltersProps {
   setMinHeight: (height: number) => void;
   minWeight: number;
   setMinWeight: (weight: number) => void;
+  verifiedFilter: boolean | null;
+  setVerifiedFilter: (verified: boolean | null) => void;
   userRole: string;
   onApplyFilters: () => void;
   onClearFilters: () => void;
   activeTab: string;
+  hasAdvancedSearch: boolean;
+  onUpgradeClick: () => void;
 }
 
 const AdvancedFilters: React.FC<AdvancedFiltersProps> = ({
@@ -1141,10 +1299,14 @@ const AdvancedFilters: React.FC<AdvancedFiltersProps> = ({
   setMinHeight,
   minWeight,
   setMinWeight,
+  verifiedFilter,
+  setVerifiedFilter,
   userRole,
   onApplyFilters,
   onClearFilters,
-  activeTab
+  activeTab,
+  hasAdvancedSearch,
+  onUpgradeClick
 }) => {
   const [showAdvanced, setShowAdvanced] = useState(false);
 
@@ -1238,7 +1400,8 @@ const AdvancedFilters: React.FC<AdvancedFiltersProps> = ({
     selectedGraduatingClasses.length > 0 ||
     selectedConferences.length > 0 ||
     selectedRequestTypes.length > 0 ||
-    (isAdmin && (minHeight > 60 || minWeight > 100)); // Include height/weight for admin
+    verifiedFilter !== null || // Include verification filter
+    (isAdmin && (minHeight > 48 || minWeight > 50)); // Include height/weight for admin
 
   return (
     <div className="space-y-4 mb-6">
@@ -1277,17 +1440,18 @@ const AdvancedFilters: React.FC<AdvancedFiltersProps> = ({
             classes: selectedGraduatingClasses.length,
             conferences: selectedConferences.length,
             requestTypes: selectedRequestTypes.length,
-            height: (userRole === 'coach' || userRole === 'recruiter' || isAdmin) && minHeight > 60 ? 1 : 0,
-            weight: (userRole === 'coach' || userRole === 'recruiter' || isAdmin) && minWeight > 100 ? 1 : 0
+            verified: verifiedFilter !== null ? 1 : 0, // Include verification filter
+            height: (userRole === 'coach' || userRole === 'recruiter' || isAdmin) && minHeight > 48 ? 1 : 0, // Updated from 60 to 48
+            weight: (userRole === 'coach' || userRole === 'recruiter' || isAdmin) && minWeight > 50 ? 1 : 0 // Updated from 100 to 50
           }).reduce((a, b) => a + b, 0)})</span>}
         </Button>
       </div>
 
       {/* Advanced Filters Panel */}
       {showAdvanced && (
-        <div className="border border-border rounded-lg p-4 space-y-4 bg-muted/30">
+        <div className="border border-border rounded-lg p-3 sm:p-4 space-y-1.5 sm:space-y-4 bg-muted/30">
           {/* Basic Filters Grid - Fixed layout to prevent shifts */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
             {/* Sports Filter */}
             <div className="space-y-2">
               <Label className="text-sm font-medium">
@@ -1351,20 +1515,6 @@ const AdvancedFilters: React.FC<AdvancedFiltersProps> = ({
               )}
             </div>
 
-            {/* Graduating Class Filter - Reserve space for coaches/recruiters */}
-            {(userRole === 'coach' || userRole === 'recruiter' || isAdmin) && (
-              <div className="space-y-2">
-                <Label className="text-sm font-medium">Graduating Class</Label>
-                <MultiSelectFilter
-                  options={graduatingClassOptions}
-                  selected={selectedGraduatingClasses}
-                  onSelectionChange={setSelectedGraduatingClasses}
-                  placeholder="Select graduation years..."
-                  searchPlaceholder="Search years..."
-                />
-              </div>
-            )}
-
             {/* Request Type Filter - Reserve space for pending/sent requests tabs */}
             {(activeTab === 'requests' || activeTab === 'sent-requests') ? (
               <div className="space-y-2">
@@ -1391,32 +1541,46 @@ const AdvancedFilters: React.FC<AdvancedFiltersProps> = ({
 
           {/* Advanced Filters for Coaches/Recruiters - Fixed positioning */}
           {(userRole === 'coach' || userRole === 'recruiter' || isAdmin) && (
-            <div className="space-y-4">
-              {/* Physical Requirements */}
-              <div className="border-t border-border pt-4">
-                <Label className="text-sm font-medium mb-4 block">Physical Requirements</Label>
-                <HeightWeightFilter
-                  minHeight={minHeight}
-                  minWeight={minWeight}
-                  onHeightChange={setMinHeight}
-                  onWeightChange={setMinWeight}
-                />
-              </div>
-
-              {/* Positions and Conferences in a separate grid to prevent layout shift */}
-              <div className="border-t border-border pt-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {/* Positions Filter - Always reserve space */}
+            <div className="space-y-1.5 sm:space-y-4">
+              {/* Advanced Filters */}
+              <div className="border-t border-border pt-1 sm:pt-3 relative">
+                <Label className="text-sm font-medium mb-1 sm:mb-3 block">Advanced Filters</Label>
+                <div className="space-y-1.5 sm:space-y-4">
+                  {/* Graduating Class - First in advanced filters */}
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium">Graduating Class</Label>
+                    {hasAdvancedSearch ? (
+                      <MultiSelectFilter
+                        options={graduatingClassOptions}
+                        selected={selectedGraduatingClasses}
+                        onSelectionChange={setSelectedGraduatingClasses}
+                        placeholder="Select graduation years..."
+                        searchPlaceholder="Search years..."
+                      />
+                    ) : (
+                      <div className="h-10 flex items-center px-3 py-2 border border-border rounded-md bg-muted/50 text-muted-foreground text-sm">
+                        Premium feature - Upgrade to filter by graduation year
+                      </div>
+                    )}
+                  </div>
+                  
+                  {/* Positions Filter */}
                   <div className="space-y-2">
                     <Label className="text-sm font-medium">Positions</Label>
                     {selectedSports.length > 0 && positionsOptions.length > 0 ? (
-                      <MultiSelectFilter
-                        options={positionsOptions}
-                        selected={selectedPositions}
-                        onSelectionChange={setSelectedPositions}
-                        placeholder="Select positions..."
-                        searchPlaceholder="Search positions..."
-                      />
+                      hasAdvancedSearch ? (
+                        <MultiSelectFilter
+                          options={positionsOptions}
+                          selected={selectedPositions}
+                          onSelectionChange={setSelectedPositions}
+                          placeholder="Select positions..."
+                          searchPlaceholder="Search positions..."
+                        />
+                      ) : (
+                        <div className="h-10 flex items-center px-3 py-2 border border-border rounded-md bg-muted/50 text-muted-foreground text-sm">
+                          Premium feature - Upgrade to filter by positions
+                        </div>
+                      )
                     ) : (
                       <div className="h-10 flex items-center px-3 py-2 border border-border rounded-md bg-muted/50 text-muted-foreground text-sm">
                         {selectedSports.length === 0 ? 'Select sports to filter by positions' : 'No positions available'}
@@ -1424,24 +1588,156 @@ const AdvancedFilters: React.FC<AdvancedFiltersProps> = ({
                     )}
                   </div>
 
-                  {/* Conferences Filter - Always reserve space */}
+                  {/* Conferences Filter */}
                   <div className="space-y-2">
                     <Label className="text-sm font-medium">Conferences</Label>
                     {selectedDivisions.length > 0 && conferencesOptions.length > 0 ? (
-                      <MultiSelectFilter
-                        options={conferencesOptions}
-                        selected={selectedConferences}
-                        onSelectionChange={setSelectedConferences}
-                        placeholder="Select conferences..."
-                        searchPlaceholder="Search conferences..."
-                      />
+                      hasAdvancedSearch ? (
+                        <MultiSelectFilter
+                          options={conferencesOptions}
+                          selected={selectedConferences}
+                          onSelectionChange={setSelectedConferences}
+                          placeholder="Select conferences..."
+                          searchPlaceholder="Search conferences..."
+                        />
+                      ) : (
+                        <div className="h-10 flex items-center px-3 py-2 border border-border rounded-md bg-muted/50 text-muted-foreground text-sm">
+                          Premium feature - Upgrade to filter by conferences
+                        </div>
+                      )
                     ) : (
                       <div className="h-10 flex items-center px-3 py-2 border border-border rounded-md bg-muted/50 text-muted-foreground text-sm">
                         {selectedDivisions.length === 0 ? 'Select divisions to filter by conferences' : 'No conferences available'}
                       </div>
                     )}
                   </div>
+                  
+                  <HeightWeightFilter
+                    minHeight={minHeight}
+                    minWeight={minWeight}
+                    onHeightChange={setMinHeight}
+                    onWeightChange={setMinWeight}
+                    isPremium={hasAdvancedSearch}
+                    onUpgradeClick={onUpgradeClick}
+                  />
+                  <VerifiedFilter
+                    verifiedFilter={verifiedFilter}
+                    onVerifiedChange={setVerifiedFilter}
+                    isPremium={hasAdvancedSearch}
+                    onUpgradeClick={onUpgradeClick}
+                  />
                 </div>
+                
+                {/* Professional Premium Overlay */}
+                {!hasAdvancedSearch && (
+                  <div className="absolute inset-0 bg-gradient-to-br from-background/20 via-background/15 to-background/20 backdrop-blur-[1px] rounded-lg border border-border/30 flex items-center justify-center">
+                    <div className="text-center space-y-3 p-6 bg-background/90 rounded-lg border border-border/50 shadow-lg backdrop-blur-sm">
+                      <div className="flex items-center justify-center space-x-2">
+                        <Crown className="h-6 w-6 text-amber-500" />
+                        <span className="text-lg font-semibold bg-gradient-to-r from-amber-600 to-amber-500 bg-clip-text text-transparent">
+                          Advanced Filters
+                        </span>
+                      </div>
+                      <p className="text-sm text-muted-foreground max-w-xs mx-auto">
+                        Unlock graduation year, positions, conferences, height/weight requirements, and verification status
+                      </p>
+                      <div className="flex justify-center">
+                        <Button
+                          onClick={() => window.location.href = '/pricing'}
+                          className="bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-whiteborder-0 shadow-lg hover:shadow-xl transition-all duration-200"
+                        >
+                          <Crown className="h-4 w-4 mr-2" />
+                          Upgrade for Advanced Filters
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Advanced Filters for Athletes - Similar to discover page */}
+          {userRole === 'athlete' && (
+            <div className="space-y-4">
+              {/* Advanced Filters */}
+              <div className="border-t border-border pt-4 relative">
+                <Label className="text-sm font-medium mb-4 block">Advanced Filters</Label>
+                
+                {!hasAdvancedSearch ? (
+                  <div className="relative">
+                    {/* Preview/Locked State */}
+                    <div className="space-y-4 pointer-events-none opacity-50">
+                      {/* Conferences Filter Preview */}
+                      <div className="space-y-2">
+                        <Label className="text-sm font-medium">Conferences</Label>
+                        <div className="h-10 flex items-center px-3 py-2 border border-border rounded-md bg-muted/50 text-muted-foreground text-sm">
+                          Filter by conferences...
+                        </div>
+                      </div>
+                      
+                      {/* Verification Filter Preview */}
+                      <div className="space-y-2">
+                        <Label className="text-sm font-medium">Verification Status</Label>
+                        <div className="h-10 flex items-center px-3 py-2 border border-border rounded-md bg-muted/50 text-muted-foreground text-sm">
+                          Filter by verification...
+                        </div>
+                      </div>
+                    </div>
+                    
+                    {/* Premium Overlay */}
+                    <div className="absolute inset-0 bg-gradient-to-br from-background/20 via-background/15 to-background/20 backdrop-blur-[1px] rounded-lg border border-border/30 flex items-center justify-center">
+                      <div className="text-center space-y-3 p-6 bg-background/90 rounded-lg border border-border/50 shadow-lg backdrop-blur-sm">
+                        <div className="flex items-center justify-center space-x-2">
+                          <Crown className="h-6 w-6 text-amber-500" />
+                          <span className="text-lg font-semibold bg-gradient-to-r from-amber-600 to-amber-500 bg-clip-text text-transparent">
+                            Advanced Filters
+                          </span>
+                        </div>
+                        <p className="text-sm text-muted-foreground max-w-xs mx-auto">
+                          Filter coaches and recruiters by conferences and verification status
+                        </p>
+                        <div className="flex justify-center">
+                          <Button
+                            onClick={() => window.location.href = '/pricing'}
+                            className="bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-whiteborder-0 shadow-lg hover:shadow-xl transition-all duration-200"
+                          >
+                            <Crown className="h-4 w-4 mr-2" />
+                            Upgrade
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {/* Conferences Filter */}
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium">Conferences</Label>
+                      {selectedDivisions.length > 0 && conferencesOptions.length > 0 ? (
+                        <MultiSelectFilter
+                          options={conferencesOptions}
+                          selected={selectedConferences}
+                          onSelectionChange={setSelectedConferences}
+                          placeholder="Select conferences..."
+                          searchPlaceholder="Search conferences..."
+                        />
+                      ) : (
+                        <div className="h-10 flex items-center px-3 py-2 border border-border rounded-md bg-muted/50 text-muted-foreground text-sm">
+                          {selectedDivisions.length === 0 ? 'Select divisions to filter by conferences' : 'No conferences available'}
+                        </div>
+                      )}
+                    </div>
+                    
+                    {/* Verification Filter */}
+                    <VerifiedFilter
+                      verifiedFilter={verifiedFilter}
+                      onVerifiedChange={setVerifiedFilter}
+                      isPremium={hasAdvancedSearch}
+                      onUpgradeClick={onUpgradeClick}
+                    />
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -1470,9 +1766,15 @@ const AdvancedFilters: React.FC<AdvancedFiltersProps> = ({
 };
 
 function App() {
+  const router = useRouter();
   const { user } = useUser();
   const effectiveRole = user?.publicMetadata?.role as string;
   const searchParams = useSearchParams();
+  
+  // Ref to prevent double mounting in React StrictMode
+  const hasInitializedRef = useRef(false);
+  // Request deduplication
+  const pendingRequestRef = useRef<Promise<{ connected: Connection[], incoming: PendingRequest[], outgoing: PendingRequest[] }> | null>(null);
   
   const [searchTerm, setSearchTerm] = useState('');
   const [filter, setFilter] = useState('all');
@@ -1480,6 +1782,10 @@ function App() {
   const [pendingRequests, setPendingRequests] = useState<PendingRequest[]>([]);
   const [sentRequests, setSentRequests] = useState<PendingRequest[]>([]);
   const [loading, setLoading] = useState(true);
+  
+  // Get subscription features using the custom hook
+  const features = useFeatureAccess();
+  const hasAdvancedSearch = features.advancedSearch;
 
   // Advanced filter states
   const [selectedSports, setSelectedSports] = useState<FilterOption[]>([]);
@@ -1494,8 +1800,10 @@ function App() {
   const [selectedRequestTypes, setSelectedRequestTypes] = useState<FilterOption[]>([]);
   
   // Height/Weight filters (for admin users)
-  const [minHeight, setMinHeight] = useState(60); // 5'0"
-  const [minWeight, setMinWeight] = useState(100);
+  const [minHeight, setMinHeight] = useState(48); // 4'0" (updated from 60)
+  const [minWeight, setMinWeight] = useState(50); // 50 lbs (updated from 100)
+  const [verifiedFilter, setVerifiedFilter] = useState<boolean | null>(null); // null = all, true = verified only
+  const [clearingFilters, setClearingFilters] = useState(false);
 
   interface FilterData {
     sports?: FilterOption[];
@@ -1508,44 +1816,134 @@ function App() {
     requestTypes?: FilterOption[];
     minHeight?: number;
     minWeight?: number;
+    verifiedFilter?: boolean | null;
   }
 
   const fetchConnections = useCallback(async (filters: FilterData = {}) => {
-    setLoading(true);
-    try {
-      const queryParams = new URLSearchParams();
-      
-      Object.entries(filters).forEach(([key, value]) => {
-        if (Array.isArray(value) && value.length > 0) {
-          value.forEach((v: FilterOption) => queryParams.append(key, v.value));
-        } else if (typeof value === 'number' && value > 0) {
-           if (key === 'minHeight' && value > 60) {
-            queryParams.append(key, value.toString());
-          } else if (key === 'minWeight' && value > 100) {
-            queryParams.append(key, value.toString());
-          }
-        }
-      });
-
-      const response = await fetch(`/api/connections?${queryParams.toString()}`);
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to fetch connections');
-      }
-      const data = await response.json();
-      setConnections(data.connected || []);
-      setPendingRequests(data.incoming || []);
-      setSentRequests(data.outgoing || []);
-    } catch (err) {
-      console.error('Error fetching connections:', err);
-    } finally {
-      setLoading(false);
+    // Prevent duplicate requests
+    if (pendingRequestRef.current) {
+      return pendingRequestRef.current;
     }
+
+    setLoading(true);
+    
+    const request = (async () => {
+      try {
+        // Check if we need to use the filtered API
+        const hasAdvancedFilters = filters.sports?.length || 
+          filters.divisions?.length || 
+          filters.states?.length || 
+          filters.countries?.length || 
+          filters.positions?.length ||
+          filters.graduatingClasses?.length ||
+          filters.conferences?.length ||
+          filters.requestTypes?.length ||
+          (filters.minHeight && filters.minHeight > 48) ||
+          (filters.minWeight && filters.minWeight > 50) ||
+          filters.verifiedFilter !== null;
+
+        if (hasAdvancedFilters) {
+          // Use filtered API for advanced filters
+          const response = await fetch('/api/connections/filtered', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              sports: filters.sports?.map(s => s.value) || [],
+              divisions: filters.divisions?.map(d => d.value) || [],
+              states: filters.states?.map(s => s.value) || [],
+              countries: filters.countries?.map(c => c.value) || [],
+              positions: filters.positions?.map(p => p.value) || [],
+              graduatingClasses: filters.graduatingClasses?.map(g => g.value) || [],
+              conferences: filters.conferences?.map(c => c.value) || [],
+              requestTypes: filters.requestTypes?.map(r => r.value) || [],
+              minHeight: filters.minHeight && filters.minHeight > 48 ? filters.minHeight : undefined,
+              minWeight: filters.minWeight && filters.minWeight > 50 ? filters.minWeight : undefined,
+              verified: filters.verifiedFilter,
+            }),
+          });
+
+          if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error || 'Failed to fetch filtered connections');
+          }
+          const data = await response.json();
+          setConnections(data.connected || []);
+          setPendingRequests(data.incoming || []);
+          setSentRequests(data.outgoing || []);
+          return data;
+        } else {
+          // Use regular API for basic connections (no filters)
+          const response = await fetch('/api/connections');
+          if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error || 'Failed to fetch connections');
+          }
+          const data = await response.json();
+          setConnections(data.connected || []);
+          setPendingRequests(data.incoming || []);
+          setSentRequests(data.outgoing || []);
+          return data;
+        }
+      } catch (err) {
+        if (process.env.NODE_ENV === 'development') {
+          console.error('Error fetching connections:', err);
+        }
+        throw err;
+      } finally {
+        setLoading(false);
+        // Clear the pending request
+        pendingRequestRef.current = null;
+      }
+    })();
+
+    pendingRequestRef.current = request;
+    return request;
   }, []);
 
+  // Upgrade handler
+  const handleUpgradeClick = useCallback(() => {
+    router.push('/pricing');
+  }, [router]);
+
+  // Initial load effect - only runs once on mount
   useEffect(() => {
-    fetchConnections();
-  }, [fetchConnections]);
+    // Prevent double mounting in React StrictMode
+    if (hasInitializedRef.current) return;
+    hasInitializedRef.current = true;
+
+    const initialLoad = async () => {
+      setLoading(true);
+      try {
+        const response = await fetch('/api/connections?');
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || 'Failed to fetch connections');
+        }
+        const data = await response.json();
+        setConnections(data.connected || []);
+        setPendingRequests(data.incoming || []);
+        setSentRequests(data.outgoing || []);
+      } catch (err) {
+        if (process.env.NODE_ENV === 'development') {
+          console.error('Error fetching connections:', err);
+        }
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    initialLoad();
+  }, []); // Empty dependency array ensures this only runs once
+
+  // Handle clearing filters - reload when filters are cleared
+  useEffect(() => {
+    if (clearingFilters) {
+      setClearingFilters(false);
+      fetchConnections(); // Fetch with no filters
+    }
+  }, [clearingFilters, fetchConnections]);
 
   const handleApplyFilters = () => {
     const filters = {
@@ -1559,11 +1957,13 @@ function App() {
       requestTypes: selectedRequestTypes,
       minHeight: minHeight,
       minWeight: minWeight,
+      verifiedFilter: verifiedFilter,
     };
     fetchConnections(filters);
   };
 
   const handleResetFilters = () => {
+    setClearingFilters(true);
     setSearchTerm('');
     setSelectedSports([]);
     setSelectedDivisions([]);
@@ -1573,9 +1973,9 @@ function App() {
     setSelectedGraduatingClasses([]);
     setSelectedConferences([]);
     setSelectedRequestTypes([]);
-    setMinHeight(60);
-    setMinWeight(100);
-    fetchConnections(); // Fetch with no filters
+    setMinHeight(48);
+    setMinWeight(50);
+    setVerifiedFilter(null);
   };
 
   const useFilteredConnections = (
@@ -1737,6 +2137,24 @@ function App() {
           </p>
         </div>
 
+        {/* Verification Info */}
+        <div className="mb-6">
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <div className="flex items-center gap-1.5">
+              <div className="w-4 h-4 bg-[#01ae79] rounded-full p-0.5">
+                <Shield className="h-3 w-3 text-white" />
+              </div>
+              <span>Verified</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <div className="w-4 h-4 bg-orange-500 rounded-full p-0.5">
+                <Shield className="h-3 w-3 text-white opacity-95" />
+              </div>
+              <span>Unverified</span>
+            </div>
+          </div>
+        </div>
+
         {/* Local Search - Always show to prevent layout shift */}
         <div className="relative mb-6">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground flex-shrink-0" size={20} />
@@ -1851,6 +2269,10 @@ function App() {
               setMinHeight={setMinHeight}
               minWeight={minWeight}
               setMinWeight={setMinWeight}
+              verifiedFilter={verifiedFilter}
+              setVerifiedFilter={setVerifiedFilter}
+              hasAdvancedSearch={hasAdvancedSearch}
+              onUpgradeClick={handleUpgradeClick}
               userRole={effectiveRole || ''}
               onApplyFilters={applyFilters}
               onClearFilters={clearAllFilters}
@@ -1914,6 +2336,10 @@ function App() {
               setMinHeight={setMinHeight}
               minWeight={minWeight}
               setMinWeight={setMinWeight}
+              verifiedFilter={verifiedFilter}
+              setVerifiedFilter={setVerifiedFilter}
+              hasAdvancedSearch={hasAdvancedSearch}
+              onUpgradeClick={handleUpgradeClick}
               userRole={effectiveRole || ''}
               onApplyFilters={applyFilters}
               onClearFilters={clearAllFilters}
@@ -1978,6 +2404,10 @@ function App() {
               setMinHeight={setMinHeight}
               minWeight={minWeight}
               setMinWeight={setMinWeight}
+              verifiedFilter={verifiedFilter}
+              setVerifiedFilter={setVerifiedFilter}
+              hasAdvancedSearch={hasAdvancedSearch}
+              onUpgradeClick={handleUpgradeClick}
               userRole={effectiveRole || ''}
               onApplyFilters={applyFilters}
               onClearFilters={clearAllFilters}

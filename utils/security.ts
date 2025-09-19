@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import crypto from 'crypto';
 
 // ==================== CONFIGURATION ====================
 
@@ -15,6 +14,7 @@ export const SECURITY_CONFIG = {
     profileInfo: isDev ? 60 : 300, // 1min dev, 5min prod
     searchResults: isDev ? 30 : 180, // 30s dev, 3min prod
     userConnections: isDev ? 60 : 120, // 1min dev, 2min prod
+    usageLimits: isDev ? 120 : 900, // 2min dev, 15min prod
     notifications: isDev ? 30 : 60, // 30s dev, 1min prod
     discover: isDev ? 60 : 300, // 1min dev, 5min prod
   },
@@ -474,7 +474,9 @@ function sanitizeFileName(fileName: string): string {
 
 function generateSecureFileKey(originalFileName: string): string {
   const timestamp = Date.now();
-  const random = crypto.randomBytes(8).toString('hex');
+  const randomArray = new Uint8Array(8);
+  crypto.getRandomValues(randomArray);
+  const random = Array.from(randomArray, byte => byte.toString(16).padStart(2, '0')).join('');
   const ext = originalFileName.split('.').pop() || '';
   return `${timestamp}_${random}.${ext}`;
 }

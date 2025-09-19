@@ -624,6 +624,7 @@ export const connectionOperations = {
                 city: true,
                 state: true,
                 division: true,
+                conference: true,
                 isVerified: true,
               },
               with: {
@@ -646,6 +647,7 @@ export const connectionOperations = {
                 city: true,
                 state: true,
                 division: true,
+                conference: true,
                 isVerified: true,
               },
               with: {
@@ -698,6 +700,7 @@ export const connectionOperations = {
                 city: true,
                 state: true,
                 division: true,
+                conference: true,
                 isVerified: true,
               },
               with: {
@@ -720,6 +723,7 @@ export const connectionOperations = {
                 city: true,
                 state: true,
                 division: true,
+                conference: true,
                 isVerified: true,
               },
               with: {
@@ -845,7 +849,7 @@ export const connectionOperations = {
       minWeight,
     } = filters;
 
-    const hasFilters = sports?.length || divisions?.length || states?.length || countries?.length || positions?.length || graduatingClasses?.length || conferences?.length || requestTypes?.length || (minHeight && minHeight > 60) || (minWeight && minWeight > 100);
+    const hasFilters = sports?.length || divisions?.length || states?.length || countries?.length || positions?.length || graduatingClasses?.length || conferences?.length || requestTypes?.length || (minHeight && minHeight > 48) || (minWeight && minWeight > 50);
 
     // If no filters, use the regular getUserConnections
     if (!hasFilters) {
@@ -1867,6 +1871,8 @@ export const notificationOperations = {
   },
 
   // Helper function to create profile view notification (first time only)
+  // Note: This creates notifications only for genuinely first-time profile views
+  // Users can clear notifications without affecting the activity log persistence
   async createProfileViewNotification(viewedUserId: string, viewerUserId: string) {
     try {
       // Check if viewer or viewed user is an admin - skip notifications for admin immunity
@@ -1882,33 +1888,25 @@ export const notificationOperations = {
       const viewerInfo = await profileOperations.getUserProfileInfo(viewerUserId);
       if (!viewerInfo) return null;
 
-      // Check if this viewer has EVER viewed this profile before (notification exists)
+      // Check if this viewer has viewed this profile before (check activityLog, not notifications)
+      // This ensures we only create notifications for truly first-time views
       try {
-        // Fetch all profileView notifications for this user and check metadata in application
-        const profileViewNotifications = await db.query.notifications.findMany({
+        // Check the activityLog to see if this is a genuine first-time view
+        const existingActivity = await db.query.activityLog.findFirst({
           where: and(
-            eq(notifications.userId, viewedUserId),
-            eq(notifications.type, 'profileView')
-          ),
-          columns: {
-            id: true,
-            metadata: true
-          }
+            eq(activityLog.viewerId, viewerUserId),
+            eq(activityLog.viewedUserId, viewedUserId),
+            eq(activityLog.action, 'profile_view')
+          )
         });
 
-        // Check if any notification has the matching viewerId in metadata
-        const existingNotification = profileViewNotifications.find(notification => {
-          const metadata = notification.metadata as { actorUserId?: string } | null;
-          return metadata?.actorUserId === viewerUserId;
-        });
-
-        // If a notification already exists, don't create a new one or update it
-        // Users can see recent activity on the /activity page
-        if (existingNotification) {
-          return null; // No notification needed - not first time
+        // If this person has viewed the profile before, don't create a notification
+        // The activity log tracks all views, but notifications are only for first impressions
+        if (existingActivity) {
+          return null; // No notification needed - not first time view
         }
       } catch (error) {
-        console.warn('Error checking for existing profile view notification, proceeding with creation:', error);
+        console.warn('Error checking activity log for existing profile view, proceeding with creation:', error);
         // Continue with creation if check fails
       }
 

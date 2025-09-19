@@ -5,8 +5,61 @@ import { sanitizeText } from '@/utils/sanitization';
 import { withRateLimit } from '@/utils/security';
 import { getCachedWithType, setCachedWithType, createErrorResponse, createSuccessResponse } from '@/utils/security';
 import { parseHeightToInches, parseWeightToPounds } from '@/lib/parsing-utils';
+import { SubscriptionManager } from '@/lib/subscription';
 
 export const runtime = 'nodejs';
+
+// Extended profile types to include conference field
+interface AthleteProfileWithConference {
+  fullName: string;
+  profileImageR3Key: string | null;
+  sport: string;
+  graduationYear: number;
+  educationLevel: string;
+  city: string;
+  state: string;
+  isVerified: boolean;
+  height?: string;
+  weight?: string;
+  positions?: string[];
+  conference?: string;
+  school?: {
+    id: number;
+    name: string;
+  };
+}
+
+interface CoachProfileWithConference {
+  fullName: string;
+  profileImageR3Key: string | null;
+  title: string;
+  sportCoaching: string;
+  city: string;
+  state: string;
+  division: string;
+  isVerified: boolean;
+  conference?: string;
+  school?: {
+    id: number;
+    name: string;
+  };
+}
+
+interface RecruitingProfileWithConference {
+  fullName: string;
+  profileImageR3Key: string | null;
+  title: string;
+  sportRecruiting: string;
+  city: string;
+  state: string;
+  division: string;
+  isVerified: boolean;
+  conference?: string;
+  school?: {
+    id: number;
+    name: string;
+  };
+}
 
 interface FilteredConnectionData {
   id: number;
@@ -28,6 +81,7 @@ interface FilteredConnectionData {
     graduationYear: number | null;
     educationLevel: string;
     division: string;
+    conference?: string;
     isVerified: boolean;
     role: string;
     height?: string;
@@ -63,6 +117,7 @@ interface RawFilterInput {
   requestTypes?: unknown;
   minHeight?: unknown;
   minWeight?: unknown;
+  verified?: unknown;
 }
 
 interface ValidatedFilters {
@@ -76,6 +131,7 @@ interface ValidatedFilters {
   requestTypes: string[];
   minHeight: number | undefined;
   minWeight: number | undefined;
+  verified: boolean | null;
 }
 
 // Validate and sanitize filter input
@@ -110,6 +166,13 @@ function validateAndSanitizeFilters(filters: RawFilterInput): ValidatedFilters {
     return Math.floor(numValue);
   };
 
+  const validateBoolean = (value: unknown): boolean | null => {
+    if (typeof value === 'boolean') return value;
+    if (value === 'true') return true;
+    if (value === 'false') return false;
+    return null;
+  };
+
   return {
     sports: validateArray(filters.sports),
     divisions: validateArray(filters.divisions),
@@ -119,8 +182,9 @@ function validateAndSanitizeFilters(filters: RawFilterInput): ValidatedFilters {
     graduatingClasses: validateArray(filters.graduatingClasses),
     conferences: validateArray(filters.conferences),
     requestTypes: validateArray(filters.requestTypes),
-    minHeight: validateNumber(filters.minHeight, 60, 96),
-    minWeight: validateNumber(filters.minWeight, 100, 500),
+    minHeight: validateNumber(filters.minHeight, 48, 96),
+    minWeight: validateNumber(filters.minWeight, 50, 500),
+    verified: validateBoolean(filters.verified),
   };
 }
 
@@ -158,6 +222,34 @@ export async function POST(request: NextRequest) {
 
     const sanitizedFilters = validateAndSanitizeFilters(body);
 
+    // Check subscription features for premium filters
+    const hasPhysicalRequirements = sanitizedFilters.minHeight || sanitizedFilters.minWeight;
+    const hasVerifiedFilter = sanitizedFilters.verified !== null;
+    
+    if (hasPhysicalRequirements || hasVerifiedFilter) {
+      const hasAdvancedSearchAccess = await SubscriptionManager.hasPremiumAccess(currentUserId);
+      
+      if (!hasAdvancedSearchAccess) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: 'Premium subscription required for advanced search features',
+            premium: {
+              required: true,
+              feature: 'advancedSearch',
+              message: 'Upgrade to filter by physical requirements and verified status',
+              availableFeatures: [
+                'Physical requirement filters (height/weight)',
+                'Verified athlete status filtering',
+                'Advanced search capabilities'
+              ]
+            }
+          },
+          { status: 403, headers: rateLimitCheck.headers }
+        );
+      }
+    }
+
     // Check cache first (only if no filters applied)
     const hasBasicFilters = sanitizedFilters.sports.length > 0 ||
                            sanitizedFilters.divisions.length > 0 ||
@@ -167,7 +259,8 @@ export async function POST(request: NextRequest) {
                               sanitizedFilters.graduatingClasses.length > 0 ||
                               sanitizedFilters.conferences.length > 0 ||
                               sanitizedFilters.minHeight ||
-                              sanitizedFilters.minWeight;
+                              sanitizedFilters.minWeight ||
+                              sanitizedFilters.verified !== null;
     const hasFilters = hasBasicFilters || hasAdvancedFilters;
     
     const cacheKey = hasFilters ? null : `connections:${currentUserId}:all`;
@@ -238,10 +331,19 @@ export async function POST(request: NextRequest) {
           }
         }
         
-        if (sanitizedFilters.conferences.length > 0 && 
-            (otherUser.role === 'coach' || otherUser.role === 'recruiter')) {
-          // Conference filtering is not yet available in the current schema
-          // Skip this filter for now
+        if (sanitizedFilters.conferences.length > 0) {
+          let userConference = null;
+          if (otherUser.role === 'athlete' && otherUser.athleteProfile) {
+            userConference = (otherUser.athleteProfile as AthleteProfileWithConference).conference;
+          } else if (otherUser.role === 'coach' && otherUser.coachProfile) {
+            userConference = (otherUser.coachProfile as CoachProfileWithConference).conference;
+          } else if (otherUser.role === 'recruiter' && otherUser.recruitingProfile) {
+            userConference = (otherUser.recruitingProfile as RecruitingProfileWithConference).conference;
+          }
+          
+          if (!userConference || !sanitizedFilters.conferences.includes(userConference)) {
+            return; // Skip this connection
+          }
         }
         
         if (sanitizedFilters.minHeight && otherUser.role === 'athlete') {
@@ -254,6 +356,21 @@ export async function POST(request: NextRequest) {
         if (sanitizedFilters.minWeight && otherUser.role === 'athlete') {
           const userWeightPounds = parseWeightToPounds(otherUser.athleteProfile?.weight);
           if (userWeightPounds === null || userWeightPounds < sanitizedFilters.minWeight) {
+            return; // Skip this connection
+          }
+        }
+        
+        if (sanitizedFilters.verified !== null) {
+          let isVerified = false;
+          if (otherUser.role === 'athlete') {
+            isVerified = Boolean(otherUser.athleteProfile?.isVerified);
+          } else if (otherUser.role === 'coach') {
+            isVerified = Boolean(otherUser.coachProfile?.isVerified);
+          } else if (otherUser.role === 'recruiter') {
+            isVerified = Boolean(otherUser.recruitingProfile?.isVerified);
+          }
+          
+          if (sanitizedFilters.verified !== isVerified) {
             return; // Skip this connection
           }
         }
@@ -293,6 +410,9 @@ export async function POST(request: NextRequest) {
           educationLevel: otherUser.athleteProfile?.educationLevel || '',
           division: otherUser.coachProfile?.division || 
                     otherUser.recruitingProfile?.division || '',
+          conference: (otherUser.athleteProfile as AthleteProfileWithConference)?.conference || 
+                     (otherUser.coachProfile as CoachProfileWithConference)?.conference || 
+                     (otherUser.recruitingProfile as RecruitingProfileWithConference)?.conference || undefined,
           isVerified: otherUser.athleteProfile?.isVerified || 
                      otherUser.coachProfile?.isVerified || 
                      otherUser.recruitingProfile?.isVerified || false,
@@ -336,6 +456,11 @@ export async function POST(request: NextRequest) {
       }
     });
 
+    // Get user's subscription features for response
+    const [hasAdvancedSearchAccess] = await Promise.all([
+      SubscriptionManager.hasPremiumAccess(currentUserId)
+    ]);
+
     const result: FilteredConnectionsResponse = {
       connected: connectedConnections,
       incoming: incomingPendingRequests,
@@ -354,7 +479,15 @@ export async function POST(request: NextRequest) {
 
     return createSuccessResponse({
       success: true,
-      ...result
+      ...result,
+      premium: {
+        hasAdvancedSearch: hasAdvancedSearchAccess,
+        availableFeatures: hasAdvancedSearchAccess ? [
+          'Physical requirement filters (height/weight)',
+          'Verified athlete status filtering',
+          'Advanced search capabilities'
+        ] : ['Upgrade to unlock advanced search features']
+      }
     }, rateLimitCheck.headers);
 
   } catch (error) {

@@ -20,6 +20,7 @@ import { useProfileNavigation } from '@/hooks/use-profile-navigation'
 import { DashboardHeader } from '../components/dashboard-header'
 import { AuthWrapper } from '../../../components/auth-wrapper'
 import { PWAInstallPrompt } from '../../../components/pwa-install-prompt'
+import { PremiumLimitsCard } from '@/components/premium-limits-card'
 
 // TypeScript interfaces for navigation items
 interface NavItemWithHref {
@@ -365,25 +366,9 @@ function DashboardContent({
         />
 
         {/* Main Grid Layout */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Navigation Cards */}
-          <div className="lg:col-span-2">
-            <Card className="border shadow-sm bg-card/80 backdrop-blur-sm">
-              <CardHeader>
-                <CardTitle className="text-foreground text-lg">Quick Navigation</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-4">
-                  {userContent.primaryNav.map((item, index) => (
-                    <NavCard key={index} item={item} profileNavigating={profileNavigating} />
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Side Content - Calendar and NCAA Rules */}
-          <div className="space-y-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+          {/* Side Content - Calendar and NCAA Rules (moved to top) */}
+          <div className="lg:col-start-3 lg:row-start-1 lg:row-span-3 space-y-6">
             {/* Calendar Date */}
             <Card className="border shadow-sm bg-card/80 backdrop-blur-sm">
               <CardHeader className="pb-3">
@@ -432,6 +417,27 @@ function DashboardContent({
                 </div>
               </CardContent>
             </Card>
+          </div>
+
+          {/* Navigation Cards */}
+          <div className="lg:col-span-2 lg:row-start-1">
+            <Card className="border shadow-sm bg-card/80 backdrop-blur-sm">
+              <CardHeader>
+                <CardTitle className="text-foreground text-lg">Quick Navigation</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-4">
+                  {userContent.primaryNav.map((item, index) => (
+                    <NavCard key={index} item={item} profileNavigating={profileNavigating} />
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Premium Limits Card - Below Quick Navigation */}
+          <div className="lg:col-span-2 lg:row-start-2">
+            <PremiumLimitsCard />
           </div>
         </div>
       </div>

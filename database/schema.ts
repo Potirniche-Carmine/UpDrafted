@@ -26,6 +26,8 @@ export const educationLevelEnum = pgEnum('education_level', ['high_school', 'und
 export const notificationTypeEnum = pgEnum('notification_type', ['profileView', 'newConnection', 'newMessage', 'systemUpdate', 'premiumFeature', 'connectionAccepted']);
 export const studentClassificationEnum = pgEnum('student_classification', ['high_school', 'university_transfers', 'juco_students', 'graduate_transfers', 'international_students']);
 export const schoolClassificationEnum = pgEnum('school_classification', ['high_school', 'college', 'university', 'professional', 'other']);
+export const subscriptionStatusEnum = pgEnum('subscription_status', ['active', 'cancelled', 'past_due', 'trialing', 'incomplete', 'incomplete_expired', 'unpaid']);
+export const subscriptionTierEnum = pgEnum('subscription_tier', ['free', 'pro_athlete_monthly', 'pro_athlete_yearly', 'pro_coach_monthly', 'pro_coach_yearly', 'pro_recruiter_monthly', 'pro_recruiter_yearly']);
 
 export const schools = pgTable('schools', {
   id: serial('id').primaryKey(),
@@ -597,6 +599,184 @@ export type Connection = typeof connections.$inferSelect;
 export type NewConnection = typeof connections.$inferInsert;
 export type Conversation = typeof conversations.$inferSelect;
 export type NewConversation = typeof conversations.$inferInsert;
+
+// Subscription and billing tables
+export const userSubscriptions = pgTable('user_subscriptions', {
+  id: serial('id').primaryKey(),
+  userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  
+  // Stripe identifiers
+  stripeCustomerId: text('stripe_customer_id'),
+  stripeSubscriptionId: text('stripe_subscription_id'),
+  stripePriceId: text('stripe_price_id'),
+  
+  // Subscription details
+  tier: subscriptionTierEnum('tier').notNull().default('free'),
+  status: subscriptionStatusEnum('status').notNull().default('active'),
+  
+  // Billing cycle
+  currentPeriodStart: timestamp('current_period_start', { withTimezone: true }),
+  currentPeriodEnd: timestamp('current_period_end', { withTimezone: true }),
+  cancelAtPeriodEnd: boolean('cancel_at_period_end').default(false),
+  canceledAt: timestamp('canceled_at', { withTimezone: true }),
+  
+  // Trial information
+  trialStart: timestamp('trial_start', { withTimezone: true }),
+  trialEnd: timestamp('trial_end', { withTimezone: true }),
+  
+  // Metadata
+  metadata: jsonb('metadata'),
+  
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+}, (table) => [
+  index('idx_user_subscriptions_user_id').on(table.userId),
+  index('idx_user_subscriptions_stripe_customer_id').on(table.stripeCustomerId),
+  index('idx_user_subscriptions_stripe_subscription_id').on(table.stripeSubscriptionId),
+  index('idx_user_subscriptions_status').on(table.status),
+  index('idx_user_subscriptions_tier').on(table.tier),
+  index('idx_user_subscriptions_period_end').on(table.currentPeriodEnd),
+  unique('user_subscriptions_user_id_unique').on(table.userId),
+  unique('user_subscriptions_stripe_subscription_id_unique').on(table.stripeSubscriptionId),
+]);
+
+// Usage tracking for premium features
+export const userUsageTracking = pgTable('user_usage_tracking', {
+  id: serial('id').primaryKey(),
+  userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  
+  // Monthly usage counters (reset each billing cycle)
+  profileViewsReceived: integer('profile_views_received').default(0),
+  connectionsRequested: integer('connections_requested').default(0),
+  messagesReceived: integer('messages_received').default(0),
+  searchesPerformed: integer('searches_performed').default(0),
+  analyticsViews: integer('analytics_views').default(0),
+  
+  // Track when usage was last reset
+  lastResetAt: timestamp('last_reset_at', { withTimezone: true }).defaultNow().notNull(),
+  
+  // Current billing period tracking
+  currentPeriodStart: timestamp('current_period_start', { withTimezone: true }).defaultNow().notNull(),
+  currentPeriodEnd: timestamp('current_period_end', { withTimezone: true }),
+  
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+}, (table) => [
+  index('idx_user_usage_user_id').on(table.userId),
+  index('idx_user_usage_period_end').on(table.currentPeriodEnd),
+  unique('user_usage_tracking_user_id_unique').on(table.userId),
+]);
+
+// Feature limits by subscription tier
+export const subscriptionFeatureLimits = pgTable('subscription_feature_limits', {
+  id: serial('id').primaryKey(),
+  tier: subscriptionTierEnum('tier').notNull(),
+  
+  // Connection limits
+  maxConnectionsPerMonth: integer('max_connections_per_month').default(-1), // -1 = unlimited
+  maxActiveConnections: integer('max_active_connections').default(-1),
+  
+  // Search and discovery limits
+  maxSearchesPerDay: integer('max_searches_per_day').default(-1),
+  advancedSearchEnabled: boolean('advanced_search_enabled').default(false),
+  
+  // Analytics and insights
+  analyticsEnabled: boolean('analytics_enabled').default(false),
+  profileViewInsights: boolean('profile_view_insights').default(false),
+  activityTracking: boolean('activity_tracking').default(false),
+  
+  // Profile features
+  priorityProfileRanking: boolean('priority_profile_ranking').default(false),
+  customProfileThemes: boolean('custom_profile_themes').default(false),
+  videoUploadsEnabled: boolean('video_uploads_enabled').default(true),
+  maxVideoUploads: integer('max_video_uploads').default(3),
+  
+  // Messaging and communication
+  priorityMessaging: boolean('priority_messaging').default(false),
+  messageRequestsEnabled: boolean('message_requests_enabled').default(true),
+  
+  // Support level
+  prioritySupport: boolean('priority_support').default(false),
+  
+  // Export capabilities
+  dataExportEnabled: boolean('data_export_enabled').default(false),
+  
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+}, (table) => [
+  index('idx_subscription_feature_limits_tier').on(table.tier),
+  unique('subscription_feature_limits_tier_unique').on(table.tier),
+]);
+
+// Payment history and billing events
+export const billingEvents = pgTable('billing_events', {
+  id: serial('id').primaryKey(),
+  userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  subscriptionId: integer('subscription_id').references(() => userSubscriptions.id, { onDelete: 'set null' }),
+  
+  // Stripe event details
+  stripeEventId: text('stripe_event_id'),
+  stripeInvoiceId: text('stripe_invoice_id'),
+  stripePaymentIntentId: text('stripe_payment_intent_id'),
+  
+  // Event information
+  eventType: text('event_type').notNull(), // 'payment_succeeded', 'payment_failed', 'subscription_created', etc.
+  amount: integer('amount'), // Amount in cents
+  currency: text('currency').default('usd'),
+  status: text('status').notNull(),
+  
+  // Event data
+  eventData: jsonb('event_data'),
+  
+  // Timestamps
+  eventTimestamp: timestamp('event_timestamp', { withTimezone: true }).notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+}, (table) => [
+  index('idx_billing_events_user_id').on(table.userId),
+  index('idx_billing_events_subscription_id').on(table.subscriptionId),
+  index('idx_billing_events_stripe_event_id').on(table.stripeEventId),
+  index('idx_billing_events_event_type').on(table.eventType),
+  index('idx_billing_events_event_timestamp').on(table.eventTimestamp),
+  unique('billing_events_stripe_event_id_unique').on(table.stripeEventId),
+]);
+
+// Relations for subscription tables
+export const userSubscriptionsRelations = relations(userSubscriptions, ({ one, many }) => ({
+  user: one(users, {
+    fields: [userSubscriptions.userId],
+    references: [users.id],
+  }),
+  billingEvents: many(billingEvents),
+}));
+
+export const userUsageTrackingRelations = relations(userUsageTracking, ({ one }) => ({
+  user: one(users, {
+    fields: [userUsageTracking.userId],
+    references: [users.id],
+  }),
+}));
+
+export const billingEventsRelations = relations(billingEvents, ({ one }) => ({
+  user: one(users, {
+    fields: [billingEvents.userId],
+    references: [users.id],
+  }),
+  subscription: one(userSubscriptions, {
+    fields: [billingEvents.subscriptionId],
+    references: [userSubscriptions.id],
+  }),
+}));
+
+// Type exports
+export type UserSubscription = typeof userSubscriptions.$inferSelect;
+export type NewUserSubscription = typeof userSubscriptions.$inferInsert;
+export type UserUsageTracking = typeof userUsageTracking.$inferSelect;
+export type NewUserUsageTracking = typeof userUsageTracking.$inferInsert;
+export type SubscriptionFeatureLimits = typeof subscriptionFeatureLimits.$inferSelect;
+export type NewSubscriptionFeatureLimits = typeof subscriptionFeatureLimits.$inferInsert;
+export type BillingEvent = typeof billingEvents.$inferSelect;
+export type NewBillingEvent = typeof billingEvents.$inferInsert;
+
 export type Message = typeof messages.$inferSelect;
 export type NewMessage = typeof messages.$inferInsert;
 export type RecruitingNeeds = typeof recruitingNeeds.$inferSelect;

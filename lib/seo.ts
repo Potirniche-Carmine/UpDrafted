@@ -6,7 +6,6 @@ export const siteConfig = {
   url: process.env.NEXT_PUBLIC_APP_URL || 'https://updrafted.us',
   ogImage: '/og-image.png',
   creator: 'UpDrafted Team',
-  twitterCreator: '@qtackz',
   keywords: [
     'college recruitment',
     'student athletes',
@@ -116,7 +115,6 @@ export function generateMetadata({
       title: metaTitle,
       description: metaDescription,
       images: [metaImage.startsWith('http') ? metaImage : `${siteConfig.url}${metaImage}`],
-      creator: siteConfig.twitterCreator, 
     },
     icons: {
       icon: [

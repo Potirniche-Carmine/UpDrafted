@@ -7,6 +7,7 @@ import { profileOperations, notificationOperations } from '@/database/db-utils';
 import { withRateLimit } from '@/utils/security';
 import { createErrorResponse } from '@/utils/security';
 import { generateProfileUrl } from '@/lib/utils';
+import { SubscriptionManager } from '@/lib/subscription';
 
 type Operation = 'getNotifications' | 'markAsRead' | 'markAllAsRead' | 'getUnreadCount' | 'dismissAllNotifications';
 
@@ -185,12 +186,24 @@ async function handleGetNotifications(userId: string, body: GetNotificationsRequ
 
     const userNotifications = await Promise.race([queryPromise, queryTimeout]);
 
+    // Check if user has premium access to profile view insights
+    const hasProfileViewInsights = await SubscriptionManager.hasPremiumAccess(userId);
+    
+    // Keep all notifications (including profile views), but we'll modify the metadata later
+    const filteredNotifications = userNotifications;
+
     // Get unique actor user IDs to batch fetch profile info
+    // For profile view notifications, only fetch actor data if user has premium
     const actorUserIds = new Set<string>();
-    userNotifications.forEach(notification => {
+    filteredNotifications.forEach(notification => {
       if (notification.metadata) {
         const metadata = notification.metadata as Record<string, unknown>;
         if (metadata.actorUserId && typeof metadata.actorUserId === 'string') {
+          // For profile view notifications, only add to fetch list if user has premium
+          if (notification.type === 'profileView' && !hasProfileViewInsights) {
+            // Skip fetching actor data for profile view notifications for non-premium users
+            return;
+          }
           actorUserIds.add(metadata.actorUserId);
         }
       }
@@ -252,8 +265,29 @@ async function handleGetNotifications(userId: string, body: GetNotificationsRequ
     }
 
     // Enhance notifications with cached profile data
-    const enhancedNotifications = userNotifications.map((notification) => {
+    const enhancedNotifications = filteredNotifications.map((notification) => {
       let enhancedData = {};
+
+      // Handle profile view notifications for non-premium users
+      if (notification.type === 'profileView' && !hasProfileViewInsights) {
+        return {
+          ...notification,
+          // Override title and message for locked notifications
+          title: 'Profile View',
+          message: 'Someone viewed your profile. View insights to see your profile statistics',
+          // Don't include any actor metadata
+          actorName: undefined,
+          actorImageUrl: undefined,
+          actorRole: undefined,
+          // Add a flag to indicate this is a locked notification
+          isLocked: true,
+          // Link to activity insights page instead of pricing
+          link: '/activity',
+          timestamp: formatTimeAgo(notification.createdAt),
+          // Strip all metadata to prevent abuse
+          metadata: undefined,
+        };
+      }
 
       if (notification.metadata) {
         const metadata = notification.metadata as Record<string, unknown>;

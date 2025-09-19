@@ -4,9 +4,8 @@ import React, { useState, useEffect, Suspense, useCallback, useMemo, useRef } fr
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { User, Users, Target, MapPin, Shield, GraduationCap, Send, ChevronDown, X, Clock, Building2, Filter, Search } from "lucide-react";
+import { User, Users, Target, MapPin, Shield, GraduationCap, Send, X, Clock, Building2, Filter, Search, Crown } from "lucide-react";
 import { useSearchParams, useRouter } from 'next/navigation';
-
 import { AuthWrapper } from '@/components/auth-wrapper';
 import { useUser } from "@clerk/nextjs";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -16,29 +15,10 @@ import { sanitizeText } from '@/utils/sanitization';
 import { createSecureHeaders } from '@/utils/clerk-security';
 import { getSportsList, DIVISIONS, US_STATES, COUNTRIES, getPositionsForSport } from '@/lib/sports-data';
 import { CONFERENCES_BY_DIVISION } from '@/lib/conference-data';
-import { Label } from "@/components/ui/label";
-import { Slider } from "@/components/ui/slider";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger
-} from "@/components/ui/popover";
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "@/components/ui/command";
-import { Checkbox } from "@/components/ui/checkbox";
 import { useProfileCompletenessSorting } from '../components/profile-completeness-sorter';
-
-// Filter option interface
-interface FilterOption {
-  value: string;
-  label: string;
-}
+import { AdvancedFilters } from '../components/advanced-filters';
+import { MultiSelectFilter, HeightWeightFilter, VerifiedFilter, type FilterOption } from '../components/filter-components';
+import { useFeatureAccess } from '@/components/providers/subscription-provider';
 
 // API response types
 interface DiscoverUser {
@@ -75,13 +55,6 @@ interface DiscoverResponse {
 }
 
 type TabValue = 'all' | 'athletes' | 'coaches' | 'recruiters';
-
-// Helper functions for height/weight conversion
-const inchesToFeetString = (totalInches: number): string => {
-  const feet = Math.floor(totalInches / 12);
-  const inches = totalInches % 12;
-  return inches > 0 ? `${feet}'${inches}"` : `${feet}'`;
-};
 
 // Generate graduation year options
 const getGraduationYearOptions = (): FilterOption[] => {
@@ -134,177 +107,6 @@ const getPositionsForSports = (selectedSports: FilterOption[]): FilterOption[] =
 
 // Ordered divisions with High School first (most common)
 const ORDERED_DIVISIONS = ['High School', ...DIVISIONS.filter(d => d !== 'High School')];
-
-// Multi-select filter component
-interface MultiSelectFilterProps {
-  options: FilterOption[];
-  selected: FilterOption[];
-  onSelectionChange: (selected: FilterOption[]) => void;
-  placeholder: string;
-  searchPlaceholder?: string;
-  className?: string;
-}
-
-function MultiSelectFilter({
-  options,
-  selected,
-  onSelectionChange,
-  placeholder,
-  searchPlaceholder = "Search...",
-  className
-}: MultiSelectFilterProps) {
-  const [open, setOpen] = useState(false);
-  const [searchTerm, setSearchTerm] = useState("");
-
-  const filteredOptions = useMemo(() => {
-    if (!searchTerm) return options;
-    return options.filter(option =>
-      option.label.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-  }, [options, searchTerm]);
-
-  const handleSelectAll = () => {
-    if (selected.length === options.length) {
-      onSelectionChange([]);
-    } else {
-      onSelectionChange(options);
-    }
-  };
-
-  const handleToggleOption = (option: FilterOption) => {
-    const isSelected = selected.some(s => s.value === option.value);
-    if (isSelected) {
-      onSelectionChange(selected.filter(s => s.value !== option.value));
-    } else {
-      onSelectionChange([...selected, option]);
-    }
-  };
-
-  return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <Button
-          variant="outline"
-          role="combobox"
-          aria-expanded={open}
-          className={cn("w-full justify-between text-left font-normal", className)}
-        >
-          <span className="truncate">
-            {selected.length === 0
-              ? placeholder
-              : selected.length === 1
-                ? selected[0].label
-                : `${selected.length} selected`
-            }
-          </span>
-          <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent className="w-[280px] sm:w-[var(--radix-popover-trigger-width)] max-w-[90vw] p-0" align="center" side="bottom" sideOffset={4}>
-        <Command>
-          <CommandInput
-            placeholder={searchPlaceholder}
-            value={searchTerm}
-            onValueChange={setSearchTerm}
-          />
-          <CommandList>
-            <CommandEmpty>No options found.</CommandEmpty>
-            <CommandGroup>
-              {/* Select All Option */}
-              <CommandItem
-                onSelect={handleSelectAll}
-                className="cursor-pointer"
-              >
-                <Checkbox
-                  checked={selected.length === options.length}
-                  className="mr-2"
-                />
-                <span className="font-medium">
-                  {selected.length === options.length ? 'Deselect All' : 'Select All'}
-                </span>
-              </CommandItem>
-
-              {/* Individual Options */}
-              {filteredOptions.map((option) => {
-                const isSelected = selected.some(s => s.value === option.value);
-                return (
-                  <CommandItem
-                    key={option.value}
-                    onSelect={() => handleToggleOption(option)}
-                    className="cursor-pointer"
-                  >
-                    <Checkbox
-                      checked={isSelected}
-                      className="mr-2"
-                    />
-                    <span>{option.label}</span>
-                  </CommandItem>
-                );
-              })}
-            </CommandGroup>
-          </CommandList>
-        </Command>
-      </PopoverContent>
-    </Popover>
-  );
-}
-
-// Height/Weight Range Filter Component
-interface HeightWeightFilterProps {
-  minHeight: number;
-  minWeight: number;
-  onHeightChange: (height: number) => void;
-  onWeightChange: (weight: number) => void;
-  className?: string;
-}
-
-function HeightWeightFilter({
-  minHeight,
-  minWeight,
-  onHeightChange,
-  onWeightChange,
-  className
-}: HeightWeightFilterProps) {
-  return (
-    <div className={cn("space-y-4", className)}>
-      <div className="space-y-2">
-        <Label className="text-sm font-medium text-foreground">
-          Minimum Height: {inchesToFeetString(minHeight)}
-        </Label>
-        <Slider
-          value={[minHeight]}
-          onValueChange={(value: number[]) => onHeightChange(value[0])}
-          min={60} // 5'0"
-          max={96} // 8'0"
-          step={1}
-          className="w-full"
-        />
-        <div className="flex justify-between text-xs text-muted-foreground">
-          <span>5&apos;0&quot;</span>
-          <span>8&apos;0&quot;</span>
-        </div>
-      </div>
-      
-      <div className="space-y-2">
-        <Label className="text-sm font-medium text-foreground">
-          Minimum Weight: {minWeight} lbs
-        </Label>
-        <Slider
-          value={[minWeight]}
-          onValueChange={(value: number[]) => onWeightChange(value[0])}
-          min={100}
-          max={500}
-          step={5}
-          className="w-full"
-        />
-        <div className="flex justify-between text-xs text-muted-foreground">
-          <span>100 lbs</span>
-          <span>500 lbs</span>
-        </div>
-      </div>
-    </div>
-  );
-}
 
 // Get available tabs based on user role
 const getAvailableTabs = (userRole: string) => {
@@ -444,8 +246,9 @@ function SearchPageContent() {
   const [selectedPositions, setSelectedPositions] = useState<FilterOption[]>([]);
   const [selectedGraduatingClasses, setSelectedGraduatingClasses] = useState<FilterOption[]>([]);
   const [selectedConferences, setSelectedConferences] = useState<FilterOption[]>([]);
-  const [minHeight, setMinHeight] = useState<number>(60); // 5'0" in inches
-  const [minWeight, setMinWeight] = useState<number>(100); // 100 lbs
+  const [minHeight, setMinHeight] = useState<number>(48); // 4'0" in inches (updated from 60)
+  const [minWeight, setMinWeight] = useState<number>(50); // 50 lbs (updated from 100)
+  const [verifiedFilter, setVerifiedFilter] = useState<boolean | null>(null); // null = all, true = verified only
 
   // Data and loading states
   const [loading, setLoading] = useState(false);
@@ -453,11 +256,16 @@ function SearchPageContent() {
   const [hasMore, setHasMore] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [page, setPage] = useState(1);
+  
+  // Get subscription features using the custom hook
+  const features = useFeatureAccess();
+  const hasAdvancedSearch = features.advancedSearch;
 
   // Filter states
   const [showMobileFilters, setShowMobileFilters] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
   const [showDiscoverButton, setShowDiscoverButton] = useState(false);
+  const [clearingFilters, setClearingFilters] = useState(false);
 
   // Refs for infinite scroll and preventing double initial load
   const observerRef = useRef<IntersectionObserver | null>(null);
@@ -546,11 +354,12 @@ function SearchPageContent() {
         divisions: selectedDivisions.map(div => sanitizeText(div.value)),
         countries: selectedCountries.map(country => sanitizeText(country.value)),
         states: showStatesFilter ? selectedStates.map(state => sanitizeText(state.value)) : [],
-        positions: selectedPositions.map(pos => sanitizeText(pos.value)),
-        graduatingClasses: selectedGraduatingClasses.map(gc => sanitizeText(gc.value)),
+        positions: effectiveRole !== 'athlete' ? selectedPositions.map(pos => sanitizeText(pos.value)) : [],
+        graduatingClasses: effectiveRole !== 'athlete' ? selectedGraduatingClasses.map(gc => sanitizeText(gc.value)) : [],
         conferences: selectedConferences.map(conf => sanitizeText(conf.value)),
-        minHeight: minHeight.toString(),
-        minWeight: minWeight.toString()
+        minHeight: effectiveRole !== 'athlete' ? minHeight.toString() : '48',
+        minWeight: effectiveRole !== 'athlete' ? minWeight.toString() : '0',
+        verified: verifiedFilter
       };
 
       // Calculate approximate URL length if we were to use GET
@@ -568,8 +377,9 @@ function SearchPageContent() {
       searchParams.positions.forEach(pos => params.append('positions', pos));
       searchParams.graduatingClasses.forEach(gc => params.append('graduatingClasses', gc));
       searchParams.conferences.forEach(conf => params.append('conferences', conf));
-      if (minHeight > 60) params.append('minHeight', searchParams.minHeight);
-      if (minWeight > 100) params.append('minWeight', searchParams.minWeight);
+      if (minHeight > 48) params.append('minHeight', searchParams.minHeight); // Updated from 60 to 48
+      if (minWeight > 50) params.append('minWeight', searchParams.minWeight); // Updated from 100 to 50
+      if (verifiedFilter !== null) params.append('verified', verifiedFilter.toString());
 
       const baseUrl = '/api/discover';
       const estimatedUrlLength = baseUrl.length + params.toString().length + 1; // +1 for '?'
@@ -591,11 +401,12 @@ function SearchPageContent() {
             divisions: selectedDivisions.map(div => sanitizeText(div.value)),
             countries: selectedCountries.map(country => sanitizeText(country.value)),
             states: showStatesFilter ? selectedStates.map(state => sanitizeText(state.value)) : [],
-            positions: selectedPositions.map(pos => sanitizeText(pos.value)),
-            graduatingClasses: selectedGraduatingClasses.map(gc => sanitizeText(gc.value)),
+            positions: effectiveRole !== 'athlete' ? selectedPositions.map(pos => sanitizeText(pos.value)) : [],
+            graduatingClasses: effectiveRole !== 'athlete' ? selectedGraduatingClasses.map(gc => sanitizeText(gc.value)) : [],
             conferences: selectedConferences.map(conf => sanitizeText(conf.value)),
-            minHeight: minHeight > 60 ? minHeight : undefined,
-            minWeight: minWeight > 100 ? minWeight : undefined
+            minHeight: effectiveRole !== 'athlete' && minHeight > 48 ? minHeight : undefined,
+            minWeight: effectiveRole !== 'athlete' && minWeight > 50 ? minWeight : undefined,
+            verified: verifiedFilter
           })
         });
 
@@ -647,13 +458,13 @@ function SearchPageContent() {
       setLoading(false);
       setInitialLoading(false);
     }
-  }, [selectedSports, selectedDivisions, selectedCountries, selectedStates, selectedPositions, selectedGraduatingClasses, selectedConferences, minHeight, minWeight, showStatesFilter]);
+  }, [selectedSports, selectedDivisions, selectedCountries, selectedStates, selectedPositions, selectedGraduatingClasses, selectedConferences, minHeight, minWeight, verifiedFilter, showStatesFilter, effectiveRole]);
 
   // Store all results from the search
   const [allUsers, setAllUsers] = useState<DiscoverUser[]>([]);
 
   // Cache key for search state
-  const CACHE_KEY = 'discover_search_state';
+  const CACHE_KEY = 'discover_search_state_v3';
 
   // Save current search state to cache (filters only, not user data)
   const saveSearchState = useCallback(() => {
@@ -695,8 +506,8 @@ function SearchPageContent() {
           setSelectedPositions(parsed.selectedPositions || []);
           setSelectedGraduatingClasses(parsed.selectedGraduatingClasses || []);
           setSelectedConferences(parsed.selectedConferences || []);
-          setMinHeight(parsed.minHeight || 60);
-          setMinWeight(parsed.minWeight || 100);
+          setMinHeight(parsed.minHeight || 48);
+          setMinWeight(parsed.minWeight || 50);
           setActiveTab(getValidTab(effectiveRole, parsed.activeTab));
           setHasSearched(parsed.hasSearched || false);
           return true; // Successfully loaded cache, but need to search fresh
@@ -733,6 +544,11 @@ function SearchPageContent() {
     }
   }, [saveSearchState, router, allUsers, generateProfileUrl]);
 
+  // Upgrade handler
+  const handleUpgradeClick = useCallback(() => {
+    router.push('/pricing');
+  }, [router]);
+
   // Auto-load results when the page first loads
   useEffect(() => {
     if (effectiveRole && !hasSearched && !initialLoading && !loading && !initialLoadTriggered.current) {
@@ -762,7 +578,7 @@ function SearchPageContent() {
     // Always show the button if user has searched at least once, regardless of filters
     // This allows users to go back to default filters or reapply changes
     setShowDiscoverButton(hasSearched);
-  }, [selectedSports, selectedDivisions, selectedCountries, selectedStates, selectedPositions, selectedGraduatingClasses, selectedConferences, minHeight, minWeight, hasSearched]);
+  }, [selectedSports, selectedDivisions, selectedCountries, selectedStates, selectedPositions, selectedGraduatingClasses, selectedConferences, minHeight, minWeight, hasSearched, verifiedFilter]);
 
   // Save search state whenever important data changes
   useEffect(() => {
@@ -770,6 +586,14 @@ function SearchPageContent() {
       saveSearchState();
     }
   }, [selectedSports, selectedDivisions, selectedStates, selectedPositions, selectedGraduatingClasses, selectedConferences, minHeight, minWeight, allUsers, activeTab, page, hasSearched, saveSearchState]);
+
+  // Handle clearing filters - reload when filters are cleared
+  useEffect(() => {
+    if (clearingFilters) {
+      setClearingFilters(false);
+      loadUsers(1, true);
+    }
+  }, [clearingFilters, loadUsers]);
 
   // Filter displayed users based on active tab
   const filteredUsers = useMemo(() => {
@@ -795,12 +619,13 @@ function SearchPageContent() {
   // Discover/Search function
   const handleDiscover = () => {
     setShowMobileFilters(false);
-    setShowDiscoverButton(false);
+    // Keep showDiscoverButton as true to always show the button
     loadUsers(1, true);
   };
 
   // Clear filters
   const clearFilters = () => {
+    setClearingFilters(true);
     setSelectedSports([]);
     setSelectedDivisions([]);
     setSelectedCountries([{ value: 'United States', label: 'United States' }]); // Reset to default
@@ -808,13 +633,11 @@ function SearchPageContent() {
     setSelectedPositions([]);
     setSelectedGraduatingClasses([]);
     setSelectedConferences([]);
-    setMinHeight(60);
-    setMinWeight(100);
+    setMinHeight(48);
+    setMinWeight(50);
+    setVerifiedFilter(null); // Reset verification filter
     setShowMobileFilters(false);
-    setShowDiscoverButton(false);
     setError(null);
-    // Re-load results without filters
-    loadUsers(1, true);
   };
 
   // Infinite scroll setup
@@ -938,9 +761,9 @@ function SearchPageContent() {
 
   // User card component
   const renderUserCard = (user: DiscoverUser) => (
-    <Card key={user.id} className="group hover:shadow-xl transition-all duration-300 border border-border shadow-md bg-card hover:bg-card/90 hover:border-[#01ae79]/50">
-      <CardContent className="p-4">
-        <div className="space-y-3">
+    <Card key={user.id} className="group hover:shadow-xl transition-all duration-300 border border-border shadow-md bg-card hover:bg-card/90 hover:border-[#01ae79]/50 h-full flex flex-col">
+      <CardContent className="p-4 flex-1 flex flex-col">
+        <div className="flex-1 space-y-3">
           {/* Header with Avatar, Name, and Badge */}
           <div className="flex items-start gap-3">
             {/* Avatar - Clickable */}
@@ -968,8 +791,8 @@ function SearchPageContent() {
                  </div>
                )}
               {!user.isVerified && (
-                <div className="absolute -bottom-1 -right-1 bg-[#f59e0b] rounded-full p-1 border-2 border-background">
-                  <Shield className="h-3 w-3 text-white" />
+                <div className="absolute -bottom-1 -right-1 bg-orange-500 rounded-full p-1 border-2 border-background">
+                  <Shield className="h-3 w-3 text-white opacity-95" />
                 </div>
               )}
             </a>
@@ -1100,40 +923,41 @@ function SearchPageContent() {
               </div>
             )}
           </div>
+        </div>
 
-          {/* Action Button - Always at bottom with consistent positioning */}
-          <div className="pt-2">
-            {user.hasPendingRequest ? (
-              <div className="w-full bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 border-0 shadow-sm transition-all duration-200 font-medium py-2 text-sm rounded-md flex items-center justify-center">
-                <Clock className="h-4 w-4 mr-2" />
-                Request Sent
-              </div>
-            ) : user.hasIncomingRequest ? (
-              <a
-                href={generateProfileUrl(user)}
-                className="w-full bg-amber-100 hover:bg-amber-200 text-amber-700 dark:bg-amber-900/30 dark:hover:bg-amber-900/40 dark:text-amber-400 border border-amber-200 dark:border-amber-700 shadow-sm hover:shadow-md transition-all duration-200 font-medium py-2 text-sm rounded-md flex items-center justify-center no-underline"
-                onClick={(e) => {
-                  e.preventDefault();
-                  handleViewProfile(user.id);
-                }}
-              >
-                <Users className="h-4 w-4 mr-2" />
-                Connection Request Received - View Profile
-              </a>
-            ) : (
-              <a
-                href={generateProfileUrl(user)}
-                className="w-full bg-[#01ae79] hover:bg-[#01ae79]/90 text-white border-0 shadow-sm hover:shadow-md transition-all duration-200 font-medium py-2 text-sm rounded-md flex items-center justify-center no-underline"
-                onClick={(e) => {
-                  e.preventDefault();
-                  handleViewProfile(user.id);
-                }}
-              >
-                <Send className="h-4 w-4 mr-2" />
-                View Profile
-              </a>
-            )}
-          </div>
+        {/* Action Button - Always at bottom with consistent positioning */}
+        <div className="pt-2 mt-auto">
+          {user.hasPendingRequest ? (
+            <div className="w-full bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 border-0 shadow-sm transition-all duration-200 font-medium py-2 text-sm rounded-md flex items-center justify-center">
+              <Clock className="h-4 w-4 mr-2" />
+              Request Sent
+            </div>
+          ) : user.hasIncomingRequest ? (
+            <a
+              href={generateProfileUrl(user)}
+              className="w-full bg-amber-100 hover:bg-amber-200 text-amber-700 dark:bg-amber-900/30 dark:hover:bg-amber-900/40 dark:text-amber-400 border border-amber-200 dark:border-amber-700 shadow-sm hover:shadow-md transition-all duration-200 font-medium py-2 text-sm rounded-md flex items-center justify-center no-underline"
+              onClick={(e) => {
+                e.preventDefault();
+                handleViewProfile(user.id);
+              }}
+            >
+              <Users className="h-4 w-4 mr-2" />
+              <span className="hidden sm:inline">Connection Request Received - View Profile</span>
+              <span className="sm:hidden">Request Received</span>
+            </a>
+          ) : (
+            <a
+              href={generateProfileUrl(user)}
+              className="w-full bg-[#01ae79] hover:bg-[#01ae79]/90 text-white border-0 shadow-sm hover:shadow-md transition-all duration-200 font-medium py-2 text-sm rounded-md flex items-center justify-center no-underline"
+              onClick={(e) => {
+                e.preventDefault();
+                handleViewProfile(user.id);
+              }}
+            >
+              <Send className="h-4 w-4 mr-2" />
+              View Profile
+            </a>
+          )}
         </div>
       </CardContent>
     </Card>
@@ -1144,11 +968,12 @@ function SearchPageContent() {
                            selectedDivisions.length + 
                            (selectedCountries.length > 1 ? selectedCountries.length : 0) + // Only count if more than United States
                            selectedStates.length +
-                           selectedPositions.length +
-                           selectedGraduatingClasses.length +
+                           (effectiveRole !== 'athlete' ? selectedPositions.length : 0) +
+                           (effectiveRole !== 'athlete' ? selectedGraduatingClasses.length : 0) +
                            selectedConferences.length +
-                           (minHeight > 60 ? 1 : 0) +
-                           (minWeight > 100 ? 1 : 0);
+                           (effectiveRole !== 'athlete' && minHeight > 48 ? 1 : 0) +
+                           (effectiveRole !== 'athlete' && minWeight > 50 ? 1 : 0) +
+                           (verifiedFilter !== null ? 1 : 0);
 
   return (
     <div className="bg-background p-4 md:p-6">
@@ -1197,7 +1022,7 @@ function SearchPageContent() {
                 )}
               </div>
 
-              <div className="space-y-4 min-h-[300px]">
+              <div className="space-y-1.5 sm:space-y-4 min-h-[300px]">
                 {/* Sports Filter */}
                 <div>
                   <label className="block text-sm font-medium text-foreground mb-2">
@@ -1261,97 +1086,48 @@ function SearchPageContent() {
                   </div>
                 )}
 
-                {/* Advanced Filters for Coaches/Recruiters/Admins viewing Athletes */}
-                {(effectiveRole === 'coach' || effectiveRole === 'recruiter' || effectiveRole === 'admin') && (
-                  <>
-                    {/* Height/Weight Filters */}
-                    <div className="border-t pt-4">
-                      <h3 className="text-sm font-medium text-foreground mb-3">Physical Requirements</h3>
-                      <HeightWeightFilter
-                        minHeight={minHeight}
-                        minWeight={minWeight}
-                        onHeightChange={setMinHeight}
-                        onWeightChange={setMinWeight}
-                      />
-                    </div>
-
-                    {/* Graduating Class Filter */}
-                    <div>
-                      <label className="block text-sm font-medium text-foreground mb-2">
-                        Graduating Class
-                      </label>
-                      <MultiSelectFilter
-                        options={graduatingClassOptions}
-                        selected={selectedGraduatingClasses}
-                        onSelectionChange={setSelectedGraduatingClasses}
-                        placeholder="Select graduation years..."
-                        searchPlaceholder="Search years..."
-                      />
-                    </div>
-
-                    {/* Positions Filter - Only show if sports are selected */}
-                    {selectedSports.length > 0 && positionsOptions.length > 0 && (
-                      <div>
-                        <label className="block text-sm font-medium text-foreground mb-2">
-                          Positions
-                        </label>
-                        <MultiSelectFilter
-                          options={positionsOptions}
-                          selected={selectedPositions}
-                          onSelectionChange={setSelectedPositions}
-                          placeholder="Select positions..."
-                          searchPlaceholder="Search positions..."
-                        />
-                      </div>
-                    )}
-
-                    {/* Conferences Filter - Only show if divisions are selected */}
-                    {selectedDivisions.length > 0 && conferencesOptions.length > 0 && (
-                      <div className="border-t pt-4">
-                        <label className="block text-sm font-medium text-foreground mb-2">
-                          Conferences
-                        </label>
-                        <MultiSelectFilter
-                          options={conferencesOptions}
-                          selected={selectedConferences}
-                          onSelectionChange={setSelectedConferences}
-                          placeholder="Select conferences..."
-                          searchPlaceholder="Search conferences..."
-                        />
-                      </div>
-                    )}
-                  </>
-                )}
-
-                {/* Advanced Filters for Athletes viewing Coaches/Recruiters */}
-                {effectiveRole === 'athlete' && (
-                  <>
-                    {/* Conferences Filter - Only show if divisions are selected */}
-                    {selectedDivisions.length > 0 && conferencesOptions.length > 0 && (
-                      <div className="border-t pt-4">
-                        <label className="block text-sm font-medium text-foreground mb-2">
-                          Conferences
-                        </label>
-                        <MultiSelectFilter
-                          options={conferencesOptions}
-                          selected={selectedConferences}
-                          onSelectionChange={setSelectedConferences}
-                          placeholder="Select conferences..."
-                          searchPlaceholder="Search conferences..."
-                        />
-                      </div>
-                    )}
-                  </>
-                )}
+                {/* Advanced Filters Component */}
+                <AdvancedFilters
+                  effectiveRole={effectiveRole}
+                  hasAdvancedSearch={hasAdvancedSearch}
+                  graduatingClassOptions={graduatingClassOptions}
+                  positionsOptions={positionsOptions}
+                  conferencesOptions={conferencesOptions}
+                  selectedGraduatingClasses={selectedGraduatingClasses}
+                  selectedPositions={selectedPositions}
+                  selectedConferences={selectedConferences}
+                  selectedSports={selectedSports}
+                  selectedDivisions={selectedDivisions}
+                  minHeight={minHeight}
+                  minWeight={minWeight}
+                  verifiedFilter={verifiedFilter}
+                  setSelectedGraduatingClasses={setSelectedGraduatingClasses}
+                  setSelectedPositions={setSelectedPositions}
+                  setSelectedConferences={setSelectedConferences}
+                  setMinHeight={setMinHeight}
+                  setMinWeight={setMinWeight}
+                  setVerifiedFilter={setVerifiedFilter}
+                  handleUpgradeClick={handleUpgradeClick}
+                />
 
                 {showDiscoverButton && (
-                  <Button
-                    onClick={handleDiscover}
-                    className="w-full bg-[#01ae79] hover:bg-[#01ae79]/90 text-white"
-                  >
-                    <Search className="h-4 w-4 mr-2" />
-                    Apply Filters
-                  </Button>
+                  <div className="flex gap-3">
+                    <Button
+                      onClick={clearFilters}
+                      variant="outline"
+                      className="flex-1"
+                      disabled={activeFiltersCount === 0}
+                    >
+                      Clear All
+                    </Button>
+                    <Button
+                      onClick={handleDiscover}
+                      className="flex-1 bg-[#01ae79] hover:bg-[#01ae79]/90 text-white"
+                    >
+                      <Search className="h-4 w-4 mr-0.5" />
+                      Apply Filters
+                    </Button>
+                  </div>
                 )}
               </div>
             </div>
@@ -1398,7 +1174,7 @@ function SearchPageContent() {
                   </Button>
                 </div>
 
-                <div className="space-y-4 min-h-[400px]">
+                <div className="space-y-1.5 sm:space-y-4 min-h-[400px]">
                   {/* Sports Filter */}
                   <div>
                     <label className="block text-sm font-medium text-foreground mb-2">
@@ -1465,83 +1241,267 @@ function SearchPageContent() {
                   {/* Advanced Filters for Coaches/Recruiters/Admins viewing Athletes */}
                   {(effectiveRole === 'coach' || effectiveRole === 'recruiter' || effectiveRole === 'admin') && (
                     <>
-                      {/* Height/Weight Filters */}
-                      <div className="border-t pt-4">
-                        <h3 className="text-sm font-medium text-foreground mb-3">Physical Requirements</h3>
-                        <HeightWeightFilter
-                          minHeight={minHeight}
-                          minWeight={minWeight}
-                          onHeightChange={setMinHeight}
-                          onWeightChange={setMinWeight}
-                        />
-                      </div>
+                      {/* Premium Overlay for Mobile */}
+                      {!hasAdvancedSearch && (
+                        <div className="border-t border-border pt-1 sm:pt-3 relative">
+                          <h3 className="text-sm font-medium text-foreground mb-1 sm:mb-3">Advanced Filters</h3>
+                          
+                          {/* Show filters in background with reduced opacity */}
+                          <div className="space-y-1.5 sm:space-y-4 opacity-40">
+                            {/* Height/Weight Preview */}
+                            <div className="space-y-2">
+                              <label className="block text-sm font-medium text-foreground">
+                                Physical Requirements
+                              </label>
+                              <div className="h-10 flex items-center px-3 py-2 border border-border rounded-md bg-muted/50 text-muted-foreground text-sm">
+                                Set minimum requirements...
+                              </div>
+                            </div>
 
-                      {/* Graduating Class Filter */}
-                      <div>
-                        <label className="block text-sm font-medium text-foreground mb-2">
-                          Graduating Class
-                        </label>
-                        <MultiSelectFilter
-                          options={graduatingClassOptions}
-                          selected={selectedGraduatingClasses}
-                          onSelectionChange={setSelectedGraduatingClasses}
-                          placeholder="Select graduation years..."
-                          searchPlaceholder="Search years..."
-                        />
-                      </div>
+                            {/* Graduating Class Preview */}
+                            <div className="space-y-2">
+                              <label className="block text-sm font-medium text-foreground">
+                                Graduating Class
+                              </label>
+                              <div className="h-10 flex items-center px-3 py-2 border border-border rounded-md bg-muted/50 text-muted-foreground text-sm">
+                                Select graduation years...
+                              </div>
+                            </div>
 
-                      {/* Positions Filter - Only show if sports are selected */}
-                      {selectedSports.length > 0 && positionsOptions.length > 0 && (
-                        <div>
-                          <label className="block text-sm font-medium text-foreground mb-2">
-                            Positions
-                          </label>
-                          <MultiSelectFilter
-                            options={positionsOptions}
-                            selected={selectedPositions}
-                            onSelectionChange={setSelectedPositions}
-                            placeholder="Select positions..."
-                            searchPlaceholder="Search positions..."
-                          />
+                            {/* Positions Preview */}
+                            <div className="space-y-2">
+                              <label className="text-sm font-medium text-foreground">
+                                Positions
+                              </label>
+                              <div className="h-10 flex items-center px-3 py-2 border border-border rounded-md bg-muted/50 text-muted-foreground text-sm">
+                                Upgrade to unlock positions
+                              </div>
+                            </div>
+
+                            {/* Conferences Preview */}
+                            <div className="space-y-2">
+                              <label className="text-sm font-medium text-foreground">
+                                Conferences
+                              </label>
+                              <div className="h-10 flex items-center px-3 py-2 border border-border rounded-md bg-muted/50 text-muted-foreground text-sm">
+                                Upgrade to unlock conferences
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Premium Overlay - Better contained */}
+                          <div className="absolute inset-0 bg-gradient-to-br from-background/20 via-background/15 to-background/20 backdrop-blur-[1px] rounded-lg border border-border/30 flex items-center justify-center z-10 overflow-hidden">
+                            <div className="text-center space-y-3 p-4 bg-background/95 rounded-lg border border-border/50 shadow-lg backdrop-blur-sm max-w-xs mx-auto">
+                              <div className="flex items-center justify-center space-x-2">
+                                <Crown className="h-5 w-5 text-amber-500" />
+                                <span className="text-base font-semibold bg-gradient-to-r from-amber-600 to-amber-500 bg-clip-text text-transparent">
+                                  Advanced Filters
+                                </span>
+                              </div>
+                              <p className="text-xs text-muted-foreground">
+                                Unlock powerful filtering options to find athletes by graduation year, playing positions, conferences, and more
+                              </p>
+                              <div className="flex justify-center">
+                                <Button 
+                                  onClick={handleUpgradeClick}
+                                  className="bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white border-0 shadow-lg hover:shadow-xl transition-all duration-200"
+                                  size="sm"
+                                >
+                                  <Crown className="h-4 w-4 mr-2" />
+                                  Upgrade
+                                </Button>
+                              </div>
+                            </div>
+                          </div>
                         </div>
                       )}
 
-                      {/* Conferences Filter - Only show if divisions are selected */}
-                      {selectedDivisions.length > 0 && conferencesOptions.length > 0 && (
-                        <div className="border-t pt-4">
-                          <label className="block text-sm font-medium text-foreground mb-2">
-                            Conferences
-                          </label>
-                          <MultiSelectFilter
-                            options={conferencesOptions}
-                            selected={selectedConferences}
-                            onSelectionChange={setSelectedConferences}
-                            placeholder="Select conferences..."
-                            searchPlaceholder="Search conferences..."
-                          />
-                        </div>
+                      {/* Individual Filters - Only show if has advanced search */}
+                      {hasAdvancedSearch && (
+                        <>
+                          {/* Height/Weight Filters */}
+                          <div className="border-t border-border pt-1 sm:pt-3">
+                            <h3 className="text-sm font-medium text-foreground mb-1 sm:mb-3">Physical Requirements</h3>
+                            <HeightWeightFilter
+                              minHeight={minHeight}
+                              minWeight={minWeight}
+                              onHeightChange={setMinHeight}
+                              onWeightChange={setMinWeight}
+                              isPremium={hasAdvancedSearch}
+                              onUpgradeClick={handleUpgradeClick}
+                            />
+                          </div>
+
+                          {/* Verified Status Filter */}
+                          <div className="pt-4">
+                            <VerifiedFilter
+                              verifiedFilter={verifiedFilter}
+                              onVerifiedChange={setVerifiedFilter}
+                              isPremium={hasAdvancedSearch}
+                              onUpgradeClick={handleUpgradeClick}
+                            />
+                          </div>
+
+                          {/* Graduating Class Filter */}
+                          <div>
+                            <div className="flex items-center justify-between">
+                              <label className="block text-sm font-medium text-foreground mb-2">
+                                Graduating Class
+                              </label>
+                            </div>
+                            <div className="relative">
+                              <MultiSelectFilter
+                                options={graduatingClassOptions}
+                                selected={selectedGraduatingClasses}
+                                onSelectionChange={setSelectedGraduatingClasses}
+                                placeholder="Select graduation years..."
+                                searchPlaceholder="Search years..."
+                              />
+                            </div>
+                          </div>
+
+                          {/* Positions Filter - Always show */}
+                          <div>
+                            <div className="flex items-center justify-between">
+                              <label className="block text-sm font-medium text-foreground mb-2">
+                                Positions
+                              </label>
+                            </div>
+                            {selectedSports.length > 0 && positionsOptions.length > 0 ? (
+                              <div className="relative">
+                                <MultiSelectFilter
+                                  options={positionsOptions}
+                                  selected={selectedPositions}
+                                  onSelectionChange={setSelectedPositions}
+                                  placeholder="Select positions..."
+                                  searchPlaceholder="Search positions..."
+                                />
+                              </div>
+                            ) : (
+                              <div className="h-10 flex items-center px-3 py-2 border border-border rounded-md bg-muted/50 text-muted-foreground text-sm">
+                                {selectedSports.length === 0 ? 'Select sports to filter by positions' : 'No positions available'}
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Conferences Filter - Always show */}
+                          <div className="pt-4">
+                            <div className="flex items-center justify-between">
+                              <label className="block text-sm font-medium text-foreground mb-2">
+                                Conferences
+                              </label>
+                            </div>
+                            {selectedDivisions.length > 0 && conferencesOptions.length > 0 ? (
+                              <div className="relative">
+                                <MultiSelectFilter
+                                  options={conferencesOptions}
+                                  selected={selectedConferences}
+                                  onSelectionChange={setSelectedConferences}
+                                  placeholder="Select conferences..."
+                                  searchPlaceholder="Search conferences..."
+                                />
+                              </div>
+                            ) : (
+                              <div className="h-10 flex items-center px-3 py-2 border border-border rounded-md bg-muted/50 text-muted-foreground text-sm">
+                                {selectedDivisions.length === 0 ? 'Select divisions to filter by conferences' : 'No conferences available'}
+                              </div>
+                            )}
+                          </div>
+                        </>
                       )}
                     </>
                   )}
 
                   {/* Advanced Filters for Athletes viewing Coaches/Recruiters */}
-                  {effectiveRole === 'athlete' && (
+                  {effectiveRole === 'athlete' && !hasAdvancedSearch && (
+                    <div className="border-t pt-4 relative">
+                      <h3 className="text-sm font-medium text-foreground mb-3">Advanced Filters</h3>
+                      
+                      {/* Show filters in background with reduced opacity */}
+                      <div className="space-y-1.5 sm:space-y-4 opacity-40">
+                        {/* Conferences Preview */}
+                        <div className="space-y-2">
+                          <label className="text-sm font-medium text-foreground">
+                            Conferences
+                          </label>
+                          <div className="h-10 flex items-center px-3 py-2 border border-border rounded-md bg-muted/50 text-muted-foreground text-sm">
+                            Upgrade to unlock conferences
+                          </div>
+                        </div>
+
+                        {/* Verification Preview */}
+                        <div className="space-y-2">
+                          <label className="text-sm font-medium text-foreground">
+                            Verification Status
+                          </label>
+                          <div className="h-10 flex items-center px-3 py-2 border border-border rounded-md bg-muted/50 text-muted-foreground text-sm">
+                            Filter by verification status
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Premium Overlay - Better contained */}
+                      <div className="absolute inset-0 bg-gradient-to-br from-background/20 via-background/15 to-background/20 backdrop-blur-[1px] rounded-lg border border-border/30 flex items-center justify-center z-10 overflow-hidden">
+                        <div className="text-center space-y-2 p-3 bg-background/95 rounded-lg border border-border/50 shadow-lg backdrop-blur-sm max-w-xs mx-auto">
+                          <div className="flex items-center justify-center space-x-2">
+                            <Crown className="h-4 w-4 text-amber-500" />
+                            <span className="text-sm font-semibold bg-gradient-to-r from-amber-600 to-amber-500 bg-clip-text text-transparent">
+                              Advanced Filters
+                            </span>
+                          </div>
+                          <p className="text-xs text-muted-foreground">
+                            Filter coaches and recruiters by conferences and verification status
+                          </p>
+                          <div className="flex justify-center">
+                            <Button 
+                              onClick={handleUpgradeClick}
+                              className="bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white border-0 shadow-lg hover:shadow-xl transition-all duration-200"
+                              size="sm"
+                            >
+                              <Crown className="h-3 w-3 mr-1" />
+                              Upgrade
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {effectiveRole === 'athlete' && hasAdvancedSearch && (
                     <>
-                      {/* Conferences Filter - Only show if divisions are selected */}
-                      {selectedDivisions.length > 0 && conferencesOptions.length > 0 && (
-                        <div className="border-t pt-4">
+                      {/* Conferences Filter - Always show */}
+                      <div className="border-t pt-4">
+                        <div className="flex items-center justify-between">
                           <label className="block text-sm font-medium text-foreground mb-2">
                             Conferences
                           </label>
-                          <MultiSelectFilter
-                            options={conferencesOptions}
-                            selected={selectedConferences}
-                            onSelectionChange={setSelectedConferences}
-                            placeholder="Select conferences..."
-                            searchPlaceholder="Search conferences..."
-                          />
                         </div>
-                      )}
+                        {selectedDivisions.length > 0 && conferencesOptions.length > 0 ? (
+                          <div className="relative">
+                            <MultiSelectFilter
+                              options={conferencesOptions}
+                              selected={selectedConferences}
+                              onSelectionChange={setSelectedConferences}
+                              placeholder="Select conferences..."
+                              searchPlaceholder="Search conferences..."
+                            />
+                          </div>
+                        ) : (
+                          <div className="h-10 flex items-center px-3 py-2 border border-border rounded-md bg-muted/50 text-muted-foreground text-sm">
+                            {selectedDivisions.length === 0 ? 'Select divisions to filter by conferences' : 'No conferences available'}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Verified Status Filter for Athletes */}
+                      <div className="pt-4">
+                        <VerifiedFilter
+                          verifiedFilter={verifiedFilter}
+                          onVerifiedChange={setVerifiedFilter}
+                          isPremium={hasAdvancedSearch}
+                          onUpgradeClick={handleUpgradeClick}
+                        />
+                      </div>
                     </>
                   )}
 
@@ -1550,6 +1510,7 @@ function SearchPageContent() {
                       onClick={clearFilters}
                       variant="outline"
                       className="flex-1"
+                      disabled={activeFiltersCount === 0}
                     >
                       Clear All
                     </Button>
@@ -1558,7 +1519,7 @@ function SearchPageContent() {
                         onClick={handleDiscover}
                         className="flex-1 bg-[#01ae79] hover:bg-[#01ae79]/90 text-white"
                       >
-                        <Search className="h-4 w-4 mr-2" />
+                        <Search className="h-4 w-4 mr-0.5" />
                         Apply Filters
                       </Button>
                     )}
@@ -1589,20 +1550,19 @@ function SearchPageContent() {
               </TabsList>
 
               {/* Badge Disclaimer */}
-              <div className="mb-4 p-3 bg-muted/30 rounded-lg border border-border/50">
-                <h3 className="text-sm font-medium mb-2">Profile Verification Status</h3>
+              <div className="mb-4">
                 <div className="flex items-center gap-4 text-sm text-muted-foreground" role="list">
-                  <div className="flex items-center gap-2" role="listitem">
-                    <div className="bg-[#01ae79] rounded-full p-1">
+                  <div className="flex items-center gap-1.5" role="listitem">
+                    <div className="w-4 h-4 bg-[#01ae79] rounded-full p-0.5">
                       <Shield className="h-3 w-3 text-white" />
                     </div>
-                    <span>Verified Profile</span>
+                    <span>Verified</span>
                   </div>
-                  <div className="flex items-center gap-2" role="listitem">
-                    <div className="bg-[#f59e0b] rounded-full p-1">
-                      <Shield className="h-3 w-3 text-white" />
+                  <div className="flex items-center gap-1.5" role="listitem">
+                    <div className="w-4 h-4 bg-orange-500 rounded-full p-0.5">
+                      <Shield className="h-3 w-3 text-white opacity-95" />
                     </div>
-                    <span>Unverified Profile</span>
+                    <span>Unverified</span>
                   </div>
                 </div>
               </div>

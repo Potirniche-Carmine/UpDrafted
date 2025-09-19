@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { UserButton, SignedIn, SignedOut, SignInButton, SignUpButton, useUser } from "@clerk/nextjs";
 import { Button } from "@/components/ui/button";
-import { Users, MessageSquare, Bell, LogIn, ChevronDown, Search, Menu, Sun, Moon, Home, UserCheck, GraduationCap } from "lucide-react";
+import { Users, MessageSquare, Bell, LogIn, ChevronDown, Search, Menu, Sun, Moon } from "lucide-react";
 import { useTheme } from "next-themes";
 import Image from "next/image";
 import { useState, useEffect } from "react";
@@ -188,22 +188,14 @@ export function Header() {
     { key: "notifications", href: "/notifications", label: "Notifications", icon: <Bell className="h-5 w-5" />, requiresAuth: true }
   ];
 
-  // Public navigation items for non-authenticated users or company pages
-  const publicNavItems: NavItem[] = [
-    { key: "home", href: "/", label: "Home", icon: <Home className="h-5 w-5" />, requiresAuth: false },
-    { key: "for-athletes", href: "/for-athletes", label: "For Athletes", icon: <UserCheck className="h-5 w-5" />, requiresAuth: false },
-    { key: "for-coaches", href: "/for-coaches", label: "For Coaches", icon: <GraduationCap className="h-5 w-5" />, requiresAuth: false },
-    { key: "for-recruiters", href: "/for-recruiters", label: "For Recruiters", icon: <Search className="h-5 w-5" />, requiresAuth: false },
-  ];
-
   // Determine which navigation items to show
   let navItemsToDisplay: NavItem[] = [];
   if (isSignedIn && hasCompletedOnboarding) {
     // Show app navigation for authenticated users
     navItemsToDisplay = navItems;
   } else {
-    // Show public navigation for non-authenticated users or those without completed onboarding
-    navItemsToDisplay = publicNavItems;
+    // Hide navigation for non-authenticated users or those without completed onboarding
+    navItemsToDisplay = [];
   }
 
   const userButtonAppearance = {

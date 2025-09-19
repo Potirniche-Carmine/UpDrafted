@@ -1,7 +1,33 @@
 import { z } from 'zod';
 
-// Environment variable validation schema
-const envSchema = z.object({
+// Client-side environment variables (NEXT_PUBLIC_* only)
+const clientEnvSchema = z.object({
+  // Domain configuration
+  NEXT_PUBLIC_APP_URL: z.string().url('NEXT_PUBLIC_APP_URL must be a valid URL').optional(),
+  
+  // Clerk Authentication (client-side)
+  NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: z.string().min(32, 'NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY must be at least 32 characters').optional(),
+  
+  // Stripe Configuration (client-side)
+  NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: z.string().min(1, 'NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY is required').optional(),
+  
+  // R2 Configuration (client-side)
+  NEXT_PUBLIC_R2_PUBLIC_URL: z.string().url('NEXT_PUBLIC_R2_PUBLIC_URL must be a valid URL').optional(),
+  
+  // Stripe Price IDs for subscription plans (optional in development)
+  NEXT_PUBLIC_STRIPE_PRICE_ATHLETE_MONTHLY: z.string().optional(),
+  NEXT_PUBLIC_STRIPE_PRICE_ATHLETE_YEARLY: z.string().optional(),
+  NEXT_PUBLIC_STRIPE_PRICE_COACH_MONTHLY: z.string().optional(),
+  NEXT_PUBLIC_STRIPE_PRICE_COACH_YEARLY: z.string().optional(),
+  NEXT_PUBLIC_STRIPE_PRICE_RECRUITER_MONTHLY: z.string().optional(),
+  NEXT_PUBLIC_STRIPE_PRICE_RECRUITER_YEARLY: z.string().optional(),
+  
+  // Node Environment
+  NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
+});
+
+// Server-side environment variables (full schema)
+const serverEnvSchema = z.object({
   // Database
   DATABASE_URL: z.string().url('DATABASE_URL must be a valid URL'),
   
@@ -48,15 +74,36 @@ const envSchema = z.object({
   
   // Domain configuration
   NEXT_PUBLIC_APP_URL: z.string().url('NEXT_PUBLIC_APP_URL must be a valid URL').optional(),
+  
+  // Stripe Configuration
+  STRIPE_SECRET_KEY: z.string().min(1, 'STRIPE_SECRET_KEY is required'),
+  NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: z.string().min(1, 'NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY is required'),
+  STRIPE_WEBHOOK_SECRET: z.string().min(1, 'STRIPE_WEBHOOK_SECRET is required').optional(),
+  
+  // Stripe Price IDs for subscription plans (optional in development)
+  NEXT_PUBLIC_STRIPE_PRICE_ATHLETE_MONTHLY: z.string().optional(),
+  NEXT_PUBLIC_STRIPE_PRICE_ATHLETE_YEARLY: z.string().optional(),
+  NEXT_PUBLIC_STRIPE_PRICE_COACH_MONTHLY: z.string().optional(),
+  NEXT_PUBLIC_STRIPE_PRICE_COACH_YEARLY: z.string().optional(),
+  NEXT_PUBLIC_STRIPE_PRICE_RECRUITER_MONTHLY: z.string().optional(),
+  NEXT_PUBLIC_STRIPE_PRICE_RECRUITER_YEARLY: z.string().optional(),
+  
+  // Stripe Product IDs for portal configurations (optional in development)
+  STRIPE_PRODUCT_ATHLETE_ID: z.string().optional(),
+  STRIPE_PRODUCT_COACH_ID: z.string().optional(),
+  STRIPE_PRODUCT_RECRUITER_ID: z.string().optional(),
 });
 
 // Type for validated environment variables
-export type Env = z.infer<typeof envSchema>;
+export type Env = z.infer<typeof serverEnvSchema>;
+export type ClientEnv = z.infer<typeof clientEnvSchema>;
 
 // Validate environment variables
-function validateEnv(): Env {
+function validateEnv(): Env | ClientEnv {
+  const schema = typeof window === 'undefined' ? serverEnvSchema : clientEnvSchema;
+  
   try {
-    return envSchema.parse(process.env);
+    return schema.parse(process.env);
   } catch (error) {
     if (error instanceof z.ZodError) {
       const missingVars = error.errors.map(err => {
@@ -64,16 +111,25 @@ function validateEnv(): Env {
         return `${path}: ${err.message}`;
       });
       
-      console.error('❌ Environment validation failed:');
-      console.error(missingVars.join('\n'));
-      
-      // In development, provide helpful guidance
-      if (process.env.NODE_ENV === 'development') {
-        console.error('\n📝 Create a .env.local file with the following variables:');
-        console.error(missingVars.map(v => v.split(':')[0] + '=your_value_here').join('\n'));
+      // Only log errors on server-side or in development
+      if (typeof window === 'undefined') {
+        console.error('❌ Environment validation failed:');
+        console.error(missingVars.join('\n'));
+        
+        // In development, provide helpful guidance
+        if (process.env.NODE_ENV === 'development') {
+          console.error('\n📝 Create a .env.local file with the following variables:');
+          console.error(missingVars.map(v => v.split(':')[0] + '=your_value_here').join('\n'));
+        }
+        
+        process.exit(1);
+      } else {
+        // On client-side, just return defaults for missing vars
+        return clientEnvSchema.parse({
+          ...process.env,
+          NODE_ENV: process.env.NODE_ENV || 'development',
+        });
       }
-      
-      process.exit(1);
     }
     throw error;
   }
@@ -87,11 +143,11 @@ export const isProduction = env.NODE_ENV === 'production';
 
 // Helper function to get the app URL
 export const getAppUrl = (): string => {
-  if (env.NEXT_PUBLIC_APP_URL) {
+  if ('NEXT_PUBLIC_APP_URL' in env && env.NEXT_PUBLIC_APP_URL) {
     return env.NEXT_PUBLIC_APP_URL;
   }
   
-  if (env.VERCEL_URL) {
+  if ('VERCEL_URL' in env && env.VERCEL_URL) {
     return `https://${env.VERCEL_URL}`;
   }
   
@@ -100,7 +156,7 @@ export const getAppUrl = (): string => {
 
 // Helper function to check if Redis is available
 export const isRedisEnabled = (): boolean => {
-  return !!env.REDIS_URL && isProduction;
+  return 'REDIS_URL' in env && !!env.REDIS_URL && isProduction;
 };
 
 // Security configuration based on environment
@@ -124,8 +180,5 @@ export const getSecurityConfig = () => ({
   },
 });
 
-// Validate environment on module load
-if (typeof window === 'undefined') {
-  // Only validate on server side
-  validateEnv();
-} 
+// The validation happens automatically when env is imported
+// No need for additional validation calls 
