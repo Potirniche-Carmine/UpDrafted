@@ -791,8 +791,8 @@ function SearchPageContent() {
                  </div>
                )}
               {!user.isVerified && (
-                <div className="absolute -bottom-1 -right-1 bg-[#f59e0b] rounded-full p-1 border-2 border-background">
-                  <Shield className="h-3 w-3 text-white" />
+                <div className="absolute -bottom-1 -right-1 bg-orange-500 rounded-full p-1 border-2 border-background">
+                  <Shield className="h-3 w-3 text-white opacity-95" />
                 </div>
               )}
             </a>
@@ -1022,7 +1022,7 @@ function SearchPageContent() {
                 )}
               </div>
 
-              <div className="space-y-4 min-h-[300px]">
+              <div className="space-y-1.5 sm:space-y-4 min-h-[300px]">
                 {/* Sports Filter */}
                 <div>
                   <label className="block text-sm font-medium text-foreground mb-2">
@@ -1124,7 +1124,7 @@ function SearchPageContent() {
                       onClick={handleDiscover}
                       className="flex-1 bg-[#01ae79] hover:bg-[#01ae79]/90 text-white"
                     >
-                      <Search className="h-4 w-4 mr-2" />
+                      <Search className="h-4 w-4 mr-0.5" />
                       Apply Filters
                     </Button>
                   </div>
@@ -1174,7 +1174,7 @@ function SearchPageContent() {
                   </Button>
                 </div>
 
-                <div className="space-y-4 min-h-[400px]">
+                <div className="space-y-1.5 sm:space-y-4 min-h-[400px]">
                   {/* Sports Filter */}
                   <div>
                     <label className="block text-sm font-medium text-foreground mb-2">
@@ -1243,11 +1243,11 @@ function SearchPageContent() {
                     <>
                       {/* Premium Overlay for Mobile */}
                       {!hasAdvancedSearch && (
-                        <div className="border-t pt-4 relative">
-                          <h3 className="text-sm font-medium text-foreground mb-3">Advanced Filters</h3>
+                        <div className="border-t border-border pt-1 sm:pt-3 relative">
+                          <h3 className="text-sm font-medium text-foreground mb-1 sm:mb-3">Advanced Filters</h3>
                           
                           {/* Show filters in background with reduced opacity */}
-                          <div className="space-y-4 opacity-40">
+                          <div className="space-y-1.5 sm:space-y-4 opacity-40">
                             {/* Height/Weight Preview */}
                             <div className="space-y-2">
                               <label className="block text-sm font-medium text-foreground">
@@ -1320,8 +1320,8 @@ function SearchPageContent() {
                       {hasAdvancedSearch && (
                         <>
                           {/* Height/Weight Filters */}
-                          <div className="border-t pt-4">
-                            <h3 className="text-sm font-medium text-foreground mb-3">Physical Requirements</h3>
+                          <div className="border-t border-border pt-1 sm:pt-3">
+                            <h3 className="text-sm font-medium text-foreground mb-1 sm:mb-3">Physical Requirements</h3>
                             <HeightWeightFilter
                               minHeight={minHeight}
                               minWeight={minWeight}
@@ -1418,7 +1418,7 @@ function SearchPageContent() {
                       <h3 className="text-sm font-medium text-foreground mb-3">Advanced Filters</h3>
                       
                       {/* Show filters in background with reduced opacity */}
-                      <div className="space-y-4 opacity-40">
+                      <div className="space-y-1.5 sm:space-y-4 opacity-40">
                         {/* Conferences Preview */}
                         <div className="space-y-2">
                           <label className="text-sm font-medium text-foreground">
@@ -1519,7 +1519,7 @@ function SearchPageContent() {
                         onClick={handleDiscover}
                         className="flex-1 bg-[#01ae79] hover:bg-[#01ae79]/90 text-white"
                       >
-                        <Search className="h-4 w-4 mr-2" />
+                        <Search className="h-4 w-4 mr-0.5" />
                         Apply Filters
                       </Button>
                     )}
@@ -1550,20 +1550,19 @@ function SearchPageContent() {
               </TabsList>
 
               {/* Badge Disclaimer */}
-              <div className="mb-4 p-3 bg-muted/30 rounded-lg border border-border/50">
-                <h3 className="text-sm font-medium mb-2">Profile Verification Status</h3>
+              <div className="mb-4">
                 <div className="flex items-center gap-4 text-sm text-muted-foreground" role="list">
-                  <div className="flex items-center gap-2" role="listitem">
-                    <div className="bg-[#01ae79] rounded-full p-1">
+                  <div className="flex items-center gap-1.5" role="listitem">
+                    <div className="w-4 h-4 bg-[#01ae79] rounded-full p-0.5">
                       <Shield className="h-3 w-3 text-white" />
                     </div>
-                    <span>Verified Profile</span>
+                    <span>Verified</span>
                   </div>
-                  <div className="flex items-center gap-2" role="listitem">
-                    <div className="bg-[#f59e0b] rounded-full p-1">
-                      <Shield className="h-3 w-3 text-white" />
+                  <div className="flex items-center gap-1.5" role="listitem">
+                    <div className="w-4 h-4 bg-orange-500 rounded-full p-0.5">
+                      <Shield className="h-3 w-3 text-white opacity-95" />
                     </div>
-                    <span>Unverified Profile</span>
+                    <span>Unverified</span>
                   </div>
                 </div>
               </div>

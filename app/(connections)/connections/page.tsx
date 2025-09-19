@@ -508,20 +508,31 @@ function VerifiedFilter({
       </div>
       
       <div className={cn("relative", isLocked && "pointer-events-none opacity-50")}>
-        <div className="flex items-center justify-between p-3 border border-border rounded-md bg-background">
+        <div 
+          className={cn(
+            "flex items-center justify-between p-3 border rounded-md transition-all duration-200",
+            !isLocked && "cursor-pointer hover:bg-accent/50",
+            verifiedFilter === true 
+              ? "bg-primary/10 border-primary/20 hover:bg-primary/20" 
+              : "bg-background border-border hover:bg-accent/30"
+          )}
+          onClick={!isLocked ? () => onVerifiedChange(verifiedFilter === true ? null : true) : undefined}
+        >
           <div className="flex items-center gap-2">
-            <Shield className="h-4 w-4 text-muted-foreground" />
+            <Shield className={cn(
+              "h-4 w-4",
+              verifiedFilter === true ? "text-primary" : "text-muted-foreground"
+            )} />
             <span className="text-sm font-medium">Verified Only</span>
           </div>
-          <Button
-            variant={verifiedFilter === true ? "default" : "outline"}
-            size="sm"
-            onClick={() => onVerifiedChange(verifiedFilter === true ? null : true)}
-            disabled={isLocked}
-            className="min-w-16"
-          >
+          <div className={cn(
+            "px-3 py-1 rounded text-xs font-medium transition-colors",
+            verifiedFilter === true 
+              ? "bg-primary text-primary-foreground" 
+              : "bg-muted text-muted-foreground"
+          )}>
             {verifiedFilter === true ? "On" : "Off"}
-          </Button>
+          </div>
         </div>
         
         {isLocked && (
@@ -608,8 +619,8 @@ const UserCard: React.FC<UserCardProps> = ({ connection, onRemoveConnection }) =
                       <Shield className="h-3 w-3 text-white" />
                     </div>
                   ) : (
-                    <div className="absolute -bottom-1 -right-1 bg-[#f59e0b] rounded-full p-1 border-2 border-background">
-                      <Shield className="h-3 w-3 text-white" />
+                    <div className="absolute -bottom-1 -right-1 bg-orange-500 rounded-full p-1 border-2 border-background">
+                      <Shield className="h-3 w-3 text-whiteopacity-95" />
                     </div>
                   )}
                 </div>
@@ -626,17 +637,6 @@ const UserCard: React.FC<UserCardProps> = ({ connection, onRemoveConnection }) =
                   
                   <div className="flex items-center gap-2 flex-wrap pt-1">
                     {getRoleBadge(otherUser.role, otherUser.division, otherUser.educationLevel)}
-                    {otherUser.isVerified ? (
-                      <Badge variant="outline" className="text-xs font-medium px-2 py-0.5 border bg-[#01ae79]/10 text-[#01ae79] border-[#01ae79]/20 dark:bg-[#01ae79]/20 dark:text-[#01ae79] dark:border-[#01ae79]/30 whitespace-nowrap">
-                        <Shield className="h-3 w-3 mr-1" />
-                        Verified
-                      </Badge>
-                    ) : (
-                      <Badge variant="outline" className="text-xs font-medium px-2 py-0.5 border bg-gray-100 text-gray-600 border-gray-200 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-700 whitespace-nowrap">
-                        <Shield className="h-3 w-3 mr-1 opacity-50" />
-                        Unverified
-                      </Badge>
-                    )}
                   </div>
 
                   <p className="text-sm font-medium text-muted-foreground truncate">
@@ -753,7 +753,7 @@ const UserCard: React.FC<UserCardProps> = ({ connection, onRemoveConnection }) =
                 e.stopPropagation();
                 router.push('/messages');
               }}
-              className="w-full h-8 sm:h-8 md:h-9 bg-[#01ae79] hover:bg-[#01ae79]/90 text-white text-xs sm:text-sm font-medium transition-all duration-200 hover:scale-[1.02]"
+              className="w-full h-8 sm:h-8 md:h-9 bg-[#01ae79] hover:bg-[#01ae79]/90 text-whitetext-xs sm:text-sm font-medium transition-all duration-200 hover:scale-[1.02]"
             >
               <MessageSquare size={14} className="mr-1.5 sm:mr-2" />  
               Send Message
@@ -843,8 +843,8 @@ const PendingRequestCard: React.FC<PendingRequestCardProps> = ({ request, onAcce
                       <Shield className="h-3 w-3 text-white" />
                     </div>
                   ) : (
-                    <div className="absolute -bottom-1 -right-1 bg-[#f59e0b] rounded-full p-1 border-2 border-background">
-                      <Shield className="h-3 w-3 text-white" />
+                    <div className="absolute -bottom-1 -right-1 bg-orange-500 rounded-full p-1 border-2 border-background">
+                      <Shield className="h-3 w-3 text-whiteopacity-95" />
                     </div>
                   )}
                 </div>
@@ -989,7 +989,7 @@ const PendingRequestCard: React.FC<PendingRequestCardProps> = ({ request, onAcce
                 e.stopPropagation();
                 onAccept(request.id);
               }}
-              className="flex-1 h-8 sm:h-9 bg-[#01ae79] hover:bg-[#01ae79]/90 text-white text-xs sm:text-sm font-medium"
+              className="flex-1 h-8 sm:h-9 bg-[#01ae79] hover:bg-[#01ae79]/90 text-whitetext-xs sm:text-sm font-medium"
             >
               <CheckCircle size={12} className="mr-1 sm:mr-2" />
               Accept
@@ -1085,8 +1085,8 @@ const SentRequestCard: React.FC<SentRequestCardProps> = ({ request, onWithdraw, 
                       <Shield className="h-3 w-3 text-white" />
                     </div>
                   ) : (
-                    <div className="absolute -bottom-1 -right-1 bg-[#f59e0b] rounded-full p-1 border-2 border-background">
-                      <Shield className="h-3 w-3 text-white" />
+                    <div className="absolute -bottom-1 -right-1 bg-orange-500 rounded-full p-1 border-2 border-background">
+                      <Shield className="h-3 w-3 text-whiteopacity-95" />
                     </div>
                   )}
                 </div>
@@ -1449,9 +1449,9 @@ const AdvancedFilters: React.FC<AdvancedFiltersProps> = ({
 
       {/* Advanced Filters Panel */}
       {showAdvanced && (
-        <div className="border border-border rounded-lg p-4 space-y-4 bg-muted/30">
+        <div className="border border-border rounded-lg p-3 sm:p-4 space-y-1.5 sm:space-y-4 bg-muted/30">
           {/* Basic Filters Grid - Fixed layout to prevent shifts */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
             {/* Sports Filter */}
             <div className="space-y-2">
               <Label className="text-sm font-medium">
@@ -1541,11 +1541,11 @@ const AdvancedFilters: React.FC<AdvancedFiltersProps> = ({
 
           {/* Advanced Filters for Coaches/Recruiters - Fixed positioning */}
           {(userRole === 'coach' || userRole === 'recruiter' || isAdmin) && (
-            <div className="space-y-4">
+            <div className="space-y-1.5 sm:space-y-4">
               {/* Advanced Filters */}
-              <div className="border-t border-border pt-4 relative">
-                <Label className="text-sm font-medium mb-4 block">Advanced Filters</Label>
-                <div className="space-y-4">
+              <div className="border-t border-border pt-1 sm:pt-3 relative">
+                <Label className="text-sm font-medium mb-1 sm:mb-3 block">Advanced Filters</Label>
+                <div className="space-y-1.5 sm:space-y-4">
                   {/* Graduating Class - First in advanced filters */}
                   <div className="space-y-2">
                     <Label className="text-sm font-medium">Graduating Class</Label>
@@ -1644,7 +1644,7 @@ const AdvancedFilters: React.FC<AdvancedFiltersProps> = ({
                       <div className="flex justify-center">
                         <Button
                           onClick={() => window.location.href = '/pricing'}
-                          className="bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white border-0 shadow-lg hover:shadow-xl transition-all duration-200"
+                          className="bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-whiteborder-0 shadow-lg hover:shadow-xl transition-all duration-200"
                         >
                           <Crown className="h-4 w-4 mr-2" />
                           Upgrade for Advanced Filters
@@ -1700,7 +1700,7 @@ const AdvancedFilters: React.FC<AdvancedFiltersProps> = ({
                         <div className="flex justify-center">
                           <Button
                             onClick={() => window.location.href = '/pricing'}
-                            className="bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white border-0 shadow-lg hover:shadow-xl transition-all duration-200"
+                            className="bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-whiteborder-0 shadow-lg hover:shadow-xl transition-all duration-200"
                           >
                             <Crown className="h-4 w-4 mr-2" />
                             Upgrade
@@ -2137,6 +2137,24 @@ function App() {
           </p>
         </div>
 
+        {/* Verification Info */}
+        <div className="mb-6">
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <div className="flex items-center gap-1.5">
+              <div className="w-4 h-4 bg-[#01ae79] rounded-full p-0.5">
+                <Shield className="h-3 w-3 text-white" />
+              </div>
+              <span>Verified</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <div className="w-4 h-4 bg-orange-500 rounded-full p-0.5">
+                <Shield className="h-3 w-3 text-white opacity-95" />
+              </div>
+              <span>Unverified</span>
+            </div>
+          </div>
+        </div>
+
         {/* Local Search - Always show to prevent layout shift */}
         <div className="relative mb-6">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground flex-shrink-0" size={20} />
@@ -2161,7 +2179,7 @@ function App() {
                   <div className="relative">
                     <Users size={16} className="transition-colors group-data-[state=active]:text-[#01ae79]" />
                     {connections.length > 0 && (
-                      <div className="absolute -top-2 -right-2 flex items-center justify-center min-w-[16px] h-4 bg-[#01ae79] text-white text-[10px] font-semibold rounded-full px-1 border border-background shadow-sm">
+                      <div className="absolute -top-2 -right-2 flex items-center justify-center min-w-[16px] h-4 bg-[#01ae79] text-whitetext-[10px] font-semibold rounded-full px-1 border border-background shadow-sm">
                         {connections.length > 99 ? '99+' : connections.length}
                       </div>
                     )}
@@ -2185,7 +2203,7 @@ function App() {
                   <div className="relative">
                     <Clock size={16} className="transition-colors group-data-[state=active]:text-[#01ae79]" />
                     {pendingRequests.length > 0 && (
-                      <div className="absolute -top-2 -right-2 flex items-center justify-center min-w-[16px] h-4 bg-red-500 text-white text-[10px] font-semibold rounded-full px-1 border border-background shadow-sm animate-pulse">
+                      <div className="absolute -top-2 -right-2 flex items-center justify-center min-w-[16px] h-4 bg-red-500 text-whitetext-[10px] font-semibold rounded-full px-1 border border-background shadow-sm animate-pulse">
                         {pendingRequests.length > 99 ? '99+' : pendingRequests.length}
                       </div>
                     )}
@@ -2209,7 +2227,7 @@ function App() {
                   <div className="relative">
                     <Send size={16} className="transition-colors group-data-[state=active]:text-[#01ae79]" />
                     {sentRequests.length > 0 && (
-                      <div className="absolute -top-2 -right-2 flex items-center justify-center min-w-[16px] h-4 bg-blue-500 text-white text-[10px] font-semibold rounded-full px-1 border border-background shadow-sm">
+                      <div className="absolute -top-2 -right-2 flex items-center justify-center min-w-[16px] h-4 bg-blue-500 text-whitetext-[10px] font-semibold rounded-full px-1 border border-background shadow-sm">
                         {sentRequests.length > 99 ? '99+' : sentRequests.length}
                       </div>
                     )}

@@ -306,43 +306,43 @@ function ActivityLogContent() {
           ) : (
             <div className="space-y-4">
               {activities.map((activity) => (
-                <div
+                <Link
                   key={activity.id}
-                  className="flex items-center justify-between p-4 rounded-lg border border-border/50 bg-card/50 hover:bg-card/80 transition-colors"
+                  href={generateProfileUrl(activity.viewer.name, activity.viewer.id)}
+                  className="block"
                 >
-                  <div className="flex items-center gap-4">
-                    <Avatar className="w-12 h-12">
-                      <AvatarImage 
-                        src={getProfileImageUrl(activity.viewer.profileImage) || undefined} 
-                        alt={activity.viewer.name} 
-                        className="object-cover" 
-                      />
-                      <AvatarFallback className="text-sm font-semibold bg-gradient-to-br from-[#01ae79]/10 to-[#01ae79]/20 text-[#01ae79]">
-                        {activity.viewer.name.split(' ').map(n => n[0]).join('').toUpperCase()}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <p className="font-medium text-foreground">{activity.viewer.name}</p>
-                        {getRoleBadge(activity.viewer.role)}
+                  <div className="flex items-center justify-between p-4 rounded-lg border border-border/50 bg-card/50 hover:bg-card/80 hover:border-[#01ae79]/30 transition-all duration-200 cursor-pointer group">
+                    <div className="flex items-center gap-4">
+                      <Avatar className="w-12 h-12">
+                        <AvatarImage 
+                          src={getProfileImageUrl(activity.viewer.profileImage) || undefined} 
+                          alt={activity.viewer.name} 
+                          className="object-cover" 
+                        />
+                        <AvatarFallback className="text-sm font-semibold bg-gradient-to-br from-[#01ae79]/10 to-[#01ae79]/20 text-[#01ae79]">
+                          {activity.viewer.name.split(' ').map(n => n[0]).join('').toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <p className="font-medium text-foreground group-hover:text-[#01ae79] transition-colors">{activity.viewer.name}</p>
+                          {getRoleBadge(activity.viewer.role)}
+                        </div>
+                        <p className="text-sm text-muted-foreground">
+                          Viewed your profile
+                        </p>
                       </div>
+                    </div>
+                    <div className="text-right">
                       <p className="text-sm text-muted-foreground">
-                        Viewed your profile
+                        {getTimeAgo(activity.createdAt)}
+                      </p>
+                      <p className="text-xs text-[#01ae79] group-hover:text-[#01ae79]/80 transition-colors mt-1">
+                        Click to view profile
                       </p>
                     </div>
                   </div>
-                  <div className="text-right">
-                    <p className="text-sm text-muted-foreground">
-                      {getTimeAgo(activity.createdAt)}
-                    </p>
-                    <Link 
-                      href={generateProfileUrl(activity.viewer.name, activity.viewer.id)}
-                      className="text-xs text-[#01ae79] hover:underline"
-                    >
-                      View Profile
-                    </Link>
-                  </div>
-                </div>
+                </Link>
               ))}
             </div>
           )}

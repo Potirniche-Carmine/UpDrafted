@@ -301,20 +301,31 @@ export function VerifiedFilter({
       </div>
       
       <div className={cn("relative", isLocked && "pointer-events-none opacity-50")}>
-        <div className="flex items-center justify-between p-3 border border-border rounded-md bg-background">
+        <div 
+          className={cn(
+            "flex items-center justify-between p-3 border rounded-md transition-all duration-200",
+            !isLocked && "cursor-pointer hover:bg-accent/50",
+            verifiedFilter === true 
+              ? "bg-primary/10 border-primary/20 hover:bg-primary/20" 
+              : "bg-background border-border hover:bg-accent/30"
+          )}
+          onClick={!isLocked ? () => onVerifiedChange(verifiedFilter === true ? null : true) : undefined}
+        >
           <div className="flex items-center gap-2">
-            <Shield className="h-4 w-4 text-muted-foreground" />
+            <Shield className={cn(
+              "h-4 w-4",
+              verifiedFilter === true ? "text-primary" : "text-muted-foreground"
+            )} />
             <span className="text-sm font-medium">Verified Only</span>
           </div>
-          <Button
-            variant={verifiedFilter === true ? "default" : "outline"}
-            size="sm"
-            onClick={() => onVerifiedChange(verifiedFilter === true ? null : true)}
-            disabled={isLocked}
-            className="min-w-16"
-          >
+          <div className={cn(
+            "px-3 py-1 rounded text-xs font-medium transition-colors",
+            verifiedFilter === true 
+              ? "bg-primary text-primary-foreground" 
+              : "bg-muted text-muted-foreground"
+          )}>
             {verifiedFilter === true ? "On" : "Off"}
-          </Button>
+          </div>
         </div>
         
         {isLocked && (

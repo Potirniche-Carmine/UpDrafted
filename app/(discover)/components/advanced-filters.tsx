@@ -78,11 +78,11 @@ export function AdvancedFilters({
   // Professional premium upgrade overlay
   if (!hasAdvancedSearch && hasPremiumFilters) {
     return (
-      <div className="border-t pt-4 relative">
-        <h3 className="text-sm font-medium text-foreground mb-3">Advanced Filters</h3>
+      <div className="border-t border-border pt-1 sm:pt-3 relative">
+        <h3 className="text-sm font-medium text-foreground mb-1 sm:mb-3">Advanced Filters</h3>
         
         {/* Show filters in background with reduced opacity */}
-        <div className="space-y-4 opacity-40">
+        <div className="space-y-1.5 sm:space-y-4 opacity-40">
           {/* Graduating Class Filter - Preview */}
           {isCoachOrRecruiterOrAdmin && graduatingClassOptions.length > 0 && (
             <div className="space-y-2">

@@ -7,6 +7,21 @@ import { useAuth } from '@clerk/nextjs'
 import { useRouter } from 'next/navigation'
 import { useSubscription } from '@/components/providers/subscription-provider'
 import { Alert, AlertDescription } from '@/components/ui/alert'
+import Link from 'next/link'
+
+// Helper function to get display name for subscription tiers
+const getCurrentPlanDisplayName = (tier: string): string => {
+  const tierMap: Record<string, string> = {
+    'free': 'Free Plan',
+    'pro_athlete_monthly': 'Pro Athlete (Monthly)',
+    'pro_athlete_yearly': 'Pro Athlete (Yearly)', 
+    'pro_coach_monthly': 'Pro Coach (Monthly)',
+    'pro_coach_yearly': 'Pro Coach (Yearly)',
+    'pro_recruiter_monthly': 'Pro Recruiter (Monthly)',
+    'pro_recruiter_yearly': 'Pro Recruiter (Yearly)'
+  }
+  return tierMap[tier] || tier
+}
 
 interface StripeCheckoutButtonProps {
   priceId: string
@@ -41,7 +56,15 @@ export function StripeCheckoutButton({
 
     // Check if user already has an active premium subscription
     if (subscription?.isPremium && subscription?.status === 'active') {
-      setError(`You already have an active ${subscription.tier} subscription. Please manage your existing subscription or contact support if you need to change plans.`)
+      // Check if it's the same plan
+      if (subscription.stripePriceId === priceId) {
+        setError('You already have this plan active.')
+        return
+      }
+      
+      // Different plan - show plan switching message with manage subscription link
+      const currentPlanName = getCurrentPlanDisplayName(subscription.tier)
+      setError(`You currently have ${currentPlanName} active. To switch plans, please manage your subscription to cancel or modify your current plan first.`)
       return
     }
 
@@ -65,7 +88,8 @@ export function StripeCheckoutButton({
       if (!response.ok) {
         if (response.status === 400 && data.subscription) {
           // User already has an active subscription
-          setError(`You already have an active ${data.subscription.tier} subscription.`)
+          const currentPlanName = getCurrentPlanDisplayName(data.subscription.tier)
+          setError(`You already have ${currentPlanName} active. To change plans, please manage your subscription to cancel or modify your current plan first.`)
           return
         }
         throw new Error(data.error || 'Failed to create checkout session')
@@ -99,7 +123,17 @@ export function StripeCheckoutButton({
     <div className="space-y-3">
       {error && (
         <Alert variant="destructive">
-          <AlertDescription>{error}</AlertDescription>
+          <AlertDescription className="space-y-2">
+            <p>{error}</p>
+            {error.includes('manage your subscription') && (
+              <Link 
+                href="/dashboard" 
+                className="inline-flex items-center text-sm font-medium text-blue-600 hover:text-blue-500 underline"
+              >
+                Go to Dashboard →
+              </Link>
+            )}
+          </AlertDescription>
         </Alert>
       )}
       
