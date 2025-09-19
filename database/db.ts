@@ -12,7 +12,7 @@ import { drizzle } from 'drizzle-orm/node-postgres';
 import * as schema from './schema';
 import { env } from '../utils/env';
 
-const connectionString = env.DATABASE_URL;
+const connectionString = 'DATABASE_URL' in env ? env.DATABASE_URL : process.env.DATABASE_URL;
 
 // Singleton pattern for database connection
 let pool: Pool | null = null;

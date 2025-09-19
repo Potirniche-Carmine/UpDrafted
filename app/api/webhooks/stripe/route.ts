@@ -5,26 +5,117 @@ import { SubscriptionManager } from '@/lib/subscription'
 import { invalidateSubscriptionCache } from '@/hooks/use-subscription'
 import Stripe from 'stripe'
 
-// Simple rate limiting to prevent webhook storms
-const webhookRequests = new Map<string, { count: number; resetTime: number }>()
-const MAX_REQUESTS_PER_MINUTE = 100
-const RATE_LIMIT_WINDOW = 60 * 1000
+// Enhanced rate limiting to prevent webhook storms and abuse
+const webhookRequests = new Map<string, { 
+  count: number
+  resetTime: number
+  lastSignature?: string
+  lastTimestamp?: number
+}>()
 
-function isRateLimited(eventType: string): boolean {
+const RATE_LIMIT_CONFIG = {
+  maxRequestsPerMinute: 100,
+  windowMs: 60 * 1000,
+  maxRequestsPerSecond: 10,
+  secondWindowMs: 1000,
+  replayProtectionWindow: 300000 // 5 minutes
+}
+
+// Stripe's documented webhook IP ranges (update as needed)
+const STRIPE_IP_RANGES = [
+  '3.18.12.63',
+  '3.130.192.231',
+  '13.235.14.237',
+  '13.235.122.149',
+  '18.211.135.69',
+  '35.154.171.200',
+  '52.15.183.38',
+  '54.88.130.119',
+  '54.88.130.237',
+  '54.187.174.169',
+  '54.187.205.235',
+  '54.187.216.72'
+]
+
+/**
+ * Enhanced rate limiting with per-second and per-minute limits
+ */
+function isRateLimited(eventType: string, signature: string): boolean {
   const now = Date.now()
   const current = webhookRequests.get(eventType)
 
   if (!current || now > current.resetTime) {
-    webhookRequests.set(eventType, { count: 1, resetTime: now + RATE_LIMIT_WINDOW })
+    webhookRequests.set(eventType, { 
+      count: 1, 
+      resetTime: now + RATE_LIMIT_CONFIG.windowMs,
+      lastSignature: signature,
+      lastTimestamp: now
+    })
     return false
   }
 
-  if (current.count >= MAX_REQUESTS_PER_MINUTE) {
+  // Check per-second rate limit
+  if (current.lastTimestamp && (now - current.lastTimestamp) < RATE_LIMIT_CONFIG.secondWindowMs) {
+    const recentRequests = Array.from(webhookRequests.values())
+      .filter(req => req.lastTimestamp && (now - req.lastTimestamp) < RATE_LIMIT_CONFIG.secondWindowMs)
+    
+    if (recentRequests.length >= RATE_LIMIT_CONFIG.maxRequestsPerSecond) {
+      return true
+    }
+  }
+
+  // Check per-minute rate limit
+  if (current.count >= RATE_LIMIT_CONFIG.maxRequestsPerMinute) {
     return true
   }
 
   current.count++
+  current.lastSignature = signature
+  current.lastTimestamp = now
   return false
+}
+
+/**
+ * Check for replay attacks using webhook signature and timestamp
+ */
+function isReplayAttack(signature: string, timestamp: number): boolean {
+  const now = Date.now()
+  const webhookTime = timestamp * 1000 // Convert to milliseconds
+  
+  // Reject webhooks older than 5 minutes
+  if (now - webhookTime > RATE_LIMIT_CONFIG.replayProtectionWindow) {
+    return true
+  }
+  
+  // Check if we've seen this exact signature recently
+  for (const [, data] of webhookRequests) {
+    if (data.lastSignature === signature && 
+        data.lastTimestamp && 
+        Math.abs(now - data.lastTimestamp) < RATE_LIMIT_CONFIG.replayProtectionWindow) {
+      return true
+    }
+  }
+  
+  return false
+}
+
+/**
+ * Basic IP allowlist check (optional - can be disabled if using Stripe-signed webhooks only)
+ */
+function isAllowedIP(ip: string | null): boolean {
+  // If no IP filtering is desired, return true
+  if (process.env.STRIPE_WEBHOOK_IP_FILTERING !== 'true') {
+    return true
+  }
+  
+  if (!ip) return false
+  
+  // Remove port if present
+  const cleanIP = ip.split(':').slice(0, -1).join(':') || ip.split(':')[0]
+  
+  return STRIPE_IP_RANGES.includes(cleanIP) || 
+         cleanIP === '127.0.0.1' || 
+         cleanIP === '::1' // Allow localhost for development
 }
 
 export async function POST(req: NextRequest) {
@@ -32,10 +123,21 @@ export async function POST(req: NextRequest) {
     const body = await req.text()
     const headersList = await headers()
     const sig = headersList.get('stripe-signature')
+    const forwardedFor = headersList.get('x-forwarded-for')
+    const clientIP = headersList.get('x-real-ip') || 
+                     forwardedFor?.split(',')[0]?.trim() || 
+                     headersList.get('x-client-ip') ||
+                     null
 
     if (!sig) {
       console.error('Missing Stripe signature')
       return NextResponse.json({ error: 'Missing signature' }, { status: 400 })
+    }
+
+    // IP filtering (optional but recommended)
+    if (!isAllowedIP(clientIP)) {
+      console.warn('Webhook request from unauthorized IP:', clientIP)
+      return NextResponse.json({ error: 'Unauthorized IP' }, { status: 403 })
     }
 
     let event: Stripe.Event
@@ -47,8 +149,18 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Invalid signature' }, { status: 400 })
     }
 
-    // Rate limiting
-    if (isRateLimited(event.type)) {
+    // Extract timestamp from signature for replay protection
+    const timestamp = sig.split(',').find(part => part.startsWith('t='))?.substring(2)
+    const webhookTimestamp = timestamp ? parseInt(timestamp, 10) : Math.floor(Date.now() / 1000)
+
+    // Replay attack protection
+    if (isReplayAttack(sig, webhookTimestamp)) {
+      console.warn('Potential replay attack detected:', { eventType: event.type, timestamp: webhookTimestamp })
+      return NextResponse.json({ error: 'Replay attack detected' }, { status: 400 })
+    }
+
+    // Enhanced rate limiting
+    if (isRateLimited(event.type, sig)) {
       console.warn(`Rate limit exceeded for webhook type: ${event.type}`)
       return NextResponse.json({ error: 'Rate limited' }, { status: 429 })
     }
@@ -83,7 +195,10 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ received: true })
   } catch (error) {
-    console.error('Webhook error:', error)
+    console.error('Webhook error:', {
+      errorMessage: error instanceof Error ? error.message : 'Unknown error',
+      errorType: error instanceof Error ? error.constructor.name : typeof error
+    })
     return NextResponse.json({ error: 'Webhook processing failed' }, { status: 500 })
   }
 }
