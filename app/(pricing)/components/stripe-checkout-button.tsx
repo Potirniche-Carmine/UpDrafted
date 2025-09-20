@@ -54,6 +54,12 @@ export function StripeCheckoutButton({
       return
     }
 
+    // Check if price ID is valid
+    if (!priceId || priceId === 'MISSING_PRICE_ID') {
+      setError('This pricing plan is not properly configured. Please contact support.')
+      return
+    }
+
     // Check if user already has an active premium subscription
     if (subscription?.isPremium && subscription?.status === 'active') {
       // Check if it's the same plan

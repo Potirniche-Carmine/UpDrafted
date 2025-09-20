@@ -11,6 +11,26 @@ const STRIPE_PRICE_IDS = {
   RECRUITER_YEARLY: process.env.NEXT_PUBLIC_STRIPE_PRICE_RECRUITER_YEARLY || '',
 };
 
+// Debug logging for missing price IDs in development
+if (process.env.NODE_ENV === 'development') {
+  const missingPriceIds = Object.entries(STRIPE_PRICE_IDS)
+    .filter(([, value]) => !value)
+    .map(([key]) => key);
+  
+  if (missingPriceIds.length > 0) {
+    console.warn('Missing Stripe price IDs:', missingPriceIds);
+  }
+}
+
+// Validation function to check if price ID is configured
+function validatePriceId(priceId: string, planName: string): string {
+  if (!priceId) {
+    console.error(`Missing price ID for plan: ${planName}. Check environment variables.`);
+    return 'MISSING_PRICE_ID'; // Return a clear indicator instead of empty string
+  }
+  return priceId;
+}
+
 export interface PricingPlan {
   id: string
   name: string
@@ -53,7 +73,7 @@ export const pricingPlans: PricingPlan[] = [
     id: 'pro-athlete-monthly',
     name: 'Pro Athlete',
     description: 'Get serious about recruiting - connect with more coaches and stand out',
-    priceId: STRIPE_PRICE_IDS.ATHLETE_MONTHLY,
+    priceId: validatePriceId(STRIPE_PRICE_IDS.ATHLETE_MONTHLY, 'Pro Athlete Monthly'),
     price: {
       monthly: 15
     },
@@ -72,7 +92,7 @@ export const pricingPlans: PricingPlan[] = [
     id: 'pro-athlete-yearly',
     name: 'Pro Athlete',
     description: 'Get serious about recruiting - connect with more coaches and stand out. Save $36/year!',
-    priceId: STRIPE_PRICE_IDS.ATHLETE_YEARLY,
+    priceId: validatePriceId(STRIPE_PRICE_IDS.ATHLETE_YEARLY, 'Pro Athlete Yearly'),
     price: {
       monthly: 15,
       yearly: 144 // $12/month * 12 = $144/year (save $36)
@@ -94,7 +114,7 @@ export const pricingPlans: PricingPlan[] = [
     id: 'pro-coach-monthly',
     name: 'Pro Coach',
     description: 'Serious about recruiting? Get unlimited athlete connections and advanced tools',
-    priceId: STRIPE_PRICE_IDS.COACH_MONTHLY,
+    priceId: validatePriceId(STRIPE_PRICE_IDS.COACH_MONTHLY, 'Pro Coach Monthly'),
     price: {
       monthly: 150
     },
@@ -114,7 +134,7 @@ export const pricingPlans: PricingPlan[] = [
     id: 'pro-coach-yearly',
     name: 'Pro Coach',
     description: 'Serious about recruiting? Get unlimited athlete connections and advanced tools. Save $300/year!',
-    priceId: STRIPE_PRICE_IDS.COACH_YEARLY,
+    priceId: validatePriceId(STRIPE_PRICE_IDS.COACH_YEARLY, 'Pro Coach Yearly'),
     price: {
       monthly: 150,
       yearly: 1500 // Save $300/year ($125/month equivalent)
@@ -137,7 +157,7 @@ export const pricingPlans: PricingPlan[] = [
     id: 'pro-recruiter-monthly',
     name: 'Pro Recruiter',
     description: 'Serious about talent acquisition? Get unlimited athlete connections and professional tools',
-    priceId: STRIPE_PRICE_IDS.RECRUITER_MONTHLY,
+    priceId: validatePriceId(STRIPE_PRICE_IDS.RECRUITER_MONTHLY, 'Pro Recruiter Monthly'),
     price: {
       monthly: 150
     },
@@ -157,7 +177,7 @@ export const pricingPlans: PricingPlan[] = [
     id: 'pro-recruiter-yearly',
     name: 'Pro Recruiter',
     description: 'Serious about talent acquisition? Get unlimited athlete connections and professional tools. Save $300/year!',
-    priceId: STRIPE_PRICE_IDS.RECRUITER_YEARLY,
+    priceId: validatePriceId(STRIPE_PRICE_IDS.RECRUITER_YEARLY, 'Pro Recruiter Yearly'),
     price: {
       monthly: 150,
       yearly: 1500 // Save $300/year ($125/month equivalent)

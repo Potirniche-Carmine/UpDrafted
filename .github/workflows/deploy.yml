@@ -50,6 +50,12 @@ jobs:
             --build-arg R2_PUBLIC_URL=${{ secrets.R2_PUBLIC_URL }} \
             --build-arg NEXT_PUBLIC_R2_PUBLIC_URL=${{ secrets.NEXT_PUBLIC_R2_PUBLIC_URL }} \
             --build-arg NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=${{ secrets.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY }} \
+            --build-arg NEXT_PUBLIC_STRIPE_PRICE_ATHLETE_MONTHLY=${{ secrets.NEXT_PUBLIC_STRIPE_PRICE_ATHLETE_MONTHLY }} \
+            --build-arg NEXT_PUBLIC_STRIPE_PRICE_ATHLETE_YEARLY=${{ secrets.NEXT_PUBLIC_STRIPE_PRICE_ATHLETE_YEARLY }} \
+            --build-arg NEXT_PUBLIC_STRIPE_PRICE_COACH_MONTHLY=${{ secrets.NEXT_PUBLIC_STRIPE_PRICE_COACH_MONTHLY }} \
+            --build-arg NEXT_PUBLIC_STRIPE_PRICE_COACH_YEARLY=${{ secrets.NEXT_PUBLIC_STRIPE_PRICE_COACH_YEARLY }} \
+            --build-arg NEXT_PUBLIC_STRIPE_PRICE_RECRUITER_MONTHLY=${{ secrets.NEXT_PUBLIC_STRIPE_PRICE_RECRUITER_MONTHLY }} \
+            --build-arg NEXT_PUBLIC_STRIPE_PRICE_RECRUITER_YEARLY=${{ secrets.NEXT_PUBLIC_STRIPE_PRICE_RECRUITER_YEARLY }} \
             --secret id=database_url,src=/tmp/database_url \
             --secret id=clerk_secret_key,src=/tmp/clerk_secret_key \
             --secret id=message_encryption_key,src=/tmp/message_encryption_key \
@@ -117,6 +123,12 @@ jobs:
             --build-arg R2_PUBLIC_URL=${{ secrets.DEV_R2_PUBLIC_URL }} \
             --build-arg NEXT_PUBLIC_R2_PUBLIC_URL=${{ secrets.DEV_NEXT_PUBLIC_R2_PUBLIC_URL }} \
             --build-arg NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=${{ secrets.DEV_NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY }} \
+            --build-arg NEXT_PUBLIC_STRIPE_PRICE_ATHLETE_MONTHLY=${{ secrets.DEV_NEXT_PUBLIC_STRIPE_PRICE_ATHLETE_MONTHLY }} \
+            --build-arg NEXT_PUBLIC_STRIPE_PRICE_ATHLETE_YEARLY=${{ secrets.DEV_NEXT_PUBLIC_STRIPE_PRICE_ATHLETE_YEARLY }} \
+            --build-arg NEXT_PUBLIC_STRIPE_PRICE_COACH_MONTHLY=${{ secrets.DEV_NEXT_PUBLIC_STRIPE_PRICE_COACH_MONTHLY }} \
+            --build-arg NEXT_PUBLIC_STRIPE_PRICE_COACH_YEARLY=${{ secrets.DEV_NEXT_PUBLIC_STRIPE_PRICE_COACH_YEARLY }} \
+            --build-arg NEXT_PUBLIC_STRIPE_PRICE_RECRUITER_MONTHLY=${{ secrets.DEV_NEXT_PUBLIC_STRIPE_PRICE_RECRUITER_MONTHLY }} \
+            --build-arg NEXT_PUBLIC_STRIPE_PRICE_RECRUITER_YEARLY=${{ secrets.DEV_NEXT_PUBLIC_STRIPE_PRICE_RECRUITER_YEARLY }} \
             --secret id=database_url,src=/tmp/database_url \
             --secret id=clerk_secret_key,src=/tmp/clerk_secret_key \
             --secret id=message_encryption_key,src=/tmp/message_encryption_key \
