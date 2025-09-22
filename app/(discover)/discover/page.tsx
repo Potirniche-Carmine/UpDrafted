@@ -862,7 +862,7 @@ function SearchPageContent() {
             )}
 
             {/* Scholarships Available for Coaches and Recruiters */}
-            {(user.role === 'coach' || user.role === 'recruiter') && user.recruitingNeeds?.scholarshipsAvailable !== null && user.recruitingNeeds?.scholarshipsAvailable !== undefined && (
+            {(user.role === 'coach' || user.role === 'recruiter') && typeof user.recruitingNeeds?.scholarshipsAvailable === 'number' && (
               <div className="flex items-center text-muted-foreground">
                 <Target className="h-4 w-4 mr-2 text-[#01ae79] flex-shrink-0" />
                 <span className="font-medium">Scholarships: {user.recruitingNeeds.scholarshipsAvailable}</span>
