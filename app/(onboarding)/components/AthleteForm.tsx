@@ -441,16 +441,9 @@ export default function AthleteForm({ data, onInputChange }: AthleteFormProps) {
           const newEducationLevel = value as EducationLevel;
           onInputChange('educationLevel', newEducationLevel);
           
-          // Re-validate HUDL URL when education level changes (may become required/optional)
-          // We need to check the new education level, not the old one
+          // Re-validate HUDL URL when education level changes - clear any existing errors since it's optional
           const newErrors = { ...validationErrors };
-          const isHighSchool = newEducationLevel === 'high_school';
-          
-          if (isHighSchool && !data.hudlUrl?.trim()) {
-            newErrors.hudlUrl = 'Hudl URL is required for high school athletes';
-          } else {
-            delete newErrors.hudlUrl;
-          }
+          delete newErrors.hudlUrl;
           
           // Re-validate graduation year when education level changes
           if (data.graduationYear) {
