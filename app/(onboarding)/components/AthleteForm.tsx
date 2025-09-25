@@ -244,6 +244,19 @@ export default function AthleteForm({ data, onInputChange }: AthleteFormProps) {
     return `https://${withoutProtocol}`;
   }
 
+  // Normalize MaxPreps URLs to always include https://www.
+  function normalizeMaxPrepsUrl(input: string): string {
+    if (typeof input !== 'string') return input as unknown as string;
+    const trimmed = input.trim();
+    if (!trimmed) return trimmed;
+    if (!/maxpreps\.com/i.test(trimmed)) return trimmed;
+    let withoutProtocol = trimmed.replace(/^\s*https?:\/\//i, '');
+    if (!withoutProtocol.toLowerCase().startsWith('www.')) {
+      withoutProtocol = 'www.' + withoutProtocol;
+    }
+    return `https://${withoutProtocol}`;
+  }
+
   const addSecondarySport = (sport: string) => {
     if (sport && !data.secondarySports.includes(sport) && sport !== data.sport) {
       onInputChange('secondarySports', [...data.secondarySports, sport]);
@@ -261,10 +274,7 @@ export default function AthleteForm({ data, onInputChange }: AthleteFormProps) {
     if (field === 'fullName') {
       newFullName = value as string;
     }
-    // Normalize HUDL URL before validation and state update
-    if (field === 'hudlUrl' && typeof value === 'string') {
-      value = normalizeHudlUrl(value);
-    }
+
     switch (field) {
       case 'fullName': {
         const nameResult = FormValidator.validateName(value as string, true);
@@ -367,7 +377,6 @@ export default function AthleteForm({ data, onInputChange }: AthleteFormProps) {
         break;
       case 'hudlUrl':
         if (value) {
-          // Accept Hudl URLs with or without protocol, and show error if name is missing
           const hudlResult = FormValidator.validateHudlURL(value as string, newFullName);
           if (hudlResult.isValid) {
             delete newErrors.hudlUrl;
@@ -429,6 +438,20 @@ export default function AthleteForm({ data, onInputChange }: AthleteFormProps) {
     onInputChange('country', value);
     if (value !== 'United States' && data.state) {
       onInputChange('state', '');
+    }
+  };
+
+  // Handle URL normalization on blur
+  const handleUrlBlur = (field: 'hudlUrl' | 'maxprepsUrl', currentValue: string) => {
+    let normalizedValue = currentValue;
+    if (field === 'hudlUrl' && currentValue && /hudl\.com/i.test(currentValue)) {
+      normalizedValue = normalizeHudlUrl(currentValue);
+    } else if (field === 'maxprepsUrl' && currentValue && /maxpreps\.com/i.test(currentValue)) {
+      normalizedValue = normalizeMaxPrepsUrl(currentValue);
+    }
+    
+    if (normalizedValue !== currentValue) {
+      validateAndUpdateField(field, normalizedValue);
     }
   };
 
@@ -820,7 +843,8 @@ export default function AthleteForm({ data, onInputChange }: AthleteFormProps) {
           id="maxprepsUrl"
           placeholder={data.fullName ? `maxpreps.com/athletes/${data.fullName.toLowerCase().replace(/\s+/g, '-')}` : "maxpreps.com/athletes/your-name"}
           value={data.maxprepsUrl}
-          onChange={(e) => validateAndUpdateField('maxprepsUrl', e.target.value)}
+          onChange={(e) => onInputChange('maxprepsUrl', e.target.value)}
+          onBlur={(e) => handleUrlBlur('maxprepsUrl', e.target.value)}
           className={`h-11 bg-background ${validationErrors.maxprepsUrl ? 'border-red-500' : ''}`}
           maxLength={FIELD_LIMITS.URL}
         />
@@ -837,7 +861,8 @@ export default function AthleteForm({ data, onInputChange }: AthleteFormProps) {
           id="hudlUrl"
           placeholder={data.fullName ? `hudl.com/profile/${data.fullName.toLowerCase().replace(/\s+/g, '-')}` : "hudl.com/profile/your-name"}
           value={data.hudlUrl}
-          onChange={(e) => validateAndUpdateField('hudlUrl', e.target.value)}
+          onChange={(e) => onInputChange('hudlUrl', e.target.value)}
+          onBlur={(e) => handleUrlBlur('hudlUrl', e.target.value)}
           className={`h-11 bg-background ${validationErrors.hudlUrl ? 'border-red-500' : ''}`}
           maxLength={FIELD_LIMITS.URL}
         />
