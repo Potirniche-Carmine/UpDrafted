@@ -11,34 +11,27 @@ import { useMemo, useCallback } from 'react';
  * 
  * Key Design Principles:
  * - Premium subscription users get top priority (30 point bonus)
- * - Focus on truly OPTIONAL fields that users can choose to fill out
- * - Profile Image & Verified Status are the main completeness indicators
- * - Positions and Height/Weight for athletes are optional enhancements
- * - Maintains fair discovery - even incomplete profiles still appear
- * - Uses weighted randomization instead of strict sorting
+ * - Profile images are highly valued (40 points) - should appear at top
+ * - Verified status is most valuable for trust (45 points)
+ * - Positions and scholarships give coaches/recruiters bonus points
+ * - Maintains fair discovery through weighted randomization
+ * - Uses score-based buckets instead of complex tier system
  * 
- * Scoring System (0-130 points, capped at 100):
+ * Scoring System (0-100+ points, capped at 100):
  * - Premium Subscription: 30 points (highest priority - paying users)
- * - Profile Image: 40 points (optional, shows professionalism)
- * - Verified Status: 45 points (optional but most valuable for trust)  
- * - Positions (coaches/recruiters only): 15 points (optional for them, required for athletes)
- * - Scholarships Available (coaches/recruiters only): 15 points (optional recruiting info)
+ * - Profile Image: 40 points (major factor for visibility)
+ * - Verified Status: 45 points (trust and authenticity)  
+ * - Positions (coaches/recruiters only): 15 points (optional recruiting info)
+ * - Scholarships Available (coaches/recruiters only): 15 points (>0 scholarships)
  * 
- * 5-Tier System:
- * - Elite (90% top half): Premium users with ALL: subscription + positions + scholarships + verified + image
- * - Premium (80% top half): Premium users with subscription + (verified OR image)
- * - High (65% top half): Non-premium but verified + image (high completeness)
- * - Medium (35% top half): Non-premium with verified OR image (medium completeness)
- * - Low (15% top half): Basic profiles (0-29 points)
+ * Score Buckets & Distribution:
+ * - High (80-100): 85% chance top half - Premium + verified + image users
+ * - Medium-High (60-79): 70% chance top half - Verified + image OR premium users
+ * - Medium (40-59): 40% chance top half - Image OR verified users
+ * - Low (0-39): 15% chance top half - Basic profiles
  * 
- * Note: Athletes don't get position points since positions are required for them,
- * but coaches/recruiters get points since positions are optional for their profiles.
- * 
- * Maximum possible scores:
- * - Premium Athletes: 115 points (capped at 100) → Premium/Elite tier
- * - Premium Coaches/Recruiters: 130 points (capped at 100) → Elite tier if actively recruiting
- * - Free Athletes: 85 points → High tier
- * - Free Coaches/Recruiters: 115 points (capped at 100) → High tier if complete
+ * This ensures profiles WITH pictures and verification appear at the top,
+ * while still giving some discovery opportunities to incomplete profiles.
  */
 
 // Types for subscription status
@@ -102,15 +95,6 @@ function isPremiumUser(user: DiscoverUser): boolean {
   return false;
 }
 
-// Tier thresholds and distribution weights - 5-tier system with premium at top
-const TIER_CONFIG = {
-  elite: { min: 95, max: 130, topHalfChance: 0.90 },    // Premium + verified + image + positions/scholarships
-  premium: { min: 75, max: 94, topHalfChance: 0.80 },   // Premium + verified OR image
-  high: { min: 55, max: 74, topHalfChance: 0.65 },      // Verified + image (non-premium)
-  medium: { min: 30, max: 54, topHalfChance: 0.35 },    // Verified OR image (non-premium)  
-  low: { min: 0, max: 29, topHalfChance: 0.15 },        // Basic profiles
-};
-
 /**
  * Calculate completeness score for a user profile (0-130, capped at 100)
  */
@@ -150,40 +134,6 @@ function calculateCompletenessScore(user: DiscoverUser): number {
 }
 
 /**
- * Check if a coach/recruiter qualifies for elite tier (premium + actively recruiting)
- */
-function isEliteRecruiter(user: DiscoverUser): boolean {
-  if (user.role !== 'coach' && user.role !== 'recruiter') return false;
-  
-  const isPremium = isPremiumUser(user);
-  const hasPositions = !!(user.positions && user.positions.length > 0);
-  const hasScholarships = !!(user.recruitingNeeds && 
-                            user.recruitingNeeds.scholarshipsAvailable !== null && 
-                            user.recruitingNeeds.scholarshipsAvailable > 0);
-  const isVerified = !!user.isVerified;
-  const hasProfileImage = !!user.profileImage;
-  
-  // Elite tier: Must be premium AND have ALL four elements (positions, scholarships, verified, profile image)
-  return isPremium && hasPositions && hasScholarships && isVerified && hasProfileImage;
-}
-
-/**
- * Determine which tier a user belongs to based on their completeness score and special criteria
- */
-function getUserTier(user: DiscoverUser, score: number): 'elite' | 'premium' | 'high' | 'medium' | 'low' {
-  // Check for elite tier first (special case for premium actively recruiting coaches/recruiters)
-  if (isEliteRecruiter(user)) {
-    return 'elite';
-  }
-  
-  // Standard tier logic based on score
-  if (score >= TIER_CONFIG.premium.min) return 'premium';
-  if (score >= TIER_CONFIG.high.min) return 'high';
-  if (score >= TIER_CONFIG.medium.min) return 'medium';
-  return 'low';
-}
-
-/**
  * Shuffle array using Fisher-Yates algorithm
  */
 function shuffleArray<T>(array: T[]): T[] {
@@ -202,144 +152,121 @@ function shuffleArray<T>(array: T[]): T[] {
 export function sortByCompletenessWithRandomization(users: DiscoverUser[]): DiscoverUser[] {
   if (users.length === 0) return users;
 
-  // Calculate scores and assign tiers
+  // Calculate scores for all users
   const usersWithScores = users.map(user => {
     const score = calculateCompletenessScore(user);
-    return {
-      user,
-      score,
-      tier: getUserTier(user, score),
-    };
+    return { user, score };
   });
 
-  // Separate into tiers
-  const eliteTier = usersWithScores.filter(item => item.tier === 'elite');
-  const premiumTier = usersWithScores.filter(item => item.tier === 'premium');
-  const highTier = usersWithScores.filter(item => item.tier === 'high');
-  const mediumTier = usersWithScores.filter(item => item.tier === 'medium');
-  const lowTier = usersWithScores.filter(item => item.tier === 'low');
+  // Sort by score (highest first) with some randomization within score ranges
+  const sortedUsers = usersWithScores.sort((a, b) => {
+    // If scores are very close (within 10 points), add some randomness
+    const scoreDiff = b.score - a.score;
+    if (Math.abs(scoreDiff) <= 10) {
+      return Math.random() - 0.5;
+    }
+    return scoreDiff;
+  });
 
-  // Shuffle within each tier to maintain randomness
-  const shuffledElite = shuffleArray(eliteTier);
-  const shuffledPremium = shuffleArray(premiumTier);
-  const shuffledHigh = shuffleArray(highTier);
-  const shuffledMedium = shuffleArray(mediumTier);
-  const shuffledLow = shuffleArray(lowTier);
+  // Apply weighted randomization based on score buckets
+  const totalUsers = sortedUsers.length;
+  
+  // Group users into score buckets for better distribution
+  const highScoreBucket: typeof sortedUsers = []; // 80-100
+  const mediumHighBucket: typeof sortedUsers = []; // 60-79
+  const mediumBucket: typeof sortedUsers = []; // 40-59
+  const lowBucket: typeof sortedUsers = []; // 0-39
+  
+  sortedUsers.forEach(item => {
+    if (item.score >= 80) highScoreBucket.push(item);
+    else if (item.score >= 60) mediumHighBucket.push(item);
+    else if (item.score >= 40) mediumBucket.push(item);
+    else lowBucket.push(item);
+  });
 
-  // Calculate how many from each tier go to top half with better edge case handling
-  // This improved algorithm ensures fair representation from all tiers while maintaining weighted preferences
-  const totalUsers = users.length;
+  // Shuffle within each bucket to maintain randomness
+  const shuffleHighScore = shuffleArray(highScoreBucket);
+  const shuffleMediumHigh = shuffleArray(mediumHighBucket);
+  const shuffleMedium = shuffleArray(mediumBucket);
+  const shuffleLow = shuffleArray(lowBucket);
+
+  // Weighted distribution: higher scores get priority but not complete dominance
   const topHalfSize = Math.ceil(totalUsers / 2);
   
-  // Step 1: Calculate ideal distribution based on tier percentages
-  const idealEliteInTopHalf = Math.floor(shuffledElite.length * TIER_CONFIG.elite.topHalfChance);
-  const idealPremiumInTopHalf = Math.floor(shuffledPremium.length * TIER_CONFIG.premium.topHalfChance);
-  const idealHighInTopHalf = Math.floor(shuffledHigh.length * TIER_CONFIG.high.topHalfChance);
-  const idealMediumInTopHalf = Math.floor(shuffledMedium.length * TIER_CONFIG.medium.topHalfChance);
-  const idealLowInTopHalf = Math.floor(shuffledLow.length * TIER_CONFIG.low.topHalfChance);
+  // Calculate how many from each bucket go to top half
+  let highScoreInTop = Math.min(Math.ceil(shuffleHighScore.length * 0.85), shuffleHighScore.length);
+  let mediumHighInTop = Math.min(Math.ceil(shuffleMediumHigh.length * 0.70), shuffleMediumHigh.length);
+  let mediumInTop = Math.min(Math.ceil(shuffleMedium.length * 0.40), shuffleMedium.length);
+  let lowInTop = Math.min(Math.ceil(shuffleLow.length * 0.15), shuffleLow.length);
   
-  const totalIdeal = idealEliteInTopHalf + idealPremiumInTopHalf + idealHighInTopHalf + idealMediumInTopHalf + idealLowInTopHalf;
+  // Adjust if we exceed top half size
+  const totalInTop = highScoreInTop + mediumHighInTop + mediumInTop + lowInTop;
+  if (totalInTop > topHalfSize) {
+    const excess = totalInTop - topHalfSize;
+    // Remove excess from lower priority buckets first
+    const reductionFromLow = Math.min(excess, lowInTop);
+    lowInTop -= reductionFromLow;
+    let remaining = excess - reductionFromLow;
+    
+    if (remaining > 0) {
+      const reductionFromMedium = Math.min(remaining, mediumInTop);
+      mediumInTop -= reductionFromMedium;
+      remaining -= reductionFromMedium;
+    }
+    
+    if (remaining > 0) {
+      const reductionFromMediumHigh = Math.min(remaining, mediumHighInTop);
+      mediumHighInTop -= reductionFromMediumHigh;
+      remaining -= reductionFromMediumHigh;
+    }
+    
+    if (remaining > 0) {
+      highScoreInTop -= remaining;
+    }
+  }
   
-  let eliteInTopHalf, premiumInTopHalf, highInTopHalf, mediumInTopHalf, lowInTopHalf;
-  
-  if (totalIdeal <= topHalfSize) {
-    // We have room for all ideal distributions, fill remaining slots proportionally
-    const remainingSlots = topHalfSize - totalIdeal;
-    const totalTierUsers = shuffledElite.length + shuffledPremium.length + shuffledHigh.length + shuffledMedium.length + shuffledLow.length;
+  // If we have room, add more from higher buckets
+  const actualTotalInTop = highScoreInTop + mediumHighInTop + mediumInTop + lowInTop;
+  if (actualTotalInTop < topHalfSize) {
+    const available = topHalfSize - actualTotalInTop;
+    // Add more from high score bucket first
+    const canAddFromHigh = Math.min(available, shuffleHighScore.length - highScoreInTop);
+    highScoreInTop += canAddFromHigh;
+    let remainingSlots = available - canAddFromHigh;
     
-    // Distribute remaining slots proportionally by tier size, with elite bias
-    const extraForElite = Math.min(remainingSlots, Math.floor((shuffledElite.length / totalTierUsers) * remainingSlots * 2.0));
-    const extraForPremium = Math.min(remainingSlots - extraForElite, Math.floor((shuffledPremium.length / totalTierUsers) * remainingSlots * 1.5));
-    const extraForHigh = Math.min(remainingSlots - extraForElite - extraForPremium, Math.floor((shuffledHigh.length / totalTierUsers) * remainingSlots));
-    const extraForMedium = Math.min(remainingSlots - extraForElite - extraForPremium - extraForHigh, Math.floor((shuffledMedium.length / totalTierUsers) * remainingSlots));
-    const extraForLow = remainingSlots - extraForElite - extraForPremium - extraForHigh - extraForMedium;
+    if (remainingSlots > 0) {
+      const canAddFromMediumHigh = Math.min(remainingSlots, shuffleMediumHigh.length - mediumHighInTop);
+      mediumHighInTop += canAddFromMediumHigh;
+      remainingSlots -= canAddFromMediumHigh;
+    }
     
-    eliteInTopHalf = Math.min(idealEliteInTopHalf + extraForElite, shuffledElite.length);
-    premiumInTopHalf = Math.min(idealPremiumInTopHalf + extraForPremium, shuffledPremium.length);
-    highInTopHalf = Math.min(idealHighInTopHalf + extraForHigh, shuffledHigh.length);
-    mediumInTopHalf = Math.min(idealMediumInTopHalf + extraForMedium, shuffledMedium.length);
-    lowInTopHalf = Math.min(idealLowInTopHalf + extraForLow, shuffledLow.length);
-  } else {
-    // We need to scale down proportionally while maintaining minimum representation
-    const scaleFactor = topHalfSize / totalIdeal;
+    if (remainingSlots > 0) {
+      const canAddFromMedium = Math.min(remainingSlots, shuffleMedium.length - mediumInTop);
+      mediumInTop += canAddFromMedium;
+      remainingSlots -= canAddFromMedium;
+    }
     
-    // Ensure each non-empty tier gets at least 1 representative if possible
-    const minRepresentation = 1;
-    
-    // Scale down the ideal numbers and add back minimum representation
-    eliteInTopHalf = shuffledElite.length > 0 ? 
-      Math.min(Math.max(minRepresentation, Math.floor(idealEliteInTopHalf * scaleFactor)), shuffledElite.length) : 0;
-    premiumInTopHalf = shuffledPremium.length > 0 ? 
-      Math.min(Math.max(minRepresentation, Math.floor(idealPremiumInTopHalf * scaleFactor)), shuffledPremium.length) : 0;
-    highInTopHalf = shuffledHigh.length > 0 ? 
-      Math.min(Math.max(minRepresentation, Math.floor(idealHighInTopHalf * scaleFactor)), shuffledHigh.length) : 0;
-    mediumInTopHalf = shuffledMedium.length > 0 ? 
-      Math.min(Math.max(minRepresentation, Math.floor(idealMediumInTopHalf * scaleFactor)), shuffledMedium.length) : 0;
-    lowInTopHalf = shuffledLow.length > 0 ? 
-      Math.min(Math.max(minRepresentation, Math.floor(idealLowInTopHalf * scaleFactor)), shuffledLow.length) : 0;
-    
-    // Adjust if we've exceeded topHalfSize
-    const currentTotal = eliteInTopHalf + premiumInTopHalf + highInTopHalf + mediumInTopHalf + lowInTopHalf;
-    if (currentTotal > topHalfSize) {
-      // Reduce from largest tiers first while maintaining minimum representation
-      const excess = currentTotal - topHalfSize;
-      let remaining = excess;
-      
-      // Reduce low tier first (preserve elite tiers)
-      if (remaining > 0 && lowInTopHalf > minRepresentation && shuffledLow.length > 0) {
-        const reduction = Math.min(remaining, lowInTopHalf - minRepresentation);
-        lowInTopHalf -= reduction;
-        remaining -= reduction;
-      }
-      
-      // Then medium tier
-      if (remaining > 0 && mediumInTopHalf > minRepresentation && shuffledMedium.length > 0) {
-        const reduction = Math.min(remaining, mediumInTopHalf - minRepresentation);
-        mediumInTopHalf -= reduction;
-        remaining -= reduction;
-      }
-      
-      // Then high tier
-      if (remaining > 0 && highInTopHalf > minRepresentation && shuffledHigh.length > 0) {
-        const reduction = Math.min(remaining, highInTopHalf - minRepresentation);
-        highInTopHalf -= reduction;
-        remaining -= reduction;
-      }
-      
-      // Then premium tier (preserve elite as much as possible)
-      if (remaining > 0 && premiumInTopHalf > minRepresentation && shuffledPremium.length > 0) {
-        const reduction = Math.min(remaining, premiumInTopHalf - minRepresentation);
-        premiumInTopHalf -= reduction;
-        remaining -= reduction;
-      }
-      
-      // Finally elite tier if absolutely necessary
-      if (remaining > 0 && eliteInTopHalf > minRepresentation && shuffledElite.length > 0) {
-        const reduction = Math.min(remaining, eliteInTopHalf - minRepresentation);
-        eliteInTopHalf -= reduction;
-        remaining -= reduction;
-      }
+    if (remainingSlots > 0) {
+      lowInTop += Math.min(remainingSlots, shuffleLow.length - lowInTop);
     }
   }
 
-  // Split each tier into top half and bottom half portions
+  // Build the final sorted list
   const topHalf = [
-    ...shuffledElite.slice(0, eliteInTopHalf),
-    ...shuffledPremium.slice(0, premiumInTopHalf),
-    ...shuffledHigh.slice(0, highInTopHalf),
-    ...shuffledMedium.slice(0, mediumInTopHalf),
-    ...shuffledLow.slice(0, lowInTopHalf),
+    ...shuffleHighScore.slice(0, highScoreInTop),
+    ...shuffleMediumHigh.slice(0, mediumHighInTop),
+    ...shuffleMedium.slice(0, mediumInTop),
+    ...shuffleLow.slice(0, lowInTop),
   ];
 
   const bottomHalf = [
-    ...shuffledElite.slice(eliteInTopHalf),
-    ...shuffledPremium.slice(premiumInTopHalf),
-    ...shuffledHigh.slice(highInTopHalf),
-    ...shuffledMedium.slice(mediumInTopHalf),
-    ...shuffledLow.slice(lowInTopHalf),
+    ...shuffleHighScore.slice(highScoreInTop),
+    ...shuffleMediumHigh.slice(mediumHighInTop),
+    ...shuffleMedium.slice(mediumInTop),
+    ...shuffleLow.slice(lowInTop),
   ];
 
-  // Shuffle the top and bottom halves internally to avoid predictable patterns
+  // Shuffle the top and bottom halves to avoid predictable patterns
   const finalTopHalf = shuffleArray(topHalf);
   const finalBottomHalf = shuffleArray(bottomHalf);
 

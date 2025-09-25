@@ -1,204 +1,35 @@
 "use client";
 
-import React, { useState, useEffect, Suspense, useCallback, useMemo, useRef } from "react";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { User, Users, Target, MapPin, Shield, GraduationCap, Send, X, Clock, Building2, Filter, Search, Crown } from "lucide-react";
-import { useSearchParams, useRouter } from 'next/navigation';
+import React, { useEffect, Suspense, useMemo } from "react";
+import { useSearchParams } from 'next/navigation';
 import { AuthWrapper } from '@/components/auth-wrapper';
 import { useUser } from "@clerk/nextjs";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Card, CardContent } from "@/components/ui/card";
-import { cn } from "@/lib/utils";
-import { sanitizeText } from '@/utils/sanitization';
-import { createSecureHeaders } from '@/utils/clerk-security';
-import { getSportsList, DIVISIONS, US_STATES, COUNTRIES, getPositionsForSport } from '@/lib/sports-data';
-import { CONFERENCES_BY_DIVISION } from '@/lib/conference-data';
 import { useProfileCompletenessSorting } from '../components/profile-completeness-sorter';
-import { AdvancedFilters } from '../components/advanced-filters';
-import { MultiSelectFilter, HeightWeightFilter, VerifiedFilter, type FilterOption } from '../components/filter-components';
 import { useFeatureAccess } from '@/components/providers/subscription-provider';
 
-// API response types
-interface DiscoverUser {
-  id: string;
-  fullName: string;
-  organizationName: string;
-  profileImage: string | null;
-  city: string;
-  state: string;
-  country?: string;
-  isVerified: boolean;
-  role: 'athlete' | 'coach' | 'recruiter';
-  sport: string;
-  title?: string;
-  division?: string;
-  educationLevel?: string;
-  hasPendingRequest: boolean;
-  hasIncomingRequest: boolean;
-  graduationYear?: number;
-  height?: string;
-  weight?: string;
-  positions?: string[];
-  recruitingNeeds?: {
-    studentClassifications: string[];
-    positions: string[];
-    scholarshipsAvailable: number | null;
-  } | null;
-}
+// Import our new components
+import { SearchFilters } from '../components/search-filters';
+import { SearchHeader } from '../components/search-header';
+import { SearchTabs, getAvailableTabs, getTabRole, getValidTab } from '../components/search-tabs';
 
-interface DiscoverResponse {
-  results: DiscoverUser[];
-  total: number;
-  hasMore: boolean;
-}
+// Import our custom hooks
+import { useFilterOptions } from '../hooks/use-filter-options';
+import { useSearchState } from '../hooks/use-search-state';
+import { useSearchAPI } from '../hooks/use-search-api';
+import { useProfileNavigation } from '../hooks/use-profile-navigation';
 
-type TabValue = 'all' | 'athletes' | 'coaches' | 'recruiters';
+// API response types (now also defined in our hooks, but kept here for component use)
 
-// Generate graduation year options
-const getGraduationYearOptions = (): FilterOption[] => {
-  const currentYear = new Date().getFullYear();
-  const years = [];
-  for (let i = 0; i <= 6; i++) {
-    years.push({
-      value: (currentYear + i).toString(),
-      label: `Class of ${currentYear + i}`
-    });
-  }
-  return years;
-};
-
-// Get conferences for selected divisions
-const getConferencesForDivisions = (selectedDivisions: FilterOption[]): FilterOption[] => {
-  // Don't show conferences for High School division
-  const eligibleDivisions = selectedDivisions.filter(div => div.value !== 'High School');
-  
-  // If no eligible divisions are selected, return empty array (don't show all conferences)
-  if (eligibleDivisions.length === 0) {
-    return [];
-  }
-  
-  const conferences = new Set<string>();
-  eligibleDivisions.forEach(division => {
-    const divisionConfs = CONFERENCES_BY_DIVISION[division.value] || [];
-    divisionConfs.forEach(conf => conferences.add(conf));
-  });
-  
-  return Array.from(conferences)
-    .map(conf => ({ value: conf, label: conf }))
-    .sort((a, b) => a.label.localeCompare(b.label));
-};
-
-// Get positions for selected sports
-const getPositionsForSports = (selectedSports: FilterOption[]): FilterOption[] => {
-  if (selectedSports.length === 0) return [];
-  
-  const positions = new Set<string>();
-  selectedSports.forEach(sport => {
-    const sportPositions = getPositionsForSport(sport.value);
-    sportPositions.forEach(pos => positions.add(pos));
-  });
-  
-  return Array.from(positions)
-    .map(pos => ({ value: pos, label: pos }))
-    .sort((a, b) => a.label.localeCompare(b.label));
-};
-
-// Ordered divisions with High School first (most common)
-const ORDERED_DIVISIONS = ['High School', ...DIVISIONS.filter(d => d !== 'High School')];
-
-// Get available tabs based on user role
-const getAvailableTabs = (userRole: string) => {
-  switch (userRole) {
-    case 'athlete':
-      return [
-        { value: 'all' as TabValue, label: 'All', icon: <Users className="h-4 w-4" /> },
-        { value: 'coaches' as TabValue, label: 'Coaches', icon: <GraduationCap className="h-4 w-4" /> },
-        { value: 'recruiters' as TabValue, label: 'Recruiters', icon: <Target className="h-4 w-4" /> }
-      ];
-    case 'coach':
-    case 'recruiter':
-      return [
-        { value: 'athletes' as TabValue, label: 'Athletes', icon: <User className="h-4 w-4" /> }
-      ];
-    default:
-      return [
-        { value: 'all' as TabValue, label: 'All', icon: <Users className="h-4 w-4" /> },
-        { value: 'athletes' as TabValue, label: 'Athletes', icon: <User className="h-4 w-4" /> },
-        { value: 'coaches' as TabValue, label: 'Coaches', icon: <GraduationCap className="h-4 w-4" /> },
-        { value: 'recruiters' as TabValue, label: 'Recruiters', icon: <Target className="h-4 w-4" /> }
-      ];
-  }
-};
-
-// Helper function to convert tab to role
-const getTabRole = (tab: TabValue): string | null => {
-  switch (tab) {
-    case 'athletes':
-      return 'athlete';
-    case 'coaches':
-      return 'coach';
-    case 'recruiters':
-      return 'recruiter';
-    default:
-      return null;
-  }
-};
-
-// Set default tab based on user role
-const getDefaultTab = (userRole: string): TabValue => {
-  if (userRole === 'coach' || userRole === 'recruiter') {
-    return 'athletes'; // Coaches and recruiters can only see athletes
-  }
-  return 'all'; // Athletes default to 'all'
-};
-
-// Helper function to get a valid tab with multiple fallbacks
-const getValidTab = (userRole: string, urlTab?: string | null): TabValue => {
-  const availableTabs = getAvailableTabs(userRole);
-  const availableTabValues = availableTabs.map(tab => tab.value);
-  
-  // Validate that we have available tabs
-  if (!availableTabValues || availableTabValues.length === 0) {
-    console.error(`No available tabs found for role "${userRole}". This should not happen.`);
-    return 'all'; // Ultimate fallback
-  }
-  
-  // First, try the URL tab if it's valid
-  if (urlTab && availableTabValues.includes(urlTab as TabValue)) {
-    return urlTab as TabValue;
-  }
-  
-  // Then try the default tab for the role
-  const defaultTab = getDefaultTab(userRole);
-  if (availableTabValues.includes(defaultTab)) {
-    return defaultTab;
-  }
-  
-  // Finally, fallback to the first available tab
-  const fallbackTab = availableTabValues[0];
-  
-  // Additional safety check (should never be needed due to validation above)
-  if (!fallbackTab) {
-    console.error(`Failed to get fallback tab for role "${userRole}". Available tabs:`, availableTabValues);
-    return 'all'; // Ultimate fallback
-  }
-  
-  // Log warning if we had to use fallback (for debugging)
-  if (urlTab && !availableTabValues.includes(urlTab as TabValue)) {
-    console.warn(`Invalid tab "${urlTab}" for role "${userRole}". Using fallback: "${fallbackTab}"`);
-  }
-  
-  return fallbackTab;
-};
 
 function SearchPageContent() {
   const searchParams = useSearchParams();
-  const router = useRouter();
   const { user } = useUser();
   const effectiveRole = user?.publicMetadata?.role as string;
   
+  // Get subscription features
+  const features = useFeatureAccess();
+  const hasAdvancedSearch = features.advancedSearch;
+
   // Dynamic title and subtitle based on user role
   const getTitle = () => {
     switch (effectiveRole) {
@@ -230,335 +61,60 @@ function SearchPageContent() {
     }
   };
 
-  const [activeTab, setActiveTab] = useState<TabValue>(
-    getValidTab(effectiveRole, searchParams?.get('tab'))
-  );
+  // Initialize hooks
+  const searchState = useSearchState({
+    effectiveRole,
+    initialTab: getValidTab(effectiveRole, searchParams?.get('tab'))
+  });
 
-  // Filter states
-  const [selectedSports, setSelectedSports] = useState<FilterOption[]>([]);
-  const [selectedDivisions, setSelectedDivisions] = useState<FilterOption[]>([]);
-  const [selectedCountries, setSelectedCountries] = useState<FilterOption[]>([
-    { value: 'United States', label: 'United States' } // Default to United States
-  ]);
-  const [selectedStates, setSelectedStates] = useState<FilterOption[]>([]);
-  
-  // Advanced filter states
-  const [selectedPositions, setSelectedPositions] = useState<FilterOption[]>([]);
-  const [selectedGraduatingClasses, setSelectedGraduatingClasses] = useState<FilterOption[]>([]);
-  const [selectedConferences, setSelectedConferences] = useState<FilterOption[]>([]);
-  const [minHeight, setMinHeight] = useState<number>(48); // 4'0" in inches (updated from 60)
-  const [minWeight, setMinWeight] = useState<number>(50); // 50 lbs (updated from 100)
-  const [verifiedFilter, setVerifiedFilter] = useState<boolean | null>(null); // null = all, true = verified only
+  const filterOptions = useFilterOptions({
+    selectedSports: searchState.selectedSports,
+    selectedDivisions: searchState.selectedDivisions,
+    selectedCountries: searchState.selectedCountries
+  });
 
-  // Data and loading states
-  const [loading, setLoading] = useState(false);
-  const [initialLoading, setInitialLoading] = useState(false);
-  const [hasMore, setHasMore] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [page, setPage] = useState(1);
-  
-  // Get subscription features using the custom hook
-  const features = useFeatureAccess();
-  const hasAdvancedSearch = features.advancedSearch;
+  const searchAPI = useSearchAPI({
+    effectiveRole,
+    selectedSports: searchState.selectedSports,
+    selectedDivisions: searchState.selectedDivisions,
+    selectedCountries: searchState.selectedCountries,
+    selectedStates: searchState.selectedStates,
+    selectedPositions: searchState.selectedPositions,
+    selectedGraduatingClasses: searchState.selectedGraduatingClasses,
+    selectedConferences: searchState.selectedConferences,
+    minHeight: searchState.minHeight,
+    minWeight: searchState.minWeight,
+    verifiedFilter: searchState.verifiedFilter,
+    showStatesFilter: filterOptions.showStatesFilter,
+    setAllUsers: searchState.setAllUsers,
+    setHasSearched: searchState.setHasSearched,
+    setPage: searchState.setPage,
+    setHasMore: searchState.setHasMore,
+    setLoading: searchState.setLoading,
+    setInitialLoading: searchState.setInitialLoading,
+    setError: searchState.setError
+  });
 
-  // Filter states
-  const [showMobileFilters, setShowMobileFilters] = useState(false);
-  const [hasSearched, setHasSearched] = useState(false);
-  const [showDiscoverButton, setShowDiscoverButton] = useState(false);
-  const [clearingFilters, setClearingFilters] = useState(false);
+  const profileNavigation = useProfileNavigation({
+    allUsers: searchState.allUsers,
+    saveSearchState: searchState.saveSearchState
+  });
 
-  // Refs for infinite scroll and preventing double initial load
-  const observerRef = useRef<IntersectionObserver | null>(null);
-  const loadMoreRef = useRef<HTMLDivElement | null>(null);
-  const initialLoadTriggered = useRef(false);
-
+  // Get available tabs based on user role
   const availableTabs = useMemo(() =>
     getAvailableTabs(effectiveRole)
-    , [effectiveRole]);
-
-  // Filter options
-  const sportsOptions = useMemo(() =>
-    getSportsList().map(sport => ({
-      value: sport,
-      label: sport
-    }))
-    , []);
-
-  const divisionsOptions = useMemo(() =>
-    ORDERED_DIVISIONS.map((division: string) => ({
-      value: division,
-      label: division
-    }))
-    , []);
-
-  const statesOptions = useMemo(() =>
-    US_STATES.map(state => ({
-      value: state,
-      label: state
-    }))
-    , []);
-
-  // Country options
-  const countryOptions = useMemo(() =>
-    COUNTRIES.map(country => ({
-      value: country,
-      label: country
-    }))
-    , []);
-
-  // Check if United States is selected to show states
-  const showStatesFilter = useMemo(() =>
-    selectedCountries.some(country => country.value === 'United States')
-    , [selectedCountries]);
-
-  // Advanced filter options
-  const positionsOptions = useMemo(() =>
-    getPositionsForSports(selectedSports)
-    , [selectedSports]);
-
-  const graduatingClassOptions = useMemo(() =>
-    getGraduationYearOptions()
-    , []);
-
-  const conferencesOptions = useMemo(() =>
-    getConferencesForDivisions(selectedDivisions)
-    , [selectedDivisions]);
-
-  // Load users function - only called when discover button is clicked
-  const loadUsers = useCallback(async (pageNum: number, isNewSearch = false) => {
-    try {
-      if (isNewSearch) {
-        setInitialLoading(true);
-        setAllUsers([]); // Clear previous results
-        setHasSearched(true);
-        setPage(1); // Reset page state immediately for new searches
-      } else {
-        setLoading(true);
-      }
-      setError(null);
-
-      const windowWithClerk = window as unknown as {
-        Clerk?: {
-          session?: {
-            getToken: () => Promise<string>;
-          };
-        };
-      };
-      const token = await windowWithClerk.Clerk?.session?.getToken();
-
-      // Prepare the search parameters
-      const searchParams = {
-        page: pageNum.toString(),
-        pageSize: '10', // Show 10 profiles per load
-        sports: selectedSports.map(sport => sanitizeText(sport.value)),
-        divisions: selectedDivisions.map(div => sanitizeText(div.value)),
-        countries: selectedCountries.map(country => sanitizeText(country.value)),
-        states: showStatesFilter ? selectedStates.map(state => sanitizeText(state.value)) : [],
-        positions: effectiveRole !== 'athlete' ? selectedPositions.map(pos => sanitizeText(pos.value)) : [],
-        graduatingClasses: effectiveRole !== 'athlete' ? selectedGraduatingClasses.map(gc => sanitizeText(gc.value)) : [],
-        conferences: selectedConferences.map(conf => sanitizeText(conf.value)),
-        minHeight: effectiveRole !== 'athlete' ? minHeight.toString() : '48',
-        minWeight: effectiveRole !== 'athlete' ? minWeight.toString() : '0',
-        verified: verifiedFilter
-      };
-
-      // Calculate approximate URL length if we were to use GET
-      const params = new URLSearchParams({
-        page: searchParams.page,
-        pageSize: searchParams.pageSize
-      });
-
-      searchParams.sports.forEach(sport => params.append('sports', sport));
-      searchParams.divisions.forEach(div => params.append('divisions', div));
-      searchParams.countries.forEach(country => params.append('countries', country));
-      if (showStatesFilter) {
-        searchParams.states.forEach(state => params.append('states', state));
-      }
-      searchParams.positions.forEach(pos => params.append('positions', pos));
-      searchParams.graduatingClasses.forEach(gc => params.append('graduatingClasses', gc));
-      searchParams.conferences.forEach(conf => params.append('conferences', conf));
-      if (minHeight > 48) params.append('minHeight', searchParams.minHeight); // Updated from 60 to 48
-      if (minWeight > 50) params.append('minWeight', searchParams.minWeight); // Updated from 100 to 50
-      if (verifiedFilter !== null) params.append('verified', verifiedFilter.toString());
-
-      const baseUrl = '/api/discover';
-      const estimatedUrlLength = baseUrl.length + params.toString().length + 1; // +1 for '?'
-
-      // Use POST if URL would be too long (> 3000 chars to be safe)
-      const usePost = estimatedUrlLength > 3000;
-
-      let response: Response;
-
-      // Helper to send POST request (avoids duplication)
-      const requestWithPost = async () =>
-        fetch('/api/discover', {
-          method: 'POST',
-          headers: createSecureHeaders(token || ''),
-          body: JSON.stringify({
-            page: pageNum,
-            pageSize: 10,
-            sports: selectedSports.map(sport => sanitizeText(sport.value)),
-            divisions: selectedDivisions.map(div => sanitizeText(div.value)),
-            countries: selectedCountries.map(country => sanitizeText(country.value)),
-            states: showStatesFilter ? selectedStates.map(state => sanitizeText(state.value)) : [],
-            positions: effectiveRole !== 'athlete' ? selectedPositions.map(pos => sanitizeText(pos.value)) : [],
-            graduatingClasses: effectiveRole !== 'athlete' ? selectedGraduatingClasses.map(gc => sanitizeText(gc.value)) : [],
-            conferences: selectedConferences.map(conf => sanitizeText(conf.value)),
-            minHeight: effectiveRole !== 'athlete' && minHeight > 48 ? minHeight : undefined,
-            minWeight: effectiveRole !== 'athlete' && minWeight > 50 ? minWeight : undefined,
-            verified: verifiedFilter
-          })
-        });
-
-      // Helper to produce better error messages
-      const ensureOk = async (res: Response) => {
-        if (res.ok) return;
-        const data = await res.json().catch(() => ({}));
-        const message = data?.error || data?.message || 'Failed to load users';
-        throw new Error(message);
-      };
-
-      if (usePost) {
-        // Use POST request for large filter sets
-        response = await requestWithPost();
-      } else {
-        // Use GET request for smaller filter sets
-        response = await fetch(`${baseUrl}?${params.toString()}`, {
-          headers: createSecureHeaders(token || ''),
-        });
-      }
-
-      if (!response.ok) {
-        // Check if it's a URL too long error and retry with POST
-        if (response.status === 414 && !usePost) {
-          response = await requestWithPost();
-          if (!response.ok) {
-            await ensureOk(response);
-          }
-        } else {
-          await ensureOk(response);
-        }
-      }
-
-      const data: DiscoverResponse = await response.json();
-
-      if (isNewSearch) {
-        setAllUsers(data.results);
-        // Page is already set to 1 at the beginning of the function
-      } else {
-        setAllUsers(prev => [...prev, ...data.results]);
-        setPage(pageNum + 1); // Update page for next load
-      }
-
-      setHasMore(data.results.length === 10); // If we got less than 10, no more pages
-
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load users');
-    } finally {
-      setLoading(false);
-      setInitialLoading(false);
-    }
-  }, [selectedSports, selectedDivisions, selectedCountries, selectedStates, selectedPositions, selectedGraduatingClasses, selectedConferences, minHeight, minWeight, verifiedFilter, showStatesFilter, effectiveRole]);
-
-  // Store all results from the search
-  const [allUsers, setAllUsers] = useState<DiscoverUser[]>([]);
-
-  // Cache key for search state
-  const CACHE_KEY = 'discover_search_state_v3';
-
-  // Save current search state to cache (filters only, not user data)
-  const saveSearchState = useCallback(() => {
-    const searchState = {
-      selectedSports,
-      selectedDivisions,
-      selectedCountries,
-      selectedStates,
-      selectedPositions,
-      selectedGraduatingClasses,
-      selectedConferences,
-      minHeight,
-      minWeight,
-      activeTab,
-      hasSearched,
-      timestamp: Date.now()
-    };
-    try {
-      const stateString = JSON.stringify(searchState);
-      localStorage.setItem(CACHE_KEY, stateString);
-    } catch (error) {
-      console.warn('Failed to save search state to cache:', error);
-    }
-  }, [selectedSports, selectedDivisions, selectedCountries, selectedStates, selectedPositions, selectedGraduatingClasses, selectedConferences, minHeight, minWeight, activeTab, hasSearched]);
-
-  // Load search state from cache (filters only)
-  const loadSearchState = useCallback(() => {
-    try {
-      const cachedState = localStorage.getItem(CACHE_KEY);
-      if (cachedState) {
-        const parsed = JSON.parse(cachedState);
-        const isRecent = Date.now() - (parsed.timestamp || 0) < 60 * 60 * 1000; // 1 hour for filters
-
-        if (isRecent) {
-          setSelectedSports(parsed.selectedSports || []);
-          setSelectedDivisions(parsed.selectedDivisions || []);
-          setSelectedCountries(parsed.selectedCountries || [{ value: 'United States', label: 'United States' }]);
-          setSelectedStates(parsed.selectedStates || []);
-          setSelectedPositions(parsed.selectedPositions || []);
-          setSelectedGraduatingClasses(parsed.selectedGraduatingClasses || []);
-          setSelectedConferences(parsed.selectedConferences || []);
-          setMinHeight(parsed.minHeight || 48);
-          setMinWeight(parsed.minWeight || 50);
-          setActiveTab(getValidTab(effectiveRole, parsed.activeTab));
-          setHasSearched(parsed.hasSearched || false);
-          return true; // Successfully loaded cache, but need to search fresh
-        }
-      }
-    } catch (error) {
-      console.warn('Failed to load search state from cache:', error);
-    }
-    return false; // No valid cache found
-  }, [effectiveRole]);
-
-  // Generate profile URL with slug
-  const generateProfileUrl = useCallback((user: DiscoverUser) => {
-    if (user.fullName) {
-      const slug = user.fullName.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
-      return `/profile/${slug}/${user.id}`;
-    }
-    // Fallback to old format if no fullName
-    return `/profile/${user.id}`;
-  }, []);
-
-  // Handle profile view with caching
-  const handleViewProfile = useCallback((userId: string) => {
-    saveSearchState();
-    
-    // Find the user in the current results to get their fullName
-    const user = allUsers.find(u => u.id === userId);
-    if (user && user.fullName) {
-      const profileUrl = generateProfileUrl(user);
-      router.push(profileUrl);
-    } else {
-      // Fallback to old format if user not found or no fullName
-      router.push(`/profile/${userId}`);
-    }
-  }, [saveSearchState, router, allUsers, generateProfileUrl]);
-
-  // Upgrade handler
-  const handleUpgradeClick = useCallback(() => {
-    router.push('/pricing');
-  }, [router]);
+  , [effectiveRole]);
 
   // Auto-load results when the page first loads
   useEffect(() => {
-    if (effectiveRole && !hasSearched && !initialLoading && !loading && !initialLoadTriggered.current) {
-      initialLoadTriggered.current = true;
+    if (effectiveRole && !searchState.hasSearched && !searchState.initialLoading && !searchState.loading && !searchState.initialLoadTriggered.current) {
+      searchState.initialLoadTriggered.current = true;
 
       // Try to load filters from cache first
-      loadSearchState();
+      searchState.loadSearchState();
 
       // Always fetch fresh data (even if cache loaded, we only cached filters)
-      loadUsers(1, true);
+      searchAPI.loadUsers(1, true);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [effectiveRole]); // Only depend on effectiveRole to prevent multiple triggers
@@ -566,1087 +122,200 @@ function SearchPageContent() {
   // Show discover button when filters change (only if filters are applied)
   useEffect(() => {
     if (effectiveRole) {
-      const validTab = getValidTab(effectiveRole, activeTab);
-      if (validTab !== activeTab) {
-        setActiveTab(validTab);
+      const validTab = getValidTab(effectiveRole, searchState.activeTab);
+      if (validTab !== searchState.activeTab) {
+        searchState.setActiveTab(validTab);
       }
     }
-  }, [effectiveRole, activeTab]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [effectiveRole]); // Only depend on effectiveRole and activeTab
 
   // Show discover button when filters change (always show after first search)
   useEffect(() => {
     // Always show the button if user has searched at least once, regardless of filters
     // This allows users to go back to default filters or reapply changes
-    setShowDiscoverButton(hasSearched);
-  }, [selectedSports, selectedDivisions, selectedCountries, selectedStates, selectedPositions, selectedGraduatingClasses, selectedConferences, minHeight, minWeight, hasSearched, verifiedFilter]);
+    searchState.setShowDiscoverButton(searchState.hasSearched);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    searchState.selectedSports, 
+    searchState.selectedDivisions, 
+    searchState.selectedCountries, 
+    searchState.selectedStates, 
+    searchState.selectedPositions, 
+    searchState.selectedGraduatingClasses, 
+    searchState.selectedConferences, 
+    searchState.minHeight, 
+    searchState.minWeight, 
+    searchState.hasSearched, 
+    searchState.verifiedFilter
+  ]);
 
   // Save search state whenever important data changes
   useEffect(() => {
-    if (hasSearched && allUsers.length > 0) {
-      saveSearchState();
+    if (searchState.hasSearched && searchState.allUsers.length > 0) {
+      searchState.saveSearchState();
     }
-  }, [selectedSports, selectedDivisions, selectedStates, selectedPositions, selectedGraduatingClasses, selectedConferences, minHeight, minWeight, allUsers, activeTab, page, hasSearched, saveSearchState]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    searchState.selectedSports, 
+    searchState.selectedDivisions, 
+    searchState.selectedStates, 
+    searchState.selectedPositions, 
+    searchState.selectedGraduatingClasses, 
+    searchState.selectedConferences, 
+    searchState.minHeight, 
+    searchState.minWeight, 
+    searchState.allUsers, 
+    searchState.activeTab, 
+    searchState.page, 
+    searchState.hasSearched
+  ]);
 
   // Handle clearing filters - reload when filters are cleared
   useEffect(() => {
-    if (clearingFilters) {
-      setClearingFilters(false);
-      loadUsers(1, true);
+    if (searchState.clearingFilters) {
+      searchState.setClearingFilters(false);
+      searchAPI.loadUsers(1, true);
     }
-  }, [clearingFilters, loadUsers]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchState.clearingFilters]);
 
   // Filter displayed users based on active tab
   const filteredUsers = useMemo(() => {
-    if (!hasSearched || allUsers.length === 0) return [];
+    if (!searchState.hasSearched || searchState.allUsers.length === 0) return [];
 
-    const tabRole = getTabRole(activeTab);
+    const tabRole = getTabRole(searchState.activeTab);
     if (!tabRole) {
       // 'all' tab logic depends on user role
       if (effectiveRole === 'athlete') {
         // Athletes see only coaches and recruiters in 'all' tab
-        return allUsers.filter(user => user.role === 'coach' || user.role === 'recruiter');
+        return searchState.allUsers.filter(user => user.role === 'coach' || user.role === 'recruiter');
       }
       // For other roles, show all users
-      return allUsers;
+      return searchState.allUsers;
     }
 
-    return allUsers.filter(user => user.role === tabRole);
-  }, [allUsers, activeTab, hasSearched, effectiveRole]);
+    return searchState.allUsers.filter(user => user.role === tabRole);
+  }, [searchState.allUsers, searchState.activeTab, searchState.hasSearched, effectiveRole]);
 
   // Apply profile completeness sorting to filtered users
   const { sortedUsers: displayedUsers } = useProfileCompletenessSorting(filteredUsers);
 
   // Discover/Search function
   const handleDiscover = () => {
-    setShowMobileFilters(false);
+    searchState.setShowMobileFilters(false);
     // Keep showDiscoverButton as true to always show the button
-    loadUsers(1, true);
-  };
-
-  // Clear filters
-  const clearFilters = () => {
-    setClearingFilters(true);
-    setSelectedSports([]);
-    setSelectedDivisions([]);
-    setSelectedCountries([{ value: 'United States', label: 'United States' }]); // Reset to default
-    setSelectedStates([]);
-    setSelectedPositions([]);
-    setSelectedGraduatingClasses([]);
-    setSelectedConferences([]);
-    setMinHeight(48);
-    setMinWeight(50);
-    setVerifiedFilter(null); // Reset verification filter
-    setShowMobileFilters(false);
-    setError(null);
+    searchAPI.loadUsers(1, true);
   };
 
   // Infinite scroll setup
   useEffect(() => {
-    if (observerRef.current) {
-      observerRef.current.disconnect();
+    if (searchState.observerRef.current) {
+      searchState.observerRef.current.disconnect();
     }
 
-    observerRef.current = new IntersectionObserver(
+    searchState.observerRef.current = new IntersectionObserver(
       (entries) => {
-        if (entries[0].isIntersecting && hasMore && !loading && !initialLoading && hasSearched) {
+        if (entries[0].isIntersecting && searchState.hasMore && !searchState.loading && !searchState.initialLoading && searchState.hasSearched) {
           // Use current page state for loading next page
-          loadUsers(page, false);
+          searchAPI.loadUsers(searchState.page, false);
         }
       },
       { threshold: 0.1 }
     );
 
-    if (loadMoreRef.current) {
-      observerRef.current.observe(loadMoreRef.current);
+    if (searchState.loadMoreRef.current) {
+      searchState.observerRef.current.observe(searchState.loadMoreRef.current);
     }
 
     return () => {
-      if (observerRef.current) {
-        observerRef.current.disconnect();
+      if (searchState.observerRef.current) {
+        searchState.observerRef.current.disconnect();
       }
     };
-  }, [hasMore, loading, initialLoading, page, loadUsers, hasSearched]);
+  }, [searchState.hasMore, searchState.loading, searchState.initialLoading, searchState.page, searchAPI, searchState.hasSearched, searchState.observerRef, searchState.loadMoreRef]);
 
-  // Profile image helper
-  const getProfileImageUrl = (profileImage: string | null) => {
-    if (!profileImage) return null;
-
-    if (profileImage.startsWith('http')) {
-      return profileImage;
-    }
-
-    const baseUrl = process.env.NEXT_PUBLIC_R2_PUBLIC_URL || 'https://pub-19c0754937db426497ca014f0e2a297c.r2.dev';
-    return `${baseUrl}/${profileImage}`;
-  };
-
-  // Helper to format education level consistently  
-  const formatEducationLevel = (educationLevel?: string) => {
-    if (educationLevel === 'high_school') return 'High School';
-    if (educationLevel === 'associate') return 'Associate';
-    if (educationLevel === 'undergraduate') return 'Undergraduate';
-    if (educationLevel === 'graduate') return 'Graduate';
-    return educationLevel;
-  };
-
-  // Helper to format division consistently
-  const formatDivision = (division?: string) => {
-    if (division === 'high_school') return 'High School';
-    return division;
-  };
-
-  // Role badge helper with division-based color coding
-  const getRoleBadge = (user: DiscoverUser) => {
-    let roleText = '';
-    let roleColor = '';
-
-    if (user.role === 'athlete') {
-      if (user.educationLevel === 'high_school') {
-        roleText = 'HS Athlete';
-        roleColor = 'bg-blue-500/10 text-blue-700 border-blue-200 dark:bg-blue-500/20 dark:text-blue-300 dark:border-blue-700';
-      } else if (user.educationLevel === 'associate') {
-        roleText = 'JC Athlete';
-        roleColor = 'bg-orange-500/10 text-orange-700 border-orange-200 dark:bg-orange-500/20 dark:text-orange-300 dark:border-orange-700';
-      } else if (user.educationLevel === 'undergraduate' || user.educationLevel === 'graduate') {
-        roleText = 'College Athlete';
-        roleColor = 'bg-purple-500/10 text-purple-700 border-purple-200 dark:bg-purple-500/20 dark:text-purple-300 dark:border-purple-700';
-      } else {
-        roleText = 'Athlete';
-        roleColor = 'bg-gray-500/10 text-gray-700 border-gray-200 dark:bg-gray-500/20 dark:text-gray-300 dark:border-gray-700';
-      }
-    } else if (user.role === 'coach') {
-      if (user.division === 'High School') {
-        roleText = 'HS Coach';
-        roleColor = 'bg-blue-500/10 text-blue-700 border-blue-200 dark:bg-blue-500/20 dark:text-blue-300 dark:border-blue-700';
-      } else if (user.division === 'Club Sports') {
-        roleText = 'Club Coach';
-        roleColor = 'bg-green-500/10 text-green-700 border-green-200 dark:bg-green-500/20 dark:text-green-300 dark:border-green-700';
-      } else if (user.division === 'Community College' || user.division === 'Junior College' || user.division?.includes('NJCAA')) {
-        roleText = 'JC Coach';
-        roleColor = 'bg-orange-500/10 text-orange-700 border-orange-200 dark:bg-orange-500/20 dark:text-orange-300 dark:border-orange-700';
-      } else if (user.division?.includes('NCAA') || user.division === 'NAIA') {
-        roleText = 'College Coach';
-        roleColor = 'bg-purple-500/10 text-purple-700 border-purple-200 dark:bg-purple-500/20 dark:text-purple-300 dark:border-purple-700';
-      } else {
-        roleText = 'Coach';
-        roleColor = 'bg-gray-500/10 text-gray-700 border-gray-200 dark:bg-gray-500/20 dark:text-gray-300 dark:border-gray-700';
-      }
-    } else if (user.role === 'recruiter') {
-      if (user.division === 'High School') {
-        roleText = 'HS Recruiter';
-        roleColor = 'bg-blue-500/10 text-blue-700 border-blue-200 dark:bg-blue-500/20 dark:text-blue-300 dark:border-blue-700';
-      } else if (user.division === 'Club Sports') {
-        roleText = 'Club Recruiter';
-        roleColor = 'bg-green-500/10 text-green-700 border-green-200 dark:bg-green-500/20 dark:text-green-300 dark:border-green-700';
-      } else if (user.division === 'Community College' || user.division === 'Junior College' || user.division?.includes('NJCAA')) {
-        roleText = 'JC Recruiter';
-        roleColor = 'bg-orange-500/10 text-orange-700 border-orange-200 dark:bg-orange-500/20 dark:text-orange-300 dark:border-orange-700';
-      } else if (user.division?.includes('NCAA') || user.division === 'NAIA') {
-        roleText = 'College Recruiter';
-        roleColor = 'bg-purple-500/10 text-purple-700 border-purple-200 dark:bg-purple-500/20 dark:text-purple-300 dark:border-purple-700';
-      } else {
-        roleText = 'Recruiter';
-        roleColor = 'bg-gray-500/10 text-gray-700 border-gray-200 dark:bg-gray-500/20 dark:text-gray-300 dark:border-gray-700';
-      }
-    }
-
-    return (
-      <Badge
-        variant="outline"
-        className={cn("text-xs font-medium px-1.5 py-0.5 border whitespace-nowrap sm:px-2", roleColor)}
-      >
-        {roleText}
-      </Badge>
-    );
-  };
-
-  // User card component
-  const renderUserCard = (user: DiscoverUser) => (
-    <Card key={user.id} className="group hover:shadow-xl transition-all duration-300 border border-border shadow-md bg-card hover:bg-card/90 hover:border-[#01ae79]/50 h-full flex flex-col">
-      <CardContent className="p-4 flex-1 flex flex-col">
-        <div className="flex-1 space-y-3">
-          {/* Header with Avatar, Name, and Badge */}
-          <div className="flex items-start gap-3">
-            {/* Avatar - Clickable */}
-            <a
-              href={generateProfileUrl(user)}
-              className="relative flex-shrink-0 cursor-pointer hover:opacity-80 transition-opacity block"
-              onClick={(e) => {
-                e.preventDefault();
-                handleViewProfile(user.id);
-              }}
-            >
-              <Avatar className="h-12 w-12 sm:h-14 sm:w-14 ring-2 ring-[#01ae79]/30 border-2 border-border">
-                <AvatarImage
-                  src={getProfileImageUrl(user.profileImage) || undefined}
-                  alt={user.fullName || 'User'}
-                  className="object-cover"
-                />
-                <AvatarFallback className="bg-gradient-to-br from-[#01ae79] to-emerald-600 text-white font-semibold text-sm sm:text-base">
-                  {user.fullName ? user.fullName.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() : 'UN'}
-                </AvatarFallback>
-              </Avatar>
-                {user.isVerified && (
-                 <div className="absolute -bottom-1 -right-1 bg-[#01ae79] rounded-full p-1 border-2 border-background">
-                   <Shield className="h-3 w-3 text-white" />
-                 </div>
-               )}
-              {!user.isVerified && (
-                <div className="absolute -bottom-1 -right-1 bg-orange-500 rounded-full p-1 border-2 border-background">
-                  <Shield className="h-3 w-3 text-white opacity-95" />
-                </div>
-              )}
-            </a>
-
-            {/* Name, Organization and Badge */}
-            <div className="flex-1 min-w-0 space-y-1.5">
-              <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0 flex-1 space-y-1">
-                  <a
-                    href={generateProfileUrl(user)}
-                    className="font-semibold text-base text-card-foreground leading-tight break-words line-clamp-2 cursor-pointer hover:text-[#01ae79] transition-colors block"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      handleViewProfile(user.id);
-                    }}
-                  >
-                    {user.fullName || 'Unknown User'}
-                  </a>
-                  {user.organizationName && (
-                    <p className="text-sm text-muted-foreground font-medium leading-tight break-words line-clamp-2">
-                      {user.organizationName}
-                    </p>
-                  )}
-                  {/* Title/Position for coaches/recruiters */}
-                  {user.title && (user.role === 'coach' || user.role === 'recruiter') && (
-                    <div className="flex items-center text-muted-foreground">
-                      <span className="font-medium text-sm">{user.title}</span>
-                    </div>
-                  )}
-                </div>
-                <div className="flex-shrink-0 ml-2">
-                  {getRoleBadge(user)}
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Information Grid */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-2 text-sm">
-            {/* Sport */}
-            {user.sport && (  
-              <div className="flex items-center text-muted-foreground col-span-full">
-                <Building2 className="h-4 w-4 mr-2 text-[#01ae79] flex-shrink-0" />
-                <span className="font-medium">{user.sport}</span>
-              </div>
-            )}
-
-            {/* Location with Country */}
-            {(user.city || user.state || user.country) && (
-              <div className="flex items-center text-muted-foreground col-span-full">
-                <MapPin className="h-4 w-4 mr-2 text-[#01ae79] flex-shrink-0" />
-                <span className="font-medium">
-                  {[user.city, user.state, user.country !== 'United States' ? user.country : null]
-                    .filter(Boolean)
-                    .join(', ')
-                  }
-                </span>
-              </div>
-            )}
-
-            {/* Division/Education Level */}
-            {(user.division || user.educationLevel) && (
-              <div className="flex items-center text-muted-foreground">
-                <GraduationCap className="h-4 w-4 mr-2 text-[#01ae79] flex-shrink-0" />
-                <span className="font-medium">{formatDivision(user.division) || formatEducationLevel(user.educationLevel)}</span>
-              </div>
-            )}
-
-            {/* Scholarships Available for Coaches and Recruiters */}
-            {(user.role === 'coach' || user.role === 'recruiter') && user.recruitingNeeds?.scholarshipsAvailable !== null && user.recruitingNeeds?.scholarshipsAvailable !== undefined && (
-              <div className="flex items-center text-muted-foreground">
-                <Target className="h-4 w-4 mr-2 text-[#01ae79] flex-shrink-0" />
-                <span className="font-medium">Scholarships: {user.recruitingNeeds.scholarshipsAvailable}</span>
-              </div>
-            )}
-
-            {/* Athlete-specific: Height & Weight */}
-            {user.role === 'athlete' && (user.height || user.weight) && (
-              <div className="flex items-center text-muted-foreground">
-                <User className="h-4 w-4 mr-2 text-[#01ae79] flex-shrink-0" />
-                <span className="font-medium">
-                  {[
-                    user.height,
-                    user.weight ? `${user.weight} lbs` : null
-                  ].filter(Boolean).join(' / ')}
-                </span>
-              </div>
-            )}
-
-            {/* Graduation Year */}
-            {user.role === 'athlete' && user.graduationYear && (
-              <div className="flex items-center text-muted-foreground">
-                <Clock className="h-4 w-4 mr-2 text-[#01ae79] flex-shrink-0" />
-                <span className="font-medium">Class of {user.graduationYear}</span>
-              </div>
-            )}
-
-            {/* Positions for athletes */}
-            {user.role === 'athlete' && user.positions && user.positions.length > 0 && (
-              <div className="flex items-center text-muted-foreground col-span-full">
-                <Target className="h-4 w-4 mr-2 text-[#01ae79] flex-shrink-0" />
-                <span className="font-medium">{user.positions.join(', ')}</span>
-              </div>
-            )}
-
-            {/* Student Classifications for Coaches and Recruiters */}
-            {(user.role === 'coach' || user.role === 'recruiter') && user.recruitingNeeds && user.recruitingNeeds.studentClassifications && user.recruitingNeeds.studentClassifications.length > 0 && (
-              <div className="flex items-center text-muted-foreground col-span-full">
-                <Users className="h-4 w-4 mr-2 text-[#01ae79] flex-shrink-0" />
-                <span className="font-medium">Looking for: {user.recruitingNeeds.studentClassifications.map(classification => {
-                  switch (classification) {
-                    case 'high_school': return 'High School';
-                    case 'university_transfers': return 'University Transfers';
-                    case 'juco_students': return 'JUCO Students';
-                    case 'graduate_transfers': return 'Graduate Transfers';
-                    case 'international_students': return 'International Students';
-                    default: return classification;
-                  }
-                }).join(', ')}</span>
-              </div>
-            )}
-
-            {/* Positions Needed for Coaches and Recruiters */}
-            {(user.role === 'coach' || user.role === 'recruiter') && user.recruitingNeeds && user.recruitingNeeds.positions && user.recruitingNeeds.positions.length > 0 && (
-              <div className="flex items-center text-muted-foreground col-span-full">
-                <Target className="h-4 w-4 mr-2 text-[#01ae79] flex-shrink-0" />
-                <span className="font-medium">Positions in need: {user.recruitingNeeds.positions.join(', ')}</span>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Action Button - Always at bottom with consistent positioning */}
-        <div className="pt-2 mt-auto">
-          {user.hasPendingRequest ? (
-            <div className="w-full bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 border-0 shadow-sm transition-all duration-200 font-medium py-2 text-sm rounded-md flex items-center justify-center">
-              <Clock className="h-4 w-4 mr-2" />
-              Request Sent
-            </div>
-          ) : user.hasIncomingRequest ? (
-            <a
-              href={generateProfileUrl(user)}
-              className="w-full bg-amber-100 hover:bg-amber-200 text-amber-700 dark:bg-amber-900/30 dark:hover:bg-amber-900/40 dark:text-amber-400 border border-amber-200 dark:border-amber-700 shadow-sm hover:shadow-md transition-all duration-200 font-medium py-2 text-sm rounded-md flex items-center justify-center no-underline"
-              onClick={(e) => {
-                e.preventDefault();
-                handleViewProfile(user.id);
-              }}
-            >
-              <Users className="h-4 w-4 mr-2" />
-              <span className="hidden sm:inline">Connection Request Received - View Profile</span>
-              <span className="sm:hidden">Request Received</span>
-            </a>
-          ) : (
-            <a
-              href={generateProfileUrl(user)}
-              className="w-full bg-[#01ae79] hover:bg-[#01ae79]/90 text-white border-0 shadow-sm hover:shadow-md transition-all duration-200 font-medium py-2 text-sm rounded-md flex items-center justify-center no-underline"
-              onClick={(e) => {
-                e.preventDefault();
-                handleViewProfile(user.id);
-              }}
-            >
-              <Send className="h-4 w-4 mr-2" />
-              View Profile
-            </a>
-          )}
-        </div>
-      </CardContent>
-    </Card>
-  );
-
-  // Active filters count
-  const activeFiltersCount = selectedSports.length + 
-                           selectedDivisions.length + 
-                           (selectedCountries.length > 1 ? selectedCountries.length : 0) + // Only count if more than United States
-                           selectedStates.length +
-                           (effectiveRole !== 'athlete' ? selectedPositions.length : 0) +
-                           (effectiveRole !== 'athlete' ? selectedGraduatingClasses.length : 0) +
-                           selectedConferences.length +
-                           (effectiveRole !== 'athlete' && minHeight > 48 ? 1 : 0) +
-                           (effectiveRole !== 'athlete' && minWeight > 50 ? 1 : 0) +
-                           (verifiedFilter !== null ? 1 : 0);
+  const title = getTitle();
+  const subtitle = getSubtitle();
 
   return (
     <div className="bg-background p-4 md:p-6">
       <div className="max-w-7xl mx-auto">
         <div className="flex flex-col xl:flex-row gap-6">
-          {/* Desktop Filters Sidebar */}
-          <div className="hidden xl:block w-full xl:w-80 flex-shrink-0">
-            <div className="bg-card rounded-lg shadow-sm border border-border p-6 sticky top-6">
-              <div className="flex items-center justify-between mb-6">
-                <div>
-                  <h1 className="text-3xl md:text-4xl font-bold text-foreground mb-1">
-                    {getTitle()}
-                  </h1>
-                  <p className="text-base md:text-lg text-muted-foreground">
-                    {getSubtitle()}
-                  </p>
-                </div>
-
-                {/* Mobile Filter Button */}
-                <Button
-                  onClick={() => setShowMobileFilters(!showMobileFilters)}
-                  variant="outline"
-                  className="xl:hidden relative"
-                >
-                  <Filter className="h-4 w-4 mr-2" />
-                  Filters
-                  {activeFiltersCount > 0 && (
-                    <Badge className="ml-2 bg-[#01ae79] text-white">
-                      {activeFiltersCount}
-                    </Badge>
-                  )}
-                </Button>
-              </div>
-
-              <div className="flex items-center justify-between mb-4 h-6">
-                <h2 className="text-sm font-medium text-foreground">Filters</h2>
-                {activeFiltersCount > 0 && (
-                  <Button
-                    onClick={clearFilters}
-                    variant="ghost"
-                    size="sm"
-                    className="text-muted-foreground hover:text-foreground text-xs"
-                  >
-                    Clear All
-                  </Button>
-                )}
-              </div>
-
-              <div className="space-y-1.5 sm:space-y-4 min-h-[300px]">
-                {/* Sports Filter */}
-                <div>
-                  <label className="block text-sm font-medium text-foreground mb-2">
-                    Sports
-                    {(effectiveRole === 'coach' || effectiveRole === 'recruiter') && (
-                      <span className="ml-2 text-xs text-muted-foreground">
-                        💡 Select one sport to filter by positions
-                      </span>
-                    )}
-                  </label>
-                  <MultiSelectFilter
-                    options={sportsOptions}
-                    selected={selectedSports}
-                    onSelectionChange={setSelectedSports}
-                    placeholder="Select sports..."
-                    searchPlaceholder="Search sports..."
-                  />
-                </div>
-
-                {/* Divisions Filter */}
-                <div>
-                  <label className="block text-sm font-medium text-foreground mb-2">
-                    Division/Level
-                  </label>
-                  <MultiSelectFilter
-                    options={divisionsOptions}
-                    selected={selectedDivisions}
-                    onSelectionChange={setSelectedDivisions}
-                    placeholder="Select divisions..."
-                    searchPlaceholder="Search divisions..."
-                  />
-                </div>
-
-                {/* Country Filter */}
-                <div>
-                  <label className="block text-sm font-medium text-foreground mb-2">
-                    Country
-                  </label>
-                  <MultiSelectFilter
-                    options={countryOptions}
-                    selected={selectedCountries}
-                    onSelectionChange={setSelectedCountries}
-                    placeholder="Select countries..."
-                    searchPlaceholder="Search countries..."
-                  />
-                </div>
-
-                {/* States Filter - Only show if United States is selected */}
-                {showStatesFilter && (
-                  <div>
-                    <label className="block text-sm font-medium text-foreground mb-2">
-                      US States
-                    </label>
-                    <MultiSelectFilter
-                      options={statesOptions}
-                      selected={selectedStates}
-                      onSelectionChange={setSelectedStates}
-                      placeholder="Select states..."
-                      searchPlaceholder="Search states..."
-                    />
-                  </div>
-                )}
-
-                {/* Advanced Filters Component */}
-                <AdvancedFilters
-                  effectiveRole={effectiveRole}
-                  hasAdvancedSearch={hasAdvancedSearch}
-                  graduatingClassOptions={graduatingClassOptions}
-                  positionsOptions={positionsOptions}
-                  conferencesOptions={conferencesOptions}
-                  selectedGraduatingClasses={selectedGraduatingClasses}
-                  selectedPositions={selectedPositions}
-                  selectedConferences={selectedConferences}
-                  selectedSports={selectedSports}
-                  selectedDivisions={selectedDivisions}
-                  minHeight={minHeight}
-                  minWeight={minWeight}
-                  verifiedFilter={verifiedFilter}
-                  setSelectedGraduatingClasses={setSelectedGraduatingClasses}
-                  setSelectedPositions={setSelectedPositions}
-                  setSelectedConferences={setSelectedConferences}
-                  setMinHeight={setMinHeight}
-                  setMinWeight={setMinWeight}
-                  setVerifiedFilter={setVerifiedFilter}
-                  handleUpgradeClick={handleUpgradeClick}
-                />
-
-                {showDiscoverButton && (
-                  <div className="flex gap-3">
-                    <Button
-                      onClick={clearFilters}
-                      variant="outline"
-                      className="flex-1"
-                      disabled={activeFiltersCount === 0}
-                    >
-                      Clear All
-                    </Button>
-                    <Button
-                      onClick={handleDiscover}
-                      className="flex-1 bg-[#01ae79] hover:bg-[#01ae79]/90 text-white"
-                    >
-                      <Search className="h-4 w-4 mr-0.5" />
-                      Apply Filters
-                    </Button>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
+          {/* Search Filters Component */}
+          <SearchFilters
+            effectiveRole={effectiveRole}
+            showMobileFilters={searchState.showMobileFilters}
+            setShowMobileFilters={searchState.setShowMobileFilters}
+            activeFiltersCount={searchState.activeFiltersCount}
+            showDiscoverButton={searchState.showDiscoverButton}
+            selectedSports={searchState.selectedSports}
+            selectedDivisions={searchState.selectedDivisions}
+            selectedCountries={searchState.selectedCountries}
+            selectedStates={searchState.selectedStates}
+            selectedPositions={searchState.selectedPositions}
+            selectedGraduatingClasses={searchState.selectedGraduatingClasses}
+            selectedConferences={searchState.selectedConferences}
+            minHeight={searchState.minHeight}
+            minWeight={searchState.minWeight}
+            verifiedFilter={searchState.verifiedFilter}
+            showStatesFilter={filterOptions.showStatesFilter}
+            sportsOptions={filterOptions.sportsOptions}
+            divisionsOptions={filterOptions.divisionsOptions}
+            countryOptions={filterOptions.countryOptions}
+            statesOptions={filterOptions.statesOptions}
+            graduatingClassOptions={filterOptions.graduatingClassOptions}
+            positionsOptions={filterOptions.positionsOptions}
+            conferencesOptions={filterOptions.conferencesOptions}
+            setSelectedSports={searchState.setSelectedSports}
+            setSelectedDivisions={searchState.setSelectedDivisions}
+            setSelectedCountries={searchState.setSelectedCountries}
+            setSelectedStates={searchState.setSelectedStates}
+            setSelectedPositions={searchState.setSelectedPositions}
+            setSelectedGraduatingClasses={searchState.setSelectedGraduatingClasses}
+            setSelectedConferences={searchState.setSelectedConferences}
+            setMinHeight={searchState.setMinHeight}
+            setMinWeight={searchState.setMinWeight}
+            setVerifiedFilter={searchState.setVerifiedFilter}
+            hasAdvancedSearch={hasAdvancedSearch}
+            handleDiscover={handleDiscover}
+            clearFilters={searchState.clearFilters}
+            handleUpgradeClick={profileNavigation.handleUpgradeClick}
+            title={title}
+            subtitle={subtitle}
+          />
 
           {/* Mobile/Tablet Header - Only visible when sidebar is hidden */}
-          <div className="xl:hidden mb-4">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex-1">
-                <h1 className="text-3xl md:text-4xl font-bold text-foreground mb-1">
-                  {getTitle()}
-                </h1>
-                <p className="text-base md:text-lg text-muted-foreground">
-                  {getSubtitle()}
-                </p>
-              </div>
-
-              {/* Mobile Filter Button */}
-              <Button
-                onClick={() => setShowMobileFilters(!showMobileFilters)}
-                variant="outline"
-                className="relative flex-shrink-0 w-[120px] justify-center"
-              >
-                <Filter className="h-4 w-4 mr-2" />
-                <span className="truncate">
-                  {activeFiltersCount > 0 ? `${activeFiltersCount} Filter${activeFiltersCount !== 1 ? 's' : ''}` : 'Filters'}
-                </span>
-              </Button>
-            </div>
-          </div>
-
-          {/* Mobile/Tablet Filters Overlay */}
-          {showMobileFilters && (
-            <div className="fixed inset-0 bg-black/20 backdrop-blur-sm z-50 xl:hidden flex items-center justify-center p-4">
-              <div className="w-full max-w-md bg-card rounded-lg p-6 max-h-[90vh] overflow-y-auto">
-                <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-lg font-semibold text-foreground">Filters</h2>
-                  <Button
-                    onClick={() => setShowMobileFilters(false)}
-                    variant="ghost"
-                    size="sm"
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
-                </div>
-
-                <div className="space-y-1.5 sm:space-y-4 min-h-[400px]">
-                  {/* Sports Filter */}
-                  <div>
-                    <label className="block text-sm font-medium text-foreground mb-2">
-                      Sports
-                      {(effectiveRole === 'coach' || effectiveRole === 'recruiter') && (
-                        <span className="ml-2 text-xs text-muted-foreground">
-                          💡 Select one sport to filter by positions
-                        </span>
-                      )}
-                    </label>
-                    <MultiSelectFilter
-                      options={sportsOptions}
-                      selected={selectedSports}
-                      onSelectionChange={setSelectedSports}
-                      placeholder="Select sports..."
-                      searchPlaceholder="Search sports..."
-                    />
-                  </div>
-
-                  {/* Divisions Filter */}
-                  <div>
-                    <label className="block text-sm font-medium text-foreground mb-2">
-                      Division/Level
-                    </label>
-                    <MultiSelectFilter
-                      options={divisionsOptions}
-                      selected={selectedDivisions}
-                      onSelectionChange={setSelectedDivisions}
-                      placeholder="Select divisions..."
-                      searchPlaceholder="Search divisions..."
-                    />
-                  </div>
-
-                  {/* Country Filter */}
-                  <div>
-                    <label className="block text-sm font-medium text-foreground mb-2">
-                      Country
-                    </label>
-                    <MultiSelectFilter
-                      options={countryOptions}
-                      selected={selectedCountries}
-                      onSelectionChange={setSelectedCountries}
-                      placeholder="Select countries..."
-                      searchPlaceholder="Search countries..."
-                    />
-                  </div>
-
-                  {/* States Filter - Only show if United States is selected */}
-                  {showStatesFilter && (
-                    <div>
-                      <label className="block text-sm font-medium text-foreground mb-2">
-                        US States
-                      </label>
-                      <MultiSelectFilter
-                        options={statesOptions}
-                        selected={selectedStates}
-                        onSelectionChange={setSelectedStates}
-                        placeholder="Select states..."
-                        searchPlaceholder="Search states..."
-                      />
-                    </div>
-                  )}
-
-                  {/* Advanced Filters for Coaches/Recruiters/Admins viewing Athletes */}
-                  {(effectiveRole === 'coach' || effectiveRole === 'recruiter' || effectiveRole === 'admin') && (
-                    <>
-                      {/* Premium Overlay for Mobile */}
-                      {!hasAdvancedSearch && (
-                        <div className="border-t border-border pt-1 sm:pt-3 relative">
-                          <h3 className="text-sm font-medium text-foreground mb-1 sm:mb-3">Advanced Filters</h3>
-                          
-                          {/* Show filters in background with reduced opacity */}
-                          <div className="space-y-1.5 sm:space-y-4 opacity-40">
-                            {/* Height/Weight Preview */}
-                            <div className="space-y-2">
-                              <label className="block text-sm font-medium text-foreground">
-                                Physical Requirements
-                              </label>
-                              <div className="h-10 flex items-center px-3 py-2 border border-border rounded-md bg-muted/50 text-muted-foreground text-sm">
-                                Set minimum requirements...
-                              </div>
-                            </div>
-
-                            {/* Graduating Class Preview */}
-                            <div className="space-y-2">
-                              <label className="block text-sm font-medium text-foreground">
-                                Graduating Class
-                              </label>
-                              <div className="h-10 flex items-center px-3 py-2 border border-border rounded-md bg-muted/50 text-muted-foreground text-sm">
-                                Select graduation years...
-                              </div>
-                            </div>
-
-                            {/* Positions Preview */}
-                            <div className="space-y-2">
-                              <label className="text-sm font-medium text-foreground">
-                                Positions
-                              </label>
-                              <div className="h-10 flex items-center px-3 py-2 border border-border rounded-md bg-muted/50 text-muted-foreground text-sm">
-                                Upgrade to unlock positions
-                              </div>
-                            </div>
-
-                            {/* Conferences Preview */}
-                            <div className="space-y-2">
-                              <label className="text-sm font-medium text-foreground">
-                                Conferences
-                              </label>
-                              <div className="h-10 flex items-center px-3 py-2 border border-border rounded-md bg-muted/50 text-muted-foreground text-sm">
-                                Upgrade to unlock conferences
-                              </div>
-                            </div>
-                          </div>
-
-                          {/* Premium Overlay - Better contained */}
-                          <div className="absolute inset-0 bg-gradient-to-br from-background/20 via-background/15 to-background/20 backdrop-blur-[1px] rounded-lg border border-border/30 flex items-center justify-center z-10 overflow-hidden">
-                            <div className="text-center space-y-3 p-4 bg-background/95 rounded-lg border border-border/50 shadow-lg backdrop-blur-sm max-w-xs mx-auto">
-                              <div className="flex items-center justify-center space-x-2">
-                                <Crown className="h-5 w-5 text-amber-500" />
-                                <span className="text-base font-semibold bg-gradient-to-r from-amber-600 to-amber-500 bg-clip-text text-transparent">
-                                  Advanced Filters
-                                </span>
-                              </div>
-                              <p className="text-xs text-muted-foreground">
-                                Unlock powerful filtering options to find athletes by graduation year, playing positions, conferences, and more
-                              </p>
-                              <div className="flex justify-center">
-                                <Button 
-                                  onClick={handleUpgradeClick}
-                                  className="bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white border-0 shadow-lg hover:shadow-xl transition-all duration-200"
-                                  size="sm"
-                                >
-                                  <Crown className="h-4 w-4 mr-2" />
-                                  Upgrade
-                                </Button>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Individual Filters - Only show if has advanced search */}
-                      {hasAdvancedSearch && (
-                        <>
-                          {/* Height/Weight Filters */}
-                          <div className="border-t border-border pt-1 sm:pt-3">
-                            <h3 className="text-sm font-medium text-foreground mb-1 sm:mb-3">Physical Requirements</h3>
-                            <HeightWeightFilter
-                              minHeight={minHeight}
-                              minWeight={minWeight}
-                              onHeightChange={setMinHeight}
-                              onWeightChange={setMinWeight}
-                              isPremium={hasAdvancedSearch}
-                              onUpgradeClick={handleUpgradeClick}
-                            />
-                          </div>
-
-                          {/* Verified Status Filter */}
-                          <div className="pt-4">
-                            <VerifiedFilter
-                              verifiedFilter={verifiedFilter}
-                              onVerifiedChange={setVerifiedFilter}
-                              isPremium={hasAdvancedSearch}
-                              onUpgradeClick={handleUpgradeClick}
-                            />
-                          </div>
-
-                          {/* Graduating Class Filter */}
-                          <div>
-                            <div className="flex items-center justify-between">
-                              <label className="block text-sm font-medium text-foreground mb-2">
-                                Graduating Class
-                              </label>
-                            </div>
-                            <div className="relative">
-                              <MultiSelectFilter
-                                options={graduatingClassOptions}
-                                selected={selectedGraduatingClasses}
-                                onSelectionChange={setSelectedGraduatingClasses}
-                                placeholder="Select graduation years..."
-                                searchPlaceholder="Search years..."
-                              />
-                            </div>
-                          </div>
-
-                          {/* Positions Filter - Always show */}
-                          <div>
-                            <div className="flex items-center justify-between">
-                              <label className="block text-sm font-medium text-foreground mb-2">
-                                Positions
-                              </label>
-                            </div>
-                            {selectedSports.length > 0 && positionsOptions.length > 0 ? (
-                              <div className="relative">
-                                <MultiSelectFilter
-                                  options={positionsOptions}
-                                  selected={selectedPositions}
-                                  onSelectionChange={setSelectedPositions}
-                                  placeholder="Select positions..."
-                                  searchPlaceholder="Search positions..."
-                                />
-                              </div>
-                            ) : (
-                              <div className="h-10 flex items-center px-3 py-2 border border-border rounded-md bg-muted/50 text-muted-foreground text-sm">
-                                {selectedSports.length === 0 ? 'Select sports to filter by positions' : 'No positions available'}
-                              </div>
-                            )}
-                          </div>
-
-                          {/* Conferences Filter - Always show */}
-                          <div className="pt-4">
-                            <div className="flex items-center justify-between">
-                              <label className="block text-sm font-medium text-foreground mb-2">
-                                Conferences
-                              </label>
-                            </div>
-                            {selectedDivisions.length > 0 && conferencesOptions.length > 0 ? (
-                              <div className="relative">
-                                <MultiSelectFilter
-                                  options={conferencesOptions}
-                                  selected={selectedConferences}
-                                  onSelectionChange={setSelectedConferences}
-                                  placeholder="Select conferences..."
-                                  searchPlaceholder="Search conferences..."
-                                />
-                              </div>
-                            ) : (
-                              <div className="h-10 flex items-center px-3 py-2 border border-border rounded-md bg-muted/50 text-muted-foreground text-sm">
-                                {selectedDivisions.length === 0 ? 'Select divisions to filter by conferences' : 'No conferences available'}
-                              </div>
-                            )}
-                          </div>
-                        </>
-                      )}
-                    </>
-                  )}
-
-                  {/* Advanced Filters for Athletes viewing Coaches/Recruiters */}
-                  {effectiveRole === 'athlete' && !hasAdvancedSearch && (
-                    <div className="border-t pt-4 relative">
-                      <h3 className="text-sm font-medium text-foreground mb-3">Advanced Filters</h3>
-                      
-                      {/* Show filters in background with reduced opacity */}
-                      <div className="space-y-1.5 sm:space-y-4 opacity-40">
-                        {/* Conferences Preview */}
-                        <div className="space-y-2">
-                          <label className="text-sm font-medium text-foreground">
-                            Conferences
-                          </label>
-                          <div className="h-10 flex items-center px-3 py-2 border border-border rounded-md bg-muted/50 text-muted-foreground text-sm">
-                            Upgrade to unlock conferences
-                          </div>
-                        </div>
-
-                        {/* Verification Preview */}
-                        <div className="space-y-2">
-                          <label className="text-sm font-medium text-foreground">
-                            Verification Status
-                          </label>
-                          <div className="h-10 flex items-center px-3 py-2 border border-border rounded-md bg-muted/50 text-muted-foreground text-sm">
-                            Filter by verification status
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Premium Overlay - Better contained */}
-                      <div className="absolute inset-0 bg-gradient-to-br from-background/20 via-background/15 to-background/20 backdrop-blur-[1px] rounded-lg border border-border/30 flex items-center justify-center z-10 overflow-hidden">
-                        <div className="text-center space-y-2 p-3 bg-background/95 rounded-lg border border-border/50 shadow-lg backdrop-blur-sm max-w-xs mx-auto">
-                          <div className="flex items-center justify-center space-x-2">
-                            <Crown className="h-4 w-4 text-amber-500" />
-                            <span className="text-sm font-semibold bg-gradient-to-r from-amber-600 to-amber-500 bg-clip-text text-transparent">
-                              Advanced Filters
-                            </span>
-                          </div>
-                          <p className="text-xs text-muted-foreground">
-                            Filter coaches and recruiters by conferences and verification status
-                          </p>
-                          <div className="flex justify-center">
-                            <Button 
-                              onClick={handleUpgradeClick}
-                              className="bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white border-0 shadow-lg hover:shadow-xl transition-all duration-200"
-                              size="sm"
-                            >
-                              <Crown className="h-3 w-3 mr-1" />
-                              Upgrade
-                            </Button>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  {effectiveRole === 'athlete' && hasAdvancedSearch && (
-                    <>
-                      {/* Conferences Filter - Always show */}
-                      <div className="border-t pt-4">
-                        <div className="flex items-center justify-between">
-                          <label className="block text-sm font-medium text-foreground mb-2">
-                            Conferences
-                          </label>
-                        </div>
-                        {selectedDivisions.length > 0 && conferencesOptions.length > 0 ? (
-                          <div className="relative">
-                            <MultiSelectFilter
-                              options={conferencesOptions}
-                              selected={selectedConferences}
-                              onSelectionChange={setSelectedConferences}
-                              placeholder="Select conferences..."
-                              searchPlaceholder="Search conferences..."
-                            />
-                          </div>
-                        ) : (
-                          <div className="h-10 flex items-center px-3 py-2 border border-border rounded-md bg-muted/50 text-muted-foreground text-sm">
-                            {selectedDivisions.length === 0 ? 'Select divisions to filter by conferences' : 'No conferences available'}
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Verified Status Filter for Athletes */}
-                      <div className="pt-4">
-                        <VerifiedFilter
-                          verifiedFilter={verifiedFilter}
-                          onVerifiedChange={setVerifiedFilter}
-                          isPremium={hasAdvancedSearch}
-                          onUpgradeClick={handleUpgradeClick}
-                        />
-                      </div>
-                    </>
-                  )}
-
-                  <div className="flex gap-3 pt-4">
-                    <Button
-                      onClick={clearFilters}
-                      variant="outline"
-                      className="flex-1"
-                      disabled={activeFiltersCount === 0}
-                    >
-                      Clear All
-                    </Button>
-                    {showDiscoverButton && (
-                      <Button
-                        onClick={handleDiscover}
-                        className="flex-1 bg-[#01ae79] hover:bg-[#01ae79]/90 text-white"
-                      >
-                        <Search className="h-4 w-4 mr-0.5" />
-                        Apply Filters
-                      </Button>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
+          <SearchHeader
+            title={title}
+            subtitle={subtitle}
+            showMobileFilters={searchState.showMobileFilters}
+            setShowMobileFilters={searchState.setShowMobileFilters}
+            activeFiltersCount={searchState.activeFiltersCount}
+          />
 
           {/* Main Content */}
           <div className="flex-1">
-            {/* Tabs */}
-            <Tabs value={activeTab} onValueChange={(value) => {
-              const validTab = getValidTab(effectiveRole, value);
-              setActiveTab(validTab);
-            }}>
-              <TabsList className="grid w-full mb-6 bg-card border border-border" style={{ gridTemplateColumns: `repeat(${availableTabs.length}, minmax(0, 1fr))` }}>
-                {availableTabs.map((tab) => (
-                  <TabsTrigger
-                    key={tab.value}
-                    value={tab.value}
-                    className="flex items-center justify-center gap-1 sm:gap-2 data-[state=active]:bg-[#01ae79] data-[state=active]:text-white text-xs sm:text-sm px-1 sm:px-4 min-w-0"
-                  >
-                    {tab.icon}
-                    <span className="text-xs sm:text-sm truncate">{tab.label}</span>
-                  </TabsTrigger>
-                ))}
-              </TabsList>
-
-              {/* Badge Disclaimer */}
-              <div className="mb-4">
-                <div className="flex items-center gap-4 text-sm text-muted-foreground" role="list">
-                  <div className="flex items-center gap-1.5" role="listitem">
-                    <div className="w-4 h-4 bg-[#01ae79] rounded-full p-0.5">
-                      <Shield className="h-3 w-3 text-white" />
-                    </div>
-                    <span>Verified</span>
-                  </div>
-                  <div className="flex items-center gap-1.5" role="listitem">
-                    <div className="w-4 h-4 bg-orange-500 rounded-full p-0.5">
-                      <Shield className="h-3 w-3 text-white opacity-95" />
-                    </div>
-                    <span>Unverified</span>
-                  </div>
-                </div>
-              </div>
-
-              {availableTabs.map((tab) => (
-                <TabsContent key={tab.value} value={tab.value} className="mt-0">
-                  {/* Results */}
-                  {initialLoading ? (
-                    <div className="flex items-center justify-center py-8">
-                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#01ae79]"></div>
-                    </div>
-                  ) : error ? (
-                    <div className="text-center py-8">
-                      <p className="text-muted-foreground mb-4">{error}</p>
-                      <Button onClick={() => loadUsers(1, true)} variant="outline">
-                        Try Again
-                      </Button>
-                    </div>
-                  ) : !hasSearched ? (
-                    <div className="text-center py-8">
-                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#01ae79] mx-auto"></div>
-                    </div>
-                  ) : displayedUsers.length === 0 ? (
-                    <div className="text-center py-8">
-                      <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                      <h3 className="text-lg font-medium text-foreground mb-2">No users found</h3>
-                      <p className="text-muted-foreground mb-4">
-                        {activeFiltersCount > 0
-                          ? "Try adjusting your filters to see more results."
-                          : "No users are available to discover at the moment."
-                        }
-                      </p>
-                      {activeFiltersCount > 0 && (
-                        <Button onClick={clearFilters} variant="outline">
-                          Clear Filters
-                        </Button>
-                      )}
-                    </div>
-                  ) : (
-                    <>
-                      {/* Results Count */}
-                      <div className="mb-4">
-                        <p className="text-sm text-muted-foreground">
-                          Showing {displayedUsers.length}
-                          {activeFiltersCount > 0 && (
-                            <span className="ml-2">
-                              • <span className="font-medium">{activeFiltersCount}</span> filter{activeFiltersCount !== 1 ? 's' : ''} applied
-                            </span>
-                          )}
-                        </p>
-                      </div>
-
-                      {/* User Grid - responsive columns */}
-                      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-2 gap-6 mb-8">
-                        {displayedUsers.map(renderUserCard)}
-                      </div>
-
-                      {/* Infinite Scroll Trigger */}
-                      {hasMore && (
-                        <div
-                          ref={loadMoreRef}
-                          className="text-center py-4"
-                        >
-                          {loading ? (
-                            <div className="flex items-center justify-center">
-                              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-[#01ae79] mr-2"></div>
-                              <span className="text-muted-foreground">Loading more...</span>
-                            </div>
-                          ) : (
-                            <p className="text-muted-foreground text-sm">Scroll down to load more</p>
-                          )}
-                        </div>
-                      )}
-
-                      {!hasMore && allUsers.length > 10 && (
-                        <div className="text-center py-4">
-                          <p className="text-muted-foreground text-sm">You&apos;ve reached the end!</p>
-                        </div>
-                      )}
-                    </>
-                  )}
-                </TabsContent>
-              ))}
-            </Tabs>
+            <SearchTabs
+              activeTab={searchState.activeTab}
+              setActiveTab={searchState.setActiveTab}
+              availableTabs={availableTabs}
+              getValidTab={getValidTab}
+              effectiveRole={effectiveRole}
+              initialLoading={searchState.initialLoading}
+              loading={searchState.loading}
+              error={searchState.error}
+              hasSearched={searchState.hasSearched}
+              hasMore={searchState.hasMore}
+              displayedUsers={displayedUsers}
+              allUsers={searchState.allUsers}
+              activeFiltersCount={searchState.activeFiltersCount}
+              clearFilters={searchState.clearFilters}
+              loadUsers={searchAPI.loadUsers}
+              handleViewProfile={profileNavigation.handleViewProfile}
+              generateProfileUrl={profileNavigation.generateProfileUrl}
+              loadMoreRef={searchState.loadMoreRef}
+            />
           </div>
         </div>
       </div>
@@ -1666,4 +335,4 @@ export default function SearchPage() {
       </Suspense>
     </AuthWrapper>
   );
-} 
+}

@@ -1313,7 +1313,7 @@ export function CoachProfile({
                       </div>
 
                       {/* Scholarships */}
-                      {profileData.recruitingNeeds?.scholarshipsAvailable && (
+                      {typeof profileData.recruitingNeeds?.scholarshipsAvailable === 'number' && (
                         <div className="p-4 border rounded-lg bg-card">
                           <p className="text-sm font-medium text-foreground mb-3">Scholarships Available</p>
                           <div className="flex items-center justify-center">
@@ -1463,16 +1463,16 @@ export function CoachProfile({
 
             {/* Call to Action for Athletes */}
             {!effectiveIsOwnProfile && (
-              <Card className="border-primary/20 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-950 dark:to-purple-950">
+              <Card className="border-primary/20 bg-gradient-to-r from-[#01ae79]/10 to-[#01ae79]/5 dark:from-[#01ae79]/20 dark:to-[#01ae79]/10">
                 <CardContent className="text-center py-8">
-                  <Users className="w-12 h-12 mx-auto text-primary mb-4" />
+                  <Users className="w-12 h-12 mx-auto text-[#01ae79] mb-4" />
                   <h3 className="text-xl font-bold mb-2">Ready to Take the Next Step?</h3>
                   <p className="text-muted-foreground mb-4">
                     Join our {profileData.sportCoaching} program and compete at the highest level while pursuing your academic goals.
                   </p>
                   <Button
                     size="lg"
-                    className="bg-blue-600 hover:bg-blue-700"
+                    className="bg-[#01ae79] hover:bg-[#01ae79]/90"
                     onClick={onConnect}
                   >
                     <Trophy className="w-5 h-5 mr-2" />
