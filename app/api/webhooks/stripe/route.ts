@@ -292,13 +292,14 @@ function isAllowedIP(ip: string | null): boolean {
 async function getUserIdByStripeCustomer(stripeCustomerId: string): Promise<string | null> {
   try {
     console.log(`🔍 Looking up userId for Stripe customer: ${stripeCustomerId}`)
-    const [subscription] = await db
+    const results = await db
       .select({ userId: userSubscriptions.userId })
       .from(userSubscriptions)
       .where(eq(userSubscriptions.stripeCustomerId, stripeCustomerId))
       .limit(1)
     
-    const userId = subscription?.userId || null
+    // Safely check if results exist and have data
+    const userId = results.length > 0 && results[0] ? results[0].userId : null
     console.log(`🔍 Database lookup result: ${userId ? `Found ${userId}` : 'Not found'}`)
     return userId
   } catch (error) {

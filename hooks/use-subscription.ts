@@ -264,7 +264,15 @@ export function useSubscription(): UseSubscriptionReturn {
     }
   }, [userId, isLoaded, fetchSubscription])
 
-
+  // Cleanup activeRequests on unmount to prevent blocking future requests
+  useEffect(() => {
+    return () => {
+      if (userId) {
+        activeRequests.delete(userId)
+        pendingRequests.delete(userId)
+      }
+    }
+  }, [userId])
 
   return {
     subscription,
