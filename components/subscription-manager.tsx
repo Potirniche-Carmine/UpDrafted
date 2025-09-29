@@ -19,24 +19,58 @@ export function SubscriptionManager({ className }: SubscriptionManagerProps) {
   const { subscription, loading, refetch } = useSubscription()
   const { error: showError } = useToast()
   const [isCreatingSession, setIsCreatingSession] = useState(false)
+  
+  // Check for URL parameters that might indicate return from Stripe portal
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search)
+    const fromStripe = urlParams.has('session_id') || 
+                      urlParams.has('payment_intent') || 
+                      document.referrer.includes('stripe.com')
+    
+    if (fromStripe) {
+      console.log('🔄 Detected return from Stripe, refetching subscription...')
+      // Wait a moment for webhooks to process, then refetch
+      setTimeout(() => refetch(), 1000)
+    }
+  }, [refetch])
+
+  // Periodic check for subscription changes (when user has premium)
+  useEffect(() => {
+    if (!subscription?.isPremium) return
+
+    const interval = setInterval(() => {
+      // Only refetch if user has been active recently (tab is visible)
+      if (document.visibilityState === 'visible') {
+        console.log('🔄 Periodic subscription check...')
+        refetch()
+      }
+    }, 2 * 60 * 1000) // Check every 2 minutes for premium users
+
+    return () => clearInterval(interval)
+  }, [subscription?.isPremium, refetch])
 
   const userRole = user?.publicMetadata?.role as string
 
   // Listen for when user returns from Stripe portal
-  // Only refetch if they were away for more than 5 minutes to respect the 24-hour cache
+  // Refetch immediately when user returns from any external navigation (like Stripe portal)
   useEffect(() => {
     let awayTime: number | null = null
+    let hadPremiumBeforeLeaving = false
 
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'hidden') {
         awayTime = Date.now()
-      } else if (document.visibilityState === 'visible' && subscription?.isPremium && awayTime) {
+        hadPremiumBeforeLeaving = subscription?.isPremium || false
+      } else if (document.visibilityState === 'visible' && awayTime) {
         const timeAway = Date.now() - awayTime
-        // Only refetch if they were away for more than 5 minutes (indicating a potential Stripe portal visit)
-        if (timeAway > 5 * 60 * 1000) {
+        // Refetch if they were away for more than 30 seconds (indicating possible external navigation)
+        // OR if they had premium subscription (more likely to use portal)
+        if (timeAway > 30 * 1000 || hadPremiumBeforeLeaving) {
+          console.log('🔄 User returned from external navigation, refetching subscription...')
           refetch()
         }
         awayTime = null
+        hadPremiumBeforeLeaving = false
       }
     }
 

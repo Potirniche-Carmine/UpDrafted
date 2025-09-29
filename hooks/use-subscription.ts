@@ -81,10 +81,31 @@ function setCachedData(userId: string, data: { subscription: SubscriptionData, f
   }
 }
 
-// Pending requests to avoid duplicate API calls
-const pendingRequests = new Map<string, Promise<{ subscription: SubscriptionData, features: SubscriptionFeatures }>>()
+function clearCachedData(userId: string) {
+  // Clear memory cache
+  subscriptionCache.delete(userId)
+  
+  // Clear sessionStorage cache
+  if (typeof window !== 'undefined') {
+    try {
+      sessionStorage.removeItem(`subscription_${userId}`)
+    } catch {
+      // Ignore sessionStorage errors
+    }
+  }
+}
 
-const CACHE_DURATION = 24 * 60 * 60 * 1000 // 24 hours
+// Pending requests to avoid duplicate API calls with timestamp tracking
+const pendingRequests = new Map<string, {
+  promise: Promise<{ subscription: SubscriptionData, features: SubscriptionFeatures }>,
+  timestamp: number,
+  id: string
+}>()
+
+// Synchronous lock to prevent multiple simultaneous calls
+const activeRequests = new Set<string>()
+
+const CACHE_DURATION = 5 * 60 * 1000 // 5 minutes (much shorter for subscription changes)
 const DEFAULT_FEATURES: SubscriptionFeatures = {
   advancedSearch: false,
   profileViewInsights: false,
@@ -121,7 +142,12 @@ export function useSubscription(): UseSubscriptionReturn {
       return
     }
 
-    // Check cache first (unless forced)
+    // Immediate synchronous check to prevent race conditions
+    if (activeRequests.has(userId) && !force) {
+      return
+    }
+
+    // Check cache first (unless forced) - use shorter cache duration for subscription changes
     if (!force) {
       const cached = getCachedData(userId)
       if (cached) {
@@ -132,10 +158,10 @@ export function useSubscription(): UseSubscriptionReturn {
     }
 
     // Check if there's already a pending request for this user
-    const pendingRequest = pendingRequests.get(userId)
-    if (pendingRequest && !force) {
+    const pendingRequestEntry = pendingRequests.get(userId)
+    if (pendingRequestEntry && !force) {
       try {
-        const { subscription: subscriptionData, features: featuresData } = await pendingRequest
+        const { subscription: subscriptionData, features: featuresData } = await pendingRequestEntry.promise
         setSubscription(subscriptionData)
         setFeatures(featuresData)
         return
@@ -145,6 +171,9 @@ export function useSubscription(): UseSubscriptionReturn {
       }
     }
 
+    // Mark this request as active immediately
+    activeRequests.add(userId)
+    
     setLoading(true)
     setError(null)
 
@@ -178,7 +207,13 @@ export function useSubscription(): UseSubscriptionReturn {
       return { subscription: subscriptionData, features: featuresData }
     })()
 
-    pendingRequests.set(userId, requestPromise)
+    const requestId = `${userId}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+    
+    pendingRequests.set(userId, {
+      promise: requestPromise,
+      timestamp: Date.now(),
+      id: requestId
+    })
 
     try {
       const { subscription: subscriptionData, features: featuresData } = await requestPromise
@@ -193,18 +228,24 @@ export function useSubscription(): UseSubscriptionReturn {
     } finally {
       setLoading(false)
       pendingRequests.delete(userId)
+      activeRequests.delete(userId) // Clear the synchronous lock
     }
   }, [isSignedIn, userId, isLoaded])
 
   const refetch = useCallback(async () => {
     if (userId) {
-      subscriptionCache.delete(userId) // Clear cache
+      // Check if refetch is already in progress
+      if (activeRequests.has(userId)) {
+        return
+      }
+      
+      clearCachedData(userId) // Clear all caches (memory + sessionStorage)
       pendingRequests.delete(userId) // Clear any pending requests
       await fetchSubscription(true)
     }
   }, [fetchSubscription, userId])
 
-  // Auto-refetch when user changes (for admin switching views)
+    // Auto-refetch when user changes (for admin switching views)
   useEffect(() => {
     // Wait for Clerk to finish loading
     if (!isLoaded) {
@@ -219,15 +260,11 @@ export function useSubscription(): UseSubscriptionReturn {
         // Use cached data
         setSubscription(cached.subscription)
         setFeatures(cached.features)
-        setLoading(false)
       }
-    } else {
-      // No user, set defaults
-      setSubscription(DEFAULT_SUBSCRIPTION)
-      setFeatures(DEFAULT_FEATURES)
-      setLoading(false)
     }
-  }, [userId, fetchSubscription, isLoaded])
+  }, [userId, isLoaded, fetchSubscription])
+
+
 
   return {
     subscription,
@@ -253,19 +290,26 @@ export function useFeatureAccess(): SubscriptionFeatures {
 export function invalidateSubscriptionCache(userId: string): void {
   subscriptionCache.delete(userId)
   pendingRequests.delete(userId)
+  activeRequests.delete(userId)
 }
 
 // Cleanup function to prevent memory leaks
 export function cleanupSubscriptionCache(): void {
   const now = Date.now()
+  
+  // Clean up expired cache entries
   for (const [userId, cached] of subscriptionCache.entries()) {
     if (now - cached.timestamp > CACHE_DURATION) {
       subscriptionCache.delete(userId)
     }
   }
-  // Also cleanup any stale pending requests (older than 30 seconds)
-  // This should not normally happen but prevents memory leaks
-  pendingRequests.clear()
+  
+  // Clean up stale pending requests (older than 30 seconds)
+  for (const [userId, pending] of pendingRequests.entries()) {
+    if (now - pending.timestamp > 30000) {
+      pendingRequests.delete(userId)
+    }
+  }
 }
 
 // Run cleanup every hour in browser environments

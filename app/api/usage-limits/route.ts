@@ -38,6 +38,9 @@ export async function GET() {
       return NextResponse.json(cachedData);
     }
 
+    // Force fresh subscription data (in case user just returned from Stripe portal)
+    SubscriptionManager.invalidateUserCache(userId)
+    
     // Get user's subscription first to optimize for premium users
     const [subscription, features] = await Promise.all([
       SubscriptionManager.getUserSubscription(userId),

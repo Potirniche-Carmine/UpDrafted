@@ -12,6 +12,9 @@ export async function GET() {
       )
     }
 
+    // Force fresh subscription data (ensures UI shows latest changes)
+    SubscriptionManager.invalidateUserCache(userId)
+    
     // Get subscription and features in one call (24-hour cache)
     const [subscription, features] = await Promise.all([
       SubscriptionManager.getUserSubscription(userId),
