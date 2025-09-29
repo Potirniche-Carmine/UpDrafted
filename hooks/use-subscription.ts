@@ -296,9 +296,19 @@ export function useFeatureAccess(): SubscriptionFeatures {
 
 // Global function to invalidate cache (call from webhooks)
 export function invalidateSubscriptionCache(userId: string): void {
+  // Clear memory cache
   subscriptionCache.delete(userId)
   pendingRequests.delete(userId)
   activeRequests.delete(userId)
+  
+  // Also clear sessionStorage cache to prevent serving stale data
+  if (typeof window !== 'undefined') {
+    try {
+      sessionStorage.removeItem(`subscription_${userId}`)
+    } catch {
+      // Ignore sessionStorage errors (e.g., in private browsing)
+    }
+  }
 }
 
 // Cleanup function to prevent memory leaks

@@ -64,7 +64,7 @@ async function fetchUsageLimits(): Promise<UsageLimits> {
 }
 
 export function PremiumLimitsCard() {
-  const { subscription, features, loading, refetch } = useSubscription()
+  const { subscription, features, loading } = useSubscription()
   const { user } = useUser()
   const { error: showError } = useToast()
   const [usageData, setUsageData] = useState<UsageLimits | null>(null)
@@ -129,12 +129,8 @@ export function PremiumLimitsCard() {
     return tierMap[tier] || tier
   }
 
-  // Force refetch subscription on component mount to ensure fresh data
-  useEffect(() => {
-    if (user?.id) {
-      refetch() // This ensures we get fresh subscription data
-    }
-  }, [user?.id, refetch])
+  // The useSubscription hook will automatically fetch data on mount if not cached.
+  // A forced refetch on every mount is inefficient.
 
   // Cleanup on unmount
   useEffect(() => {
