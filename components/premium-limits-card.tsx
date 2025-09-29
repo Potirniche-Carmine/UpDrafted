@@ -129,6 +129,9 @@ export function PremiumLimitsCard() {
     return tierMap[tier] || tier
   }
 
+  // The useSubscription hook will automatically fetch data on mount if not cached.
+  // A forced refetch on every mount is inefficient.
+
   // Cleanup on unmount
   useEffect(() => {
     return () => {

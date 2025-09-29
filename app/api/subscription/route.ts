@@ -1,8 +1,8 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
 import { SubscriptionManager } from '@/lib/subscription'
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
     const { userId } = await auth()
     if (!userId) {
@@ -12,7 +12,15 @@ export async function GET() {
       )
     }
 
-    // Get subscription and features in one call (24-hour cache)
+    const { searchParams } = new URL(req.url)
+    const force = searchParams.get('force') === 'true'
+    
+    if (force) {
+      // Force fresh subscription data (ensures UI shows latest changes)
+      SubscriptionManager.invalidateUserCache(userId)
+    }
+    
+    // Get subscription and features in one call (24-hour cache unless forced)
     const [subscription, features] = await Promise.all([
       SubscriptionManager.getUserSubscription(userId),
       SubscriptionManager.getSubscriptionFeatures(userId)

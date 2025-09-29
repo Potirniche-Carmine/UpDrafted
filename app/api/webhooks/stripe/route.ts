@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from 'next/server'
 import { headers } from 'next/headers'
 import { stripe } from '@/lib/stripe'
 import { SubscriptionManager } from '@/lib/subscription'
+import { db } from '@/database/db'
+import { userSubscriptions } from '@/database/schema'
+import { eq } from 'drizzle-orm'
 import Stripe from 'stripe'
 
 // Enhanced rate limiting to prevent webhook storms and abuse
@@ -282,6 +285,29 @@ function isAllowedIP(ip: string | null): boolean {
   return isAllowed
 }
 
+/**
+ * Lookup userId by Stripe customer ID when metadata is missing
+ * This handles cases where Customer Portal updates don't preserve metadata
+ */
+async function getUserIdByStripeCustomer(stripeCustomerId: string): Promise<string | null> {
+  try {
+    console.log(`🔍 Looking up userId for Stripe customer: ${stripeCustomerId}`)
+    const results = await db
+      .select({ userId: userSubscriptions.userId })
+      .from(userSubscriptions)
+      .where(eq(userSubscriptions.stripeCustomerId, stripeCustomerId))
+      .limit(1)
+    
+    // Safely check if results exist and have data
+    const userId = results.length > 0 && results[0] ? results[0].userId : null
+    console.log(`🔍 Database lookup result: ${userId ? `Found ${userId}` : 'Not found'}`)
+    return userId
+  } catch (error) {
+    console.error('Error looking up userId by Stripe customer ID:', error)
+    return null
+  }
+}
+
 export async function POST(req: NextRequest) {
   try {
     const body = await req.text()
@@ -355,19 +381,33 @@ export async function POST(req: NextRequest) {
     switch (event.type) {
       case 'customer.subscription.created':
       case 'customer.subscription.updated':
+        console.log(`Processing ${event.type} for subscription:`, event.data.object.id)
         await handleSubscriptionUpdate(event.data.object as Stripe.Subscription)
         break
 
       case 'customer.subscription.deleted':
+        console.log(`Processing ${event.type} for subscription:`, event.data.object.id)
         await handleSubscriptionDeleted(event.data.object as Stripe.Subscription)
         break
 
       case 'checkout.session.completed':
+        console.log(`Processing ${event.type} for session:`, event.data.object.id)
         await handleCheckoutCompleted(event.data.object as Stripe.Checkout.Session)
         break
 
+      case 'invoice.payment_succeeded':
+        // Handle successful recurring payments - ensures subscription stays active
+        await handleInvoicePaymentSucceeded(event.data.object as Stripe.Invoice)
+        break
+
+      case 'invoice.payment_failed':
+        // Handle failed payments - may need to update subscription status
+        await handleInvoicePaymentFailed(event.data.object as Stripe.Invoice)
+        break
+
       default:
-        // Silently ignore unhandled webhook types (they're not configured for production)
+        // Log unhandled events temporarily to debug
+        console.log(`Unhandled webhook event: ${event.type}`)
         break
     }
 
@@ -388,14 +428,44 @@ interface StripeSubscriptionWebhook extends Stripe.Subscription {
 }
 
 async function handleSubscriptionUpdate(subscription: Stripe.Subscription) {
-  const userId = subscription.metadata?.userId
+  let userId = subscription.metadata?.userId
+  
+  // Only use database fallback if metadata is truly missing (rare case)
+  // Most updates from Customer Portal actually preserve metadata
+  if (!userId && subscription.customer) {
+    const lookedUpUserId = await getUserIdByStripeCustomer(subscription.customer as string)
+    if (lookedUpUserId) {
+      userId = lookedUpUserId
+    }
+  }
+  
   if (!userId) {
-    console.error('No userId in subscription metadata')
+    console.error('No userId found in subscription metadata or database lookup', {
+      subscriptionId: subscription.id,
+      customerId: subscription.customer,
+      hasMetadata: !!subscription.metadata,
+      metadataKeys: subscription.metadata ? Object.keys(subscription.metadata) : []
+    })
     return
   }
 
+  console.log(`Found userId: ${userId} for subscription: ${subscription.id}`)
+
   try {
+    // Minimal logging for database fallback cases only
+    if (!subscription.metadata?.userId) {
+      console.log(`Webhook: Database fallback for ${subscription.id}`)
+    }
+    
     const webhookData = subscription as StripeSubscriptionWebhook    
+    const priceId = subscription.items.data[0]?.price?.id
+    console.log(`📋 Subscription details:`, {
+      subscriptionId: subscription.id,
+      status: subscription.status,
+      priceId: priceId,
+      customerId: subscription.customer
+    })
+
     await SubscriptionManager.updateSubscriptionFromStripe(userId, {
       id: subscription.id,
       customer: subscription.customer as string,
@@ -409,23 +479,41 @@ async function handleSubscriptionUpdate(subscription: Stripe.Subscription) {
       items: subscription.items
     })
     
-    // Cache invalidation is handled by SubscriptionManager.updateSubscriptionFromStripe
+    // Cache invalidation is automatically handled by updateSubscriptionFromStripe
+    console.log(`✅ Subscription updated for user ${userId} - status: ${subscription.status}`)
   } catch (error) {
     console.error(`Error updating subscription for user ${userId}:`, error)
   }
 }
 
 async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
-  const userId = subscription.metadata?.userId
+  let userId = subscription.metadata?.userId
+  
+  // Fallback: lookup userId by Stripe customer ID if metadata is missing
+  // This handles Customer Portal updates which may not preserve metadata
+  if (!userId && subscription.customer) {
+    const lookedUpUserId = await getUserIdByStripeCustomer(subscription.customer as string)
+    if (lookedUpUserId) {
+      userId = lookedUpUserId
+    }
+  }
+  
   if (!userId) {
-    console.error('No userId in subscription metadata')
+    console.error('No userId found in subscription metadata or database lookup for deletion', {
+      subscriptionId: subscription.id,
+      customerId: subscription.customer,
+      hasMetadata: !!subscription.metadata,
+      metadataKeys: subscription.metadata ? Object.keys(subscription.metadata) : []
+    })
     return
   }
+
+  console.log(`Found userId: ${userId} for subscription deletion: ${subscription.id}`)
 
   try {
     await SubscriptionManager.cancelSubscription(userId)
     
-    // Cache invalidation is handled by SubscriptionManager.cancelSubscription
+    console.log(`Webhook: Subscription canceled ${subscription.id}`)
   } catch (error) {
     console.error(`Error canceling subscription for user ${userId}:`, error)
   }
@@ -457,10 +545,40 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
         trial_end: subscription.trial_end,
         items: subscription.items
       })
-            
-      // Cache invalidation is handled by SubscriptionManager.updateSubscriptionFromStripe
+      
+      console.log(`Webhook: Checkout completed ${subscription.id}`)
     } catch (error) {
       console.error(`Error creating subscription from checkout for user ${userId}:`, error)
+    }
+  }
+}
+
+async function handleInvoicePaymentSucceeded(invoice: Stripe.Invoice) {
+  // When a recurring payment succeeds, refresh the subscription status
+  // Use type assertion to access subscription property
+  const invoiceWithSub = invoice as Stripe.Invoice & { subscription?: string }
+  if (invoiceWithSub.subscription) {
+    try {
+      const subscription = await stripe.subscriptions.retrieve(invoiceWithSub.subscription)
+      await handleSubscriptionUpdate(subscription)
+      // Cache invalidation is handled by handleSubscriptionUpdate
+    } catch (error) {
+      console.error('Error handling successful invoice payment:', error)
+    }
+  }
+}
+
+async function handleInvoicePaymentFailed(invoice: Stripe.Invoice) {
+  // When a payment fails, refresh the subscription status (it might go to past_due)
+  // Use type assertion to access subscription property
+  const invoiceWithSub = invoice as Stripe.Invoice & { subscription?: string }
+  if (invoiceWithSub.subscription) {
+    try {
+      const subscription = await stripe.subscriptions.retrieve(invoiceWithSub.subscription)
+      await handleSubscriptionUpdate(subscription)
+      // Cache invalidation is handled by handleSubscriptionUpdate
+    } catch (error) {
+      console.error('Error handling failed invoice payment:', error)
     }
   }
 }
