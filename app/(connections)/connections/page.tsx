@@ -14,7 +14,7 @@ import Link from 'next/link';
 import { AuthWrapper } from '../../../components/auth-wrapper';
 import { sanitizeText } from '@/utils/sanitization';
 import { useUser } from "@clerk/nextjs";
-import { getSportsList, DIVISIONS, US_STATES, COUNTRIES, getPositionsForSport } from '@/lib/sports-data';
+import { DIVISIONS, US_STATES, COUNTRIES, getPositionsForSport } from '@/lib/sports-data';
 import { CONFERENCES_BY_DIVISION } from '@/lib/conference-data';
 import { useFeatureAccess } from '@/components/providers/subscription-provider';
 import { Label } from "@/components/ui/label";
@@ -35,6 +35,8 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
 import { generateProfileUrl } from "@/lib/utils";
+import { SportFilter } from '@/components/ui/sport-filter';
+
 
 interface Connection {
   id: number;
@@ -1306,7 +1308,8 @@ const AdvancedFilters: React.FC<AdvancedFiltersProps> = ({
   onClearFilters,
   activeTab,
   hasAdvancedSearch,
-  onUpgradeClick
+  onUpgradeClick,
+
 }) => {
   const [showAdvanced, setShowAdvanced] = useState(false);
 
@@ -1344,12 +1347,7 @@ const AdvancedFilters: React.FC<AdvancedFiltersProps> = ({
   }, [userRole]);
 
   // Filter options
-  const sportsOptions = useMemo(() =>
-    getSportsList().map(sport => ({
-      value: sport,
-      label: sport
-    }))
-  , []);
+  // Using SportFilter for categorized sport filtering
 
   const divisionsOptions = useMemo(() =>
     getOrderedDivisions().map(division => ({
@@ -1462,12 +1460,12 @@ const AdvancedFilters: React.FC<AdvancedFiltersProps> = ({
                   </span>
                 )}
               </Label>
-              <MultiSelectFilter
-                options={sportsOptions}
+              <SportFilter
                 selected={selectedSports}
                 onSelectionChange={setSelectedSports}
                 placeholder="Select sports..."
                 searchPlaceholder="Search sports..."
+
               />
             </div>
 
@@ -1787,6 +1785,8 @@ function App() {
   const features = useFeatureAccess();
   const hasAdvancedSearch = features.advancedSearch;
 
+  // Since we're on the connections page, we don't need default sport selection
+  
   // Advanced filter states
   const [selectedSports, setSelectedSports] = useState<FilterOption[]>([]);
   const [selectedDivisions, setSelectedDivisions] = useState<FilterOption[]>([]);
@@ -1804,6 +1804,10 @@ function App() {
   const [minWeight, setMinWeight] = useState(50); // 50 lbs (updated from 100)
   const [verifiedFilter, setVerifiedFilter] = useState<boolean | null>(null); // null = all, true = verified only
   const [clearingFilters, setClearingFilters] = useState(false);
+
+  // No default sport selection needed for connections page
+
+
 
   interface FilterData {
     sports?: FilterOption[];
@@ -2277,6 +2281,7 @@ function App() {
               onApplyFilters={applyFilters}
               onClearFilters={clearAllFilters}
               activeTab={activeTab}
+
             />
 
             {loading ? (

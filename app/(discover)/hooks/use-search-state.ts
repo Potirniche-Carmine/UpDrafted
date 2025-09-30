@@ -35,6 +35,7 @@ interface DiscoverUser {
 interface UseSearchStateProps {
   effectiveRole: string;
   initialTab: TabValue;
+  defaultSport?: string; // Optional default sport to preserve during clear operations
 }
 
 interface UseSearchStateReturn {
@@ -102,7 +103,7 @@ interface UseSearchStateReturn {
   activeFiltersCount: number;
 }
 
-export const useSearchState = ({ effectiveRole, initialTab }: UseSearchStateProps): UseSearchStateReturn => {
+export const useSearchState = ({ effectiveRole, initialTab, defaultSport }: UseSearchStateProps): UseSearchStateReturn => {
   // Tab state
   const [activeTab, setActiveTab] = useState<TabValue>(initialTab);
 
@@ -201,7 +202,9 @@ export const useSearchState = ({ effectiveRole, initialTab }: UseSearchStateProp
   // Clear filters
   const clearFilters = useCallback(() => {
     setClearingFilters(true);
-    setSelectedSports([]);
+    // Preserve default sport if one is set, otherwise clear all sports
+    const sportsToSet = defaultSport ? [{ value: defaultSport, label: defaultSport }] : [];
+    setSelectedSports(sportsToSet);
     setSelectedDivisions([]);
     setSelectedCountries([{ value: 'United States', label: 'United States' }]); // Reset to default
     setSelectedStates([]);
@@ -213,10 +216,14 @@ export const useSearchState = ({ effectiveRole, initialTab }: UseSearchStateProp
     setVerifiedFilter(null); // Reset verification filter
     setShowMobileFilters(false);
     setError(null);
-  }, []);
+  }, [defaultSport]);
 
-  // Active filters count
-  const activeFiltersCount = selectedSports.length + 
+  // Active filters count (don't count default sport as an active filter)
+  const nonDefaultSportsCount = defaultSport 
+    ? selectedSports.filter(sport => sport.value !== defaultSport).length
+    : selectedSports.length;
+  
+  const activeFiltersCount = nonDefaultSportsCount + 
                            selectedDivisions.length + 
                            (selectedCountries.length > 1 ? selectedCountries.length : 0) + // Only count if more than United States
                            selectedStates.length +

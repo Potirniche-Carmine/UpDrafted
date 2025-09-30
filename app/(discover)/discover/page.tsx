@@ -17,6 +17,8 @@ import { useFilterOptions } from '../hooks/use-filter-options';
 import { useSearchState } from '../hooks/use-search-state';
 import { useSearchAPI } from '../hooks/use-search-api';
 import { useProfileNavigation } from '../hooks/use-profile-navigation';
+// Note: Removed useUserSportInfo as hook doesn't exist - using default sport handling in search state instead
+
 
 // API response types (now also defined in our hooks, but kept here for component use)
 
@@ -61,21 +63,38 @@ function SearchPageContent() {
     }
   };
 
+  // For discover page, we'll handle default sport within the search state instead of using external hook
+
+  // Get default sport from URL params (e.g., ?defaultSport=Basketball)
+  const defaultSport = searchParams?.get('defaultSport') || undefined;
+
   // Initialize hooks
   const searchState = useSearchState({
     effectiveRole,
-    initialTab: getValidTab(effectiveRole, searchParams?.get('tab'))
+    initialTab: getValidTab(effectiveRole, searchParams?.get('tab')),
+    defaultSport
   });
 
+  // Destructure for default sport initialization
+  const { selectedSports, setSelectedSports } = searchState;
+
+  // Initialize default sport if provided and no sports are selected yet
+  useEffect(() => {
+    if (defaultSport && selectedSports.length === 0) {
+      const sportOption = { value: defaultSport, label: defaultSport };
+      setSelectedSports([sportOption]);
+    }
+  }, [defaultSport, selectedSports.length, setSelectedSports]);
+
   const filterOptions = useFilterOptions({
-    selectedSports: searchState.selectedSports,
+    selectedSports: selectedSports,
     selectedDivisions: searchState.selectedDivisions,
     selectedCountries: searchState.selectedCountries
   });
 
   const searchAPI = useSearchAPI({
     effectiveRole,
-    selectedSports: searchState.selectedSports,
+    selectedSports: selectedSports,
     selectedDivisions: searchState.selectedDivisions,
     selectedCountries: searchState.selectedCountries,
     selectedStates: searchState.selectedStates,
@@ -100,10 +119,14 @@ function SearchPageContent() {
     saveSearchState: searchState.saveSearchState
   });
 
+  // Default sport handling is now done within the search state hook
+
   // Get available tabs based on user role
   const availableTabs = useMemo(() =>
     getAvailableTabs(effectiveRole)
   , [effectiveRole]);
+
+
 
   // Auto-load results when the page first loads
   useEffect(() => {
@@ -260,7 +283,6 @@ function SearchPageContent() {
             minWeight={searchState.minWeight}
             verifiedFilter={searchState.verifiedFilter}
             showStatesFilter={filterOptions.showStatesFilter}
-            sportsOptions={filterOptions.sportsOptions}
             divisionsOptions={filterOptions.divisionsOptions}
             countryOptions={filterOptions.countryOptions}
             statesOptions={filterOptions.statesOptions}
@@ -283,6 +305,7 @@ function SearchPageContent() {
             handleUpgradeClick={profileNavigation.handleUpgradeClick}
             title={title}
             subtitle={subtitle}
+            // Default sport logic now handled internally in SearchFilters
           />
 
           {/* Mobile/Tablet Header - Only visible when sidebar is hidden */}
