@@ -250,19 +250,7 @@ export const SearchFilters: React.FC<SearchFiltersProps> = ({
               </Button>
             </div>
 
-            {/* Clear All Button - Right aligned (with consistent spacing to prevent layout shift) */}
-            <div className="flex justify-end mt-6 h-6">
-              {activeFiltersCount > 0 && (
-                <Button
-                  onClick={handleClearFilters}
-                  variant="ghost"
-                  size="sm"
-                  className="text-muted-foreground hover:text-foreground text-xs h-6 px-2"
-                >
-                  Clear All
-                </Button>
-              )}
-            </div>
+
           </div>
 
           {/* Scrollable Filters Content with gradient indicators */}

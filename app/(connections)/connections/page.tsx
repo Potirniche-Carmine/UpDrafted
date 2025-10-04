@@ -36,6 +36,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
 import { generateProfileUrl } from "@/lib/utils";
 import { SportFilter } from '@/components/ui/sport-filter';
+import { useUserPrimarySport } from '@/hooks/use-user-primary-sport';
 
 
 interface Connection {
@@ -1769,6 +1770,9 @@ function App() {
   const effectiveRole = user?.publicMetadata?.role as string;
   const searchParams = useSearchParams();
   
+  // Get user's primary sport to use as default filter
+  const { userSport } = useUserPrimarySport();
+  
   // Ref to prevent double mounting in React StrictMode
   const hasInitializedRef = useRef(false);
   // Request deduplication
@@ -1785,7 +1789,26 @@ function App() {
   const features = useFeatureAccess();
   const hasAdvancedSearch = features.advancedSearch;
 
-  // Since we're on the connections page, we don't need default sport selection
+  // Initialize with user's sports as default filter
+  const getDefaultSportsFilter = useCallback(() => {
+    if (!userSport) return [];
+    
+    const sports: string[] = [];
+    
+    // Add primary sport
+    if (userSport.primarySport) {
+      sports.push(userSport.primarySport);
+    }
+    
+    // For recruiters and athletes, add secondary sports too
+    if ((effectiveRole === 'recruiter' || effectiveRole === 'athlete') && userSport.secondarySports) {
+      sports.push(...userSport.secondarySports);
+    }
+    
+    // Remove duplicates and convert to FilterOption format
+    const uniqueSports = Array.from(new Set(sports));
+    return uniqueSports.map(sport => ({ value: sport, label: sport }));
+  }, [userSport, effectiveRole]);
   
   // Advanced filter states
   const [selectedSports, setSelectedSports] = useState<FilterOption[]>([]);
@@ -1911,6 +1934,16 @@ function App() {
     router.push('/pricing');
   }, [router]);
 
+  // Update sports filter when user's sport data loads
+  useEffect(() => {
+    if (userSport && selectedSports.length === 0) {
+      const defaultSports = getDefaultSportsFilter();
+      if (defaultSports.length > 0) {
+        setSelectedSports(defaultSports);
+      }
+    }
+  }, [userSport, selectedSports.length, getDefaultSportsFilter]);
+
   // Initial load effect - only runs once on mount
   useEffect(() => {
     // Prevent double mounting in React StrictMode
@@ -1969,10 +2002,11 @@ function App() {
   const handleResetFilters = () => {
     setClearingFilters(true);
     setSearchTerm('');
-    setSelectedSports([]);
+    // Reset to default sport (user's primary sport) instead of clearing all
+    setSelectedSports(getDefaultSportsFilter());
     setSelectedDivisions([]);
     setSelectedStates([]);
-    setSelectedCountries([]);
+    setSelectedCountries([{ value: 'United States', label: 'United States' }]);
     setSelectedPositions([]);
     setSelectedGraduatingClasses([]);
     setSelectedConferences([]);

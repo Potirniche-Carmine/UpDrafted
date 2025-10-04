@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, Suspense, useMemo } from "react";
+import { useEffect, useMemo, Suspense, useCallback, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { AuthWrapper } from '@/components/auth-wrapper';
 import { useUser } from "@clerk/nextjs";
@@ -17,7 +17,7 @@ import { useFilterOptions } from '../hooks/use-filter-options';
 import { useSearchState } from '../hooks/use-search-state';
 import { useSearchAPI } from '../hooks/use-search-api';
 import { useProfileNavigation } from '../hooks/use-profile-navigation';
-// Note: Removed useUserSportInfo as hook doesn't exist - using default sport handling in search state instead
+import { useUserPrimarySport } from '@/hooks/use-user-primary-sport';
 
 
 // API response types (now also defined in our hooks, but kept here for component use)
@@ -31,6 +31,12 @@ function SearchPageContent() {
   // Get subscription features
   const features = useFeatureAccess();
   const hasAdvancedSearch = features.advancedSearch;
+
+  // Get user's primary sport to use as default filter
+  const { userSport, loading: userSportLoading } = useUserPrimarySport();
+
+  // Track if filters are ready to be shown (to prevent flash)
+  const [filtersReady, setFiltersReady] = useState(false);
 
   // Dynamic title and subtitle based on user role
   const getTitle = () => {
@@ -63,28 +69,41 @@ function SearchPageContent() {
     }
   };
 
-  // For discover page, we'll handle default sport within the search state instead of using external hook
+  // Get user's default sports
+  const getUserDefaultSports = useCallback(() => {
+    // Use URL param as override
+    const urlSport = searchParams?.get('defaultSport');
+    if (urlSport) {
+      return [{ value: urlSport, label: urlSport }];
+    }
 
-  // Get default sport from URL params (e.g., ?defaultSport=Basketball)
-  const defaultSport = searchParams?.get('defaultSport') || undefined;
+    if (!userSport?.primarySport) return [];
 
-  // Initialize hooks
+    const sportsToSet: { value: string; label: string }[] = [];
+    
+    // Add primary sport
+    sportsToSet.push({ value: userSport.primarySport, label: userSport.primarySport });
+    
+    // For recruiters and athletes, add secondary sports too
+    if ((userSport.role === 'recruiter' || userSport.role === 'athlete') && userSport.secondarySports?.length) {
+      userSport.secondarySports.forEach(sport => {
+        if (!sportsToSet.some(s => s.value === sport)) {
+          sportsToSet.push({ value: sport, label: sport });
+        }
+      });
+    }
+    
+    return sportsToSet;
+  }, [userSport, searchParams]);
+
+  // Initialize hooks without default sports (will be set via useEffect when user data loads)
   const searchState = useSearchState({
     effectiveRole,
-    initialTab: getValidTab(effectiveRole, searchParams?.get('tab')),
-    defaultSport
+    initialTab: getValidTab(effectiveRole, searchParams?.get('tab'))
   });
 
-  // Destructure for default sport initialization
-  const { selectedSports, setSelectedSports } = searchState;
-
-  // Initialize default sport if provided and no sports are selected yet
-  useEffect(() => {
-    if (defaultSport && selectedSports.length === 0) {
-      const sportOption = { value: defaultSport, label: defaultSport };
-      setSelectedSports([sportOption]);
-    }
-  }, [defaultSport, selectedSports.length, setSelectedSports]);
+  // Destructure search state
+  const { selectedSports } = searchState;
 
   const filterOptions = useFilterOptions({
     selectedSports: selectedSports,
@@ -119,28 +138,68 @@ function SearchPageContent() {
     saveSearchState: searchState.saveSearchState
   });
 
-  // Default sport handling is now done within the search state hook
+  // Custom clear filters that preserves user's default sports
+  const clearFiltersWithDefaults = useCallback(() => {
+    // Call the original clear filters first
+    searchState.clearFilters();
+    
+    // Then set the user's default sports
+    const defaultSports = getUserDefaultSports();
+    if (defaultSports.length > 0) {
+      searchState.setSelectedSports(defaultSports);
+    }
+  }, [searchState, getUserDefaultSports]);
+
+  // Set default sports when user data becomes available
+  useEffect(() => {
+    if (userSport && searchState.selectedSports.length === 0) {
+      const defaultSports = getUserDefaultSports();
+      if (defaultSports.length > 0) {
+        searchState.setSelectedSports(defaultSports);
+      }
+    }
+  }, [userSport, searchState.selectedSports.length, getUserDefaultSports, searchState]);
+
+  // Mark filters as ready when user sport data is loaded and sports are set (or no sports to set)
+  useEffect(() => {
+    if (!userSportLoading && userSport !== null) {
+      const defaultSports = getUserDefaultSports();
+      const hasSportsToSet = defaultSports.length > 0;
+      
+      if (!hasSportsToSet || searchState.selectedSports.length > 0) {
+        setFiltersReady(true);
+      }
+    }
+  }, [userSportLoading, userSport, searchState.selectedSports.length, getUserDefaultSports]);
 
   // Get available tabs based on user role
   const availableTabs = useMemo(() =>
     getAvailableTabs(effectiveRole)
   , [effectiveRole]);
 
-
-
-  // Auto-load results when the page first loads
+  // Auto-load results when the page first loads, but wait for user sport data and sports to be set
   useEffect(() => {
     if (effectiveRole && !searchState.hasSearched && !searchState.initialLoading && !searchState.loading && !searchState.initialLoadTriggered.current) {
-      searchState.initialLoadTriggered.current = true;
+      // Wait for user sport data to load and sports to be set
+      if (userSport !== null) { // null means still loading, undefined means no sport
+        // If user has sports, wait for them to be set in the search state
+        const userDefaultSports = getUserDefaultSports();
+        const hasSportsToSet = userDefaultSports.length > 0;
+        
+        if (!hasSportsToSet || searchState.selectedSports.length > 0) {
+          // Either no default sports needed, or sports have been set
+          searchState.initialLoadTriggered.current = true;
 
-      // Try to load filters from cache first
-      searchState.loadSearchState();
+          // Try to load filters from cache first
+          searchState.loadSearchState();
 
-      // Always fetch fresh data (even if cache loaded, we only cached filters)
-      searchAPI.loadUsers(1, true);
+          // Always fetch fresh data (even if cache loaded, we only cached filters)
+          searchAPI.loadUsers(1, true);
+        }
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [effectiveRole]); // Only depend on effectiveRole to prevent multiple triggers
+  }, [effectiveRole, userSport, searchState.selectedSports.length]); // Include selectedSports to wait for them to be set
 
   // Show discover button when filters change (only if filters are applied)
   useEffect(() => {
@@ -265,48 +324,63 @@ function SearchPageContent() {
     <div className="bg-background p-4 md:p-6">
       <div className="max-w-7xl mx-auto">
         <div className="flex flex-col xl:flex-row gap-6">
-          {/* Search Filters Component */}
-          <SearchFilters
-            effectiveRole={effectiveRole}
-            showMobileFilters={searchState.showMobileFilters}
-            setShowMobileFilters={searchState.setShowMobileFilters}
-            activeFiltersCount={searchState.activeFiltersCount}
-            showDiscoverButton={searchState.showDiscoverButton}
-            selectedSports={searchState.selectedSports}
-            selectedDivisions={searchState.selectedDivisions}
-            selectedCountries={searchState.selectedCountries}
-            selectedStates={searchState.selectedStates}
-            selectedPositions={searchState.selectedPositions}
-            selectedGraduatingClasses={searchState.selectedGraduatingClasses}
-            selectedConferences={searchState.selectedConferences}
-            minHeight={searchState.minHeight}
-            minWeight={searchState.minWeight}
-            verifiedFilter={searchState.verifiedFilter}
-            showStatesFilter={filterOptions.showStatesFilter}
-            divisionsOptions={filterOptions.divisionsOptions}
-            countryOptions={filterOptions.countryOptions}
-            statesOptions={filterOptions.statesOptions}
-            graduatingClassOptions={filterOptions.graduatingClassOptions}
-            positionsOptions={filterOptions.positionsOptions}
-            conferencesOptions={filterOptions.conferencesOptions}
-            setSelectedSports={searchState.setSelectedSports}
-            setSelectedDivisions={searchState.setSelectedDivisions}
-            setSelectedCountries={searchState.setSelectedCountries}
-            setSelectedStates={searchState.setSelectedStates}
-            setSelectedPositions={searchState.setSelectedPositions}
-            setSelectedGraduatingClasses={searchState.setSelectedGraduatingClasses}
-            setSelectedConferences={searchState.setSelectedConferences}
-            setMinHeight={searchState.setMinHeight}
-            setMinWeight={searchState.setMinWeight}
-            setVerifiedFilter={searchState.setVerifiedFilter}
-            hasAdvancedSearch={hasAdvancedSearch}
-            handleDiscover={handleDiscover}
-            clearFilters={searchState.clearFilters}
-            handleUpgradeClick={profileNavigation.handleUpgradeClick}
-            title={title}
-            subtitle={subtitle}
-            // Default sport logic now handled internally in SearchFilters
-          />
+          {/* Search Filters Component - Only show when filters are ready to prevent flash */}
+          {filtersReady ? (
+            <SearchFilters
+              effectiveRole={effectiveRole}
+              showMobileFilters={searchState.showMobileFilters}
+              setShowMobileFilters={searchState.setShowMobileFilters}
+              activeFiltersCount={searchState.activeFiltersCount}
+              showDiscoverButton={searchState.showDiscoverButton}
+              selectedSports={searchState.selectedSports}
+              selectedDivisions={searchState.selectedDivisions}
+              selectedCountries={searchState.selectedCountries}
+              selectedStates={searchState.selectedStates}
+              selectedPositions={searchState.selectedPositions}
+              selectedGraduatingClasses={searchState.selectedGraduatingClasses}
+              selectedConferences={searchState.selectedConferences}
+              minHeight={searchState.minHeight}
+              minWeight={searchState.minWeight}
+              verifiedFilter={searchState.verifiedFilter}
+              showStatesFilter={filterOptions.showStatesFilter}
+              divisionsOptions={filterOptions.divisionsOptions}
+              countryOptions={filterOptions.countryOptions}
+              statesOptions={filterOptions.statesOptions}
+              graduatingClassOptions={filterOptions.graduatingClassOptions}
+              positionsOptions={filterOptions.positionsOptions}
+              conferencesOptions={filterOptions.conferencesOptions}
+              setSelectedSports={searchState.setSelectedSports}
+              setSelectedDivisions={searchState.setSelectedDivisions}
+              setSelectedCountries={searchState.setSelectedCountries}
+              setSelectedStates={searchState.setSelectedStates}
+              setSelectedPositions={searchState.setSelectedPositions}
+              setSelectedGraduatingClasses={searchState.setSelectedGraduatingClasses}
+              setSelectedConferences={searchState.setSelectedConferences}
+              setMinHeight={searchState.setMinHeight}
+              setMinWeight={searchState.setMinWeight}
+              setVerifiedFilter={searchState.setVerifiedFilter}
+              hasAdvancedSearch={hasAdvancedSearch}
+              handleDiscover={handleDiscover}
+              clearFilters={clearFiltersWithDefaults}
+              handleUpgradeClick={profileNavigation.handleUpgradeClick}
+              title={title}
+              subtitle={subtitle}
+              // Default sport logic now handled internally in SearchFilters
+            />
+          ) : (
+            <div className="w-full xl:w-96 shrink-0">
+              {/* Loading placeholder for filters */}
+              <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 animate-pulse">
+                <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded mb-4"></div>
+                <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded mb-6"></div>
+                <div className="space-y-4">
+                  <div className="h-10 bg-gray-200 dark:bg-gray-700 rounded"></div>
+                  <div className="h-10 bg-gray-200 dark:bg-gray-700 rounded"></div>
+                  <div className="h-10 bg-gray-200 dark:bg-gray-700 rounded"></div>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Mobile/Tablet Header - Only visible when sidebar is hidden */}
           <SearchHeader
