@@ -14,9 +14,10 @@ import {
   DIVISIONS,
   US_STATES, 
   getPositionsForSport, 
-  getSportsList,
   getStudentClassificationOptions
 } from "@/lib/sports-data";
+import { UnifiedSportSelector } from "@/components/ui/unified-sport-selector";
+
 import { FormValidator, FIELD_LIMITS } from "@/app/(onboarding)/lib/form-validation";
 import { OnboardingData } from "../lib/types";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -31,76 +32,7 @@ interface RecruiterFormProps {
   onInputChange: (field: keyof OnboardingData, value: string | number | string[] | number[] | File | null | boolean | { [sport: string]: { graduationYears: number[]; positions: string[]; scholarshipsAvailable: number | null; recruitingPhilosophy: string; } }) => void;
 }
 
-// Searchable Combobox Component for Sports
-function SportCombobox({ 
-  value, 
-  onValueChange, 
-  placeholder, 
-  excludeSports = []
-}: {
-  value: string;
-  onValueChange: (value: string) => void;
-  placeholder: string;
-  excludeSports?: string[];
-}) {
-  const [open, setOpen] = useState(false);
-  const [searchValue, setSearchValue] = useState("");
-  const sports = getSportsList().filter(sport => !excludeSports.includes(sport));
-  
-  // Filter sports based on search, limit to 10 for performance
-  const filteredSports = sports.filter(sport => 
-    sport.toLowerCase().includes(searchValue.toLowerCase())
-  ).slice(0, 30);
 
-  return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <Button
-          variant="outline"
-          role="combobox"
-          aria-expanded={open}
-          className="h-11 w-full justify-between bg-background"
-        >
-          {value || placeholder}
-          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent className="w-full p-0" style={{ width: 'var(--radix-popover-trigger-width)' }}>
-        <Command>
-          <CommandInput 
-            placeholder="Search sports..." 
-            value={searchValue}
-            onValueChange={setSearchValue}
-          />
-          <CommandList className="max-h-[200px]">
-            <CommandEmpty>No sport found.</CommandEmpty>
-            <CommandGroup>
-              {filteredSports.map((sport) => (
-                <CommandItem
-                  key={sport}
-                  value={sport}
-                  onSelect={(currentValue) => {
-                    onValueChange(currentValue);
-                    setOpen(false);
-                    setSearchValue("");
-                  }}
-                >
-                  <Check
-                    className={cn(
-                      "mr-2 h-4 w-4",
-                      value === sport ? "opacity-100" : "opacity-0"
-                    )}
-                  />
-                  {sport}
-                </CommandItem>
-              ))}
-            </CommandGroup>
-          </CommandList>
-        </Command>
-      </PopoverContent>
-    </Popover>
-  );
-}
 
 // Add country list for recruiting
 const COUNTRIES = [
@@ -480,10 +412,12 @@ export default function RecruiterForm({ data, onInputChange }: RecruiterFormProp
       {/* Primary Sport */}
       <div className="space-y-3">
         <Label htmlFor="sportCoaching" className="text-base font-medium">Primary Sport *</Label>
-        <SportCombobox
+        <UnifiedSportSelector
+          mode="single"
           value={data.sportCoaching}
           onValueChange={(value) => onInputChange('sportCoaching', value)}
           placeholder="Select primary sport"
+          userCurrentSport={data.sportCoaching}
         />
         <p className="text-xs text-muted-foreground">
           This will be your main recruiting sport and will appear prominently on your profile.
@@ -499,23 +433,15 @@ export default function RecruiterForm({ data, onInputChange }: RecruiterFormProp
           </p>
         </div>
         
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-          {getSportsList().filter(sport => sport !== data.sportCoaching).map(sport => (
-            <div key={sport} className="flex items-center space-x-2">
-              <Checkbox
-                id={`secondary-sport-${sport}`}
-                checked={data.secondarySportsRecruiting.includes(sport)}
-                onCheckedChange={() => toggleSecondarySport(sport)}
-              />
-              <Label 
-                htmlFor={`secondary-sport-${sport}`} 
-                className="text-sm cursor-pointer leading-tight"
-              >
-                {sport}
-              </Label>
-            </div>
-          ))}
-        </div>
+        <UnifiedSportSelector
+          mode="multi"
+          selectedSports={data.secondarySportsRecruiting}
+          onSportsChange={(sports) => onInputChange('secondarySportsRecruiting', sports)}
+          placeholder="Select additional sports..."
+          excludeSports={[data.sportCoaching].filter(Boolean)}
+          userCurrentSport={data.sportCoaching}
+          maxSelection={10}
+        />
         
         {data.secondarySportsRecruiting.length > 0 && (
           <div className="flex flex-wrap gap-2 mt-3">

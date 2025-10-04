@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import { getSportsList, DIVISIONS, US_STATES, COUNTRIES, getPositionsForSport } from '@/lib/sports-data';
+import { DIVISIONS, US_STATES, COUNTRIES, getPositionsForSport } from '@/lib/sports-data';
 import { CONFERENCES_BY_DIVISION } from '@/lib/conference-data';
 
 export interface FilterOption {
@@ -67,14 +67,12 @@ interface UseFilterOptionsProps {
   selectedCountries: FilterOption[];
 }
 
-export const useFilterOptions = ({ selectedSports, selectedDivisions, selectedCountries }: UseFilterOptionsProps) => {
-  // Base filter options
-  const sportsOptions = useMemo(() =>
-    getSportsList().map(sport => ({
-      value: sport,
-      label: sport
-    }))
-  , []);
+export const useFilterOptions = ({ 
+  selectedSports, 
+  selectedDivisions, 
+  selectedCountries 
+}: UseFilterOptionsProps) => {
+  // Base filter options (sports are now handled by categorized SportFilter component)
 
   const divisionsOptions = useMemo(() =>
     ORDERED_DIVISIONS.map((division: string) => ({
@@ -115,7 +113,6 @@ export const useFilterOptions = ({ selectedSports, selectedDivisions, selectedCo
   , [selectedDivisions]);
 
   return {
-    sportsOptions,
     divisionsOptions,
     statesOptions,
     countryOptions,

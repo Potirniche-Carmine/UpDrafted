@@ -15,10 +15,10 @@ import { cn } from "@/lib/utils";
 import { 
   US_STATES, 
   getPositionsForSport, 
-  getSportsList,
   getGraduationYearsForEducationLevel,
   DIVISIONS
 } from "@/lib/sports-data";
+import { UnifiedSportSelector } from "@/components/ui/unified-sport-selector";
 import { FormValidator, FIELD_LIMITS } from "@/app/(onboarding)/lib/form-validation";
 import { OnboardingData } from "../lib/types";
 import { EducationLevel } from "../lib/onboarding";
@@ -71,76 +71,7 @@ const shouldShowStandardizedTests = (educationLevel: EducationLevel) => {
   return educationLevel === 'high_school';
 };
 
-// Searchable Combobox Component for Sports
-function SportCombobox({ 
-  value, 
-  onValueChange, 
-  placeholder, 
-  excludeSports = []
-}: {
-  value: string;
-  onValueChange: (value: string) => void;
-  placeholder: string;
-  excludeSports?: string[];
-}) {
-  const [open, setOpen] = useState(false);
-  const [searchValue, setSearchValue] = useState("");
-  const sports = getSportsList().filter(sport => !excludeSports.includes(sport));
-  
-  // Filter sports based on search, limit to 10 for performance
-  const filteredSports = sports.filter(sport => 
-    sport.toLowerCase().includes(searchValue.toLowerCase())
-  ).slice(0, 30);
 
-  return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <Button
-          variant="outline"
-          role="combobox"
-          aria-expanded={open}
-          className="h-11 w-full justify-between bg-background"
-        >
-          {value || placeholder}
-          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent className="w-full p-0" style={{ width: 'var(--radix-popover-trigger-width)' }}>
-        <Command>
-          <CommandInput 
-            placeholder="Search sports..." 
-            value={searchValue}
-            onValueChange={setSearchValue}
-          />
-          <CommandList className="max-h-[200px]">
-            <CommandEmpty>No sport found.</CommandEmpty>
-            <CommandGroup>
-              {filteredSports.map((sport) => (
-                <CommandItem
-                  key={sport}
-                  value={sport}
-                  onSelect={(currentValue) => {
-                    onValueChange(currentValue);
-                    setOpen(false);
-                    setSearchValue("");
-                  }}
-                >
-                  <Check
-                    className={cn(
-                      "mr-2 h-4 w-4",
-                      value === sport ? "opacity-100" : "opacity-0"
-                    )}
-                  />
-                  {sport}
-                </CommandItem>
-              ))}
-            </CommandGroup>
-          </CommandList>
-        </Command>
-      </PopoverContent>
-    </Popover>
-  );
-}
 
 // Add country list for athlete recruiting
 const COUNTRIES = [
@@ -499,10 +430,13 @@ export default function AthleteForm({ data, onInputChange }: AthleteFormProps) {
       {/* Primary Sport Selection */}
       <div className="space-y-3">
         <Label htmlFor="sport" className="text-base font-medium">Primary Sport *</Label>
-        <SportCombobox
+        <UnifiedSportSelector
+          mode="single"
           value={data.sport}
           onValueChange={(value) => onInputChange('sport', value)}
           placeholder="Select your primary sport"
+          userGender={data.gender === 'male' ? 'male' : data.gender === 'female' ? 'female' : null}
+          userCurrentSport={data.sport}
         />
       </div>
 
@@ -531,11 +465,14 @@ export default function AthleteForm({ data, onInputChange }: AthleteFormProps) {
       <div className="space-y-3">
         <Label className="text-base font-medium">Secondary Sports</Label>
         <div className="space-y-3">
-          <SportCombobox
+          <UnifiedSportSelector
+            mode="single"
             value=""
             onValueChange={addSecondarySport}
             placeholder="Add secondary sport (optional)"
             excludeSports={[data.sport, ...data.secondarySports].filter(Boolean)}
+            userGender={data.gender === 'male' ? 'male' : data.gender === 'female' ? 'female' : null}
+            userCurrentSport={data.sport}
           />
           {data.secondarySports.length > 0 && (
             <div className="flex flex-wrap gap-2">

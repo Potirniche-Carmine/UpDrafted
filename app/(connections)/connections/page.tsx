@@ -14,7 +14,7 @@ import Link from 'next/link';
 import { AuthWrapper } from '../../../components/auth-wrapper';
 import { sanitizeText } from '@/utils/sanitization';
 import { useUser } from "@clerk/nextjs";
-import { getSportsList, DIVISIONS, US_STATES, COUNTRIES, getPositionsForSport } from '@/lib/sports-data';
+import { DIVISIONS, US_STATES, COUNTRIES, getPositionsForSport } from '@/lib/sports-data';
 import { CONFERENCES_BY_DIVISION } from '@/lib/conference-data';
 import { useFeatureAccess } from '@/components/providers/subscription-provider';
 import { Label } from "@/components/ui/label";
@@ -35,6 +35,9 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
 import { generateProfileUrl } from "@/lib/utils";
+import { SportFilter } from '@/components/ui/sport-filter';
+import { useUserPrimarySport } from '@/hooks/use-user-primary-sport';
+
 
 interface Connection {
   id: number;
@@ -1306,7 +1309,8 @@ const AdvancedFilters: React.FC<AdvancedFiltersProps> = ({
   onClearFilters,
   activeTab,
   hasAdvancedSearch,
-  onUpgradeClick
+  onUpgradeClick,
+
 }) => {
   const [showAdvanced, setShowAdvanced] = useState(false);
 
@@ -1344,12 +1348,7 @@ const AdvancedFilters: React.FC<AdvancedFiltersProps> = ({
   }, [userRole]);
 
   // Filter options
-  const sportsOptions = useMemo(() =>
-    getSportsList().map(sport => ({
-      value: sport,
-      label: sport
-    }))
-  , []);
+  // Using SportFilter for categorized sport filtering
 
   const divisionsOptions = useMemo(() =>
     getOrderedDivisions().map(division => ({
@@ -1462,12 +1461,12 @@ const AdvancedFilters: React.FC<AdvancedFiltersProps> = ({
                   </span>
                 )}
               </Label>
-              <MultiSelectFilter
-                options={sportsOptions}
+              <SportFilter
                 selected={selectedSports}
                 onSelectionChange={setSelectedSports}
                 placeholder="Select sports..."
                 searchPlaceholder="Search sports..."
+
               />
             </div>
 
@@ -1771,6 +1770,9 @@ function App() {
   const effectiveRole = user?.publicMetadata?.role as string;
   const searchParams = useSearchParams();
   
+  // Get user's primary sport to use as default filter
+  const { userSport } = useUserPrimarySport();
+  
   // Ref to prevent double mounting in React StrictMode
   const hasInitializedRef = useRef(false);
   // Request deduplication
@@ -1787,6 +1789,27 @@ function App() {
   const features = useFeatureAccess();
   const hasAdvancedSearch = features.advancedSearch;
 
+  // Initialize with user's sports as default filter
+  const getDefaultSportsFilter = useCallback(() => {
+    if (!userSport) return [];
+    
+    const sports: string[] = [];
+    
+    // Add primary sport
+    if (userSport.primarySport) {
+      sports.push(userSport.primarySport);
+    }
+    
+    // For recruiters and athletes, add secondary sports too
+    if ((effectiveRole === 'recruiter' || effectiveRole === 'athlete') && userSport.secondarySports) {
+      sports.push(...userSport.secondarySports);
+    }
+    
+    // Remove duplicates and convert to FilterOption format
+    const uniqueSports = Array.from(new Set(sports));
+    return uniqueSports.map(sport => ({ value: sport, label: sport }));
+  }, [userSport, effectiveRole]);
+  
   // Advanced filter states
   const [selectedSports, setSelectedSports] = useState<FilterOption[]>([]);
   const [selectedDivisions, setSelectedDivisions] = useState<FilterOption[]>([]);
@@ -1804,6 +1827,10 @@ function App() {
   const [minWeight, setMinWeight] = useState(50); // 50 lbs (updated from 100)
   const [verifiedFilter, setVerifiedFilter] = useState<boolean | null>(null); // null = all, true = verified only
   const [clearingFilters, setClearingFilters] = useState(false);
+
+  // No default sport selection needed for connections page
+
+
 
   interface FilterData {
     sports?: FilterOption[];
@@ -1907,6 +1934,16 @@ function App() {
     router.push('/pricing');
   }, [router]);
 
+  // Update sports filter when user's sport data loads
+  useEffect(() => {
+    if (userSport && selectedSports.length === 0) {
+      const defaultSports = getDefaultSportsFilter();
+      if (defaultSports.length > 0) {
+        setSelectedSports(defaultSports);
+      }
+    }
+  }, [userSport, selectedSports.length, getDefaultSportsFilter]);
+
   // Initial load effect - only runs once on mount
   useEffect(() => {
     // Prevent double mounting in React StrictMode
@@ -1965,10 +2002,11 @@ function App() {
   const handleResetFilters = () => {
     setClearingFilters(true);
     setSearchTerm('');
-    setSelectedSports([]);
+    // Reset to default sport (user's primary sport) instead of clearing all
+    setSelectedSports(getDefaultSportsFilter());
     setSelectedDivisions([]);
     setSelectedStates([]);
-    setSelectedCountries([]);
+    setSelectedCountries([{ value: 'United States', label: 'United States' }]);
     setSelectedPositions([]);
     setSelectedGraduatingClasses([]);
     setSelectedConferences([]);
@@ -2277,6 +2315,7 @@ function App() {
               onApplyFilters={applyFilters}
               onClearFilters={clearAllFilters}
               activeTab={activeTab}
+
             />
 
             {loading ? (

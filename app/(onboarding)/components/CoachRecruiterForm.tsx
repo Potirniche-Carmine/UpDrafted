@@ -6,19 +6,14 @@ import { Input, SocialInput } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Button } from "@/components/ui/button";
-import { Check, ChevronsUpDown } from "lucide-react";
 import { 
   DIVISIONS,
   US_STATES, 
-  getPositionsForSport, 
-  getSportsList 
+  getPositionsForSport
 } from "@/lib/sports-data";
+import { UnifiedSportSelector } from "@/components/ui/unified-sport-selector";
 import { FormValidator, FIELD_LIMITS } from "@/app/(onboarding)/lib/form-validation";
 import { OnboardingData } from "../lib/types";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
-import { cn } from "@/lib/utils";
 import { FileUpload } from '@/components/ui/file-upload';
 
 interface CoachRecruiterFormProps {
@@ -26,76 +21,7 @@ interface CoachRecruiterFormProps {
   onInputChange: (field: keyof OnboardingData, value: string | number | string[] | number[] | File | null | boolean) => void;
 }
 
-// Searchable Combobox Component for Sports
-function SportCombobox({ 
-  value, 
-  onValueChange, 
-  placeholder, 
-  excludeSports = []
-}: {
-  value: string;
-  onValueChange: (value: string) => void;
-  placeholder: string;
-  excludeSports?: string[];
-}) {
-  const [open, setOpen] = useState(false);
-  const [searchValue, setSearchValue] = useState("");
-  const sports = getSportsList().filter(sport => !excludeSports.includes(sport));
-  
-  // Filter sports based on search, limit to 10 for performance
-  const filteredSports = sports.filter(sport => 
-    sport.toLowerCase().includes(searchValue.toLowerCase())
-  ).slice(0, 30);
 
-  return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <Button
-          variant="outline"
-          role="combobox"
-          aria-expanded={open}
-          className="h-11 w-full justify-between bg-background"
-        >
-          {value || placeholder}
-          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent className="w-full p-0" style={{ width: 'var(--radix-popover-trigger-width)' }}>
-        <Command>
-          <CommandInput 
-            placeholder="Search sports..." 
-            value={searchValue}
-            onValueChange={setSearchValue}
-          />
-          <CommandList className="max-h-[200px]">
-            <CommandEmpty>No sport found.</CommandEmpty>
-            <CommandGroup>
-              {filteredSports.map((sport) => (
-                <CommandItem
-                  key={sport}
-                  value={sport}
-                  onSelect={(currentValue) => {
-                    onValueChange(currentValue);
-                    setOpen(false);
-                    setSearchValue("");
-                  }}
-                >
-                  <Check
-                    className={cn(
-                      "mr-2 h-4 w-4",
-                      value === sport ? "opacity-100" : "opacity-0"
-                    )}
-                  />
-                  {sport}
-                </CommandItem>
-              ))}
-            </CommandGroup>
-          </CommandList>
-        </Command>
-      </PopoverContent>
-    </Popover>
-  );
-}
 
 export default function CoachRecruiterForm({ data, onInputChange }: CoachRecruiterFormProps) {
   const [validationErrors, setValidationErrors] = useState<{[key: string]: string}>({});
@@ -322,10 +248,12 @@ export default function CoachRecruiterForm({ data, onInputChange }: CoachRecruit
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="space-y-3">
           <Label htmlFor="sportCoaching" className="text-base font-medium">Sport {data.role === 'recruiter' ? 'Recruiting For' : 'Coaching'} *</Label>
-          <SportCombobox
+          <UnifiedSportSelector
+            mode="single"
             value={data.sportCoaching}
             onValueChange={(value) => onInputChange('sportCoaching', value)}
             placeholder="Select sport"
+            userCurrentSport={data.sportCoaching}
           />
         </div>
         <div className="space-y-3">

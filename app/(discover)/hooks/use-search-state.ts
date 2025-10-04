@@ -35,6 +35,8 @@ interface DiscoverUser {
 interface UseSearchStateProps {
   effectiveRole: string;
   initialTab: TabValue;
+  defaultSport?: string; // Optional default sport to preserve during clear operations
+  defaultSports?: string[]; // Optional array of default sports
 }
 
 interface UseSearchStateReturn {
@@ -102,12 +104,23 @@ interface UseSearchStateReturn {
   activeFiltersCount: number;
 }
 
-export const useSearchState = ({ effectiveRole, initialTab }: UseSearchStateProps): UseSearchStateReturn => {
+export const useSearchState = ({ effectiveRole, initialTab, defaultSport, defaultSports }: UseSearchStateProps): UseSearchStateReturn => {
   // Tab state
   const [activeTab, setActiveTab] = useState<TabValue>(initialTab);
 
+  // Helper function to get initial sports
+  const getInitialSports = (): FilterOption[] => {
+    if (defaultSports && defaultSports.length > 0) {
+      return defaultSports.map(sport => ({ value: sport, label: sport }));
+    }
+    if (defaultSport) {
+      return [{ value: defaultSport, label: defaultSport }];
+    }
+    return [];
+  };
+
   // Filter states
-  const [selectedSports, setSelectedSports] = useState<FilterOption[]>([]);
+  const [selectedSports, setSelectedSports] = useState<FilterOption[]>(getInitialSports());
   const [selectedDivisions, setSelectedDivisions] = useState<FilterOption[]>([]);
   const [selectedCountries, setSelectedCountries] = useState<FilterOption[]>([
     { value: 'United States', label: 'United States' } // Default to United States
@@ -201,7 +214,13 @@ export const useSearchState = ({ effectiveRole, initialTab }: UseSearchStateProp
   // Clear filters
   const clearFilters = useCallback(() => {
     setClearingFilters(true);
-    setSelectedSports([]);
+    // Reset to initial default sports
+    const initialSports = defaultSports && defaultSports.length > 0
+      ? defaultSports.map(sport => ({ value: sport, label: sport }))
+      : defaultSport 
+        ? [{ value: defaultSport, label: defaultSport }]
+        : [];
+    setSelectedSports(initialSports);
     setSelectedDivisions([]);
     setSelectedCountries([{ value: 'United States', label: 'United States' }]); // Reset to default
     setSelectedStates([]);
@@ -213,10 +232,21 @@ export const useSearchState = ({ effectiveRole, initialTab }: UseSearchStateProp
     setVerifiedFilter(null); // Reset verification filter
     setShowMobileFilters(false);
     setError(null);
-  }, []);
+  }, [defaultSport, defaultSports]);
 
-  // Active filters count
-  const activeFiltersCount = selectedSports.length + 
+  // Active filters count (don't count default sports as active filters)
+  const getDefaultSportValues = () => {
+    if (defaultSports && defaultSports.length > 0) return defaultSports;
+    if (defaultSport) return [defaultSport];
+    return [];
+  };
+  
+  const defaultSportValues = getDefaultSportValues();
+  const nonDefaultSportsCount = selectedSports.filter(sport => 
+    !defaultSportValues.includes(sport.value)
+  ).length;
+  
+  const activeFiltersCount = nonDefaultSportsCount + 
                            selectedDivisions.length + 
                            (selectedCountries.length > 1 ? selectedCountries.length : 0) + // Only count if more than United States
                            selectedStates.length +

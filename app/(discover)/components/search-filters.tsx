@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Filter, Search, X } from "lucide-react";
 import { AdvancedFilters } from './advanced-filters';
 import { MultiSelectFilter, type FilterOption } from './filter-components';
+import { SportFilter } from '@/components/ui/sport-filter';
 
 interface SearchFiltersProps {
   // State
@@ -29,7 +30,6 @@ interface SearchFiltersProps {
   showStatesFilter: boolean;
 
   // Filter options
-  sportsOptions: FilterOption[];
   divisionsOptions: FilterOption[];
   countryOptions: FilterOption[];
   statesOptions: FilterOption[];
@@ -79,7 +79,6 @@ export const SearchFilters: React.FC<SearchFiltersProps> = ({
   minWeight,
   verifiedFilter,
   showStatesFilter,
-  sportsOptions,
   divisionsOptions,
   countryOptions,
   statesOptions,
@@ -106,6 +105,11 @@ export const SearchFilters: React.FC<SearchFiltersProps> = ({
   const [showScrollHint, setShowScrollHint] = useState(true);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
+  // Clear filters function (default sport handling is done elsewhere)
+  const handleClearFilters = () => {
+    clearFilters();
+  };
+
   // Handle scroll event to show/hide scroll hint
   const handleScroll = () => {
     const container = scrollContainerRef.current;
@@ -129,14 +133,13 @@ export const SearchFilters: React.FC<SearchFiltersProps> = ({
   }, []);
 
   const renderFiltersContent = () => (
-    <div className="space-y-4 sm:space-y-6">
+    <div className="space-y-3 sm:space-y-4">
       {/* Sports Filter */}
-      <div className="space-y-3">
+      <div className="space-y-2">
         <label className="block text-sm font-semibold text-foreground">
           Sports
         </label>
-        <MultiSelectFilter
-          options={sportsOptions}
+        <SportFilter
           selected={selectedSports}
           onSelectionChange={setSelectedSports}
           placeholder="Select sports..."
@@ -145,7 +148,7 @@ export const SearchFilters: React.FC<SearchFiltersProps> = ({
       </div>
 
       {/* Divisions Filter */}
-      <div className="space-y-3">
+      <div className="space-y-2">
         <label className="block text-sm font-semibold text-foreground">
           Division/Level
         </label>
@@ -159,7 +162,7 @@ export const SearchFilters: React.FC<SearchFiltersProps> = ({
       </div>
 
       {/* Country Filter */}
-      <div className="space-y-3">
+      <div className="space-y-2">
         <label className="block text-sm font-semibold text-foreground">
           Country
         </label>
@@ -174,7 +177,7 @@ export const SearchFilters: React.FC<SearchFiltersProps> = ({
 
       {/* States Filter - Only show if United States is selected */}
       {showStatesFilter && (
-        <div className="space-y-3">
+        <div className="space-y-2">
           <label className="block text-sm font-semibold text-foreground">
             US States
           </label>
@@ -247,19 +250,7 @@ export const SearchFilters: React.FC<SearchFiltersProps> = ({
               </Button>
             </div>
 
-            {/* Clear All Button - Right aligned */}
-            {activeFiltersCount > 0 && (
-              <div className="flex justify-end mt-6">
-                <Button
-                  onClick={clearFilters}
-                  variant="ghost"
-                  size="sm"
-                  className="text-muted-foreground hover:text-foreground text-xs h-6 px-2"
-                >
-                  Clear All
-                </Button>
-              </div>
-            )}
+
           </div>
 
           {/* Scrollable Filters Content with gradient indicators */}
@@ -272,14 +263,13 @@ export const SearchFilters: React.FC<SearchFiltersProps> = ({
               ref={scrollContainerRef}
               className="h-full overflow-y-auto px-6 py-4 scrollbar-thin scrollbar-thumb-muted scrollbar-track-transparent"
             >
-              <div className="space-y-4 sm:space-y-6 pb-4">
+              <div className="space-y-3 sm:space-y-4 pb-4">
                 {/* Sports Filter */}
-                <div className="space-y-3">
+                <div className="space-y-2">
                   <label className="block text-sm font-semibold text-foreground">
                     Sports
                   </label>
-                  <MultiSelectFilter
-                    options={sportsOptions}
+                  <SportFilter
                     selected={selectedSports}
                     onSelectionChange={setSelectedSports}
                     placeholder="Select sports..."
@@ -288,7 +278,7 @@ export const SearchFilters: React.FC<SearchFiltersProps> = ({
                 </div>
 
                 {/* Divisions Filter */}
-                <div className="space-y-3">
+                <div className="space-y-2">
                   <label className="block text-sm font-semibold text-foreground">
                     Division/Level
                   </label>
@@ -372,7 +362,7 @@ export const SearchFilters: React.FC<SearchFiltersProps> = ({
           {showDiscoverButton && (
             <div className="flex gap-3 p-6 pt-4 border-t border-border bg-card rounded-b-xl flex-shrink-0">
               <Button
-                onClick={clearFilters}
+                onClick={handleClearFilters}
                 variant="outline"
                 className="flex-1"
                 disabled={activeFiltersCount === 0}
@@ -416,7 +406,7 @@ export const SearchFilters: React.FC<SearchFiltersProps> = ({
             {/* Action Buttons */}
             <div className="flex gap-3 p-6 pt-4 border-t border-border bg-card rounded-b-xl">
               <Button
-                onClick={clearFilters}
+                onClick={handleClearFilters}
                 variant="outline"
                 className="flex-1"
                 disabled={activeFiltersCount === 0}
