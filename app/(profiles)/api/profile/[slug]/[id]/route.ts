@@ -979,16 +979,45 @@ export async function PUT(
     }
 
     // SECURITY: Prevent changing MaxPreps URL for verified users to prevent impersonation
-    if (sanitizedData.maxPrepsUrl !== undefined) {
+    // Only check if maxPrepsUrl was explicitly provided in the original update data
+    if (updateData.maxPrepsUrl !== undefined && sanitizedData.maxPrepsUrl !== undefined) {
       // Get the current athlete profile to check verification status
       const currentProfile = await athleteOperations.getAthleteProfile(currentUserId);
       if (currentProfile?.isVerified && currentProfile.maxprepsUrl) {
-        // If the user is already verified and trying to change/remove MaxPreps URL, reject the request
+        // Normalize both URLs for comparison to handle format differences
+        const normalizeUrl = (url: string | null): string => {
+          if (!url) return '';
+          let urlToNormalize = url.toLowerCase().trim();
+          
+          // Add https:// if no protocol is present
+          if (!urlToNormalize.match(/^[a-zA-Z][a-zA-Z0-9+.-]*:/)) {
+            urlToNormalize = 'https://' + urlToNormalize;
+          }
+          
+          try {
+            // Parse and normalize the URL
+            const parsed = new URL(urlToNormalize);
+            // Return normalized: protocol + hostname + pathname (no trailing slash)
+            return (parsed.protocol + '//' + parsed.hostname + parsed.pathname).replace(/\/$/, '').toLowerCase();
+          } catch {
+            // If parsing fails, just return the trimmed lowercase version
+            return urlToNormalize.replace(/\/$/, '');
+          }
+        };
+
         const newMaxPrepsUrl = sanitizedData.maxPrepsUrl as string;
         const currentMaxPrepsUrl = currentProfile.maxprepsUrl;
         
+        const normalizedNew = normalizeUrl(newMaxPrepsUrl);
+        const normalizedCurrent = normalizeUrl(currentMaxPrepsUrl);
+        
         // Block both changing to a different URL and removing/clearing the URL
-        if (newMaxPrepsUrl !== currentMaxPrepsUrl) {
+        if (normalizedNew !== normalizedCurrent) {
+          console.warn('MaxPreps URL modification blocked for verified user:', {
+            userId: currentUserId,
+            currentUrl: normalizedCurrent,
+            attemptedUrl: normalizedNew
+          });
           return NextResponse.json(
             { error: 'Cannot modify or remove MaxPreps URL for verified accounts. This protects against impersonation.' },
             { status: 403 }

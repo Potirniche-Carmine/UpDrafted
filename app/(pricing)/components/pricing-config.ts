@@ -60,6 +60,7 @@ export const pricingPlans: PricingPlan[] = [
     interval: 'month',
     features: [
       '5 Connection Requests Per Month',
+      '1 Embedded YouTube Video',
       'Basic Profile Creation',
       'Basic Search Functionality',
       'Standard Support'
@@ -80,6 +81,7 @@ export const pricingPlans: PricingPlan[] = [
     interval: 'month',
     features: [
       '25 Connection Requests Per Month',
+      'Embed Up to 3 YouTube Highlight Videos',
       'Advanced Search Filters to Find Your Perfect Coach',
       'Read Receipts - Know When Coaches See Your Messages',
       'See Who Has Viewed Your Profile',
@@ -100,6 +102,7 @@ export const pricingPlans: PricingPlan[] = [
     interval: 'year',
     features: [
       '25 Connection Requests Per Month',
+      'Embed Up to 3 YouTube Highlight Videos',
       'Advanced Search Filters to Find Your Perfect Coach',
       'Read Receipts - Know When Coaches See Your Messages',
       'See Who Has Viewed Your Profile',
@@ -121,6 +124,7 @@ export const pricingPlans: PricingPlan[] = [
     interval: 'month',
     features: [
       'Unlimited Connection Requests to Athletes',
+      'Embed Up to 3 YouTube Program Videos',
       'Advanced Search Filters to Find Perfect Athletes',
       'Read Receipts - Know When Athletes See Your Messages',
       'See Who Has Viewed Your Profile',
@@ -142,6 +146,7 @@ export const pricingPlans: PricingPlan[] = [
     interval: 'year',
     features: [
       'Unlimited Connection Requests to Athletes',
+      'Embed Up to 3 YouTube Program Videos',
       'Advanced Search Filters to Find Perfect Athletes',
       'Read Receipts - Know When Athletes See Your Messages',
       'See Who Has Viewed Your Profile',
@@ -164,6 +169,7 @@ export const pricingPlans: PricingPlan[] = [
     interval: 'month',
     features: [
       'Unlimited Connection Requests to Athletes',
+      'Embed Up to 3 YouTube Program Videos',
       'Advanced Search & Filtering for Talent Discovery',
       'Read Receipts - Know When Athletes See Your Messages',
       'See Who Has Viewed Your Profile',
@@ -185,6 +191,7 @@ export const pricingPlans: PricingPlan[] = [
     interval: 'year',
     features: [
       'Unlimited Connection Requests to Athletes',
+      'Embed Up to 3 YouTube Program Videos',
       'Advanced Search & Filtering for Talent Discovery',
       'Read Receipts - Know When Athletes See Your Messages',
       'See Who Has Viewed Your Profile',

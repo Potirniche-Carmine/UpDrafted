@@ -163,12 +163,18 @@ export function sanitizeUrl(input: string | undefined | null): string {
     // Check decoded URL for dangerous patterns
     for (const pattern of dangerousPatterns) {
       if (pattern.test(decodedUrl)) {
-        console.warn('sanitizeUrl: Dangerous pattern detected in decoded URL, rejecting:', pattern.source);
+        console.warn('sanitizeUrl: Dangerous pattern detected in decoded URL, rejecting:', pattern.source, 'URL:', trimmed.substring(0, 100));
         return '';
       }
     }
 
-    const url = new URL(trimmed);
+    // Auto-prepend https:// if no protocol is present
+    let urlToParse = trimmed;
+    if (!trimmed.match(/^[a-zA-Z][a-zA-Z0-9+.-]*:/)) {
+      urlToParse = 'https://' + trimmed;
+    }
+
+    const url = new URL(urlToParse);
     
     // Only allow http and https protocols
     if (url.protocol === 'http:' || url.protocol === 'https:') {
@@ -187,10 +193,10 @@ export function sanitizeUrl(input: string | undefined | null): string {
       // Return the normalized URL string
       return url.toString();
     } else {
-      console.warn('sanitizeUrl: Non-HTTP(S) protocol detected, rejecting:', url.protocol);
+      console.warn('sanitizeUrl: Non-HTTP(S) protocol detected, rejecting:', url.protocol, 'URL:', trimmed.substring(0, 100));
     }
   } catch (error) {
-    console.warn('sanitizeUrl: URL parsing failed, rejecting:', error instanceof Error ? error.message : 'Unknown error');
+    console.warn('sanitizeUrl: URL parsing failed, rejecting:', error instanceof Error ? error.message : 'Unknown error', 'URL:', trimmed.substring(0, 100));
   }
   
   return '';
@@ -376,10 +382,22 @@ export function sanitizeProfileData(data: Record<string, unknown>): Record<strin
           sanitized[key] = value.map(video => {
             if (video && typeof video === 'object') {
               const videoObj = video as Record<string, unknown>;
+              const sanitizedUrl = sanitizeUrl(videoObj.url as string);
+              const sanitizedEmbedUrl = sanitizeUrl(videoObj.embedUrl as string);
+              
+              // Skip videos with invalid URLs
+              if (!sanitizedUrl || !sanitizedEmbedUrl) {
+                console.warn('sanitizeProfileData: Skipping video with invalid URL', { 
+                  url: videoObj.url, 
+                  embedUrl: videoObj.embedUrl 
+                });
+                return null;
+              }
+              
               return {
                 title: sanitizeText(videoObj.title as string),
-                url: sanitizeUrl(videoObj.url as string),
-                embedUrl: sanitizeUrl(videoObj.embedUrl as string),
+                url: sanitizedUrl,
+                embedUrl: sanitizedEmbedUrl,
                 sortOrder: sanitizeNumber(videoObj.sortOrder, 0, 100)
               };
             }
