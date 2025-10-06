@@ -190,6 +190,7 @@ export const pageMetadata = {
     title: 'Pricing Plans',
     description: 'Choose the perfect plan for your college recruitment journey. Premium features for serious athletes and coaches.',
     path: '/pricing',
+    noIndex: true,
   }),
   
   forAthletes: () => generateMetadata({
@@ -208,5 +209,29 @@ export const pageMetadata = {
     title: 'For Recruiters',
     description: 'Professional recruiting tools for finding and connecting with top student-athletes.',
     path: '/for-recruiters',
+  }),
+
+  privacyPolicy: () => generateMetadata({
+    title: 'Privacy Policy',
+    description: 'Learn how UpDrafted collects, uses, and protects your personal information. Your privacy is important to us.',
+    path: '/privacy-policy',
+  }),
+
+  termsOfService: () => generateMetadata({
+    title: 'Terms of Service',
+    description: 'Read the terms and conditions for using UpDrafted. Understand your rights and responsibilities on our platform.',
+    path: '/terms-of-service',
+  }),
+
+  contact: () => generateMetadata({
+    title: 'Contact Us',
+    description: 'Get in touch with the UpDrafted team. We\'re here to help with any questions about our platform.',
+    path: '/contact',
+  }),
+
+  about: () => generateMetadata({
+    title: 'About Us',
+    description: 'Learn about UpDrafted and our mission to connect student-athletes with college programs.',
+    path: '/about',
   }),
 } 
