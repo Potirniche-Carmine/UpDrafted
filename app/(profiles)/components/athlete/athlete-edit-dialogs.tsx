@@ -12,7 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Save, X, Plus, Shield, CalendarIcon, Trophy } from "lucide-react";
-import { getSportsList, US_STATES, GRADUATION_YEARS, getPositionsForSport, getMeasurablesForSport, DIVISIONS } from '@/lib/sports-data';
+import { US_STATES, GRADUATION_YEARS, getPositionsForSport, getMeasurablesForSport, DIVISIONS } from '@/lib/sports-data';
 import { EducationLevel } from '@/app/(onboarding)/lib/onboarding';
 import { sanitizeProfileData } from '@/utils/sanitization';
 import { FileUpload } from '@/components/ui/file-upload';
@@ -21,6 +21,7 @@ import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
 import { ConferenceSelector } from "@/components/ui/conference-selector";
 import { SchoolSelector } from "@/components/ui/school-selector";
 import { divisionHasConferences } from "@/lib/conference-data";
+import { UnifiedSportSelector } from "@/components/ui/unified-sport-selector";
 import { 
   isoStringToDate,
   formatDateRange,
@@ -1254,9 +1255,6 @@ export function AthleteEditDialogs({
     
     switch (dialogType) {
       case 'basic-info':
-        const availableSports = getSportsList().filter(sport => 
-          sport !== editData.sport && !(editData.secondarySports as string[])?.includes(sport)
-        );
         const availablePositions = getPositionsForSport(editData.sport as string);
         
         return (
@@ -1265,7 +1263,11 @@ export function AthleteEditDialogs({
               <DialogTitle>Edit Basic Information</DialogTitle>
               <DialogDescription>Update your personal information, sport, and physical details.</DialogDescription>
             </DialogHeader>
-            <div className="space-y-6 max-h-[70vh] overflow-y-auto pr-2">
+            <div 
+              className="space-y-6 max-h-[70vh] overflow-y-auto overscroll-contain pr-2" 
+              style={{ touchAction: 'pan-y' }}
+              onWheel={(e) => e.stopPropagation()}
+            >
               <div className="space-y-2">
                 <Label htmlFor="edit-fullName" className={cn(
                   "text-sm font-medium",
@@ -1305,27 +1307,20 @@ export function AthleteEditDialogs({
                   Primary Sport *
                   {shouldLockFields() && <span className="text-xs text-muted-foreground block">(Locked during verification)</span>}
                 </Label>
-                <Select
-                  value={String(editData.sport || '')}
-                  onValueChange={(value) => {
-                    if (!shouldLockFields()) {
-                      setEditData(prev => ({ ...prev, sport: value, positions: [] }));
-                    }
-                  }}
-                  disabled={shouldLockFields()}
-                >
-                  <SelectTrigger className={cn(
-                    "!h-11 w-full",
-                    shouldLockFields() && "opacity-50 cursor-not-allowed bg-muted"
-                  )} id="edit-sport">
-                    <SelectValue placeholder="Select sport" />
-                  </SelectTrigger>
-                  <SelectContent className="z-[70]">
-                    {getSportsList().map((sport) => (
-                      <SelectItem key={sport} value={sport}>{sport}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <div className={cn(shouldLockFields() && "opacity-50 cursor-not-allowed")}>
+                  <UnifiedSportSelector
+                    mode="single"
+                    value={String(editData.sport || '')}
+                    onValueChange={(value) => {
+                      if (!shouldLockFields()) {
+                        setEditData(prev => ({ ...prev, sport: value, positions: [] }));
+                      }
+                    }}
+                    placeholder="Select sport"
+                    userCurrentSport={profileData.sport}
+                    disabled={shouldLockFields()}
+                  />
+                </div>
               </div>
 
               <div className="space-y-2">
@@ -1575,7 +1570,7 @@ export function AthleteEditDialogs({
                         "text-sm font-medium",
                         shouldLockFields() && "text-muted-foreground"
                       )}>
-                        Conference
+                        Conference {(editData.educationLevel === 'undergraduate' || editData.educationLevel === 'graduate') && '*'}
                         {shouldLockFields() && <span className="text-xs text-muted-foreground block">(Locked during verification)</span>}
                       </Label>
                       <ConferenceSelector
@@ -1591,6 +1586,7 @@ export function AthleteEditDialogs({
                         inDialog={true}
                         height="h-12"
                         disabled={shouldLockFields()}
+                        required={editData.educationLevel === 'undergraduate' || editData.educationLevel === 'graduate'}
                       />
                     </div>
                   )}
@@ -1607,23 +1603,21 @@ export function AthleteEditDialogs({
                   {shouldLockFields() && <span className="text-xs text-muted-foreground block">(Locked during verification)</span>}
                 </Label>
                 <div className="space-y-2">
-                  <Select onValueChange={(value) => {
-                    if (!shouldLockFields()) {
-                      addSecondarySport(value);
-                    }
-                  }} disabled={shouldLockFields()}>
-                    <SelectTrigger className={cn(
-                      "!h-11 w-full",
-                      shouldLockFields() && "opacity-50 cursor-not-allowed bg-muted"
-                    )} id="edit-secondarySports">
-                      <SelectValue placeholder="Add secondary sport (optional)" />
-                    </SelectTrigger>
-                    <SelectContent className="z-[70]">
-                      {availableSports.map(sport => (
-                        <SelectItem key={sport} value={sport}>{sport}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <div className={cn(shouldLockFields() && "opacity-50 cursor-not-allowed")}>
+                    <UnifiedSportSelector
+                      mode="single"
+                      value=""
+                      onValueChange={(value) => {
+                        if (!shouldLockFields()) {
+                          addSecondarySport(value);
+                        }
+                      }}
+                      placeholder="Add secondary sport (optional)"
+                      excludeSports={[editData.sport as string, ...(editData.secondarySports as string[] || [])].filter(Boolean)}
+                      userCurrentSport={profileData.sport}
+                      disabled={shouldLockFields()}
+                    />
+                  </div>
                   
                   {(editData.secondarySports as string[])?.length > 0 && (
                     <div className="flex flex-wrap gap-2">
@@ -1660,7 +1654,11 @@ export function AthleteEditDialogs({
                     Positions *
                     {shouldLockFields() && <span className="text-xs text-muted-foreground block">(Locked during verification)</span>}
                   </Label>
-                  <div className="grid grid-cols-2 gap-2 max-h-32 overflow-y-auto">
+                  <div 
+                    className="grid grid-cols-2 gap-2 max-h-32 overflow-y-auto overscroll-contain" 
+                    style={{ touchAction: 'pan-y' }}
+                    onWheel={(e) => e.stopPropagation()}
+                  >
                     {availablePositions.map((position, index) => (
                       <div key={position} className="flex items-center space-x-2">
                         <Checkbox
@@ -2254,7 +2252,11 @@ export function AthleteEditDialogs({
               <DialogTitle>Manage Highlight Videos</DialogTitle>
               <DialogDescription>Add YouTube videos to showcase your best plays and skills.</DialogDescription>
             </DialogHeader>
-            <div className="space-y-6 max-h-[70vh] overflow-y-auto">
+            <div 
+              className="space-y-6 max-h-[70vh] overflow-y-auto overscroll-contain pr-2" 
+              style={{ touchAction: 'pan-y' }}
+              onWheel={(e) => e.stopPropagation()}
+            >
               {/* Existing videos */}
               {tempVideos && tempVideos.length > 0 && (
                 <div className="space-y-3">
@@ -2627,7 +2629,11 @@ export function AthleteEditDialogs({
                 You can add up to 3 camp or club experiences. Edit, remove, or add new experiences below.
               </DialogDescription>
             </DialogHeader>
-            <div className="space-y-6 max-h-[70vh] overflow-y-auto pr-2">
+            <div 
+              className="space-y-6 max-h-[70vh] overflow-y-auto overscroll-contain pr-2" 
+              style={{ touchAction: 'pan-y' }}
+              onWheel={(e) => e.stopPropagation()}
+            >
               {/* List current experiences */}
               <div className="space-y-2">
                 <h4 className="font-medium flex items-center gap-2">
@@ -2651,14 +2657,15 @@ export function AthleteEditDialogs({
                             </SelectContent>
                           </Select>
                           {/* Sport dropdown */}
-                          <Select value={campForm.sport} onValueChange={v => setCampForm(f => ({ ...f, sport: v }))}>
-                            <SelectTrigger className="w-32 !h-11"><SelectValue placeholder="Sport" /></SelectTrigger>
-                            <SelectContent className="z-[9999]">
-                              {getSportsList().map(sport => (
-                                <SelectItem key={sport} value={sport}>{sport}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
+                          <div className="w-48">
+                            <UnifiedSportSelector
+                              mode="single"
+                              value={campForm.sport}
+                              onValueChange={v => setCampForm(f => ({ ...f, sport: v }))}
+                              placeholder="Sport"
+                              userCurrentSport={profileData.sport}
+                            />
+                          </div>
                         </div>
                         {/* Editable title */}
                         <Input
@@ -2896,14 +2903,15 @@ export function AthleteEditDialogs({
                         </SelectContent>
                       </Select>
                       {/* Sport dropdown */}
-                      <Select value={campForm.sport} onValueChange={v => setCampForm(f => ({ ...f, sport: v }))}>
-                        <SelectTrigger className="w-32 !h-11"><SelectValue placeholder="Sport" /></SelectTrigger>
-                        <SelectContent className="z-[9999]">
-                          {getSportsList().map(sport => (
-                            <SelectItem key={sport} value={sport}>{sport}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <div className="w-48">
+                        <UnifiedSportSelector
+                          mode="single"
+                          value={campForm.sport}
+                          onValueChange={v => setCampForm(f => ({ ...f, sport: v }))}
+                          placeholder="Sport"
+                          userCurrentSport={profileData.sport}
+                        />
+                      </div>
                     </div>
                     {/* Editable title */}
                     <Input
@@ -3159,7 +3167,7 @@ export function AthleteEditDialogs({
     if (!isOpen) {
       campExperienceInitializedRef.current = false;
     }
-  }, [isOpen, dialogType, profileData.campExperience]);
+  }, [isOpen, dialogType, profileData.campExperience, profileData.city, profileData.state, profileData.country, profileData.sport]);
 
   // Add a ref to track if initialization has happened for this open session
   const campExperienceInitializedRef = useRef(false);

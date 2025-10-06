@@ -179,7 +179,7 @@ export function UnifiedSportSelector({
   };
 
   return (
-    <div className={cn("space-y-3", className)}>
+    <div className="space-y-3">
       {/* Selected Sports Display (Multi mode only) */}
       {mode === 'multi' && selectedSports.length > 0 && (
         <div className="flex flex-wrap gap-2">
@@ -209,7 +209,7 @@ export function UnifiedSportSelector({
               variant="outline"
               role="combobox"
               aria-expanded={open}
-              className="h-11 w-full justify-between bg-background"
+              className={cn("h-11 w-full justify-between bg-background font-normal", className)}
               disabled={disabled}
             >
               {getDisplayText()}
@@ -258,10 +258,10 @@ export function UnifiedSportSelector({
         </p>
       )}
 
-      {/* Disabled state display (when component is disabled but has selections) */}
-      {disabled && mode === 'multi' && selectedSports.length === 0 && (
-        <div className="h-11 w-full flex items-center px-3 border border-border rounded-md bg-muted text-muted-foreground">
-          {placeholder}
+      {/* Disabled state display */}
+      {disabled && (
+        <div className={cn("h-11 w-full flex items-center px-3 border border-border rounded-md bg-muted text-muted-foreground", className)}>
+          {mode === 'single' && value ? value : placeholder}
         </div>
       )}
     </div>

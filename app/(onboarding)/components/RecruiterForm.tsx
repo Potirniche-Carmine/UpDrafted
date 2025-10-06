@@ -484,6 +484,7 @@ export default function RecruiterForm({ data, onInputChange }: RecruiterFormProp
             label="Conference"
             labelClassName="text-base font-medium"
             height="h-11"
+            required={data.division !== 'High School'}
           />
         </div>
       </div>
