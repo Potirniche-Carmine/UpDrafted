@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useMemo, Suspense, useCallback, useState } from 'react';
+import { useEffect, useMemo, Suspense, useCallback, useState, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { AuthWrapper } from '@/components/auth-wrapper';
 import { useUser } from "@clerk/nextjs";
-import { useProfileCompletenessSorting } from '../components/profile-completeness-sorter';
+import { sortByCompletenessWithRandomization } from '../components/profile-completeness-sorter';
 import { useFeatureAccess } from '@/components/providers/subscription-provider';
 
 // Import our new components
@@ -150,56 +150,40 @@ function SearchPageContent() {
     }
   }, [searchState, getUserDefaultSports]);
 
-  // Set default sports when user data becomes available
+  // Initialize filters and mark ready when user sport data is loaded
   useEffect(() => {
-    if (userSport && searchState.selectedSports.length === 0) {
-      const defaultSports = getUserDefaultSports();
-      if (defaultSports.length > 0) {
-        searchState.setSelectedSports(defaultSports);
-      }
-    }
-  }, [userSport, searchState.selectedSports.length, getUserDefaultSports, searchState]);
+    if (!userSportLoading && userSport !== null && !searchState.initialLoadTriggered.current) {
+      // Try to load filters from cache first
+      const hasCache = searchState.loadSearchState();
 
-  // Mark filters as ready when user sport data is loaded and sports are set (or no sports to set)
-  useEffect(() => {
-    if (!userSportLoading && userSport !== null) {
-      const defaultSports = getUserDefaultSports();
-      const hasSportsToSet = defaultSports.length > 0;
-      
-      if (!hasSportsToSet || searchState.selectedSports.length > 0) {
-        setFiltersReady(true);
+      // If no cache, set default sports
+      if (!hasCache) {
+        const userDefaultSports = getUserDefaultSports();
+        if (userDefaultSports.length > 0) {
+          searchState.setSelectedSports(userDefaultSports);
+        }
       }
+
+      // Mark filters as ready
+      setFiltersReady(true);
     }
-  }, [userSportLoading, userSport, searchState.selectedSports.length, getUserDefaultSports]);
+  }, [userSportLoading, userSport, getUserDefaultSports, searchState]);
 
   // Get available tabs based on user role
   const availableTabs = useMemo(() =>
     getAvailableTabs(effectiveRole)
   , [effectiveRole]);
 
-  // Auto-load results when the page first loads, but wait for user sport data and sports to be set
+  // Auto-load results when filters are ready and page first loads
   useEffect(() => {
-    if (effectiveRole && !searchState.hasSearched && !searchState.initialLoading && !searchState.loading && !searchState.initialLoadTriggered.current) {
-      // Wait for user sport data to load and sports to be set
-      if (userSport !== null) { // null means still loading, undefined means no sport
-        // If user has sports, wait for them to be set in the search state
-        const userDefaultSports = getUserDefaultSports();
-        const hasSportsToSet = userDefaultSports.length > 0;
-        
-        if (!hasSportsToSet || searchState.selectedSports.length > 0) {
-          // Either no default sports needed, or sports have been set
-          searchState.initialLoadTriggered.current = true;
+    if (effectiveRole && filtersReady && !searchState.hasSearched && !searchState.initialLoading && !searchState.loading && !searchState.initialLoadTriggered.current) {
+      searchState.initialLoadTriggered.current = true;
 
-          // Try to load filters from cache first
-          searchState.loadSearchState();
-
-          // Always fetch fresh data (even if cache loaded, we only cached filters)
-          searchAPI.loadUsers(1, true);
-        }
-      }
+      // Trigger search with cached or default filters
+      searchAPI.loadUsers(1, true);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [effectiveRole, userSport, searchState.selectedSports.length]); // Include selectedSports to wait for them to be set
+  }, [effectiveRole, filtersReady]); // Trigger when filters are ready
 
   // Show discover button when filters change (only if filters are applied)
   useEffect(() => {
@@ -262,26 +246,55 @@ function SearchPageContent() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchState.clearingFilters]);
 
-  // Filter displayed users based on active tab
-  const filteredUsers = useMemo(() => {
-    if (!searchState.hasSearched || searchState.allUsers.length === 0) return [];
+  // Store the sorted users separately to prevent re-sorting on pagination
+  const [sortedUsers, setSortedUsers] = useState<typeof searchState.allUsers>([]);
+  const previousUserCountRef = useRef(0);
+
+  // Filter and sort users - only sort new users when they're added
+  useEffect(() => {
+    if (!searchState.hasSearched || searchState.allUsers.length === 0) {
+      setSortedUsers([]);
+      previousUserCountRef.current = 0;
+      return;
+    }
+
+    // Check if this is a new search (user count went from something to 0 back to something, or first search)
+    const isNewSearch = previousUserCountRef.current === 0 || searchState.allUsers.length < previousUserCountRef.current;
+    
+    if (isNewSearch) {
+      // New search: sort all users
+      const sorted = sortByCompletenessWithRandomization(searchState.allUsers);
+      setSortedUsers(sorted);
+    } else {
+      // Pagination: only sort the NEW users and append them
+      const newUsersCount = searchState.allUsers.length - previousUserCountRef.current;
+      if (newUsersCount > 0) {
+        const newUsers = searchState.allUsers.slice(-newUsersCount);
+        const sortedNewUsers = sortByCompletenessWithRandomization(newUsers);
+        setSortedUsers(prev => [...prev, ...sortedNewUsers]);
+      }
+    }
+
+    previousUserCountRef.current = searchState.allUsers.length;
+  }, [searchState.allUsers, searchState.hasSearched]);
+
+  // Filter displayed users based on active tab from the sorted list
+  const displayedUsers = useMemo(() => {
+    if (!searchState.hasSearched || sortedUsers.length === 0) return [];
 
     const tabRole = getTabRole(searchState.activeTab);
     if (!tabRole) {
       // 'all' tab logic depends on user role
       if (effectiveRole === 'athlete') {
         // Athletes see only coaches and recruiters in 'all' tab
-        return searchState.allUsers.filter(user => user.role === 'coach' || user.role === 'recruiter');
+        return sortedUsers.filter(user => user.role === 'coach' || user.role === 'recruiter');
       }
       // For other roles, show all users
-      return searchState.allUsers;
+      return sortedUsers;
     }
 
-    return searchState.allUsers.filter(user => user.role === tabRole);
-  }, [searchState.allUsers, searchState.activeTab, searchState.hasSearched, effectiveRole]);
-
-  // Apply profile completeness sorting to filtered users
-  const { sortedUsers: displayedUsers } = useProfileCompletenessSorting(filteredUsers);
+    return sortedUsers.filter(user => user.role === tabRole);
+  }, [sortedUsers, searchState.activeTab, searchState.hasSearched, effectiveRole]);
 
   // Discover/Search function
   const handleDiscover = () => {

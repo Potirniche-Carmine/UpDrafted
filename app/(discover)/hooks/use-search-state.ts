@@ -97,7 +97,7 @@ interface UseSearchStateReturn {
   
   // Actions
   saveSearchState: () => void;
-  loadSearchState: () => void;
+  loadSearchState: () => boolean;
   clearFilters: () => void;
   
   // Computed values
@@ -192,17 +192,21 @@ export const useSearchState = ({ effectiveRole, initialTab, defaultSport, defaul
         const isRecent = Date.now() - (parsed.timestamp || 0) < 60 * 60 * 1000; // 1 hour for filters
 
         if (isRecent) {
-          setSelectedSports(parsed.selectedSports || []);
-          setSelectedDivisions(parsed.selectedDivisions || []);
-          setSelectedCountries(parsed.selectedCountries || [{ value: 'United States', label: 'United States' }]);
-          setSelectedStates(parsed.selectedStates || []);
-          setSelectedPositions(parsed.selectedPositions || []);
-          setSelectedGraduatingClasses(parsed.selectedGraduatingClasses || []);
-          setSelectedConferences(parsed.selectedConferences || []);
-          setMinHeight(parsed.minHeight || 48);
-          setMinWeight(parsed.minWeight || 50);
-          setHasSearched(parsed.hasSearched || false);
-          return true; // Successfully loaded cache, but need to search fresh
+          // Only load cache if user has searched before (prevents overriding defaults on first visit)
+          if (parsed.hasSearched) {
+            setSelectedSports(parsed.selectedSports || []);
+            setSelectedDivisions(parsed.selectedDivisions || []);
+            setSelectedCountries(parsed.selectedCountries || [{ value: 'United States', label: 'United States' }]);
+            setSelectedStates(parsed.selectedStates || []);
+            setSelectedPositions(parsed.selectedPositions || []);
+            setSelectedGraduatingClasses(parsed.selectedGraduatingClasses || []);
+            setSelectedConferences(parsed.selectedConferences || []);
+            setMinHeight(parsed.minHeight || 48);
+            setMinWeight(parsed.minWeight || 50);
+            setActiveTab(parsed.activeTab || 'all');
+            // Mark that we've loaded cached state and should trigger search
+            return true; // Successfully loaded cache, need to search with these filters
+          }
         }
       }
     } catch (error) {
