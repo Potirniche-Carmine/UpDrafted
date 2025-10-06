@@ -258,10 +258,9 @@ function SearchPageContent() {
       return;
     }
 
-    // Check if this is a new search (user count went from something to 0 back to something, or first search)
-    const isNewSearch = previousUserCountRef.current === 0 || searchState.allUsers.length < previousUserCountRef.current;
-    
-    if (isNewSearch) {
+    // When a new search starts (indicated by initialLoading), sort the new set of users.
+    // Otherwise, for pagination, sort only the newly added users and append them.
+    if (searchState.initialLoading) {
       // New search: sort all users
       const sorted = sortByCompletenessWithRandomization(searchState.allUsers);
       setSortedUsers(sorted);
@@ -276,7 +275,7 @@ function SearchPageContent() {
     }
 
     previousUserCountRef.current = searchState.allUsers.length;
-  }, [searchState.allUsers, searchState.hasSearched]);
+  }, [searchState.allUsers, searchState.hasSearched, searchState.initialLoading]);
 
   // Filter displayed users based on active tab from the sorted list
   const displayedUsers = useMemo(() => {

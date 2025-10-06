@@ -130,7 +130,14 @@ export function sanitizeUrl(input: string | undefined | null): string {
     return '';
   }
 
-  // Security: Pre-validate against dangerous patterns
+  // Auto-prepend https:// if no protocol is present BEFORE validation
+  // This prevents protocol injection where malicious strings could bypass initial checks
+  let urlToParse = trimmed;
+  if (!trimmed.match(/^[a-zA-Z][a-zA-Z0-9+.-]*:/)) {
+    urlToParse = 'https://' + trimmed;
+  }
+
+  // Security: Pre-validate against dangerous patterns AFTER protocol normalization
   const dangerousPatterns = [
     /javascript:/gi,
     /vbscript:/gi,
@@ -145,7 +152,7 @@ export function sanitizeUrl(input: string | undefined | null): string {
   ];
 
   for (const pattern of dangerousPatterns) {
-    if (pattern.test(trimmed)) {
+    if (pattern.test(urlToParse)) {
       console.warn('sanitizeUrl: Dangerous pattern detected in URL, rejecting:', pattern.source);
       return '';
     }
@@ -153,9 +160,9 @@ export function sanitizeUrl(input: string | undefined | null): string {
   
   try {
     // First, decode any URL encoding to check for hidden dangerous content
-    let decodedUrl = trimmed;
+    let decodedUrl = urlToParse;
     try {
-      decodedUrl = decodeURIComponent(trimmed);
+      decodedUrl = decodeURIComponent(urlToParse);
     } catch {
       // If decoding fails, continue with original
     }
@@ -166,12 +173,6 @@ export function sanitizeUrl(input: string | undefined | null): string {
         console.warn('sanitizeUrl: Dangerous pattern detected in decoded URL, rejecting:', pattern.source, 'URL:', trimmed.substring(0, 100));
         return '';
       }
-    }
-
-    // Auto-prepend https:// if no protocol is present
-    let urlToParse = trimmed;
-    if (!trimmed.match(/^[a-zA-Z][a-zA-Z0-9+.-]*:/)) {
-      urlToParse = 'https://' + trimmed;
     }
 
     const url = new URL(urlToParse);

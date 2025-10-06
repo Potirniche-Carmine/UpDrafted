@@ -161,6 +161,7 @@ export default function OnboardingForm({ role, onBack }: OnboardingFormProps) {
     if (data.role === 'athlete' && !data.ageConfirmation) return false;
     
     if (data.role === 'athlete') {
+      const isCollege = data.educationLevel === 'undergraduate' || data.educationLevel === 'graduate';
       const baseRequirements = !!(
         data.sport && 
         data.graduationYear && 
@@ -174,16 +175,12 @@ export default function OnboardingForm({ role, onBack }: OnboardingFormProps) {
         data.weight && 
         data.positions.length > 0 &&
         data.intendedMajor &&
-        data.personalStatement
+        data.personalStatement &&
+        (isCollege ? data.division : data.teamLevel)
       );
 
-      // For college students, division is required instead of competitionLevel
-      const divisionRequirement = (data.educationLevel === 'undergraduate' || data.educationLevel === 'graduate') 
-        ? !!data.division 
-        : true;
-
       // Conference is required for undergraduate and graduate students
-      const conferenceRequirement = (data.educationLevel === 'undergraduate' || data.educationLevel === 'graduate')
+      const conferenceRequirement = isCollege
         ? !!data.conference
         : true;
 
@@ -197,7 +194,7 @@ export default function OnboardingForm({ role, onBack }: OnboardingFormProps) {
         academicRequirements = true;
       }
 
-      return baseRequirements && divisionRequirement && conferenceRequirement && academicRequirements;
+      return baseRequirements && conferenceRequirement && academicRequirements;
     } else if (data.role === 'coach') {
       // Base requirements for coaches
       const baseRequirements = !!(
