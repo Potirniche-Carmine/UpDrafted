@@ -19,7 +19,8 @@ import {
   Target,
   Timer,
   X,
-  AlertTriangle
+  AlertTriangle,
+  Crown
 } from "lucide-react";
 import { ProfileHeader } from "../shared/profile-header";
 import { AcademicSummaryCard } from "../shared/academic-summary-card";
@@ -27,6 +28,7 @@ import { AthleteEditDialogs } from "./athlete-edit-dialogs";
 import { VerificationSection } from "./athlete-verification-section";
 import { VerificationDialog } from "../shared/verification-dialog";
 import { useRoleView } from '@/hooks/use-role-view';
+import { useSubscription } from '@/components/providers/subscription-provider';
 import { AthleteProfileData, AthleteProfileProps, Measurable } from './athlete-profile-types';
 import { ConnectionDialog } from "../shared/connection-dialog";
 import { SendOverChatDialog } from "../shared/send-over-chat-dialog";
@@ -462,6 +464,11 @@ export function AthleteProfile({
   
   // Toast hook
   const toast = useToast();
+  
+  // Get subscription status for video limits
+  const { subscription } = useSubscription();
+  const isPremium = subscription?.isPremium && subscription?.status === 'active';
+  const videoLimit = isPremium ? 3 : 1;
   
   // Confirmation dialog state
   const [confirmationDialog, setConfirmationDialog] = useState<{
@@ -1738,7 +1745,15 @@ export function AthleteProfile({
               <Card>
                 <CardHeader>
                   <div className="flex items-center justify-between">
-                    <CardTitle>Highlight Videos</CardTitle>
+                    <div className="flex items-center gap-2">
+                      <CardTitle>Highlight Videos</CardTitle>
+                      {effectiveIsOwnProfile && isPremium && (
+                        <Badge variant="outline" className="text-xs bg-[#01ae79]/10 text-[#01ae79] border-[#01ae79]/30">
+                          <Crown className="w-3 h-3 mr-1" />
+                          Pro {safeProfileData.youtubeVideos?.length || 0}/{videoLimit}
+                        </Badge>
+                      )}
+                    </div>
                     {effectiveIsOwnProfile && (
                       <Button 
                         size="sm" 
@@ -1768,6 +1783,27 @@ export function AthleteProfile({
                           </div>
                                               </div>
                     ))}
+                    
+                    {/* Upgrade prompt for free users at video limit */}
+                    {effectiveIsOwnProfile && !isPremium && safeProfileData.youtubeVideos.length >= videoLimit && (
+                      <div className="mt-4 p-4 bg-gradient-to-r from-[#01ae79]/5 to-[#01ae79]/10 dark:from-[#01ae79]/10 dark:to-[#01ae79]/20 rounded-lg border border-[#01ae79]/20">
+                        <div className="flex items-start gap-3">
+                          <Crown className="w-5 h-5 text-[#01ae79] flex-shrink-0 mt-0.5" />
+                          <div className="flex-1">
+                            <h4 className="font-semibold text-sm text-foreground mb-1">Want to showcase more highlights?</h4>
+                            <p className="text-xs text-muted-foreground mb-3">
+                              Upgrade to Pro Athlete to embed up to 3 YouTube videos and get 25 connection requests per month, read receipts, and profile insights.
+                            </p>
+                            <Link href="/pricing">
+                              <Button size="sm" className="bg-[#01ae79] hover:bg-[#01ae79]/90">
+                                <Crown className="w-3 h-3 mr-1" />
+                                Upgrade to Pro
+                              </Button>
+                            </Link>
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 ) : effectiveIsOwnProfile && (
                   <div className="bg-muted/50 rounded-lg p-4">
@@ -1775,6 +1811,7 @@ export function AthleteProfile({
                       <p className="font-medium text-muted-foreground mb-2">No Highlight Videos Added</p>
                       <p className="text-sm text-muted-foreground mb-4">
                         Add YouTube videos to showcase your best plays and skills
+                        {!isPremium && <span className="block mt-2 text-xs">Free accounts can add {videoLimit} video. <Link href="/pricing" className="text-[#01ae79] hover:underline">Upgrade to Pro</Link> for up to 3 videos.</span>}
                       </p>
                       <Button 
                         variant="outline"

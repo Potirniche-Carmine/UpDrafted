@@ -229,7 +229,7 @@ const getUserContent = (role: string, handleViewProfile: () => void, profileNavi
         primaryNav: [
           { 
             label: "Admin Controls", 
-            href: "/admin-init", 
+            href: "/admin", 
             icon: Eye, 
             description: "Access admin management tools", 
             color: "#dc2626" 

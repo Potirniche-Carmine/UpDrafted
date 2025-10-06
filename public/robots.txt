@@ -1,27 +1,6 @@
 User-agent: *
 
-# Allow public pages
-Allow: /$
-Allow: /about$
-Allow: /for-athletes$
-Allow: /for-coaches$
-Allow: /for-recruiters$
-Allow: /contact$
-Allow: /terms-of-service$
-Allow: /privacy-policy$
-
-# Allow static assets
-Allow: /icons/
-Allow: /images/
-Allow: /*.css$
-Allow: /*.js$
-Allow: /*.png$
-Allow: /*.jpg$
-Allow: /*.jpeg$
-Allow: /*.svg$
-Allow: /*.webp$
-
-# Block all other areas (private app sections)
+# Block private areas (authenticated user sections)
 Disallow: /admin/
 Disallow: /api/
 Disallow: /_next/
@@ -37,6 +16,12 @@ Disallow: /notifications/
 Disallow: /connections/
 Disallow: /activity/
 Disallow: /pricing/
+Disallow: /success/
+
+# Allow all other pages (public marketing pages)
+# Including: /, /about, /for-athletes, /for-coaches, /for-recruiters, 
+# /contact, /terms-of-service, /privacy-policy
+Allow: /
 
 # Sitemap location (canonical HTTPS URL)
 Sitemap: https://updrafted.us/sitemap.xml

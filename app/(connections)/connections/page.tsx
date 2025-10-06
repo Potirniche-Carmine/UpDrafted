@@ -1263,8 +1263,6 @@ interface AdvancedFiltersProps {
   setSelectedGraduatingClasses: (classes: FilterOption[]) => void;
   selectedConferences: FilterOption[];
   setSelectedConferences: (conferences: FilterOption[]) => void;
-  selectedRequestTypes: FilterOption[];
-  setSelectedRequestTypes: (types: FilterOption[]) => void;
   minHeight: number;
   setMinHeight: (height: number) => void;
   minWeight: number;
@@ -1274,9 +1272,10 @@ interface AdvancedFiltersProps {
   userRole: string;
   onApplyFilters: () => void;
   onClearFilters: () => void;
-  activeTab: string;
   hasAdvancedSearch: boolean;
   onUpgradeClick: () => void;
+  showAdvanced: boolean;
+  setShowAdvanced: (show: boolean) => void;
 }
 
 const AdvancedFilters: React.FC<AdvancedFiltersProps> = ({
@@ -1296,8 +1295,6 @@ const AdvancedFilters: React.FC<AdvancedFiltersProps> = ({
   setSelectedGraduatingClasses,
   selectedConferences,
   setSelectedConferences,
-  selectedRequestTypes,
-  setSelectedRequestTypes,
   minHeight,
   setMinHeight,
   minWeight,
@@ -1307,13 +1304,11 @@ const AdvancedFilters: React.FC<AdvancedFiltersProps> = ({
   userRole,
   onApplyFilters,
   onClearFilters,
-  activeTab,
   hasAdvancedSearch,
   onUpgradeClick,
-
+  showAdvanced,
+  setShowAdvanced,
 }) => {
-  const [showAdvanced, setShowAdvanced] = useState(false);
-
   // Basic role filters for connections - exclude athletes filter for athlete users
   const basicFilters = useMemo(() => {
     const allFilters = [
@@ -1329,22 +1324,6 @@ const AdvancedFilters: React.FC<AdvancedFiltersProps> = ({
     }
     
     return allFilters;
-  }, [userRole]);
-
-  // Request type filter options (for pending/sent requests) - exclude athletes for athlete users
-  const requestTypeOptions = useMemo(() => {
-    const allOptions = [
-      { value: 'athletes', label: 'Athletes' },
-      { value: 'coaches', label: 'Coaches' },
-      { value: 'recruiters', label: 'Recruiters' }
-    ];
-    
-    // Remove athletes option if user is an athlete
-    if (userRole === 'athlete') {
-      return allOptions.filter(option => option.value !== 'athletes');
-    }
-    
-    return allOptions;
   }, [userRole]);
 
   // Filter options
@@ -1398,7 +1377,6 @@ const AdvancedFilters: React.FC<AdvancedFiltersProps> = ({
     selectedPositions.length > 0 ||
     selectedGraduatingClasses.length > 0 ||
     selectedConferences.length > 0 ||
-    selectedRequestTypes.length > 0 ||
     verifiedFilter !== null || // Include verification filter
     (isAdmin && (minHeight > 48 || minWeight > 50)); // Include height/weight for admin
 
@@ -1438,7 +1416,6 @@ const AdvancedFilters: React.FC<AdvancedFiltersProps> = ({
             positions: selectedPositions.length,
             classes: selectedGraduatingClasses.length,
             conferences: selectedConferences.length,
-            requestTypes: selectedRequestTypes.length,
             verified: verifiedFilter !== null ? 1 : 0, // Include verification filter
             height: (userRole === 'coach' || userRole === 'recruiter' || isAdmin) && minHeight > 48 ? 1 : 0, // Updated from 60 to 48
             weight: (userRole === 'coach' || userRole === 'recruiter' || isAdmin) && minWeight > 50 ? 1 : 0 // Updated from 100 to 50
@@ -1448,7 +1425,16 @@ const AdvancedFilters: React.FC<AdvancedFiltersProps> = ({
 
       {/* Advanced Filters Panel */}
       {showAdvanced && (
-        <div className="border border-border rounded-lg p-3 sm:p-4 space-y-1.5 sm:space-y-4 bg-muted/30">
+        <div className="border border-border rounded-lg p-3 sm:p-4 space-y-4 bg-muted/30 relative">
+          {/* Close Button */}
+          <button
+            onClick={() => setShowAdvanced(false)}
+            className="absolute top-2 right-2 sm:top-3 sm:right-3 p-1.5 rounded-md hover:bg-background/80 transition-colors text-muted-foreground hover:text-foreground"
+            aria-label="Close advanced filters"
+          >
+            <X size={18} />
+          </button>
+          
           {/* Basic Filters Grid - Fixed layout to prevent shifts */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
             {/* Sports Filter */}
@@ -1513,38 +1499,15 @@ const AdvancedFilters: React.FC<AdvancedFiltersProps> = ({
                 </div>
               )}
             </div>
-
-            {/* Request Type Filter - Reserve space for pending/sent requests tabs */}
-            {(activeTab === 'requests' || activeTab === 'sent-requests') ? (
-              <div className="space-y-2">
-                <Label className="text-sm font-medium">Request Types</Label>
-                {requestTypeOptions.length > 0 ? (
-                  <MultiSelectFilter
-                    options={requestTypeOptions}
-                    selected={selectedRequestTypes}
-                    onSelectionChange={setSelectedRequestTypes}
-                    placeholder="Filter by user type..."
-                    searchPlaceholder="Search user types..."
-                  />
-                ) : (
-                  <div className="h-10 flex items-center px-3 py-2 border border-border rounded-md bg-muted/50 text-muted-foreground text-sm">
-                    No request type filters available
-                  </div>
-                )}
-              </div>
-            ) : (
-              // Placeholder to maintain consistent spacing on connections tab
-              <div className="h-[60px]"></div>
-            )}
           </div>
 
           {/* Advanced Filters for Coaches/Recruiters - Fixed positioning */}
           {(userRole === 'coach' || userRole === 'recruiter' || isAdmin) && (
-            <div className="space-y-1.5 sm:space-y-4">
+            <div className="space-y-4">
               {/* Advanced Filters */}
-              <div className="border-t border-border pt-1 sm:pt-3 relative">
-                <Label className="text-sm font-medium mb-1 sm:mb-3 block">Advanced Filters</Label>
-                <div className="space-y-1.5 sm:space-y-4">
+              <div className="border-t border-border pt-4 relative">
+                <Label className="text-sm font-medium mb-4 block">Advanced Filters</Label>
+                <div className="space-y-4">
                   {/* Graduating Class - First in advanced filters */}
                   <div className="space-y-2">
                     <Label className="text-sm font-medium">Graduating Class</Label>
@@ -1820,7 +1783,6 @@ function App() {
   const [selectedPositions, setSelectedPositions] = useState<FilterOption[]>([]);
   const [selectedGraduatingClasses, setSelectedGraduatingClasses] = useState<FilterOption[]>([]);
   const [selectedConferences, setSelectedConferences] = useState<FilterOption[]>([]);
-  const [selectedRequestTypes, setSelectedRequestTypes] = useState<FilterOption[]>([]);
   
   // Height/Weight filters (for admin users)
   const [minHeight, setMinHeight] = useState(48); // 4'0" (updated from 60)
@@ -1840,7 +1802,6 @@ function App() {
     positions?: FilterOption[];
     graduatingClasses?: FilterOption[];
     conferences?: FilterOption[];
-    requestTypes?: FilterOption[];
     minHeight?: number;
     minWeight?: number;
     verifiedFilter?: boolean | null;
@@ -1864,7 +1825,6 @@ function App() {
           filters.positions?.length ||
           filters.graduatingClasses?.length ||
           filters.conferences?.length ||
-          filters.requestTypes?.length ||
           (filters.minHeight && filters.minHeight > 48) ||
           (filters.minWeight && filters.minWeight > 50) ||
           filters.verifiedFilter !== null;
@@ -1884,7 +1844,6 @@ function App() {
               positions: filters.positions?.map(p => p.value) || [],
               graduatingClasses: filters.graduatingClasses?.map(g => g.value) || [],
               conferences: filters.conferences?.map(c => c.value) || [],
-              requestTypes: filters.requestTypes?.map(r => r.value) || [],
               minHeight: filters.minHeight && filters.minHeight > 48 ? filters.minHeight : undefined,
               minWeight: filters.minWeight && filters.minWeight > 50 ? filters.minWeight : undefined,
               verified: filters.verifiedFilter,
@@ -1991,7 +1950,6 @@ function App() {
       positions: selectedPositions,
       graduatingClasses: selectedGraduatingClasses,
       conferences: selectedConferences,
-      requestTypes: selectedRequestTypes,
       minHeight: minHeight,
       minWeight: minWeight,
       verifiedFilter: verifiedFilter,
@@ -2010,7 +1968,6 @@ function App() {
     setSelectedPositions([]);
     setSelectedGraduatingClasses([]);
     setSelectedConferences([]);
-    setSelectedRequestTypes([]);
     setMinHeight(48);
     setMinWeight(50);
     setVerifiedFilter(null);
@@ -2044,6 +2001,9 @@ function App() {
   // Connection action handlers
   const [connectionToRemove, setConnectionToRemove] = useState<{id: number, targetUserId: string, userName: string} | null>(null);
   const [requestToWithdraw, setRequestToWithdraw] = useState<{id: number, targetUserId: string, userName: string} | null>(null);
+  
+  // Advanced filters state - persists across tab changes
+  const [showAdvanced, setShowAdvanced] = useState(false);
   
   // Initialize activeTab from URL search params, default to 'connections'
   const [activeTab, setActiveTab] = useState(() => {
@@ -2301,8 +2261,6 @@ function App() {
               setSelectedGraduatingClasses={setSelectedGraduatingClasses}
               selectedConferences={selectedConferences}
               setSelectedConferences={setSelectedConferences}
-              selectedRequestTypes={selectedRequestTypes}
-              setSelectedRequestTypes={setSelectedRequestTypes}
               minHeight={minHeight}
               setMinHeight={setMinHeight}
               minWeight={minWeight}
@@ -2314,8 +2272,8 @@ function App() {
               userRole={effectiveRole || ''}
               onApplyFilters={applyFilters}
               onClearFilters={clearAllFilters}
-              activeTab={activeTab}
-
+              showAdvanced={showAdvanced}
+              setShowAdvanced={setShowAdvanced}
             />
 
             {loading ? (
@@ -2369,8 +2327,6 @@ function App() {
               setSelectedGraduatingClasses={setSelectedGraduatingClasses}
               selectedConferences={selectedConferences}
               setSelectedConferences={setSelectedConferences}
-              selectedRequestTypes={selectedRequestTypes}
-              setSelectedRequestTypes={setSelectedRequestTypes}
               minHeight={minHeight}
               setMinHeight={setMinHeight}
               minWeight={minWeight}
@@ -2382,7 +2338,8 @@ function App() {
               userRole={effectiveRole || ''}
               onApplyFilters={applyFilters}
               onClearFilters={clearAllFilters}
-              activeTab={activeTab}
+              showAdvanced={showAdvanced}
+              setShowAdvanced={setShowAdvanced}
             />
 
             {loading ? (
@@ -2437,8 +2394,6 @@ function App() {
               setSelectedGraduatingClasses={setSelectedGraduatingClasses}
               selectedConferences={selectedConferences}
               setSelectedConferences={setSelectedConferences}
-              selectedRequestTypes={selectedRequestTypes}
-              setSelectedRequestTypes={setSelectedRequestTypes}
               minHeight={minHeight}
               setMinHeight={setMinHeight}
               minWeight={minWeight}
@@ -2450,7 +2405,8 @@ function App() {
               userRole={effectiveRole || ''}
               onApplyFilters={applyFilters}
               onClearFilters={clearAllFilters}
-              activeTab={activeTab}
+              showAdvanced={showAdvanced}
+              setShowAdvanced={setShowAdvanced}
             />
 
             {loading ? (

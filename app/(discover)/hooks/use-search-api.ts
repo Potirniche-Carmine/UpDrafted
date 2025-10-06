@@ -89,7 +89,7 @@ export const useSearchAPI = ({
         setInitialLoading(true);
         setAllUsers([]); // Clear previous results
         setHasSearched(true);
-        setPage(1); // Reset page state immediately for new searches
+        setPage(2); // Set to 2 since we're loading page 1, next load will be page 2
       } else {
         setLoading(true);
       }
@@ -104,9 +104,10 @@ export const useSearchAPI = ({
       };
       const token = await windowWithClerk.Clerk?.session?.getToken();
 
-      // Prepare the search parameters
+      // Prepare the search parameters - use 1 for new search, pageNum for pagination
+      const actualPage = isNewSearch ? 1 : pageNum;
       const searchParams = {
-        page: pageNum.toString(),
+        page: actualPage.toString(),
         pageSize: '10', // Show 10 profiles per load
         sports: selectedSports.map(sport => sanitizeText(sport.value)),
         divisions: selectedDivisions.map(div => sanitizeText(div.value)),
@@ -153,7 +154,7 @@ export const useSearchAPI = ({
           method: 'POST',
           headers: createSecureHeaders(token || ''),
           body: JSON.stringify({
-            page: pageNum,
+            page: actualPage,
             pageSize: 10,
             sports: selectedSports.map(sport => sanitizeText(sport.value)),
             divisions: selectedDivisions.map(div => sanitizeText(div.value)),
@@ -202,9 +203,14 @@ export const useSearchAPI = ({
 
       if (isNewSearch) {
         setAllUsers(data.results);
-        // Page is already set to 1 at the beginning of the function
+        // Page is already set to 2 at the beginning of the function (ready for next load)
       } else {
-        setAllUsers(prev => [...prev, ...data.results]);
+        // Use a Set to prevent duplicates based on user ID
+        setAllUsers(prev => {
+          const existingIds = new Set(prev.map(u => u.id));
+          const newUsers = data.results.filter(u => !existingIds.has(u.id));
+          return [...prev, ...newUsers];
+        });
         setPage(pageNum + 1); // Update page for next load
       }
 

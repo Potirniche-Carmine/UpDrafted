@@ -545,6 +545,7 @@ export default function AthleteForm({ data, onInputChange }: AthleteFormProps) {
               labelClassName="text-base font-medium"
               description="Choose your athletic conference for better recruiting visibility"
               height="h-11"
+              required={data.educationLevel === 'undergraduate' || data.educationLevel === 'graduate'}
             />
           </div>
         </div>

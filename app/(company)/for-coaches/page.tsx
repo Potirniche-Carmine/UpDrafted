@@ -1,10 +1,11 @@
-"use client";
-
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { ArrowRight, Navigation, Shield, Eye, Gift, Users, ExternalLink, Target, CheckCircle } from 'lucide-react';
+import { pageMetadata } from "@/lib/seo";
+
+export const metadata = pageMetadata.forCoaches();
 
 export default function ForCoachesPage() {
   return (

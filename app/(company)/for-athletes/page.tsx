@@ -1,10 +1,11 @@
-"use client";
-
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { ArrowRight, User, Target, Shield, Trophy, Star, MessageCircle, CheckCircle } from 'lucide-react';
+import { pageMetadata } from "@/lib/seo";
+
+export const metadata = pageMetadata.forAthletes();
 
 export default function ForAthletesPage() {
   return (

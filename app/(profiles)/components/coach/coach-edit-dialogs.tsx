@@ -11,13 +11,15 @@ import { Checkbox } from "@/components/ui/checkbox";
 
 import { Badge } from "@/components/ui/badge";
 import { Save, X } from "lucide-react";
-import { getSportsList, US_STATES, DIVISIONS, getPositionsForSport, getStudentClassificationOptions } from '@/lib/sports-data';
+import { US_STATES, DIVISIONS, getPositionsForSport, getStudentClassificationOptions } from '@/lib/sports-data';
 import { CoachProfileData } from './coach-profile-types';
 import { sanitizeProfileData } from '@/utils/sanitization';
 import { FileUpload } from '@/components/ui/file-upload';
 import { useRoleView } from '@/hooks/use-role-view';
 import { SchoolSelector } from "@/components/ui/school-selector";
 import { cn } from '@/lib/utils';
+import { UnifiedSportSelector } from "@/components/ui/unified-sport-selector";
+import { ConferenceSelector } from "@/components/ui/conference-selector";
 
 
 // Field validation limits
@@ -645,24 +647,23 @@ export function CoachEditDialogs({
 
             <div className="space-y-2">
               <Label htmlFor="sportCoaching">Sport *</Label>
-              <Select value={editData.sportCoaching || ''} onValueChange={(value) => {
-                if (!shouldLockFields()) {
-                  handleFieldChange('sportCoaching', value);
-                }
-              }}>
-                <SelectTrigger className={cn(
-                  '!h-11 w-full',
-                  validationErrors.sportCoaching ? 'border-red-500' : '',
-                  shouldLockFields() && 'text-muted-foreground opacity-50 cursor-not-allowed bg-muted'
-                )}>
-                  <SelectValue placeholder="Select sport" />
-                </SelectTrigger>
-                <SelectContent className="z-[70]">
-                  {getSportsList().map(sport => (
-                    <SelectItem key={sport} value={sport}>{sport}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <div className={cn(shouldLockFields() && 'opacity-50 cursor-not-allowed')}>
+                <UnifiedSportSelector
+                  mode="single"
+                  value={editData.sportCoaching || ''}
+                  onValueChange={(value) => {
+                    if (!shouldLockFields()) {
+                      handleFieldChange('sportCoaching', value);
+                    }
+                  }}
+                  placeholder="Select sport"
+                  userCurrentSport={profileData.sportCoaching}
+                  disabled={shouldLockFields()}
+                  className={cn(
+                    validationErrors.sportCoaching && 'border-red-500'
+                  )}
+                />
+              </div>
               {validationErrors.sportCoaching && <p className="text-red-500 text-sm">{validationErrors.sportCoaching}</p>}
             </div>
 
@@ -779,22 +780,21 @@ export function CoachEditDialogs({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="conference">Conference</Label>
-              <Input
-                id="conference"
+              <Label htmlFor="conference">Conference {editData.division && editData.division !== 'High School' && '*'}</Label>
+              <ConferenceSelector
+                division={editData.division || ''}
                 value={editData.conference || ''}
-                onChange={(e) => {
+                onValueChange={(value) => {
                   if (!shouldLockFields()) {
-                    handleFieldChange('conference', e.target.value);
+                    handleFieldChange('conference', value);
                   }
                 }}
-                placeholder="e.g., Big Ten, SEC, WAC"
-                autoComplete="off"
-                inputMode="text"
-                className={cn(
-                  shouldLockFields() && 'text-muted-foreground opacity-50 cursor-not-allowed bg-muted'
-                )}
+                placeholder="Select conference"
+                label=""
+                inDialog={true}
+                height="h-11"
                 disabled={shouldLockFields()}
+                required={editData.division !== 'High School'}
               />
             </div>
           </div>
@@ -1138,8 +1138,10 @@ export function CoachEditDialogs({
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent 
-        className="max-w-2xl max-h-[90vh] sm:max-h-[80vh] overflow-y-auto w-[95vw] sm:w-full flex flex-col"
+        className="max-w-2xl max-h-[90vh] sm:max-h-[80vh] overflow-y-auto overscroll-contain w-[95vw] sm:w-full flex flex-col"
         onOpenAutoFocus={e => e.preventDefault()}
+        style={{ touchAction: 'pan-y' }}
+        onWheel={(e) => e.stopPropagation()}
       >
         <DialogHeader>
           <DialogTitle>{getDialogTitle()}</DialogTitle>

@@ -1,10 +1,11 @@
-"use client";
-
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import Link from "next/link";
 import { Scale, Info, UserCheck, AlertTriangle, FileText, Mail, Shield, ArrowRight, MessageCircle, Crown } from "lucide-react";
+import { pageMetadata } from "@/lib/seo";
+
+export const metadata = pageMetadata.termsOfService();
 
 export default function TermsOfServicePage() {
     const lastUpdated = "January 2025";

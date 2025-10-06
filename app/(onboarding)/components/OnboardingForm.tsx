@@ -161,6 +161,7 @@ export default function OnboardingForm({ role, onBack }: OnboardingFormProps) {
     if (data.role === 'athlete' && !data.ageConfirmation) return false;
     
     if (data.role === 'athlete') {
+      const isCollege = data.educationLevel === 'undergraduate' || data.educationLevel === 'graduate';
       const baseRequirements = !!(
         data.sport && 
         data.graduationYear && 
@@ -174,12 +175,13 @@ export default function OnboardingForm({ role, onBack }: OnboardingFormProps) {
         data.weight && 
         data.positions.length > 0 &&
         data.intendedMajor &&
-        data.personalStatement
+        data.personalStatement &&
+        (isCollege ? data.division : data.teamLevel)
       );
 
-      // For college students, division is required instead of competitionLevel
-      const divisionRequirement = (data.educationLevel === 'undergraduate' || data.educationLevel === 'graduate') 
-        ? !!data.division 
+      // Conference is required for undergraduate and graduate students
+      const conferenceRequirement = isCollege
+        ? !!data.conference
         : true;
 
       // Academic requirements depend on education level
@@ -192,7 +194,7 @@ export default function OnboardingForm({ role, onBack }: OnboardingFormProps) {
         academicRequirements = true;
       }
 
-      return baseRequirements && divisionRequirement && academicRequirements;
+      return baseRequirements && conferenceRequirement && academicRequirements;
     } else if (data.role === 'coach') {
       // Base requirements for coaches
       const baseRequirements = !!(
@@ -206,6 +208,9 @@ export default function OnboardingForm({ role, onBack }: OnboardingFormProps) {
         data.personalStatement
       );
 
+      // Conference is required for all coaches (unless High School)
+      const conferenceRequirement = data.division === 'High School' ? true : !!data.conference;
+
       // Only require recruiting needs for non-high school coaches
       const recruitingRequirements = data.division === 'High School' || !!(
         data.recruitingStudentClassifications.length > 0 &&
@@ -213,7 +218,7 @@ export default function OnboardingForm({ role, onBack }: OnboardingFormProps) {
         data.recruitingPhilosophy
       );
 
-      return baseRequirements && recruitingRequirements;
+      return baseRequirements && conferenceRequirement && recruitingRequirements;
     } else {
       // Requirements for recruiters
       const baseRequirements = !!(
@@ -227,9 +232,12 @@ export default function OnboardingForm({ role, onBack }: OnboardingFormProps) {
         data.personalStatement
       );
 
+      // Conference is required for all recruiters (unless High School)
+      const conferenceRequirement = data.division === 'High School' ? true : !!data.conference;
+
       // For high school recruiters, don't require recruiting needs
       if (data.division === 'High School') {
-        return baseRequirements;
+        return baseRequirements && conferenceRequirement;
       }
 
       // Only require recruiting needs for the main sport during onboarding
@@ -240,7 +248,7 @@ export default function OnboardingForm({ role, onBack }: OnboardingFormProps) {
              mainSportNeeds.positions.length > 0 && 
              mainSportNeeds.recruitingPhilosophy.trim().length > 0;
 
-      return baseRequirements && mainSportRequirements;
+      return baseRequirements && conferenceRequirement && mainSportRequirements;
     }
   };
 

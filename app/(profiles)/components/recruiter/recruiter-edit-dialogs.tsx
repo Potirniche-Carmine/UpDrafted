@@ -11,13 +11,15 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Save, X } from "lucide-react";
-import { getSportsList, US_STATES, DIVISIONS, getPositionsForSport, getStudentClassificationOptions } from '@/lib/sports-data';
+import { US_STATES, DIVISIONS, getPositionsForSport, getStudentClassificationOptions } from '@/lib/sports-data';
 import { RecruiterProfileData } from './recruiter-profile-types';
 import { sanitizeProfileData } from '@/utils/sanitization';
 import { FileUpload } from '@/components/ui/file-upload';
 import { useRoleView } from '@/hooks/use-role-view';
 import { SchoolSelector } from "@/components/ui/school-selector";
 import { cn } from '@/lib/utils';
+import { UnifiedSportSelector } from "@/components/ui/unified-sport-selector";
+import { ConferenceSelector } from "@/components/ui/conference-selector";
 
 // Field validation limits
 const FIELD_LIMITS = {
@@ -719,28 +721,20 @@ export function RecruiterEditDialogs({
 
             <div className="space-y-2">
               <Label htmlFor="sportRecruiting">Sport Recruiting *</Label>
-              <Select 
-                value={editData.sportRecruiting || ''} 
-                onValueChange={(value) => {
-                  if (!shouldLockFields()) {
-                    handleFieldChange('sportRecruiting', value);
-                  }
-                }}
-              >
-                <SelectTrigger className={cn(
-                  '!h-11 w-full',
-                  shouldLockFields() && 'text-muted-foreground opacity-50 cursor-not-allowed bg-muted'
-                )}>
-                  <SelectValue placeholder="Select sport" />
-                </SelectTrigger>
-                <SelectContent className="z-[70]">
-                  {getSportsList().map((sport) => (
-                    <SelectItem key={sport} value={sport}>
-                      {sport}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <div className={cn(shouldLockFields() && 'opacity-50 cursor-not-allowed')}>
+                <UnifiedSportSelector
+                  mode="single"
+                  value={editData.sportRecruiting || ''}
+                  onValueChange={(value) => {
+                    if (!shouldLockFields()) {
+                      handleFieldChange('sportRecruiting', value);
+                    }
+                  }}
+                  placeholder="Select sport"
+                  userCurrentSport={profileData.sportRecruiting}
+                  disabled={shouldLockFields()}
+                />
+              </div>
               {validationErrors.sportRecruiting && (
                 <p className="text-sm text-red-500 mt-1">{validationErrors.sportRecruiting}</p>
               )}
@@ -864,23 +858,20 @@ export function RecruiterEditDialogs({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="conference">Conference (Optional)</Label>
-              <Input
-                id="conference"
+              <ConferenceSelector
+                division={editData.division || ''}
                 value={editData.conference || ''}
-                onChange={(e) => {
+                onValueChange={(value) => {
                   if (!shouldLockFields()) {
-                    handleFieldChange('conference', e.target.value);
+                    handleFieldChange('conference', value);
                   }
                 }}
-                placeholder="e.g., Big Ten, ACC, etc."
-                autoComplete="off"
-                inputMode="text"
-                autoFocus={false}
-                className={cn(
-                  shouldLockFields() && 'text-muted-foreground opacity-50 cursor-not-allowed bg-muted'
-                )}
+                placeholder="Select conference"
+                label=""
+                inDialog={true}
+                height="h-11"
                 disabled={shouldLockFields()}
+                required={editData.division !== 'High School'}
               />
             </div>
           </div>
@@ -1230,8 +1221,6 @@ export function RecruiterEditDialogs({
       case 'add-sport':
         const availablePositionsForNewSport = editData.newSport ? getPositionsForSport(editData.newSport) : [];
         const existingSports = [profileData.sportRecruiting, ...(profileData.secondarySports || [])];
-        const availableSports = getSportsList().filter(sport => !existingSports.includes(sport));
-        
 
 
         const toggleNeedsPosition = (position: string) => {
@@ -1246,32 +1235,20 @@ export function RecruiterEditDialogs({
           <div className="space-y-6">
             <div className="space-y-3">
               <Label htmlFor="newSport" className="text-base font-medium">Select Sport *</Label>
-              <Select 
-                value={editData.newSport || ''} 
+              <UnifiedSportSelector
+                mode="single"
+                value={editData.newSport || ''}
                 onValueChange={(value) => {
                   handleFieldChange('newSport', value);
                   // Reset positions when sport changes
                   handleFieldChange('positions', []);
                 }}
-              >
-                <SelectTrigger className="!h-11 w-full bg-background">
-                  <SelectValue placeholder="Select a sport to add" />
-                </SelectTrigger>
-                <SelectContent className="z-[70]">
-                  {availableSports.map((sport) => (
-                    <SelectItem key={sport} value={sport}>
-                      {sport}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                placeholder="Select a sport to add"
+                excludeSports={existingSports}
+                userCurrentSport={profileData.sportRecruiting}
+              />
               {validationErrors.newSport && (
                 <p className="text-sm text-red-500 mt-1">{validationErrors.newSport}</p>
-              )}
-              {availableSports.length === 0 && (
-                <p className="text-sm text-muted-foreground mt-1">
-                  All available sports have already been added to your profile.
-                </p>
               )}
             </div>
 
@@ -1413,8 +1390,10 @@ export function RecruiterEditDialogs({
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent 
-        className="max-w-2xl max-h-[90vh] sm:max-h-[80vh] overflow-y-auto w-[95vw] sm:w-full flex flex-col"
+        className="max-w-2xl max-h-[90vh] sm:max-h-[80vh] overflow-y-auto overscroll-contain w-[95vw] sm:w-full flex flex-col"
         onOpenAutoFocus={e => e.preventDefault()}
+        style={{ touchAction: 'pan-y' }}
+        onWheel={(e) => e.stopPropagation()}
       >
         <DialogHeader>
           <DialogTitle>{getDialogTitle()}</DialogTitle>

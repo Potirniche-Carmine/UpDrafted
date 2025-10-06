@@ -405,6 +405,7 @@ export default function CoachForm({ data, onInputChange }: CoachFormProps) {
             label="Conference"
             labelClassName="text-base font-medium"
             height="h-11"
+            required={data.division !== 'High School'}
           />
         </div>
       </div>
