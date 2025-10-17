@@ -12,7 +12,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { AuthWrapper } from '../../../components/auth-wrapper';
 import { useAuth } from "@clerk/nextjs";
-import { getSportsList } from "@/lib/sports-data";
+import { UnifiedSportSelector } from "@/components/ui/unified-sport-selector";
 import { generateProfileUrl } from "@/lib/utils";
 
 interface SearchResult {
@@ -97,9 +97,6 @@ const getRoleBadge = (role: string, division?: string, educationLevel?: string) 
 
 const RESULTS_PER_PAGE = 20;
 const PAGES_TO_LOAD = 2;
-
-// Get sports list from sports-data.ts
-const SPORTS = getSportsList();
 
 function SearchPageContent() {
   const searchParams = useSearchParams();
@@ -300,11 +297,11 @@ function SearchPageContent() {
   };
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-6xl">
+    <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-8 max-w-6xl">
       {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-foreground mb-2">Search Results</h1>
-        <p className="text-muted-foreground h-6">
+      <div className="mb-6 sm:mb-8">
+        <h1 className="text-2xl sm:text-3xl font-bold text-foreground mb-2">Search Results</h1>
+        <p className="text-sm sm:text-base text-muted-foreground h-6">
           {searchTerm ? (
             <>Showing results for &ldquo;<span className="font-medium text-foreground">{searchTerm}</span>&rdquo;</>
           ) : (
@@ -315,22 +312,22 @@ function SearchPageContent() {
 
       {/* Search Bar */}
       <Card className="mb-6">
-        <CardContent className="p-6">
-          <form onSubmit={handleSearch} className="space-y-6">
-            <div className="flex gap-4">
+        <CardContent className="p-4 sm:p-6">
+          <form onSubmit={handleSearch} className="space-y-4 sm:space-y-6">
+            <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
               <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Search className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
                 <Input
                   type="search"
-                  placeholder="Search athletes, coaches, recruiters... (minimum 3 characters)"
-                  className="pl-10 h-12"
+                  placeholder="Search athletes, coaches, recruiters..."
+                  className="pl-11 h-14 sm:h-12 text-base"
                   value={inputValue}
                   onChange={(e) => setInputValue(e.target.value)}
                 />
               </div>
               <Button 
                 type="submit" 
-                className="h-12 px-6 bg-[#01ae79] hover:bg-[#01ae79]/90 text-white"
+                className="h-14 sm:h-12 w-full sm:w-auto px-8 bg-[#01ae79] hover:bg-[#01ae79]/90 text-white font-medium text-base"
                 disabled={inputValue.length < 3}
               >
                 Search
@@ -338,11 +335,11 @@ function SearchPageContent() {
             </div>
             
             {/* Always visible filters */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
               <div>
                 <label className="block text-sm font-medium mb-2">Role</label>
                 <Select value={roleFilter} onValueChange={(value) => handleFilterChange('role', value)}>
-                  <SelectTrigger>
+                  <SelectTrigger className="h-12 sm:h-11 w-full">
                     <SelectValue placeholder="All roles" />
                   </SelectTrigger>
                   <SelectContent>
@@ -356,19 +353,13 @@ function SearchPageContent() {
               
               <div>
                 <label className="block text-sm font-medium mb-2">Sport</label>
-                <Select value={sportFilter} onValueChange={(value) => handleFilterChange('sport', value)}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="All sports" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All sports</SelectItem>
-                    {SPORTS.map((sport) => (
-                      <SelectItem key={sport} value={sport}>
-                        {sport}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <UnifiedSportSelector
+                  mode="single"
+                  value={sportFilter === 'all' ? '' : sportFilter}
+                  onValueChange={(value) => handleFilterChange('sport', value || 'all')}
+                  placeholder="All sports"
+                  className="w-full h-12 sm:h-11"
+                />
               </div>
             </div>
           </form>
@@ -376,8 +367,8 @@ function SearchPageContent() {
       </Card>
 
       {/* Results Count */}
-      <div className="flex items-center justify-between mb-6">
-        <p className="text-muted-foreground">
+      <div className="flex items-center justify-center mb-4 sm:mb-6">
+        <p className="text-sm sm:text-base text-muted-foreground text-center">
           {isLoading ? (
             'Searching...'
           ) : searchTerm.length < 3 ? (
@@ -386,7 +377,7 @@ function SearchPageContent() {
             <>
               {totalResults} {totalResults === 1 ? 'result' : 'results'} found
               {totalResults > 0 && (
-                <span> • Page {currentPage} of {totalPages}</span>
+                <span className="hidden sm:inline"> • Page {currentPage} of {totalPages}</span>
               )}
             </>
           )}
@@ -395,24 +386,23 @@ function SearchPageContent() {
 
       {/* Results Grid */}
       {searchTerm.length < 3 ? (
-        <div className="text-center py-16">
-          <Search className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
-          <h3 className="text-xl font-semibold text-foreground mb-2">Start your search</h3>
-          <p className="text-muted-foreground">
+        <div className="text-center py-12 sm:py-16">
+          <Search className="h-12 w-12 sm:h-16 sm:w-16 text-muted-foreground mx-auto mb-4" />
+          <h3 className="text-lg sm:text-xl font-semibold text-foreground mb-2">Start your search</h3>
+          <p className="text-sm sm:text-base text-muted-foreground">
             Enter at least 3 characters to search for athletes, coaches, and recruiters
           </p>
         </div>
       ) : isLoading && allResults.length === 0 ? (
-        <div className="text-center py-16">
+        <div className="text-center py-12 sm:py-16">
           <div className="animate-spin h-8 w-8 border-4 border-green-500 border-t-transparent rounded-full mx-auto mb-4"></div>
           <p className="text-muted-foreground">Searching...</p>
         </div>
       ) : getCurrentPageResults().length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-          {getCurrentPageResults().map((user) => (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 mb-6 sm:mb-8">{getCurrentPageResults().map((user) => (
             <Link key={user.id} href={generateProfileUrl(user.fullName, user.id)}>
-              <Card className="hover:shadow-lg transition-all duration-200 hover:border-green-200 dark:hover:border-green-800 group">
-                <CardContent className="p-4 md:p-6">
+              <Card className="hover:shadow-lg transition-all duration-200 hover:border-green-200 dark:hover:border-green-800 group h-full">
+                <CardContent className="p-4 sm:p-6">
                   <div className="flex items-start gap-3 md:gap-4">
                     <div className="relative flex-shrink-0">
                       <Avatar className="w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 ring-2 ring-[#01ae79]/20 group-hover:ring-[#01ae79]/50 transition-all duration-200">
@@ -506,14 +496,14 @@ function SearchPageContent() {
           ))}
         </div>
       ) : (
-        <div className="text-center py-16">
-          <Search className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
-          <h3 className="text-xl font-semibold text-foreground mb-2">No results found</h3>
-          <p className="text-muted-foreground mb-4">
+        <div className="text-center py-12 sm:py-16">
+          <Search className="h-12 w-12 sm:h-16 sm:w-16 text-muted-foreground mx-auto mb-4" />
+          <h3 className="text-lg sm:text-xl font-semibold text-foreground mb-2">No results found</h3>
+          <p className="text-sm sm:text-base text-muted-foreground mb-4">
             Try adjusting your search terms or clearing filters
           </p>
           {roleFilter !== 'all' && (
-            <Button onClick={clearFilters} variant="outline">
+            <Button onClick={clearFilters} variant="outline" className="h-11">
               Clear Filters
             </Button>
           )}
@@ -522,33 +512,49 @@ function SearchPageContent() {
 
       {/* Pagination */}
       {totalPages > 1 && (
-        <div className="flex items-center justify-center gap-2">
+        <div className="flex items-center justify-center gap-2 flex-wrap">
           <Button
             variant="outline"
             onClick={() => setCurrentPage(currentPage - 1)}
             disabled={currentPage === 1}
+            className="h-11 px-4 sm:px-6"
           >
             Previous
           </Button>
           
-          <div className="flex items-center gap-1">
-            {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-              <Button
-                key={page}
-                variant={currentPage === page ? "default" : "outline"}
-                size="sm"
-                onClick={() => setCurrentPage(page)}
-                className="w-10"
-              >
-                {page}
-              </Button>
-            ))}
+          <div className="flex items-center gap-1 flex-wrap justify-center">
+            {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => {
+              // Show first page, last page, current page, and pages around current
+              let page;
+              if (totalPages <= 5) {
+                page = i + 1;
+              } else if (currentPage <= 3) {
+                page = i + 1;
+              } else if (currentPage >= totalPages - 2) {
+                page = totalPages - 4 + i;
+              } else {
+                page = currentPage - 2 + i;
+              }
+              
+              return (
+                <Button
+                  key={page}
+                  variant={currentPage === page ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setCurrentPage(page)}
+                  className="w-10 h-10 sm:w-11 sm:h-11"
+                >
+                  {page}
+                </Button>
+              );
+            })}
           </div>
           
           <Button
             variant="outline"
             onClick={() => setCurrentPage(currentPage + 1)}
             disabled={currentPage === totalPages}
+            className="h-11 px-4 sm:px-6"
           >
             Next
           </Button>
