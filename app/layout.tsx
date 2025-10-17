@@ -5,6 +5,7 @@ import { ThemeProvider } from "@/components/theme-provider";
 import { ClerkProviderWrapper } from "@/components/clerk-theme-wrapper"; 
 import { Header } from "@/components/header";
 import { Footer } from "@/components/footer";
+import { MobileBottomNav } from "@/components/mobile-bottom-nav";
 import { QueryProvider } from '@/components/providers/query-provider'
 import { SubscriptionProvider } from '@/components/providers/subscription-provider'
 import { generateMetadata } from "@/lib/seo";
@@ -103,10 +104,11 @@ export default function RootLayout({
             >
               <SubscriptionProvider>
                 <Header />
-                <main className="flex-grow container mx-auto max-w-screen-2xl px-4 sm:px-6 lg:px-8 py-8">
+                <main className="flex-grow container mx-auto max-w-screen-2xl px-4 sm:px-6 lg:px-8 py-8 pb-20 md:pb-8">
                   {children}
                 </main>
                 <Footer />
+                <MobileBottomNav />
                 <ToastContainer />
               </SubscriptionProvider>
             </ClerkProviderWrapper>
