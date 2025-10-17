@@ -17,7 +17,6 @@ import {
 } from "lucide-react"
 import Link from "next/link"
 import { useProfileNavigation } from '@/hooks/use-profile-navigation'
-import { DashboardHeader } from '../components/dashboard-header'
 import { AuthWrapper } from '../../../components/auth-wrapper'
 import { PWAInstallPrompt } from '../../../components/pwa-install-prompt'
 import { PremiumLimitsCard } from '@/components/premium-limits-card'
@@ -64,18 +63,12 @@ const ncaaRules = [
 ];
 
 const getUserContent = (role: string, handleViewProfile: () => void, profileNavigating: boolean = false): {
-  welcomeText: string;
-  searchText: string;
-  searchHref: string;
   primaryNav: NavItem[];
 } => {
   // Base navigation items that exist in the app
   switch (role) {
     case 'athlete':
       return {
-        welcomeText: "Continue your recruiting journey",
-        searchText: "Discover Schools & Coaches",
-        searchHref: "/discover",
         primaryNav: [
           { 
             label: profileNavigating ? "Loading..." : "View Profile", 
@@ -123,9 +116,6 @@ const getUserContent = (role: string, handleViewProfile: () => void, profileNavi
       };
     case 'coach':
       return {
-        welcomeText: "Discover and recruit talented athletes",
-        searchText: "Discover Athletes",
-        searchHref: "/discover",
         primaryNav: [
           { 
             label: profileNavigating ? "Loading..." : "View Profile", 
@@ -173,9 +163,6 @@ const getUserContent = (role: string, handleViewProfile: () => void, profileNavi
       };
     case 'recruiter':
       return {
-        welcomeText: "Connect athletes with the right opportunities",
-        searchText: "Discover Athletes",
-        searchHref: "/discover",
         primaryNav: [
           { 
             label: profileNavigating ? "Loading..." : "View Profile", 
@@ -223,9 +210,6 @@ const getUserContent = (role: string, handleViewProfile: () => void, profileNavi
       };
     case 'admin':
       return {
-        welcomeText: "Manage and oversee platform operations",
-        searchText: "Discover All Users",
-        searchHref: "/discover",
         primaryNav: [
           { 
             label: "Admin Controls", 
@@ -274,9 +258,6 @@ const getUserContent = (role: string, handleViewProfile: () => void, profileNavi
     default:
       // Fallback for unknown roles
       return {
-        welcomeText: "Welcome to UpDrafted",
-        searchText: "Discover",
-        searchHref: "/discover",
         primaryNav: [
           { 
             label: "Discover", 
@@ -358,18 +339,10 @@ function DashboardContent({
   return (
     <div className="min-h-screen bg-background">
       <div className="container mx-auto py-6 px-4 md:px-6 space-y-8">
-        {/* Header Section */}
-        <DashboardHeader
-          welcomeText={userContent.welcomeText}
-          searchText={userContent.searchText}
-          searchHref={userContent.searchHref}
-        />
-
         {/* Main Grid Layout */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
-          {/* Side Content - Calendar and NCAA Rules (moved to top) */}
-          <div className="lg:col-start-3 lg:row-start-1 lg:row-span-3 space-y-6">
-            {/* Calendar Date */}
+          {/* Calendar Date - First on mobile, right side on desktop */}
+          <div className="lg:col-start-3 lg:row-start-1 order-1">
             <Card className="border shadow-sm bg-card/80 backdrop-blur-sm">
               <CardHeader className="pb-3">
                 <CardTitle className="text-foreground flex items-center text-lg">
@@ -383,8 +356,31 @@ function DashboardContent({
                 </div>
               </CardContent>
             </Card>
+          </div>
 
-            {/* NCAA Rules */}
+          {/* Navigation Cards - Second on mobile, spans 2 cols on desktop */}
+          <div className="lg:col-span-2 lg:row-start-1 order-2">
+            <Card className="border shadow-sm bg-card/80 backdrop-blur-sm">
+              <CardHeader>
+                <CardTitle className="text-foreground text-lg">Quick Navigation</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-4">
+                  {userContent.primaryNav.map((item, index) => (
+                    <NavCard key={index} item={item} profileNavigating={profileNavigating} />
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Premium Limits Card - Third on mobile, below Quick Navigation on desktop */}
+          <div className="lg:col-span-2 lg:row-start-2 order-3">
+            <PremiumLimitsCard />
+          </div>
+
+          {/* NCAA Rules - Fourth on mobile, right side on desktop */}
+          <div className="lg:col-start-3 lg:row-start-2 order-4">
             <Card className="border shadow-sm bg-card/80 backdrop-blur-sm">
               <CardHeader className="pb-3">
                 <CardTitle className="text-foreground flex items-center text-lg">
@@ -417,27 +413,6 @@ function DashboardContent({
                 </div>
               </CardContent>
             </Card>
-          </div>
-
-          {/* Navigation Cards */}
-          <div className="lg:col-span-2 lg:row-start-1">
-            <Card className="border shadow-sm bg-card/80 backdrop-blur-sm">
-              <CardHeader>
-                <CardTitle className="text-foreground text-lg">Quick Navigation</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-4">
-                  {userContent.primaryNav.map((item, index) => (
-                    <NavCard key={index} item={item} profileNavigating={profileNavigating} />
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Premium Limits Card - Below Quick Navigation */}
-          <div className="lg:col-span-2 lg:row-start-2">
-            <PremiumLimitsCard />
           </div>
         </div>
       </div>
