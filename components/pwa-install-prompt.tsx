@@ -240,8 +240,8 @@ export function PWAInstallPrompt() {
   }
 
   return (
-    <div className="fixed bottom-20 left-4 right-4 z-[60] md:hidden">
-      <Card className="bg-gradient-to-r from-green-500 to-green-600 text-white shadow-lg border-0">
+    <div className="fixed bottom-20 left-4 right-4 z-60 md:hidden">
+      <Card className="bg-linear-to-r from-green-500 to-green-600 text-white shadow-lg border-0">
         <CardContent className="p-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3 flex-1">
