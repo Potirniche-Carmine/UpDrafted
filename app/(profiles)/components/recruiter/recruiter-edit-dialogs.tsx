@@ -10,11 +10,12 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
-import { Save, X } from "lucide-react";
+import { Save, X, Upload } from "lucide-react";
+import Image from 'next/image';
 import { US_STATES, DIVISIONS, getPositionsForSport, getStudentClassificationOptions } from '@/lib/sports-data';
 import { RecruiterProfileData } from './recruiter-profile-types';
 import { sanitizeProfileData } from '@/utils/sanitization';
-import { FileUpload } from '@/components/ui/file-upload';
+import { ProfilePictureUpload } from '@/components/ui/profile-picture-upload';
 import { useRoleView } from '@/hooks/use-role-view';
 import { SchoolSelector } from "@/components/ui/school-selector";
 import { cn } from '@/lib/utils';
@@ -83,9 +84,8 @@ export function RecruiterEditDialogs({
   const [editData, setEditData] = useState<Record<string, any>>({});
   const [validationErrors, setValidationErrors] = useState<{[key: string]: string}>({});
   const [isUploading, setIsUploading] = useState(false);
-  const [profileImagePreview, setProfileImagePreview] = useState<string | null>(null);
+  const [croppedProfileImageData, setCroppedProfileImageData] = useState<{ blob: Blob; url: string } | null>(null);
   const [organizationLogoPreview, setOrganizationLogoPreview] = useState<string | null>(null);
-  const [selectedProfileFile, setSelectedProfileFile] = useState<File | null>(null);
   const [selectedOrganizationFile, setSelectedOrganizationFile] = useState<File | null>(null);
 
   // Get admin role information for demo profile uploads
@@ -100,9 +100,8 @@ export function RecruiterEditDialogs({
   useEffect(() => {
     if (!dialogType) {
       // Clean up preview state when dialog is closed
-      setProfileImagePreview(null);
+      setCroppedProfileImageData(null);
       setOrganizationLogoPreview(null);
-      setSelectedProfileFile(null);
       setSelectedOrganizationFile(null);
       setValidationErrors({});
       return;
@@ -180,8 +179,7 @@ export function RecruiterEditDialogs({
       case 'profile-image':
         setEditData({});
         // Always start fresh for image editing
-        setProfileImagePreview(null);
-        setSelectedProfileFile(null);
+        setCroppedProfileImageData(null);
         break;
       case 'organization-logo':
         setEditData({});
@@ -346,9 +344,8 @@ export function RecruiterEditDialogs({
       onSave(updates);
       
       // Reset state and close dialog
-      setProfileImagePreview(null);
+      setCroppedProfileImageData(null);
       setOrganizationLogoPreview(null);
-      setSelectedProfileFile(null);
       setSelectedOrganizationFile(null);
       onClose();
     } catch (error) {
@@ -359,7 +356,17 @@ export function RecruiterEditDialogs({
     }
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, imageType: 'profile' | 'organization') => {
+  const handleProfilePictureChange = (blob: Blob, croppedImageUrl: string) => {
+    setCroppedProfileImageData({ blob, url: croppedImageUrl });
+    setValidationErrors({});
+  };
+
+  const removeProfilePicture = () => {
+    setCroppedProfileImageData(null);
+    setValidationErrors({});
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     
     if (file) {
@@ -380,49 +387,40 @@ export function RecruiterEditDialogs({
       // Clear any previous errors
       setValidationErrors({});
       
-      // Store the selected file
-      if (imageType === 'profile') {
-        setSelectedProfileFile(file);
-      } else {
-        setSelectedOrganizationFile(file);
-      }
+      // Store the selected file for organization logo
+      setSelectedOrganizationFile(file);
       
       // Create preview URL
       const reader = new FileReader();
       reader.onloadend = () => {
-        if (imageType === 'profile') {
-          setProfileImagePreview(reader.result as string);
-        } else {
-          setOrganizationLogoPreview(reader.result as string);
-        }
+        setOrganizationLogoPreview(reader.result as string);
       };
       reader.readAsDataURL(file);
     }
   };
 
-  const removeImagePreview = (imageType: 'profile' | 'organization') => {
-    if (imageType === 'profile') {
-      setProfileImagePreview(null);
-      setSelectedProfileFile(null);
-    } else {
-      setOrganizationLogoPreview(null);
-      setSelectedOrganizationFile(null);
-    }
+  const removeOrganizationLogo = () => {
+    setOrganizationLogoPreview(null);
+    setSelectedOrganizationFile(null);
     setValidationErrors({});
     // Reset file input
-    const fileInput = document.getElementById(
-      imageType === 'profile' ? 'profileImageUpload' : 'organizationLogoUpload'
-    ) as HTMLInputElement;
+    const fileInput = document.getElementById('organizationLogoUpload') as HTMLInputElement;
     if (fileInput) {
       fileInput.value = '';
     }
   };
 
-  const handleManualUpload = async (imageType: 'profile' | 'organization') => {
-    const file = imageType === 'profile' ? selectedProfileFile : selectedOrganizationFile;
-    if (!file) return;
+  const handleProfileImageUpload = async () => {
+    if (!croppedProfileImageData) return;
+    
+    // Convert blob to file
+    const file = new File([croppedProfileImageData.blob], 'profile-picture.jpg', { type: 'image/jpeg' });
+    await handleImageUpload(file, 'profile');
+  };
 
-    await handleImageUpload(file, imageType);
+  const handleOrganizationLogoUpload = async () => {
+    if (!selectedOrganizationFile) return;
+    await handleImageUpload(selectedOrganizationFile, 'organization');
   };
 
   // Helper function to check if recruiting needs form is valid
@@ -1180,42 +1178,87 @@ export function RecruiterEditDialogs({
 
       case 'profile-image':
         return (
-          <FileUpload
-            id="profileImageUpload"
-            accept="image/jpeg,image/jpg,image/png,image/webp"
-            onChange={(e) => handleFileChange(e, 'profile')}
-            onRemove={() => removeImagePreview('profile')}
-            disabled={isUploading}
-            preview={profileImagePreview}
-            originalImage={profileData.profileImage}
-            uploadText="Upload a profile picture"
-            chooseText="Choose a new profile picture"
-            supportedFormats="Supported formats: JPG, PNG, WebP"
-            maxSize="5MB"
-            isUploading={isUploading}
-            error={validationErrors.upload}
-            imageType="profile"
-          />
+          <div className="space-y-4">
+            <ProfilePictureUpload
+              id="profileImageUpload"
+              value={croppedProfileImageData?.url || profileData.profileImage}
+              onChange={handleProfilePictureChange}
+              onRemove={removeProfilePicture}
+              disabled={isUploading}
+            />
+            {validationErrors.upload && <p className="text-red-500 text-sm">{validationErrors.upload}</p>}
+          </div>
         );
 
       case 'organization-logo':
         return (
-          <FileUpload
-            id="organizationLogoUpload"
-            accept="image/jpeg,image/jpg,image/png,image/webp"
-            onChange={(e) => handleFileChange(e, 'organization')}
-            onRemove={() => removeImagePreview('organization')}
-            disabled={isUploading}
-            preview={organizationLogoPreview}
-            originalImage={profileData.organizationLogo}
-            uploadText="Upload organization logo"
-            chooseText="Choose a new logo"
-            supportedFormats="Supported formats: JPG, PNG, WebP"
-            maxSize="5MB"
-            isUploading={isUploading}
-            error={validationErrors.upload}
-            imageType="organization"
-          />
+          <div className="space-y-4">
+            <div className="space-y-4">
+              {organizationLogoPreview || profileData.organizationLogo ? (
+                <div className="relative mx-auto w-24 h-24">
+                  <div className="relative w-full h-full rounded-lg overflow-hidden bg-muted border-2 border-border">
+                    <Image
+                      src={organizationLogoPreview || profileData.organizationLogo || ''}
+                      alt="Organization logo"
+                      fill
+                      className="object-cover"
+                      unoptimized
+                    />
+                  </div>
+                  {organizationLogoPreview && (
+                    <Button
+                      type="button"
+                      variant="destructive"
+                      size="sm"
+                      onClick={removeOrganizationLogo}
+                      className="absolute -top-2 -right-2 w-8 h-8 rounded-full p-0 shadow-lg border-2 border-background"
+                      disabled={isUploading}
+                      title="Remove logo"
+                    >
+                      <X className="w-4 h-4" />
+                    </Button>
+                  )}
+                </div>
+              ) : (
+                <div 
+                  className="border-2 border-dashed border-border rounded-lg p-8 hover:border-primary/50 transition-colors cursor-pointer group"
+                  onClick={() => document.getElementById('organizationLogoUpload')?.click()}
+                >
+                  <div className="flex flex-col items-center gap-3">
+                    <div className="w-20 h-20 rounded-lg bg-muted flex items-center justify-center group-hover:bg-primary/10 transition-colors">
+                      <Upload className="w-10 h-10 text-muted-foreground group-hover:text-primary transition-colors" />
+                    </div>
+                    <div className="text-center">
+                      <p className="text-sm font-medium">Click to upload organization logo</p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        PNG, JPG or WebP (max. 5MB)
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+              
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => document.getElementById('organizationLogoUpload')?.click()}
+                disabled={isUploading}
+                className="w-full"
+              >
+                {organizationLogoPreview || profileData.organizationLogo ? 'Change Logo' : 'Choose Logo'}
+              </Button>
+
+              <input
+                id="organizationLogoUpload"
+                type="file"
+                accept="image/jpeg,image/jpg,image/png,image/webp"
+                onChange={handleFileChange}
+                disabled={isUploading}
+                className="sr-only"
+              />
+            </div>
+            {validationErrors.upload && <p className="text-red-500 text-sm">{validationErrors.upload}</p>}
+          </div>
         );
 
       case 'add-sport':
@@ -1433,14 +1476,14 @@ export function RecruiterEditDialogs({
               Add Sport
             </Button>
           )}
-          {dialogType === 'profile-image' && profileImagePreview && (
-            <Button onClick={() => handleManualUpload('profile')} disabled={isUploading}>
+          {dialogType === 'profile-image' && croppedProfileImageData && (
+            <Button onClick={handleProfileImageUpload} disabled={isUploading}>
               <Save className="w-4 h-4 mr-2" />
               {isUploading ? 'Saving...' : 'Save Changes'}
             </Button>
           )}
           {dialogType === 'organization-logo' && organizationLogoPreview && (
-            <Button onClick={() => handleManualUpload('organization')} disabled={isUploading}>
+            <Button onClick={handleOrganizationLogoUpload} disabled={isUploading}>
               <Save className="w-4 h-4 mr-2" />
               {isUploading ? 'Saving...' : 'Save Changes'}
             </Button>

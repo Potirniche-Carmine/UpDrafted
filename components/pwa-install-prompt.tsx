@@ -79,16 +79,29 @@ export function PWAInstallPrompt() {
       if (dismissedValue === 'true') return true;
       
       const dismissTime = parseInt(dismissedValue);
-      const sevenDaysInMs = 7 * 24 * 60 * 60 * 1000;
+      const threeDaysInMs = 3 * 24 * 60 * 60 * 1000; // 3 days
       const now = Date.now();
       
-      return (now - dismissTime) < sevenDaysInMs;
+      return (now - dismissTime) < threeDaysInMs;
+    };
+    
+    // Track dashboard visits to avoid showing on first visit
+    const checkShouldShowBasedOnVisits = () => {
+      const visitCountStr = localStorage.getItem('pwa-dashboard-visits');
+      const visitCount = visitCountStr ? parseInt(visitCountStr) : 0;
+      
+      // Increment visit count
+      localStorage.setItem('pwa-dashboard-visits', String(visitCount + 1));
+      
+      // Show after 2nd visit (user has used the app at least once before)
+      return visitCount >= 1;
     };
     
     const initializePrompt = async () => {
       const standalone = checkStandalone();
       const mobile = checkMobile();
       const dismissed = checkDismissed();
+      const hasEnoughVisits = checkShouldShowBasedOnVisits();
       const installable = await checkInstallability();
       const browser = getBrowserType();
       
@@ -102,6 +115,7 @@ export function PWAInstallPrompt() {
                         mobile && 
                         !standalone && 
                         !dismissed &&
+                        hasEnoughVisits &&
                         installable &&
                         window.location.pathname === '/dashboard';
 
@@ -154,78 +168,57 @@ export function PWAInstallPrompt() {
     };
   }, [showPrompt]);
 
-  const getInstallInstructions = () => {
-    switch (browserType) {
-      case 'chrome':
-      case 'edge':
-        return {
-          title: 'Install UpDrafted App',
-          instructions: [
-            'Tap the menu (⋮) in your browser',
-            'Select "Add to Home screen" or "Install app"',
-            'Tap "Add" or "Install" to confirm'
-          ]
-        };
-      case 'safari':
-        return {
-          title: 'Add UpDrafted to Home Screen',
-          instructions: [
-            'Tap the Share button (□↗) at the bottom',
-            'Scroll and tap "Add to Home Screen"',
-            'Tap "Add" to confirm'
-          ]
-        };
-      case 'firefox':
-        return {
-          title: 'Install UpDrafted',
-          instructions: [
-            'Tap the menu (☰) in your browser',
-            'Look for "Install" or "Add to Home screen"',
-            'Follow the prompts to install'
-          ]
-        };
-      default:
-        return {
-          title: 'Install UpDrafted',
-          instructions: [
-            'Look for an "Install" or "Add to Home screen" option in your browser menu',
-            'This may be in the address bar or main menu',
-            'Follow your browser\'s prompts to install'
-          ]
-        };
-    }
-  };
-
   const handleInstallClick = async () => {
     if (deferredPrompt) {
       try {
+        // Trigger the native browser install prompt
         await deferredPrompt.prompt();
         const { outcome } = await deferredPrompt.userChoice;
         
         if (outcome === 'accepted') {
+          // User installed the app
+          localStorage.setItem('pwa-install-dismissed', 'true');
+          setShowPrompt(false);
+        } else {
+          // User dismissed the install dialog
+          localStorage.setItem('pwa-install-dismissed', Date.now().toString());
+          setShowPrompt(false);
+        }
+        
+        setDeferredPrompt(null);
+      } catch (error) {
+        console.error('Error during install prompt:', error);
+        // Still hide the prompt if there's an error
+        setShowPrompt(false);
+        localStorage.setItem('pwa-install-dismissed', Date.now().toString());
+      }
+    } else {
+      // For browsers like Safari that don't support beforeinstallprompt
+      // Try to trigger the native share sheet if possible
+      if (browserType === 'safari') {
+        // On iOS Safari, we can't programmatically trigger the install
+        // But we can at least dismiss the prompt and let the user know
+        // they can use the Share button
+        const shouldShowTip = confirm(
+          'To add UpDrafted to your home screen:\n\n' +
+          '1. Tap the Share button (□↗) at the bottom\n' +
+          '2. Scroll down and tap "Add to Home Screen"\n' +
+          '3. Tap "Add" to confirm\n\n' +
+          'Would you like to see this tip again later?'
+        );
+        
+        if (!shouldShowTip) {
           localStorage.setItem('pwa-install-dismissed', 'true');
         } else {
           localStorage.setItem('pwa-install-dismissed', Date.now().toString());
         }
-        
-        setDeferredPrompt(null);
         setShowPrompt(false);
-      } catch (error) {
-        console.error('Error during install prompt:', error);
-        // Fallback to manual instructions
-        showManualInstructions();
+      } else {
+        // For other browsers, just dismiss
+        setShowPrompt(false);
+        localStorage.setItem('pwa-install-dismissed', Date.now().toString());
       }
-    } else {
-      // Show manual instructions when no deferred prompt is available
-      showManualInstructions();
     }
-  };
-
-  const showManualInstructions = () => {
-    const { title, instructions } = getInstallInstructions();
-    const instructionText = instructions.map((step, index) => `${index + 1}. ${step}`).join('\n');
-    
-    alert(`${title}\n\n${instructionText}\n\nAfter installation, you'll get:\n• Push notifications\n• Offline access\n• Faster loading\n• Native app experience`);
   };
 
   const handleDismiss = () => {
@@ -247,8 +240,8 @@ export function PWAInstallPrompt() {
   }
 
   return (
-    <div className="fixed bottom-4 left-4 right-4 z-50 md:hidden">
-      <Card className="bg-gradient-to-r from-green-500 to-green-600 text-white shadow-lg border-0">
+    <div className="fixed bottom-20 left-4 right-4 z-60 md:hidden">
+      <Card className="bg-linear-to-r from-green-500 to-green-600 text-white shadow-lg border-0">
         <CardContent className="p-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3 flex-1">
