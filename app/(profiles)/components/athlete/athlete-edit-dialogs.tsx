@@ -15,7 +15,7 @@ import { Save, X, Plus, Shield, CalendarIcon, Trophy } from "lucide-react";
 import { US_STATES, GRADUATION_YEARS, getPositionsForSport, getMeasurablesForSport, DIVISIONS } from '@/lib/sports-data';
 import { EducationLevel } from '@/app/(onboarding)/lib/onboarding';
 import { sanitizeProfileData } from '@/utils/sanitization';
-import { FileUpload } from '@/components/ui/file-upload';
+import { ProfilePictureUpload } from '@/components/ui/profile-picture-upload';
 import { useRoleView } from '@/hooks/use-role-view';
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
 import { ConferenceSelector } from "@/components/ui/conference-selector";
@@ -342,8 +342,7 @@ export function AthleteEditDialogs({
   const [validationErrors, setValidationErrors] = useState<{[key: string]: string}>({});
   const [measurableToEdit, setMeasurableToEdit] = useState<Measurable | null>(null);
   const [isUploading, setIsUploading] = useState(false);
-  const [profileImagePreview, setProfileImagePreview] = useState<string | null>(null);
-  const [selectedProfileFile, setSelectedProfileFile] = useState<File | null>(null);
+  const [croppedImageData, setCroppedImageData] = useState<{ blob: Blob; url: string } | null>(null);
   const [isDirty, setIsDirty] = useState(false);
   
   // Get subscription status to determine video limits
@@ -425,8 +424,7 @@ export function AthleteEditDialogs({
   useEffect(() => {
     if (!dialogType) {
       // Clean up state immediately when dialog is closed
-      setProfileImagePreview(null);
-      setSelectedProfileFile(null);
+      setCroppedImageData(null);
       setValidationErrors({});
       setTempVideos([]); // Clear temp videos when dialog closes
       return;
@@ -557,8 +555,7 @@ export function AthleteEditDialogs({
   useEffect(() => {
     if (dialogType === 'profile-image') {
       // Always start fresh for image editing when dialog opens
-      setProfileImagePreview(null);
-      setSelectedProfileFile(null);
+      setCroppedImageData(null);
       setValidationErrors({});
     }
   }, [dialogType]); // Only depend on dialogType, not profileData
@@ -940,8 +937,7 @@ export function AthleteEditDialogs({
       onSave(updates);
       
       // Reset state and close dialog
-      setProfileImagePreview(null);
-      setSelectedProfileFile(null);
+      setCroppedImageData(null);
       onClose();
     } catch (error) {
       console.error('Error uploading image:', error);
@@ -951,53 +947,22 @@ export function AthleteEditDialogs({
     }
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    
-    if (file) {
-      // Validate file type
-      const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
-      if (!allowedTypes.includes(file.type)) {
-        setValidationErrors({ upload: 'Please select a valid image file (JPEG, PNG, or WebP)' });
-        return;
-      }
-
-      // Validate file size (5MB limit)
-      const maxSize = 5 * 1024 * 1024; // 5MB in bytes
-      if (file.size > maxSize) {
-        setValidationErrors({ upload: 'File size must be less than 5MB' });
-        return;
-      }
-
-      // Clear any previous errors
-      setValidationErrors({});
-      
-      // Store the selected file
-      setSelectedProfileFile(file);
-      
-      // Create preview URL
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setProfileImagePreview(reader.result as string);
-      };
-      reader.readAsDataURL(file);
-    }
+  const handleProfilePictureChange = (blob: Blob, croppedImageUrl: string) => {
+    setCroppedImageData({ blob, url: croppedImageUrl });
+    setValidationErrors({});
   };
 
-  const removeImagePreview = () => {
-    setProfileImagePreview(null);
-    setSelectedProfileFile(null);
+  const removeProfilePicture = () => {
+    setCroppedImageData(null);
     setValidationErrors({});
-    // Reset file input
-    const fileInput = document.getElementById('profileImageUpload') as HTMLInputElement;
-    if (fileInput) {
-      fileInput.value = '';
-    }
   };
 
   const handleSaveImageChanges = async () => {
-    if (!selectedProfileFile) return;
-    await handleImageUpload(selectedProfileFile);
+    if (!croppedImageData) return;
+    
+    // Convert blob to file
+    const file = new File([croppedImageData.blob], 'profile-picture.jpg', { type: 'image/jpeg' });
+    await handleImageUpload(file);
   };
 
   const handleDeleteMeasurable = () => {
@@ -2551,31 +2516,20 @@ export function AthleteEditDialogs({
               <DialogDescription>Upload a professional headshot or action photo to represent yourself.</DialogDescription>
             </DialogHeader>
             <div className="space-y-4">
-              <div className="space-y-4">
-                <FileUpload
-                  id="profileImageUpload"
-                  accept="image/jpeg,image/jpg,image/png,image/webp"
-                  onChange={handleFileChange}
-                  onRemove={removeImagePreview}
-                  disabled={isUploading}
-                  preview={profileImagePreview}
-                  originalImage={profileData.profileImage}
-                  uploadText="Upload a profile picture"
-                  chooseText="Choose a new profile picture"
-                  supportedFormats="Supported formats: JPG, PNG, WebP"
-                  maxSize="5MB"
-                  isUploading={isUploading}
-                  error={validationErrors.upload}
-                  imageType="profile"
-                />
-              </div>
+              <ProfilePictureUpload
+                id="profileImageUpload"
+                value={croppedImageData?.url || profileData.profileImage}
+                onChange={handleProfilePictureChange}
+                onRemove={removeProfilePicture}
+                disabled={isUploading}
+              />
               {validationErrors.upload && <p className="text-red-500 text-sm">{validationErrors.upload}</p>}
             </div>
             <DialogFooter className="gap-2">
               <Button variant="outline" onClick={onClose} disabled={isUploading}>
                 Cancel
               </Button>
-              {profileImagePreview && (
+              {croppedImageData && (
                 <Button onClick={handleSaveImageChanges} disabled={isUploading}>
                   <Save className="w-4 h-4 mr-2" />
                   {isUploading ? 'Saving...' : 'Save Changes'}
