@@ -26,36 +26,51 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build and Push Docker Image
+      - name: Load Environment Variables and Build
+        env:
+          ENV_FILE_PATH: ${{ secrets.PROD_ENV_FILE_PATH }}
         run: |
+          # Load environment variables from .env file
+          if [ ! -f "$ENV_FILE_PATH" ]; then
+            echo "Error: Environment file not found at $ENV_FILE_PATH"
+            exit 1
+          fi
+          
+          set -a
+          source "$ENV_FILE_PATH"
+          set +a
+          
+          # Build and push image
           IMAGE_ID=ghcr.io/${{ github.repository_owner }}/updraftedprod
           IMAGE_ID=$(echo $IMAGE_ID | tr '[:upper:]' '[:lower:]')
-          # Create temporary files for secrets
-          echo "${{ secrets.DATABASE_URL }}" > /tmp/database_url
-          echo "${{ secrets.CLERK_SECRET_KEY }}" > /tmp/clerk_secret_key
-          echo "${{ secrets.MESSAGE_ENCRYPTION_KEY }}" > /tmp/message_encryption_key
-          echo "${{ secrets.STRIPE_SECRET_KEY }}" > /tmp/stripe_secret_key
-          echo "${{ secrets.STRIPE_WEBHOOK_SECRET }}" > /tmp/stripe_webhook_secret
-          echo "${{ secrets.R2_ACCESS_KEY_ID }}" > /tmp/r2_access_key_id
-          echo "${{ secrets.R2_SECRET_ACCESS_KEY }}" > /tmp/r2_secret_access_key
-          echo "${{ secrets.R2_ACCOUNT_ID }}" > /tmp/r2_account_id
-          echo "${{ secrets.R2_PUBLIC_BUCKET_NAME }}" > /tmp/r2_public_bucket_name
-          echo "${{ secrets.R2_PRIVATE_BUCKET_NAME }}" > /tmp/r2_private_bucket_name
-          # Build with secrets mounted
+          
+          # Create temporary secret files from loaded env vars
+          echo "$DATABASE_URL" > /tmp/database_url
+          echo "$CLERK_SECRET_KEY" > /tmp/clerk_secret_key
+          echo "$MESSAGE_ENCRYPTION_KEY" > /tmp/message_encryption_key
+          echo "$STRIPE_SECRET_KEY" > /tmp/stripe_secret_key
+          echo "$STRIPE_WEBHOOK_SECRET" > /tmp/stripe_webhook_secret
+          echo "$R2_ACCESS_KEY_ID" > /tmp/r2_access_key_id
+          echo "$R2_SECRET_ACCESS_KEY" > /tmp/r2_secret_access_key
+          echo "$R2_ACCOUNT_ID" > /tmp/r2_account_id
+          echo "$R2_PUBLIC_BUCKET_NAME" > /tmp/r2_public_bucket_name
+          echo "$R2_PRIVATE_BUCKET_NAME" > /tmp/r2_private_bucket_name
+          
+          # Build with all env vars
           DOCKER_BUILDKIT=1 docker build \
-            --build-arg NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=${{ secrets.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY }} \
-            --build-arg NEXT_PUBLIC_CLERK_SIGN_IN_URL=${{ secrets.NEXT_PUBLIC_CLERK_SIGN_IN_URL }} \
-            --build-arg NEXT_PUBLIC_CLERK_SIGN_UP_URL=${{ secrets.NEXT_PUBLIC_CLERK_SIGN_UP_URL }} \
-            --build-arg NEXT_PUBLIC_APP_URL=${{ secrets.NEXT_PUBLIC_APP_URL }} \
-            --build-arg R2_PUBLIC_URL=${{ secrets.R2_PUBLIC_URL }} \
-            --build-arg NEXT_PUBLIC_R2_PUBLIC_URL=${{ secrets.NEXT_PUBLIC_R2_PUBLIC_URL }} \
-            --build-arg NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=${{ secrets.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY }} \
-            --build-arg NEXT_PUBLIC_STRIPE_PRICE_ATHLETE_MONTHLY=${{ secrets.NEXT_PUBLIC_STRIPE_PRICE_ATHLETE_MONTHLY }} \
-            --build-arg NEXT_PUBLIC_STRIPE_PRICE_ATHLETE_YEARLY=${{ secrets.NEXT_PUBLIC_STRIPE_PRICE_ATHLETE_YEARLY }} \
-            --build-arg NEXT_PUBLIC_STRIPE_PRICE_COACH_MONTHLY=${{ secrets.NEXT_PUBLIC_STRIPE_PRICE_COACH_MONTHLY }} \
-            --build-arg NEXT_PUBLIC_STRIPE_PRICE_COACH_YEARLY=${{ secrets.NEXT_PUBLIC_STRIPE_PRICE_COACH_YEARLY }} \
-            --build-arg NEXT_PUBLIC_STRIPE_PRICE_RECRUITER_MONTHLY=${{ secrets.NEXT_PUBLIC_STRIPE_PRICE_RECRUITER_MONTHLY }} \
-            --build-arg NEXT_PUBLIC_STRIPE_PRICE_RECRUITER_YEARLY=${{ secrets.NEXT_PUBLIC_STRIPE_PRICE_RECRUITER_YEARLY }} \
+            --build-arg NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY="$NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY" \
+            --build-arg NEXT_PUBLIC_CLERK_SIGN_IN_URL="$NEXT_PUBLIC_CLERK_SIGN_IN_URL" \
+            --build-arg NEXT_PUBLIC_CLERK_SIGN_UP_URL="$NEXT_PUBLIC_CLERK_SIGN_UP_URL" \
+            --build-arg NEXT_PUBLIC_APP_URL="$NEXT_PUBLIC_APP_URL" \
+            --build-arg R2_PUBLIC_URL="$R2_PUBLIC_URL" \
+            --build-arg NEXT_PUBLIC_R2_PUBLIC_URL="$NEXT_PUBLIC_R2_PUBLIC_URL" \
+            --build-arg NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY="$NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY" \
+            --build-arg NEXT_PUBLIC_STRIPE_PRICE_ATHLETE_MONTHLY="$NEXT_PUBLIC_STRIPE_PRICE_ATHLETE_MONTHLY" \
+            --build-arg NEXT_PUBLIC_STRIPE_PRICE_ATHLETE_YEARLY="$NEXT_PUBLIC_STRIPE_PRICE_ATHLETE_YEARLY" \
+            --build-arg NEXT_PUBLIC_STRIPE_PRICE_COACH_MONTHLY="$NEXT_PUBLIC_STRIPE_PRICE_COACH_MONTHLY" \
+            --build-arg NEXT_PUBLIC_STRIPE_PRICE_COACH_YEARLY="$NEXT_PUBLIC_STRIPE_PRICE_COACH_YEARLY" \
+            --build-arg NEXT_PUBLIC_STRIPE_PRICE_RECRUITER_MONTHLY="$NEXT_PUBLIC_STRIPE_PRICE_RECRUITER_MONTHLY" \
+            --build-arg NEXT_PUBLIC_STRIPE_PRICE_RECRUITER_YEARLY="$NEXT_PUBLIC_STRIPE_PRICE_RECRUITER_YEARLY" \
             --secret id=database_url,src=/tmp/database_url \
             --secret id=clerk_secret_key,src=/tmp/clerk_secret_key \
             --secret id=message_encryption_key,src=/tmp/message_encryption_key \
@@ -67,17 +82,19 @@ jobs:
             --secret id=r2_public_bucket_name,src=/tmp/r2_public_bucket_name \
             --secret id=r2_private_bucket_name,src=/tmp/r2_private_bucket_name \
             -t $IMAGE_ID:latest .
-          # Clean up temporary files
+          
+          # Clean up
           rm -f /tmp/database_url /tmp/clerk_secret_key /tmp/message_encryption_key
           rm -f /tmp/stripe_secret_key /tmp/stripe_webhook_secret
           rm -f /tmp/r2_access_key_id /tmp/r2_secret_access_key /tmp/r2_account_id
           rm -f /tmp/r2_public_bucket_name /tmp/r2_private_bucket_name
+          
           docker push $IMAGE_ID:latest
           
-      - name: Trigger Coolify Production Deployment via Webhook
-        run: >
-          curl -X POST "${{ secrets.COOLIFY_WEBHOOK_URL }}"
-          -H "Authorization: Bearer ${{ secrets.COOLIFY_TOKEN }}"
+      - name: Trigger Coolify Production Deployment
+        run: |
+          curl -X POST "${{ secrets.COOLIFY_WEBHOOK_URL }}" \
+            -H "Authorization: Bearer ${{ secrets.COOLIFY_TOKEN }}"
 
   deploy-development:
     name: Build and Deploy to Development
@@ -98,37 +115,52 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build and Push Docker Image for Dev
+      - name: Load Environment Variables and Build
+        env:
+          ENV_FILE_PATH: ${{ secrets.DEV_ENV_FILE_PATH }}
         run: |
+          # Load environment variables from .env file
+          if [ ! -f "$ENV_FILE_PATH" ]; then
+            echo "Error: Environment file not found at $ENV_FILE_PATH"
+            exit 1
+          fi
+          
+          set -a
+          source "$ENV_FILE_PATH"
+          set +a
+          
+          # Build and push image
           IMAGE_ID=ghcr.io/${{ github.repository_owner }}/updrafteddev
           IMAGE_ID=$(echo $IMAGE_ID | tr '[:upper:]' '[:lower:]')
-          # Create temporary files for secrets
-          echo "${{ secrets.DEV_DATABASE_URL }}" > /tmp/database_url
-          echo "${{ secrets.DEV_CLERK_SECRET_KEY }}" > /tmp/clerk_secret_key
-          echo "${{ secrets.DEV_MESSAGE_ENCRYPTION_KEY }}" > /tmp/message_encryption_key
-          echo "${{ secrets.DEV_STRIPE_SECRET_KEY }}" > /tmp/stripe_secret_key
-          echo "${{ secrets.DEV_STRIPE_WEBHOOK_SECRET }}" > /tmp/stripe_webhook_secret
-          echo "${{ secrets.DEV_R2_ACCESS_KEY_ID }}" > /tmp/r2_access_key_id
-          echo "${{ secrets.DEV_R2_SECRET_ACCESS_KEY }}" > /tmp/r2_secret_access_key
-          echo "${{ secrets.DEV_R2_ACCOUNT_ID }}" > /tmp/r2_account_id
-          echo "${{ secrets.DEV_R2_PUBLIC_BUCKET_NAME }}" > /tmp/r2_public_bucket_name
-          echo "${{ secrets.DEV_R2_PRIVATE_BUCKET_NAME }}" > /tmp/r2_private_bucket_name
-          # Build with secrets mounted
+          
+          # Create temporary secret files from loaded env vars
+          echo "$DATABASE_URL" > /tmp/database_url
+          echo "$CLERK_SECRET_KEY" > /tmp/clerk_secret_key
+          echo "$MESSAGE_ENCRYPTION_KEY" > /tmp/message_encryption_key
+          echo "$STRIPE_SECRET_KEY" > /tmp/stripe_secret_key
+          echo "$STRIPE_WEBHOOK_SECRET" > /tmp/stripe_webhook_secret
+          echo "$R2_ACCESS_KEY_ID" > /tmp/r2_access_key_id
+          echo "$R2_SECRET_ACCESS_KEY" > /tmp/r2_secret_access_key
+          echo "$R2_ACCOUNT_ID" > /tmp/r2_account_id
+          echo "$R2_PUBLIC_BUCKET_NAME" > /tmp/r2_public_bucket_name
+          echo "$R2_PRIVATE_BUCKET_NAME" > /tmp/r2_private_bucket_name
+          
+          # Build with all env vars
           DOCKER_BUILDKIT=1 docker build \
             -f dockerfile.dev \
-            --build-arg NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=${{ secrets.DEV_NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY }} \
-            --build-arg NEXT_PUBLIC_CLERK_SIGN_IN_URL=${{ secrets.DEV_NEXT_PUBLIC_CLERK_SIGN_IN_URL }} \
-            --build-arg NEXT_PUBLIC_CLERK_SIGN_UP_URL=${{ secrets.DEV_NEXT_PUBLIC_CLERK_SIGN_UP_URL }} \
-            --build-arg NEXT_PUBLIC_APP_URL=${{ secrets.DEV_NEXT_PUBLIC_APP_URL }} \
-            --build-arg R2_PUBLIC_URL=${{ secrets.DEV_R2_PUBLIC_URL }} \
-            --build-arg NEXT_PUBLIC_R2_PUBLIC_URL=${{ secrets.DEV_NEXT_PUBLIC_R2_PUBLIC_URL }} \
-            --build-arg NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=${{ secrets.DEV_NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY }} \
-            --build-arg NEXT_PUBLIC_STRIPE_PRICE_ATHLETE_MONTHLY=${{ secrets.DEV_NEXT_PUBLIC_STRIPE_PRICE_ATHLETE_MONTHLY }} \
-            --build-arg NEXT_PUBLIC_STRIPE_PRICE_ATHLETE_YEARLY=${{ secrets.DEV_NEXT_PUBLIC_STRIPE_PRICE_ATHLETE_YEARLY }} \
-            --build-arg NEXT_PUBLIC_STRIPE_PRICE_COACH_MONTHLY=${{ secrets.DEV_NEXT_PUBLIC_STRIPE_PRICE_COACH_MONTHLY }} \
-            --build-arg NEXT_PUBLIC_STRIPE_PRICE_COACH_YEARLY=${{ secrets.DEV_NEXT_PUBLIC_STRIPE_PRICE_COACH_YEARLY }} \
-            --build-arg NEXT_PUBLIC_STRIPE_PRICE_RECRUITER_MONTHLY=${{ secrets.DEV_NEXT_PUBLIC_STRIPE_PRICE_RECRUITER_MONTHLY }} \
-            --build-arg NEXT_PUBLIC_STRIPE_PRICE_RECRUITER_YEARLY=${{ secrets.DEV_NEXT_PUBLIC_STRIPE_PRICE_RECRUITER_YEARLY }} \
+            --build-arg NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY="$NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY" \
+            --build-arg NEXT_PUBLIC_CLERK_SIGN_IN_URL="$NEXT_PUBLIC_CLERK_SIGN_IN_URL" \
+            --build-arg NEXT_PUBLIC_CLERK_SIGN_UP_URL="$NEXT_PUBLIC_CLERK_SIGN_UP_URL" \
+            --build-arg NEXT_PUBLIC_APP_URL="$NEXT_PUBLIC_APP_URL" \
+            --build-arg R2_PUBLIC_URL="$R2_PUBLIC_URL" \
+            --build-arg NEXT_PUBLIC_R2_PUBLIC_URL="$NEXT_PUBLIC_R2_PUBLIC_URL" \
+            --build-arg NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY="$NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY" \
+            --build-arg NEXT_PUBLIC_STRIPE_PRICE_ATHLETE_MONTHLY="$NEXT_PUBLIC_STRIPE_PRICE_ATHLETE_MONTHLY" \
+            --build-arg NEXT_PUBLIC_STRIPE_PRICE_ATHLETE_YEARLY="$NEXT_PUBLIC_STRIPE_PRICE_ATHLETE_YEARLY" \
+            --build-arg NEXT_PUBLIC_STRIPE_PRICE_COACH_MONTHLY="$NEXT_PUBLIC_STRIPE_PRICE_COACH_MONTHLY" \
+            --build-arg NEXT_PUBLIC_STRIPE_PRICE_COACH_YEARLY="$NEXT_PUBLIC_STRIPE_PRICE_COACH_YEARLY" \
+            --build-arg NEXT_PUBLIC_STRIPE_PRICE_RECRUITER_MONTHLY="$NEXT_PUBLIC_STRIPE_PRICE_RECRUITER_MONTHLY" \
+            --build-arg NEXT_PUBLIC_STRIPE_PRICE_RECRUITER_YEARLY="$NEXT_PUBLIC_STRIPE_PRICE_RECRUITER_YEARLY" \
             --secret id=database_url,src=/tmp/database_url \
             --secret id=clerk_secret_key,src=/tmp/clerk_secret_key \
             --secret id=message_encryption_key,src=/tmp/message_encryption_key \
@@ -140,14 +172,16 @@ jobs:
             --secret id=r2_public_bucket_name,src=/tmp/r2_public_bucket_name \
             --secret id=r2_private_bucket_name,src=/tmp/r2_private_bucket_name \
             -t $IMAGE_ID:latest .
-          # Clean up temporary files
+          
+          # Clean up
           rm -f /tmp/database_url /tmp/clerk_secret_key /tmp/message_encryption_key
           rm -f /tmp/stripe_secret_key /tmp/stripe_webhook_secret
           rm -f /tmp/r2_access_key_id /tmp/r2_secret_access_key /tmp/r2_account_id
           rm -f /tmp/r2_public_bucket_name /tmp/r2_private_bucket_name
+          
           docker push $IMAGE_ID:latest
           
-      - name: Trigger Coolify Development Deployment via Webhook
-        run: >
-          curl -X POST "${{ secrets.COOLIFY_DEV_WEBHOOK_URL }}"
-          -H "Authorization: Bearer ${{ secrets.COOLIFY_DEV_TOKEN }}"
+      - name: Trigger Coolify Development Deployment
+        run: |
+          curl -X POST "${{ secrets.COOLIFY_DEV_WEBHOOK_URL }}" \
+            -H "Authorization: Bearer ${{ secrets.COOLIFY_DEV_TOKEN }}"
