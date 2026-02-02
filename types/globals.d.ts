@@ -2,10 +2,9 @@ export { }
 
 export type Roles = 'admin' | 'athlete' | 'coach' | 'recruiter'
 
-declare global {
-    interface CustomJwtSessionClaims {
-        metadata: {
-            role?: Roles
-        }
+// Better-auth extends the user type with role field
+declare module "better-auth/types" {
+    interface User {
+        role?: Roles
     }
 }

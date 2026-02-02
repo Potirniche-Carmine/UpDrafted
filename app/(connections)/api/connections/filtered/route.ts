@@ -99,10 +99,10 @@ interface FilteredConnectionsResponse {
   connected: FilteredConnectionData[];
   incoming: FilteredConnectionData[];
   outgoing: FilteredConnectionData[];
-  counts: { 
-    connected: number; 
-    incoming: number; 
-    outgoing: number; 
+  counts: {
+    connected: number;
+    incoming: number;
+    outgoing: number;
   };
 }
 
@@ -150,7 +150,7 @@ function validateAndSanitizeFilters(filters: RawFilterInput): ValidatedFilters {
   const validateNumber = (num: unknown, min: number, max: number): number | undefined => {
     // Handle string inputs that can be converted to numbers
     let numValue: number;
-    
+
     if (typeof num === 'number') {
       numValue = num;
     } else if (typeof num === 'string') {
@@ -160,7 +160,7 @@ function validateAndSanitizeFilters(filters: RawFilterInput): ValidatedFilters {
     } else {
       return undefined;
     }
-    
+
     // Validate range
     if (numValue < min || numValue > max || !isFinite(numValue)) return undefined;
     return Math.floor(numValue);
@@ -225,10 +225,10 @@ export async function POST(request: NextRequest) {
     // Check subscription features for premium filters
     const hasPhysicalRequirements = sanitizedFilters.minHeight || sanitizedFilters.minWeight;
     const hasVerifiedFilter = sanitizedFilters.verified !== null;
-    
+
     if (hasPhysicalRequirements || hasVerifiedFilter) {
       const hasAdvancedSearchAccess = await SubscriptionManager.hasPremiumAccess(currentUserId);
-      
+
       if (!hasAdvancedSearchAccess) {
         return NextResponse.json(
           {
@@ -252,19 +252,19 @@ export async function POST(request: NextRequest) {
 
     // Check cache first (only if no filters applied)
     const hasBasicFilters = sanitizedFilters.sports.length > 0 ||
-                           sanitizedFilters.divisions.length > 0 ||
-                           sanitizedFilters.states.length > 0 ||
-                           sanitizedFilters.requestTypes.length > 0;
+      sanitizedFilters.divisions.length > 0 ||
+      sanitizedFilters.states.length > 0 ||
+      sanitizedFilters.requestTypes.length > 0;
     const hasAdvancedFilters = sanitizedFilters.positions.length > 0 ||
-                              sanitizedFilters.graduatingClasses.length > 0 ||
-                              sanitizedFilters.conferences.length > 0 ||
-                              sanitizedFilters.minHeight ||
-                              sanitizedFilters.minWeight ||
-                              sanitizedFilters.verified !== null;
+      sanitizedFilters.graduatingClasses.length > 0 ||
+      sanitizedFilters.conferences.length > 0 ||
+      sanitizedFilters.minHeight ||
+      sanitizedFilters.minWeight ||
+      sanitizedFilters.verified !== null;
     const hasFilters = hasBasicFilters || hasAdvancedFilters;
-    
+
     const cacheKey = hasFilters ? null : `connections:${currentUserId}:all`;
-    
+
     if (cacheKey) {
       const cachedConnections = await getCachedWithType<FilteredConnectionsResponse>(cacheKey);
       if (cachedConnections) {
@@ -276,13 +276,13 @@ export async function POST(request: NextRequest) {
     }
 
     // Get connections from database with optimized filtering for basic filters
-    const allConnections = hasBasicFilters 
+    const allConnections = hasBasicFilters
       ? await connectionOperations.getFilteredUserConnections(currentUserId, {
-          sports: sanitizedFilters.sports,
-          divisions: sanitizedFilters.divisions,
-          states: sanitizedFilters.states,
-          requestTypes: sanitizedFilters.requestTypes,
-        })
+        sports: sanitizedFilters.sports,
+        divisions: sanitizedFilters.divisions,
+        states: sanitizedFilters.states,
+        requestTypes: sanitizedFilters.requestTypes,
+      })
       : await connectionOperations.getUserConnections(currentUserId);
 
     // Early exit if no connections
@@ -293,11 +293,11 @@ export async function POST(request: NextRequest) {
         outgoing: [],
         counts: { connected: 0, incoming: 0, outgoing: 0 }
       };
-      
+
       if (cacheKey) {
         await setCachedWithType(cacheKey, emptyResponse, 'userConnections');
       }
-      
+
       return createSuccessResponse({
         success: true,
         ...emptyResponse
@@ -313,7 +313,7 @@ export async function POST(request: NextRequest) {
       // Determine which user is the "other" user
       const isFromUser = connection.fromUserId === currentUserId;
       const otherUser = isFromUser ? connection.toUser : connection.fromUser;
-      
+
       // Early filtering for advanced filters to avoid unnecessary object creation
       if (hasAdvancedFilters) {
         // Quick rejection based on advanced filters
@@ -323,14 +323,14 @@ export async function POST(request: NextRequest) {
             return; // Skip this connection
           }
         }
-        
+
         if (sanitizedFilters.graduatingClasses.length > 0 && otherUser.role === 'athlete') {
           const userGradYear = otherUser.athleteProfile?.graduationYear?.toString();
           if (!userGradYear || !sanitizedFilters.graduatingClasses.includes(userGradYear)) {
             return; // Skip this connection
           }
         }
-        
+
         if (sanitizedFilters.conferences.length > 0) {
           let userConference = null;
           if (otherUser.role === 'athlete' && otherUser.athleteProfile) {
@@ -340,26 +340,26 @@ export async function POST(request: NextRequest) {
           } else if (otherUser.role === 'recruiter' && otherUser.recruitingProfile) {
             userConference = (otherUser.recruitingProfile as RecruitingProfileWithConference).conference;
           }
-          
+
           if (!userConference || !sanitizedFilters.conferences.includes(userConference)) {
             return; // Skip this connection
           }
         }
-        
+
         if (sanitizedFilters.minHeight && otherUser.role === 'athlete') {
           const userHeightInches = parseHeightToInches(otherUser.athleteProfile?.height);
           if (userHeightInches === null || userHeightInches < sanitizedFilters.minHeight) {
             return; // Skip this connection
           }
         }
-        
+
         if (sanitizedFilters.minWeight && otherUser.role === 'athlete') {
           const userWeightPounds = parseWeightToPounds(otherUser.athleteProfile?.weight);
           if (userWeightPounds === null || userWeightPounds < sanitizedFilters.minWeight) {
             return; // Skip this connection
           }
         }
-        
+
         if (sanitizedFilters.verified !== null) {
           let isVerified = false;
           if (otherUser.role === 'athlete') {
@@ -369,13 +369,13 @@ export async function POST(request: NextRequest) {
           } else if (otherUser.role === 'recruiter') {
             isVerified = Boolean(otherUser.recruitingProfile?.isVerified);
           }
-          
+
           if (sanitizedFilters.verified !== isVerified) {
             return; // Skip this connection
           }
         }
       }
-      
+
       const formattedConnection: FilteredConnectionData = {
         id: connection.id,
         status: connection.status,
@@ -385,38 +385,38 @@ export async function POST(request: NextRequest) {
         isInitiator: isFromUser,
         otherUser: {
           userId: otherUser.id,
-          fullName: otherUser.athleteProfile?.fullName || 
-                    otherUser.coachProfile?.fullName || 
-                    otherUser.recruitingProfile?.fullName || '',
-          profileImage: otherUser.athleteProfile?.profileImageR3Key || 
-                        otherUser.coachProfile?.profileImageR3Key || 
-                        otherUser.recruitingProfile?.profileImageR3Key || null,
-          organizationName: otherUser.athleteProfile?.school?.name || 
-                            otherUser.coachProfile?.school?.name || 
-                            otherUser.recruitingProfile?.school?.name || '',
-          title: otherUser.coachProfile?.title || 
-                 otherUser.recruitingProfile?.title || '',
-          sport: otherUser.athleteProfile?.sport || 
-                 otherUser.coachProfile?.sportCoaching ||
-                 otherUser.recruitingProfile?.sportRecruiting || '',
-          city: otherUser.athleteProfile?.city || 
-                otherUser.coachProfile?.city || 
-                otherUser.recruitingProfile?.city || '',
-          state: otherUser.athleteProfile?.state || 
-                 otherUser.coachProfile?.state || 
-                 otherUser.recruitingProfile?.state || '',
+          fullName: otherUser.athleteProfile?.fullName ||
+            otherUser.coachProfile?.fullName ||
+            otherUser.recruitingProfile?.fullName || '',
+          profileImage: otherUser.athleteProfile?.profileImageR3Key ||
+            otherUser.coachProfile?.profileImageR3Key ||
+            otherUser.recruitingProfile?.profileImageR3Key || null,
+          organizationName: otherUser.athleteProfile?.school?.name ||
+            otherUser.coachProfile?.school?.name ||
+            otherUser.recruitingProfile?.school?.name || '',
+          title: otherUser.coachProfile?.title ||
+            otherUser.recruitingProfile?.title || '',
+          sport: otherUser.athleteProfile?.sport ||
+            otherUser.coachProfile?.sportCoaching ||
+            otherUser.recruitingProfile?.sportRecruiting || '',
+          city: otherUser.athleteProfile?.city ||
+            otherUser.coachProfile?.city ||
+            otherUser.recruitingProfile?.city || '',
+          state: otherUser.athleteProfile?.state ||
+            otherUser.coachProfile?.state ||
+            otherUser.recruitingProfile?.state || '',
           country: 'United States', // Default to US since types don't include country field yet
           graduationYear: otherUser.athleteProfile?.graduationYear || null,
           educationLevel: otherUser.athleteProfile?.educationLevel || '',
-          division: otherUser.coachProfile?.division || 
-                    otherUser.recruitingProfile?.division || '',
-          conference: (otherUser.athleteProfile as AthleteProfileWithConference)?.conference || 
-                     (otherUser.coachProfile as CoachProfileWithConference)?.conference || 
-                     (otherUser.recruitingProfile as RecruitingProfileWithConference)?.conference || undefined,
-          isVerified: otherUser.athleteProfile?.isVerified || 
-                     otherUser.coachProfile?.isVerified || 
-                     otherUser.recruitingProfile?.isVerified || false,
-          role: otherUser.role,
+          division: otherUser.coachProfile?.division ||
+            otherUser.recruitingProfile?.division || '',
+          conference: (otherUser.athleteProfile as AthleteProfileWithConference)?.conference ||
+            (otherUser.coachProfile as CoachProfileWithConference)?.conference ||
+            (otherUser.recruitingProfile as RecruitingProfileWithConference)?.conference || undefined,
+          isVerified: otherUser.athleteProfile?.isVerified ||
+            otherUser.coachProfile?.isVerified ||
+            otherUser.recruitingProfile?.isVerified || false,
+          role: otherUser.role || 'athlete',
           height: otherUser.athleteProfile?.height || undefined,
           weight: otherUser.athleteProfile?.weight || undefined,
           positions: otherUser.athleteProfile?.positions || undefined,

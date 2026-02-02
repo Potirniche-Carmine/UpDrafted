@@ -8,14 +8,14 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Eye, Shield, CheckCircle, Settings, X } from "lucide-react";
-import { useUser } from "@clerk/nextjs";
+import { useUser } from "@/hooks/use-auth";
 
 type ViewRole = 'athlete' | 'coach' | 'recruiter';
 
 export function RoleSwitcher() {
   const { user } = useUser();
   const [isExpanded, setIsExpanded] = useState(false);
-  const isAdmin = user?.publicMetadata?.role === 'admin';
+  const isAdmin = user?.role === 'admin';
 
   if (!isAdmin) {
     return null;
@@ -107,7 +107,7 @@ export function RoleSwitcher() {
             {currentRole}
           </Badge>
         </div>
-        
+
         {/* Role Selection */}
         <div className="space-y-2">
           <Label className="text-xs font-medium">Role</Label>

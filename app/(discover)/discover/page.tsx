@@ -3,7 +3,7 @@
 import { useEffect, useMemo, Suspense, useCallback, useState, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { AuthWrapper } from '@/components/auth-wrapper';
-import { useUser } from "@clerk/nextjs";
+import { useUser } from "@/hooks/use-auth";
 import { sortByCompletenessWithRandomization } from '../components/profile-completeness-sorter';
 import { useFeatureAccess } from '@/components/providers/subscription-provider';
 
@@ -26,7 +26,7 @@ import { useUserPrimarySport } from '@/hooks/use-user-primary-sport';
 function SearchPageContent() {
   const searchParams = useSearchParams();
   const { user } = useUser();
-  const effectiveRole = user?.publicMetadata?.role as string;
+  const effectiveRole = user?.role as string;
   
   // Get subscription features
   const features = useFeatureAccess();

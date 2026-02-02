@@ -1,4 +1,4 @@
-import { auth, createClerkClient } from '@clerk/nextjs/server'
+import { getSession } from '@/utils/roles'
 import { NextRequest, NextResponse } from 'next/server'
 import { validateRoleAssignment, validateRoleEscalation } from '@/utils/validation'
 import { uploadProfilePicture, uploadOrganizationLogo } from '@/database/r2'
@@ -10,25 +10,21 @@ import { recruitingNeedsOperations } from '@/database/db-utils'
 // Force Node.js runtime to avoid expensive edge function costs
 export const runtime = 'nodejs'
 
-const clerkClient = createClerkClient({
-  secretKey: process.env.CLERK_SECRET_KEY
-})
-
 export async function POST(request: NextRequest) {
   try {
-    // Authenticate the request using Clerk (middleware already handled auth.protect())
-    const { userId } = await auth()
-    
-    if (!userId) {
+    // Authenticate the request using better-auth session
+    const session = await getSession();
+
+    if (!session?.user) {
       return NextResponse.json(
         { error: 'Unauthorized - Missing or invalid session token' },
         { status: 401 }
       )
     }
 
+    const userId = session.user.id;
     // Check if user is admin
-    const user = await clerkClient.users.getUser(userId)
-    const isAdmin = user.publicMetadata?.role === 'admin'
+    const isAdmin = session.user.role === 'admin';
 
     // Parse the request body
     const formData = await request.formData()
@@ -36,7 +32,7 @@ export async function POST(request: NextRequest) {
     const profileImage = formData.get('profileImage') as File | null
     const organizationLogo = formData.get('organizationLogo') as File | null
     const userIdFromForm = formData.get('userId') as string
-    const email = formData.get('email') as string
+    const email = formData.get('email') as string || session.user.email
     const role = formData.get('role') as 'athlete' | 'coach' | 'recruiter'
 
     // Validate the userId matches the authenticated user
@@ -94,9 +90,9 @@ export async function POST(request: NextRequest) {
     // Check if there are validation errors
     if (Object.keys(validationErrors).length > 0) {
       return NextResponse.json(
-        { 
+        {
           error: 'Validation failed',
-          validationErrors 
+          validationErrors
         },
         { status: 400 }
       )
@@ -147,14 +143,14 @@ export async function POST(request: NextRequest) {
           // Get or create school for demo profile
           const educationLevelMap: { [key: string]: 'high_school' | 'college' | 'university' | 'professional' | 'other' } = {
             'high_school': 'high_school',
-            'associate': 'college', 
+            'associate': 'college',
             'undergraduate': 'university',
             'graduate': 'university'
           };
-          
+
           const educationLevel = profileData.educationLevel || 'undergraduate';
           const schoolClassification = educationLevelMap[educationLevel] || 'university';
-          
+
           const school = await schoolOperations.getOrCreateSchool(
             profileData.organizationName || 'Unknown Institution',
             schoolClassification
@@ -189,7 +185,7 @@ export async function POST(request: NextRequest) {
             profileImageR3Key
           })
           profileId = result.id
-          
+
         } else if (role === 'coach') {
           // Get or create school for demo coach profile
           const school = await schoolOperations.getOrCreateSchool(
@@ -216,7 +212,7 @@ export async function POST(request: NextRequest) {
             organizationLogoR3Key
           })
           profileId = result.id
-          
+
           // Create recruiting needs for demo coach if provided
           if (profileData.recruitingPositions) {
             await recruitingNeedsOperations.createRecruitingNeeds({
@@ -227,7 +223,7 @@ export async function POST(request: NextRequest) {
               recruitingPhilosophy: profileData.recruitingPhilosophy || undefined
             });
           }
-          
+
         } else if (role === 'recruiter') {
           // Get or create school for demo recruiter profile
           const school = await schoolOperations.getOrCreateSchool(
@@ -255,7 +251,7 @@ export async function POST(request: NextRequest) {
             organizationLogoR3Key
           })
           profileId = result.id
-          
+
           // Create sport-specific recruiting needs for demo recruiter if provided
           if (profileData.sportSpecificNeeds) {
             for (const [sport, needs] of Object.entries(profileData.sportSpecificNeeds)) {
@@ -274,33 +270,33 @@ export async function POST(request: NextRequest) {
         } else {
           throw new Error('Invalid role provided')
         }
-        
-        // Don't update admin role in Clerk - keep them as admin
+
       } else {
         // For regular users, use normal onboarding flow
+        // The operations below automatically update the user record in the database with the new role
         if (role === 'athlete') {
           result = await onboardingOperations.createAthleteOnboarding(
-            userId, 
-            email, 
+            userId,
+            email,
             profileData,
             profileImageR3Key
           )
           profileId = result.athleteProfile.id
-          
+
         } else if (role === 'coach') {
           result = await onboardingOperations.createCoachOnboarding(
-            userId, 
-            email, 
+            userId,
+            email,
             profileData,
             profileImageR3Key,
             organizationLogoR3Key
           )
           profileId = result.profile.id
-          
+
         } else if (role === 'recruiter') {
           result = await onboardingOperations.createRecruiterOnboarding(
-            userId, 
-            email, 
+            userId,
+            email,
             profileData,
             profileImageR3Key,
             organizationLogoR3Key
@@ -309,17 +305,10 @@ export async function POST(request: NextRequest) {
         } else {
           throw new Error('Invalid role provided')
         }
-
-        // Update user role in Clerk for regular users only
-        await clerkClient.users.updateUserMetadata(userId, {
-          publicMetadata: {
-            role
-          }
-        })
       }
 
       let isVerified = false;
-      
+
       // Set verification status based on role and admin status
       if (!isAdmin) {
         if (role === 'athlete' && 'athleteProfile' in result) {
@@ -330,8 +319,8 @@ export async function POST(request: NextRequest) {
       }
 
       return NextResponse.json(
-        { 
-          message: 'Profile created successfully', 
+        {
+          message: 'Profile created successfully',
           userId,
           role,
           profileId,
@@ -343,7 +332,7 @@ export async function POST(request: NextRequest) {
       )
 
     } catch (dbError) {
-      console.error('Database/Clerk operation failed:', dbError)
+      console.error('Database operation failed:', dbError)
       return NextResponse.json(
         { error: 'Failed to create profile. Please try again.' },
         { status: 500 }
@@ -357,4 +346,4 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     )
   }
-} 
+}

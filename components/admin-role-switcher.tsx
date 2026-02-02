@@ -1,7 +1,7 @@
 "use client";
 
 import { useRoleView } from "@/hooks/use-role-view";
-import { useAuth } from "@clerk/nextjs";
+import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -17,17 +17,17 @@ interface DemoProfiles {
 }
 
 export function AdminRoleSwitcher() {
-  const { 
-    isAdmin, 
-    viewingAs, 
-    verificationStatus, 
+  const {
+    isAdmin,
+    viewingAs,
+    verificationStatus,
     loading,
     setViewingAs,
-    setVerificationStatus 
+    setVerificationStatus
   } = useRoleView();
-  
+
   const { getToken } = useAuth();
-  
+
   const [demoProfiles, setDemoProfiles] = useState<DemoProfiles>({
     athlete: null,
     coach: null,
@@ -40,9 +40,9 @@ export function AdminRoleSwitcher() {
   useEffect(() => {
     const fetchDemoProfiles = async () => {
       if (!isAdmin || hasFetchedProfiles.current) return;
-      
+
       hasFetchedProfiles.current = true;
-      
+
       try {
         const token = await getToken();
         if (!token) {

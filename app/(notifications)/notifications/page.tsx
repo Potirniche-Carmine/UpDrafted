@@ -7,7 +7,7 @@ import { Bell, UserPlus, MessageCircle, Trash2, Circle, Check, User, Lock } from
 import { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { AuthWrapper } from '../../../components/auth-wrapper';
 import { useNotifications } from '@/hooks/use-notifications';
-import { useAuth } from '@clerk/nextjs';
+import { useAuth } from '@/hooks/use-auth';
 import { useRouter } from 'next/navigation';
 
 interface Notification {

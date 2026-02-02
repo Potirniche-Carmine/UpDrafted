@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button'
 import Link from 'next/link'
 import { CheckCircle, Crown, ArrowRight, Search, MessageSquare, Eye, BarChart3, Users } from 'lucide-react'
 import { SubscriptionManager } from '@/lib/subscription'
-import { auth } from '@clerk/nextjs/server'
+import { getSession } from "@/utils/roles"
 
 interface SuccessPageProps {
   searchParams: Promise<{ session_id?: string }>
@@ -40,7 +40,8 @@ export default async function SuccessPage({ searchParams }: SuccessPageProps) {
   }
 
   // Force invalidate subscription cache for immediate updates
-  const { userId } = await auth()
+  const userSession = await getSession();
+  const userId = userSession?.user?.id;
   if (userId) {
     SubscriptionManager.invalidateUserCache(userId)
     console.log(`Cache invalidated for user ${userId} on success page`)
@@ -147,7 +148,7 @@ export default async function SuccessPage({ searchParams }: SuccessPageProps) {
                   <ArrowRight className="h-4 w-4 ml-2" />
                 </Button>
               </Link>
-              
+
               <Link href="/dashboard" className="block">
                 <Button variant="outline" className="w-full border-[#01ae79]/30 hover:bg-[#01ae79]/5">
                   View Dashboard

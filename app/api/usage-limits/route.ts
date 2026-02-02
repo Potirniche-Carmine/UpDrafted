@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { auth } from '@clerk/nextjs/server'
+import { getSession } from "@/utils/roles"
 import { db } from '@/database/db'
 import { connections } from '@/database/schema'
 import { eq, and, gte, count } from 'drizzle-orm'
@@ -24,8 +24,9 @@ interface UsageLimits {
 
 export async function GET() {
   try {
-    const { userId } = await auth()
-    
+    const session = await getSession();
+    const userId = session?.user?.id;
+
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
@@ -33,14 +34,14 @@ export async function GET() {
     // Check Redis/memory cache first with longer TTL for this data
     const cacheKey = `usage-limits:${userId}`
     const cachedData = await getCachedWithType<UsageLimits>(cacheKey)
-    
+
     if (cachedData) {
       return NextResponse.json(cachedData);
     }
 
     // Force fresh subscription data (in case user just returned from Stripe portal)
     SubscriptionManager.invalidateUserCache(userId)
-    
+
     // Get user's subscription first to optimize for premium users
     const [subscription, features] = await Promise.all([
       SubscriptionManager.getUserSubscription(userId),
@@ -48,7 +49,7 @@ export async function GET() {
     ])
 
     const isPremium = subscription?.isPremium && subscription?.status === 'active'
-    
+
     // For premium users with unlimited features, return optimized response without heavy queries
     if (isPremium && features?.maxConnectionsPerMonth === -1) {
       const optimizedUsageLimits = {

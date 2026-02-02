@@ -31,7 +31,7 @@ import { RecruiterProfileData, RecruiterProfileProps } from './recruiter-profile
 import { ConnectionDialog } from "../shared/connection-dialog";
 import { SendOverChatDialog } from "../shared/send-over-chat-dialog";
 import { useToast } from "@/components/ui/toast";
-import { useUser } from "@clerk/nextjs";
+import { useUser } from "@/hooks/use-auth";
 import { useRoleView } from '@/hooks/use-role-view';
 import { getStudentClassificationDisplayName, StudentClassification } from '@/lib/sports-data';
 import { generateProfileSlug, generateProfileUrl } from '@/lib/utils';
@@ -502,7 +502,7 @@ export function RecruiterProfile({
     }
   }, [profileData?.sportSpecificNeeds, selectedSport]);
   const { user } = useUser();
-  const effectiveRole = user?.publicMetadata?.role as string;
+  const effectiveRole = user?.role as string;
   
   // Toast hook
   const toast = useToast();

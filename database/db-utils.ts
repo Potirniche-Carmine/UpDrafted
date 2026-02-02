@@ -1,9 +1,9 @@
 import { eq, and, desc, or, asc, count, lt, ilike, inArray, ne } from 'drizzle-orm';
 import { db } from './db';
 import { parseHeightToInches, parseWeightToPounds } from '@/lib/parsing-utils';
-import { 
-  users, 
-  athleteProfiles, 
+import {
+  users,
+  athleteProfiles,
   athleteMeasurables,
   athleteExperience,
   coachProfiles,
@@ -71,7 +71,7 @@ export const userOperations = {
   // Create or update user (for onboarding)
   async createOrUpdateUser(userId: string, userData: NewUser) {
     const existingUser = await db.select().from(users).where(eq(users.id, userId)).limit(1);
-    
+
     if (existingUser.length === 0) {
       // Create new user
       return await this.createUser(userData);
@@ -140,9 +140,9 @@ export const athleteOperations = {
     offset?: number;
   }) {
     const { sport, graduationYear, state, limit = 20, offset = 0 } = criteria;
-    
+
     const whereConditions = [];
-    
+
     if (sport) {
       whereConditions.push(eq(athleteProfiles.sport, sport));
     }
@@ -152,7 +152,7 @@ export const athleteOperations = {
     if (state) {
       whereConditions.push(eq(athleteProfiles.state, state));
     }
-    
+
     return await db.query.athleteProfiles.findMany({
       where: whereConditions.length > 0 ? and(...whereConditions) : undefined,
       with: {
@@ -196,7 +196,7 @@ export const athleteOperations = {
   async replaceAthleteMeasurables(athleteId: number, measurablesData: NewAthleteMeasurable[]) {
     // Delete existing measurables for this athlete
     await db.delete(athleteMeasurables).where(eq(athleteMeasurables.athleteId, athleteId));
-    
+
     // Insert new measurables if any
     if (measurablesData.length > 0) {
       return await db.insert(athleteMeasurables).values(measurablesData).returning();
@@ -236,7 +236,7 @@ export const athleteOperations = {
   async replaceAthleteVideos(athleteId: number, videosData: NewAthleteVideo[]) {
     // Delete existing videos for this athlete
     await db.delete(athleteVideos).where(eq(athleteVideos.athleteId, athleteId));
-    
+
     // Insert new videos if any
     if (videosData.length > 0) {
       return await db.insert(athleteVideos).values(videosData).returning();
@@ -279,7 +279,7 @@ export const athleteExperienceOperations = {
   async replaceAthleteExperiences(athleteId: number, experiencesData: NewAthleteExperience[]) {
     // Delete existing experiences for this athlete
     await db.delete(athleteExperience).where(eq(athleteExperience.athleteId, athleteId));
-    
+
     // Insert new experiences if any
     if (experiencesData.length > 0) {
       return await db.insert(athleteExperience).values(experiencesData).returning();
@@ -330,9 +330,9 @@ export const coachOperations = {
     offset?: number;
   }) {
     const { division, state, isVerified, limit = 20, offset = 0 } = criteria;
-    
+
     const whereConditions = [];
-    
+
     if (division) {
       whereConditions.push(eq(coachProfiles.division, division));
     }
@@ -342,7 +342,7 @@ export const coachOperations = {
     if (isVerified !== undefined) {
       whereConditions.push(eq(coachProfiles.isVerified, isVerified));
     }
-    
+
     return await db.query.coachProfiles.findMany({
       where: whereConditions.length > 0 ? and(...whereConditions) : undefined,
       with: {
@@ -379,7 +379,7 @@ export const recruitingOperations = {
 
     // Transform recruiting needs into sportSpecificNeeds object
     const sportSpecificNeeds: { [sport: string]: { studentClassifications: string[]; positions: string[]; scholarshipsAvailable?: number; recruitingPhilosophy?: string; } } = {};
-    
+
     recruitingNeeds.forEach(need => {
       sportSpecificNeeds[need.sport] = {
         studentClassifications: need.studentClassifications,
@@ -421,9 +421,9 @@ export const recruitingOperations = {
     offset?: number;
   }) {
     const { division, state, isVerified, limit = 20, offset = 0 } = criteria;
-    
+
     const whereConditions = [];
-    
+
     if (division) {
       whereConditions.push(eq(recruitingProfiles.division, division));
     }
@@ -433,7 +433,7 @@ export const recruitingOperations = {
     if (isVerified !== undefined) {
       whereConditions.push(eq(recruitingProfiles.isVerified, isVerified));
     }
-    
+
     return await db.query.recruitingProfiles.findMany({
       where: whereConditions.length > 0 ? and(...whereConditions) : undefined,
       with: {
@@ -747,13 +747,13 @@ export const connectionOperations = {
       ...userConnections.map(conn => conn.fromUser),
       ...userConnections.map(conn => conn.toUser)
     ];
-    
+
     const recruiterProfileIds = allUsers
       .filter(user => user.role === 'recruiter' && user.recruitingProfile)
       .map(user => user.recruitingProfile!.id);
 
     let recruiterNeeds: typeof recruitingProfileNeeds.$inferSelect[] = [];
-    
+
     try {
       if (recruiterProfileIds.length > 0) {
         recruiterNeeds = await db.query.recruitingProfileNeeds.findMany({
@@ -773,7 +773,7 @@ export const connectionOperations = {
       scholarshipsAvailable: number | null;
       recruitingPhilosophy: string | null;
     }>>();
-    
+
     recruiterNeeds.forEach(need => {
       if (need && typeof need.recruitingProfileId === 'number') {
         if (!recruiterNeedsMap.has(need.recruitingProfileId)) {
@@ -819,7 +819,7 @@ export const connectionOperations = {
         and(eq(connections.fromUserId, toUserId), eq(connections.toUserId, fromUserId))
       )
     });
-    
+
     return connection;
   },
 
@@ -859,35 +859,35 @@ export const connectionOperations = {
     // For simplicity, get all connections and filter them
     // This could be optimized in the future with more complex DB queries
     const allConnections = await this.getUserConnections(userId);
-    
+
     // Apply filters on the server side
     return allConnections.filter(connection => {
       const otherUser = connection.fromUserId === userId ? connection.toUser : connection.fromUser;
-      
+
       // Sports filter
       if (sports && sports.length > 0) {
-        const userSport = otherUser.athleteProfile?.sport || 
-                         otherUser.coachProfile?.sportCoaching || 
-                         otherUser.recruitingProfile?.sportRecruiting;
+        const userSport = otherUser.athleteProfile?.sport ||
+          otherUser.coachProfile?.sportCoaching ||
+          otherUser.recruitingProfile?.sportRecruiting;
         if (!userSport || !sports.includes(userSport)) {
           return false;
         }
       }
-      
+
       // Divisions filter
       if (divisions && divisions.length > 0) {
-        const userDivision = otherUser.coachProfile?.division || 
-                            otherUser.recruitingProfile?.division;
+        const userDivision = otherUser.coachProfile?.division ||
+          otherUser.recruitingProfile?.division;
         if (!userDivision || !divisions.includes(userDivision)) {
           return false;
         }
       }
-      
+
       // States filter
       if (states && states.length > 0) {
-        const userState = otherUser.athleteProfile?.state || 
-                         otherUser.coachProfile?.state || 
-                         otherUser.recruitingProfile?.state;
+        const userState = otherUser.athleteProfile?.state ||
+          otherUser.coachProfile?.state ||
+          otherUser.recruitingProfile?.state;
         if (!userState || !states.includes(userState)) {
           return false;
         }
@@ -907,7 +907,7 @@ export const connectionOperations = {
         if (!otherUser.athleteProfile?.positions) {
           return false;
         }
-        const hasMatchingPosition = otherUser.athleteProfile.positions.some(pos => 
+        const hasMatchingPosition = otherUser.athleteProfile.positions.some(pos =>
           positions.includes(pos)
         );
         if (!hasMatchingPosition) {
@@ -932,7 +932,7 @@ export const connectionOperations = {
 
       // Request types filter (role filter)
       if (requestTypes && requestTypes.length > 0) {
-        if (!requestTypes.includes(otherUser.role)) {
+        if (!otherUser.role || !requestTypes.includes(otherUser.role)) {
           return false;
         }
       }
@@ -952,7 +952,7 @@ export const connectionOperations = {
           return false;
         }
       }
-      
+
       return true;
     });
   },
@@ -1070,7 +1070,7 @@ export const activityOperations = {
           metadata
         })
         .where(eq(activityLog.id, existingRecord.id));
-      
+
       return { action: 'updated', recordId: existingRecord.id };
     } else {
       // Create a new record
@@ -1080,7 +1080,7 @@ export const activityOperations = {
         action,
         metadata
       }).returning({ id: activityLog.id });
-      
+
       return { action: 'created', recordId: newRecord.id };
     }
   },
@@ -1098,12 +1098,12 @@ export const activityOperations = {
   async cleanupOldActivityLogs(daysToKeep = 14) {
     const cutoffDate = new Date();
     cutoffDate.setDate(cutoffDate.getDate() - daysToKeep);
-    
+
     const result = await db
       .delete(activityLog)
       .where(lt(activityLog.createdAt, cutoffDate))
       .returning({ deletedId: activityLog.id });
-    
+
     return {
       deletedCount: result.length,
       cutoffDate: cutoffDate.toISOString(),
@@ -1117,9 +1117,9 @@ export const onboardingOperations = {
   // Complete onboarding for athlete
   async createAthleteOnboarding(userId: string, email: string, profileData: OnboardingProfileData, profileImageR3Key?: string) {
     // Create or update user
-    const user = await userOperations.createOrUpdateUser(userId, { 
+    const user = await userOperations.createOrUpdateUser(userId, {
       id: userId,
-      email, 
+      email,
       role: 'athlete',
     });
 
@@ -1130,10 +1130,10 @@ export const onboardingOperations = {
       'undergraduate': 'university',
       'graduate': 'university'
     };
-    
+
     const educationLevel = profileData.educationLevel || 'undergraduate';
     const schoolClassification = educationLevelMap[educationLevel] || 'university';
-    
+
     const school = await schoolOperations.getOrCreateSchool(
       profileData.organizationName || 'Unknown Institution',
       schoolClassification
@@ -1142,7 +1142,7 @@ export const onboardingOperations = {
     // Check if this is a high school athlete with a valid Hudl URL
     const isHighSchool = educationLevel === 'high_school';
     const hasValidHudlUrl = profileData.hudlUrl && profileData.hudlUrl.trim();
-    
+
     // Auto-verify high school athletes with valid Hudl URLs
     // Additional server-side validation to ensure URL matches profile name
     let shouldAutoVerify = false;
@@ -1184,9 +1184,9 @@ export const onboardingOperations = {
       personalStatement: profileData.personalStatement || undefined,
       isVerified: shouldAutoVerify, // Auto-verify if high school athlete with valid Hudl URL
     };
-    
+
     const athleteProfile = await athleteOperations.createAthleteProfile(newProfile);
-    
+
     return { user, athleteProfile, school };
   },
 
@@ -1345,7 +1345,7 @@ export const reportOperations = {
 
   // Update report status (for moderation)
   async updateReportStatus(
-    reportId: number, 
+    reportId: number,
     status: 'pending' | 'under_review' | 'resolved' | 'dismissed',
     reviewedBy?: string,
     moderatorNotes?: string,
@@ -1417,11 +1417,11 @@ export const messageOperations = {
         user2: true,
       }
     });
-    
+
     if (conversation) {
       return conversation;
     }
-    
+
     // If not found, try with users in reverse order
     return await db.query.conversations.findFirst({
       where: and(
@@ -1434,7 +1434,7 @@ export const messageOperations = {
       }
     });
   },
-  
+
   // Get conversation by ID with participants
   async getConversationById(conversationId: number) {
     return await db.query.conversations.findFirst({
@@ -1445,14 +1445,14 @@ export const messageOperations = {
       }
     });
   },
-  
+
   // Create a new conversation
   async createConversation(user1Id: string, user2Id: string): Promise<{ id: number }> {
     // Prevent creating conversations with the same user
     if (user1Id === user2Id) {
       throw new Error('Cannot create conversation with yourself');
     }
-    
+
     const [conversation] = await db.insert(conversations)
       .values({
         user1Id,
@@ -1460,7 +1460,7 @@ export const messageOperations = {
         lastMessageAt: new Date(),
       })
       .returning({ id: conversations.id });
-    
+
     return conversation;
   },
 
@@ -1482,12 +1482,12 @@ export const messageOperations = {
       },
       orderBy: [desc(conversations.lastMessageAt)]
     });
-    
+
     // Filter out conversations where both users are the same person
-    const filteredConversations = allConversations.filter(conversation => 
+    const filteredConversations = allConversations.filter(conversation =>
       conversation.user1Id !== conversation.user2Id
     );
-    
+
     return filteredConversations;
   },
 
@@ -1510,14 +1510,14 @@ export const messageOperations = {
       // with: { sender: true } // Commented out for performance
     });
   },
-  
+
   // Send a new message (OPTIMIZED with transaction)
   async sendMessage(conversationId: number, senderId: string, content: string) {
     // Use database transaction for consistency and performance
     return await db.transaction(async (tx) => {
       // Sanitize and encrypt the message
       const { encryptedText, iv } = sanitizeAndEncryptMessage(content);
-      
+
       // Get only what we need from conversation (optimized query)
       const conversation = await tx.query.conversations.findFirst({
         where: eq(conversations.id, conversationId),
@@ -1527,14 +1527,14 @@ export const messageOperations = {
           user2Id: true,
         }
       });
-      
+
       if (!conversation) {
         throw new Error('Conversation not found');
       }
-      
+
       // Determine if sender is user1 or user2
       const isUser1 = conversation.user1Id === senderId;
-      
+
       // Insert the new message first
       const [message] = await tx.insert(messages)
         .values({
@@ -1546,7 +1546,7 @@ export const messageOperations = {
           createdAt: new Date()
         })
         .returning();
-      
+
       // Update conversation with new last message time and increment unread count
       if (isUser1) {
         // Get current count and increment it safely
@@ -1554,9 +1554,9 @@ export const messageOperations = {
           where: eq(conversations.id, conversationId),
           columns: { user2UnreadCount: true }
         });
-        
+
         await tx.update(conversations)
-          .set({ 
+          .set({
             lastMessageAt: new Date(),
             user2UnreadCount: (currentConv?.user2UnreadCount || 0) + 1
           })
@@ -1567,19 +1567,19 @@ export const messageOperations = {
           where: eq(conversations.id, conversationId),
           columns: { user1UnreadCount: true }
         });
-        
+
         await tx.update(conversations)
-          .set({ 
+          .set({
             lastMessageAt: new Date(),
             user1UnreadCount: (currentConv?.user1UnreadCount || 0) + 1
           })
           .where(eq(conversations.id, conversationId));
       }
-      
+
       return message;
     });
   },
-  
+
   // Mark messages as read (OPTIMIZED with transaction)
   async markMessagesAsRead(conversationId: number, userId: string) {
     return await db.transaction(async (tx) => {
@@ -1592,16 +1592,16 @@ export const messageOperations = {
           user2Id: true,
         }
       });
-      
+
       if (!conversation) {
         throw new Error('Conversation not found');
       }
-      
+
       const isUser1 = conversation.user1Id === userId;
-      
+
       // Mark messages as read where this user is NOT the sender (batch update)
       await tx.update(messages)
-        .set({ 
+        .set({
           isRead: true,
           readAt: new Date()
         })
@@ -1610,7 +1610,7 @@ export const messageOperations = {
           ne(messages.senderId, userId), // Use ne() instead of raw SQL
           eq(messages.isRead, false)
         ));
-      
+
       // Reset unread count in conversation
       if (isUser1) {
         await tx.update(conversations)
@@ -1623,7 +1623,7 @@ export const messageOperations = {
       }
     });
   },
-  
+
   // Get total unread message count for a user (OPTIMIZED single query)
   async getUnreadMessageCount(userId: string) {
     // Get all conversations for this user and sum up their unread counts
@@ -1673,21 +1673,21 @@ export const messageOperations = {
       });
 
       let createdCount = 0;
-      
+
       for (const connection of connectedConnections) {
         // Check if a conversation already exists between these users
         const existingConversation = await this.getConversationByUsers(
           connection.fromUserId,
           connection.toUserId
         );
-        
+
         if (!existingConversation) {
           // Create the missing conversation
           await this.createConversation(connection.fromUserId, connection.toUserId);
           createdCount++;
         }
       }
-      
+
       return createdCount;
     } catch (error) {
       console.error('Error creating missing conversations:', error);
@@ -1709,7 +1709,7 @@ export const profileOperations = {
       },
     });
   },
-  
+
   // Get user profile image and name based on their role
   async getUserProfileInfo(userId: string) {
     const user = await this.getUserWithProfile(userId);
@@ -1746,7 +1746,7 @@ export const profileOperations = {
 
     return {
       fullName,
-      profileImageUrl: profileImageUrl 
+      profileImageUrl: profileImageUrl
         ? constructR2Url(R2_PUBLIC_URL, profileImageUrl)
         : null,
       role: user.role,
@@ -1787,7 +1787,7 @@ export const notificationOperations = {
       })
       .from(notifications)
       .where(
-        unreadOnly 
+        unreadOnly
           ? and(eq(notifications.userId, userId), eq(notifications.isRead, false))
           : eq(notifications.userId, userId)
       )
@@ -1802,9 +1802,9 @@ export const notificationOperations = {
   async markNotificationAsRead(userId: string, notificationId: number) {
     const [notification] = await db
       .update(notifications)
-      .set({ 
-        isRead: true, 
-        readAt: new Date() 
+      .set({
+        isRead: true,
+        readAt: new Date()
       })
       .where(
         and(
@@ -1820,9 +1820,9 @@ export const notificationOperations = {
   async markAllNotificationsAsRead(userId: string) {
     await db
       .update(notifications)
-      .set({ 
-        isRead: true, 
-        readAt: new Date() 
+      .set({
+        isRead: true,
+        readAt: new Date()
       })
       .where(
         and(
@@ -1956,7 +1956,7 @@ export const notificationOperations = {
 
           // If notification already exists, don't create a new one
           if (existingNotification) {
-    
+
             return null;
           }
         } catch (error) {
@@ -2019,7 +2019,7 @@ export const adminOperations = {
   // Create or update admin role preferences
   async setAdminRolePreferences(userId: string, preferencesData: Partial<NewAdminRolePreferences>) {
     const existing = await this.getAdminRolePreferences(userId);
-    
+
     if (existing) {
       const [updated] = await db
         .update(adminRolePreferences)
@@ -2086,7 +2086,7 @@ export const adminOperations = {
 
       // Transform recruiting needs into sportSpecificNeeds object
       const sportSpecificNeeds: { [sport: string]: { studentClassifications: string[]; positions: string[]; scholarshipsAvailable?: number; recruitingPhilosophy?: string; } } = {};
-      
+
       recruitingNeeds.forEach(need => {
         sportSpecificNeeds[need.sport] = {
           studentClassifications: need.studentClassifications,
@@ -2139,21 +2139,23 @@ export const adminOperations = {
   },
 
   // Update demo profiles
-  async updateDemoAthleteProfile(userId: string, profileData: Partial<NewAthleteProfile> & { campExperience?: Array<{
-    id?: number; // Database ID for existing experiences
-    type: 'Camp' | 'Club';
-    name: string;
-    city: string;
-    country: string;
-    state?: string;
-    startDate: Date | string;
-    endDate: Date | string;
-    sport: string;
-    description: string;
-  }> }) {
+  async updateDemoAthleteProfile(userId: string, profileData: Partial<NewAthleteProfile> & {
+    campExperience?: Array<{
+      id?: number; // Database ID for existing experiences
+      type: 'Camp' | 'Club';
+      name: string;
+      city: string;
+      country: string;
+      state?: string;
+      startDate: Date | string;
+      endDate: Date | string;
+      sport: string;
+      description: string;
+    }>
+  }) {
     // Handle camp experiences separately since they're stored in a separate table
     const { campExperience, ...otherProfileData } = profileData;
-    
+
     // Update the main profile
     const [profile] = await db
       .update(athleteProfiles)
@@ -2163,7 +2165,7 @@ export const adminOperations = {
         eq(athleteProfiles.isDemoProfile, true)
       ))
       .returning();
-    
+
     // Handle camp experiences if provided
     if (campExperience !== undefined && profile) {
       // Get existing experiences from database
@@ -2231,7 +2233,7 @@ export const adminOperations = {
 
       // Create a map of existing experiences by their ID for quick lookup
       const existingExperiencesMap = new Map(existingExperiences.map(exp => [exp.id, exp]));
-      
+
       // Create a map of frontend experiences by their ID (if they have one)
       const frontendExperiencesMap = new Map();
       const frontendExperiencesWithoutId: NewAthleteExperience[] = [];
@@ -2284,9 +2286,9 @@ export const adminOperations = {
             .delete(athleteExperience)
             .where(eq(athleteExperience.id, id));
         }
-       });
+      });
     }
-    
+
     return profile;
   },
 
@@ -2322,10 +2324,10 @@ export const schoolOperations = {
   // Search schools with autocomplete functionality
   async searchSchools(query: string, limit = 15, classification?: 'high_school' | 'college' | 'university' | 'professional' | 'other') {
     if (!query.trim()) return [];
-    
+
     const searchQuery = `%${query.toLowerCase()}%`;
     const normalizedQuery = this.normalizeSchoolName(query);
-    
+
     // Use the composite index when classification is provided for better performance
     if (classification) {
       return await db
@@ -2349,7 +2351,7 @@ export const schoolOperations = {
         .orderBy(schools.name)
         .limit(limit);
     }
-    
+
     // Fallback to general search without classification filter
     return await db
       .select({
@@ -2385,7 +2387,7 @@ export const schoolOperations = {
 
     if (existingSchool.length > 0) {
       return existingSchool[0];
-       }
+    }
 
     try {
       const [school] = await db.insert(schools).values(schoolData).returning();
@@ -2402,12 +2404,12 @@ export const schoolOperations = {
             eq(schools.classification, schoolData.classification)
           ))
           .limit(1);
-        
+
         if (duplicateSchool.length > 0) {
           return duplicateSchool[0];
         }
       }
-      
+
       // Re-throw error if it's not a duplicate key issue
       throw error;
     }
@@ -2449,15 +2451,15 @@ export const schoolOperations = {
   // Calculate Levenshtein distance for string similarity
   levenshteinDistance(str1: string, str2: string): number {
     const matrix = Array(str2.length + 1).fill(null).map(() => Array(str1.length + 1).fill(null));
-    
+
     for (let i = 0; i <= str1.length; i++) {
       matrix[0][i] = i;
     }
-    
+
     for (let j = 0; j <= str2.length; j++) {
       matrix[j][0] = j;
     }
-    
+
     for (let j = 1; j <= str2.length; j++) {
       for (let i = 1; i <= str1.length; i++) {
         const indicator = str1[i - 1] === str2[j - 1] ? 0 : 1;
@@ -2468,7 +2470,7 @@ export const schoolOperations = {
         );
       }
     }
-    
+
     return matrix[str2.length][str1.length];
   },
 
@@ -2476,12 +2478,12 @@ export const schoolOperations = {
   calculateSimilarity(str1: string, str2: string): number {
     const normalized1 = this.normalizeSchoolName(str1);
     const normalized2 = this.normalizeSchoolName(str2);
-    
+
     if (normalized1 === normalized2) return 100;
-    
+
     const maxLength = Math.max(normalized1.length, normalized2.length);
     if (maxLength === 0) return 100;
-    
+
     const distance = this.levenshteinDistance(normalized1, normalized2);
     return ((maxLength - distance) / maxLength) * 100;
   },
@@ -2489,7 +2491,7 @@ export const schoolOperations = {
   // Find similar schools using fuzzy matching
   async findSimilarSchools(name: string, classification: 'high_school' | 'college' | 'university' | 'professional' | 'other'): Promise<typeof schools.$inferSelect[]> {
     const normalizedInput = this.normalizeSchoolName(name);
-    
+
     // First try exact normalized match
     let existingSchools = await db
       .select()
@@ -2507,10 +2509,10 @@ export const schoolOperations = {
     // Then try similarity search using LIKE with parts of the name
     const nameParts = normalizedInput.split(' ').filter(part => part.length > 2);
     if (nameParts.length > 0) {
-      const likeConditions = nameParts.map(part => 
+      const likeConditions = nameParts.map(part =>
         ilike(schools.name, `%${part}%`)
       );
-      
+
       existingSchools = await db
         .select()
         .from(schools)
@@ -2527,7 +2529,7 @@ export const schoolOperations = {
   // Get or create school by name (for onboarding/profile updates)
   async getOrCreateSchool(name: string, classification: 'high_school' | 'college' | 'university' | 'professional' | 'other') {
     const trimmedName = name.trim();
-    
+
     // First try to find existing school (case-insensitive exact match)
     const exactMatch = await db
       .select()
@@ -2544,10 +2546,10 @@ export const schoolOperations = {
 
     // Check for highly similar schools (99%+ similarity) to prevent duplicates
     const similarSchools = await this.findSimilarSchools(trimmedName, classification);
-    
+
     for (const school of similarSchools) {
       const similarity = this.calculateSimilarity(trimmedName, school.name);
-      
+
       // If similarity is 99% or higher, return the existing school instead of creating a duplicate
       if (similarity >= 99) {
 
@@ -2560,9 +2562,9 @@ export const schoolOperations = {
       const similarity = this.calculateSimilarity(trimmedName, school.name);
       return similarity >= 80 && similarity < 99;
     });
-    
+
     if (potentialDuplicates.length > 0) {
-      console.warn(`Creating new school "${trimmedName}" despite similar existing schools:`, 
+      console.warn(`Creating new school "${trimmedName}" despite similar existing schools:`,
         potentialDuplicates.map(s => `${s.name} (${this.calculateSimilarity(trimmedName, s.name).toFixed(1)}% similar)`)
       );
     }
@@ -2589,7 +2591,7 @@ export const schoolOperations = {
     if (!schoolId) {
       return fallbackName || 'Unknown School';
     }
-    
+
     const school = await this.getSchoolById(schoolId);
     return school?.name || fallbackName || 'Unknown School';
   },
@@ -2597,7 +2599,7 @@ export const schoolOperations = {
   // Bulk get school names for multiple IDs (for performance)
   async getSchoolNames(schoolIds: (number | null)[]): Promise<Map<number, string>> {
     const validIds = schoolIds.filter((id): id is number => id !== null);
-    
+
     if (validIds.length === 0) {
       return new Map();
     }
@@ -2649,7 +2651,7 @@ export function createWeightFilter(_minWeight: number): boolean {
  */
 export function filterByHeight(heightStr: string | null, minHeight: number): boolean {
   if (!heightStr) return false;
-  
+
   try {
     const heightInInches = parseHeightToInches(heightStr);
     return heightInInches !== null && heightInInches >= minHeight;
@@ -2666,7 +2668,7 @@ export function filterByHeight(heightStr: string | null, minHeight: number): boo
  */
 export function filterByWeight(weightStr: string | null, minWeight: number): boolean {
   if (!weightStr) return false;
-  
+
   try {
     const weightInPounds = parseWeightToPounds(weightStr);
     return weightInPounds !== null && weightInPounds >= minWeight;

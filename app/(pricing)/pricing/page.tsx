@@ -10,7 +10,7 @@ import { useState, Suspense } from "react";
 import { PricingCard } from "@/app/(pricing)/components/pricing-card";
 import { getPlansByRole } from "@/app/(pricing)/components/pricing-config";
 import { useSearchParams } from 'next/navigation';
-import { useUser } from "@clerk/nextjs";
+import { useUser } from "@/hooks/use-auth";
 
 // FAQ Accordion Component
 function FAQAccordion({ userRole }: { userRole: string }) {
@@ -125,7 +125,7 @@ function PricingPageContent() {
   const { user } = useUser();
   
   // Get user role from Clerk public metadata or default to 'athlete'
-  const userRole = (user?.publicMetadata?.role as 'athlete' | 'coach' | 'recruiter') || 'athlete';
+  const userRole = (user?.role as 'athlete' | 'coach' | 'recruiter') || 'athlete';
   
   // Get plans specific to the user's role (includes free tier)
   const availablePlans = getPlansByRole(userRole);

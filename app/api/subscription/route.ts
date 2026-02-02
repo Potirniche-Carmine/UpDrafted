@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { auth } from '@clerk/nextjs/server'
+import { getSession } from "@/utils/roles"
 import { SubscriptionManager } from '@/lib/subscription'
 
 export async function GET(req: NextRequest) {
   try {
-    const { userId } = await auth()
+    const session = await getSession();
+    const userId = session?.user?.id;
+
     if (!userId) {
       return NextResponse.json(
         { error: 'Authentication required' },
@@ -14,12 +16,12 @@ export async function GET(req: NextRequest) {
 
     const { searchParams } = new URL(req.url)
     const force = searchParams.get('force') === 'true'
-    
+
     if (force) {
       // Force fresh subscription data (ensures UI shows latest changes)
       SubscriptionManager.invalidateUserCache(userId)
     }
-    
+
     // Get subscription and features in one call (24-hour cache unless forced)
     const [subscription, features] = await Promise.all([
       SubscriptionManager.getUserSubscription(userId),
@@ -32,7 +34,7 @@ export async function GET(req: NextRequest) {
     })
   } catch (error) {
     console.error('Error fetching subscription:', error)
-    
+
     // Return default free tier on error
     return NextResponse.json({
       subscription: {

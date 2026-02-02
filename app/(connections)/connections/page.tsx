@@ -13,7 +13,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { AuthWrapper } from '../../../components/auth-wrapper';
 import { sanitizeText } from '@/utils/sanitization';
-import { useUser } from "@clerk/nextjs";
+import { useUser } from "@/hooks/use-auth";
 import { DIVISIONS, US_STATES, COUNTRIES, getPositionsForSport } from '@/lib/sports-data';
 import { CONFERENCES_BY_DIVISION } from '@/lib/conference-data';
 import { useFeatureAccess } from '@/components/providers/subscription-provider';
@@ -1730,7 +1730,7 @@ const AdvancedFilters: React.FC<AdvancedFiltersProps> = ({
 function App() {
   const router = useRouter();
   const { user } = useUser();
-  const effectiveRole = user?.publicMetadata?.role as string;
+  const effectiveRole = user?.role as string;
   const searchParams = useSearchParams();
   
   // Get user's primary sport to use as default filter

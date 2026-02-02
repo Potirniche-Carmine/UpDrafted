@@ -97,10 +97,10 @@ interface ConnectionsResponse {
   connected: ConnectionData[];
   incoming: ConnectionData[];
   outgoing: ConnectionData[];
-  counts: { 
-    connected: number; 
-    incoming: number; 
-    outgoing: number; 
+  counts: {
+    connected: number;
+    incoming: number;
+    outgoing: number;
   };
 }
 
@@ -112,7 +112,7 @@ export async function POST(request: NextRequest) {
     if (authResult instanceof NextResponse) return authResult;
 
     const { userId: currentUserId, role } = authResult;
-    
+
     // Apply rate limiting for connection operations
     const rateLimitCheck = await withRateLimit(request, 'connections', currentUserId, role);
     if (!rateLimitCheck.success) return rateLimitCheck.response;
@@ -133,7 +133,7 @@ export async function POST(request: NextRequest) {
 
     // Sanitize the note to prevent XSS
     const sanitizedNote = note ? sanitizeText(note) : undefined;
-    
+
     // Validate note length
     if (sanitizedNote && sanitizedNote.length > 500) {
       return createErrorResponse('Note must be 500 characters or less', 400);
@@ -158,11 +158,11 @@ export async function POST(request: NextRequest) {
     if (targetUser.role === 'athlete' && targetUser.athleteProfile) {
       const educationLevel = targetUser.athleteProfile.educationLevel;
       const division = targetUser.athleteProfile.division;
-      
+
       // Only D1, D2, and D3 college athletes need transfer portal verification
-      if ((educationLevel === 'undergraduate' || educationLevel === 'graduate') && 
-          division && 
-          ['division_1', 'division_2', 'division_3'].includes(division)) {
+      if ((educationLevel === 'undergraduate' || educationLevel === 'graduate') &&
+        division &&
+        ['division_1', 'division_2', 'division_3'].includes(division)) {
         if (!targetUser.athleteProfile.isOnTransferPortal) {
           return createErrorResponse(
             'This athlete must be verified for NCAA Transfer Portal before connections can be made. They need to complete transfer portal verification first.',
@@ -198,8 +198,8 @@ export async function POST(request: NextRequest) {
     // Create notification for the recipient of the connection request
     try {
       await notificationOperations.createConnectionNotification(
-        targetUserId, 
-        currentUserId, 
+        targetUserId,
+        currentUserId,
         'newConnection',
         connection.id
       );
@@ -224,17 +224,17 @@ export async function POST(request: NextRequest) {
         notes: connection.notes
       }
     }, rateLimitCheck.headers);
-    
+
     return response;
 
   } catch (error) {
     console.error('Error creating connection:', error);
-    
+
     // Handle database constraint violations (e.g., duplicate connection)
     if (error instanceof Error && error.message.includes('unique')) {
       return createErrorResponse('Connection already exists between these users', 409);
     }
-    
+
     return createErrorResponse('Failed to create connection', 500);
   }
 }
@@ -277,11 +277,11 @@ export async function GET(request: NextRequest) {
       minHeight,
       minWeight,
     };
-    
+
     const hasFilters = Object.values(filters).some(v => v !== undefined && (!Array.isArray(v) || v.length > 0));
 
     // Generate a more specific cache key if filters are applied
-    const cacheKey = hasFilters 
+    const cacheKey = hasFilters
       ? `connections:${currentUserId}:${JSON.stringify(filters)}`
       : `connections:${currentUserId}:all`;
 
@@ -310,7 +310,7 @@ export async function GET(request: NextRequest) {
     allConnections.forEach(connection => {
       const isFromUser = connection.fromUserId === currentUserId;
       const otherUser = isFromUser ? connection.toUser : connection.fromUser;
-      
+
       const formattedConnection: ConnectionData = {
         id: connection.id,
         status: connection.status,
@@ -320,37 +320,37 @@ export async function GET(request: NextRequest) {
         isInitiator: isFromUser,
         otherUser: {
           userId: otherUser.id,
-          fullName: otherUser.athleteProfile?.fullName || 
-                    otherUser.coachProfile?.fullName || 
-                    otherUser.recruitingProfile?.fullName || '',
-          profileImage: otherUser.athleteProfile?.profileImageR3Key || 
-                        otherUser.coachProfile?.profileImageR3Key || 
-                        otherUser.recruitingProfile?.profileImageR3Key || null,
-          organizationName: otherUser.athleteProfile?.school?.name || 
-                            otherUser.coachProfile?.school?.name || 
-                            otherUser.recruitingProfile?.school?.name || '',
-          title: otherUser.coachProfile?.title || 
-                 otherUser.recruitingProfile?.title || '',
-          sport: otherUser.athleteProfile?.sport || 
-                 otherUser.coachProfile?.sportCoaching ||
-                 otherUser.recruitingProfile?.sportRecruiting || '',
-          city: otherUser.athleteProfile?.city || 
-                otherUser.coachProfile?.city || 
-                otherUser.recruitingProfile?.city || '',
-          state: otherUser.athleteProfile?.state || 
-                 otherUser.coachProfile?.state || 
-                 otherUser.recruitingProfile?.state || '',
+          fullName: otherUser.athleteProfile?.fullName ||
+            otherUser.coachProfile?.fullName ||
+            otherUser.recruitingProfile?.fullName || '',
+          profileImage: otherUser.athleteProfile?.profileImageR3Key ||
+            otherUser.coachProfile?.profileImageR3Key ||
+            otherUser.recruitingProfile?.profileImageR3Key || null,
+          organizationName: otherUser.athleteProfile?.school?.name ||
+            otherUser.coachProfile?.school?.name ||
+            otherUser.recruitingProfile?.school?.name || '',
+          title: otherUser.coachProfile?.title ||
+            otherUser.recruitingProfile?.title || '',
+          sport: otherUser.athleteProfile?.sport ||
+            otherUser.coachProfile?.sportCoaching ||
+            otherUser.recruitingProfile?.sportRecruiting || '',
+          city: otherUser.athleteProfile?.city ||
+            otherUser.coachProfile?.city ||
+            otherUser.recruitingProfile?.city || '',
+          state: otherUser.athleteProfile?.state ||
+            otherUser.coachProfile?.state ||
+            otherUser.recruitingProfile?.state || '',
           graduationYear: otherUser.athleteProfile?.graduationYear || null,
           educationLevel: otherUser.athleteProfile?.educationLevel || '',
-          division: otherUser.coachProfile?.division || 
-                    otherUser.recruitingProfile?.division || '',
-          conference: (otherUser.athleteProfile && (otherUser.athleteProfile as AthleteProfileWithConference).conference) || 
-                     (otherUser.coachProfile && (otherUser.coachProfile as CoachProfileWithConference).conference) || 
-                     (otherUser.recruitingProfile && (otherUser.recruitingProfile as RecruitingProfileWithConference).conference) || undefined,
-          isVerified: otherUser.athleteProfile?.isVerified || 
-                     otherUser.coachProfile?.isVerified || 
-                     otherUser.recruitingProfile?.isVerified || false,
-          role: otherUser.role,
+          division: otherUser.coachProfile?.division ||
+            otherUser.recruitingProfile?.division || '',
+          conference: (otherUser.athleteProfile && (otherUser.athleteProfile as AthleteProfileWithConference).conference) ||
+            (otherUser.coachProfile && (otherUser.coachProfile as CoachProfileWithConference).conference) ||
+            (otherUser.recruitingProfile && (otherUser.recruitingProfile as RecruitingProfileWithConference).conference) || undefined,
+          isVerified: otherUser.athleteProfile?.isVerified ||
+            otherUser.coachProfile?.isVerified ||
+            otherUser.recruitingProfile?.isVerified || false,
+          role: otherUser.role || 'athlete',
           height: otherUser.athleteProfile?.height || undefined,
           weight: otherUser.athleteProfile?.weight || undefined,
           positions: otherUser.athleteProfile?.positions || undefined,
@@ -424,7 +424,7 @@ export async function DELETE(request: NextRequest) {
     if (authResult instanceof NextResponse) return authResult;
 
     const { userId: currentUserId, role } = authResult;
-    
+
     // Apply rate limiting for connection operations
     const rateLimitCheck = await withRateLimit(request, 'connections', currentUserId, role);
     if (!rateLimitCheck.success) return rateLimitCheck.response;
@@ -478,7 +478,7 @@ export async function PUT(request: NextRequest) {
     if (authResult instanceof NextResponse) return authResult;
 
     const { userId: currentUserId, role } = authResult;
-    
+
     // Apply rate limiting for connection operations
     const rateLimitCheck = await withRateLimit(request, 'connections', currentUserId, role);
     if (!rateLimitCheck.success) return rateLimitCheck.response;

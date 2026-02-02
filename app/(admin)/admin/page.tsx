@@ -1,6 +1,6 @@
 "use client";
 
-import { useUser, useAuth } from "@clerk/nextjs";
+import { useUser, useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -17,7 +17,7 @@ export default function AdminPage() {
   const [checkingStatus, setCheckingStatus] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const isAdmin = user?.publicMetadata?.role === 'admin';
+  const isAdmin = user?.role === 'admin';
 
   // Redirect non-admin users
   useEffect(() => {
@@ -35,24 +35,16 @@ export default function AdminPage() {
       }
 
       try {
-        const token = await getToken();
-        
-        if (!token) {
-          setError('No authentication token available');
-          setCheckingStatus(false);
-          return;
-        }
-
         // Try to initialize (it will return existing user if already exists)
         const response = await fetch('/api/admin/initialize', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`,
             'Accept': 'application/json',
           },
+          credentials: 'include',
           body: JSON.stringify({
-            email: user?.emailAddresses?.[0]?.emailAddress
+            email: user?.email
           })
         });
 
@@ -69,13 +61,13 @@ export default function AdminPage() {
       }
     };
 
-    if (user?.emailAddresses?.[0]?.emailAddress) {
+    if (user?.email) {
       checkInitStatus();
     }
-  }, [isAdmin, user?.emailAddresses, getToken]);
+  }, [isAdmin, user?.email]);
 
   const handleInitialize = async () => {
-    if (!user?.emailAddresses?.[0]?.emailAddress) {
+    if (!user?.email) {
       setError('No email address found');
       return;
     }
@@ -84,22 +76,15 @@ export default function AdminPage() {
     setError(null);
 
     try {
-      const token = await getToken();
-      
-      if (!token) {
-        setError('No authentication token available');
-        return;
-      }
-
       const response = await fetch('/api/admin/initialize', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
           'Accept': 'application/json',
         },
+        credentials: 'include',
         body: JSON.stringify({
-          email: user.emailAddresses[0].emailAddress
+          email: user.email
         })
       });
 
@@ -107,7 +92,6 @@ export default function AdminPage() {
 
       if (response.ok) {
         setInitialized(true);
-        // No need to reload - state update handles UI
       } else {
         setError(data.error || 'Failed to initialize admin user');
       }
@@ -146,7 +130,7 @@ export default function AdminPage() {
           </CardHeader>
           <CardContent>
             <p className="text-sm text-muted-foreground">
-              Please ensure your role is set to &apos;admin&apos; in the Clerk dashboard.
+              Please ensure your role is set to &apos;admin&apos; in the database.
             </p>
           </CardContent>
         </Card>
@@ -186,7 +170,7 @@ export default function AdminPage() {
               <Badge variant="destructive">ADMIN</Badge>
             </CardTitle>
             <CardDescription>
-              Your admin role is configured in Clerk, but you need to initialize your database record.
+              Your admin role is configured, but you need to initialize your database record.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -194,7 +178,7 @@ export default function AdminPage() {
               <div className="text-sm font-medium">Current Status:</div>
               <div className="space-y-1">
                 <div className="flex justify-between items-center text-sm">
-                  <span>Clerk Role:</span>
+                  <span>Role:</span>
                   <Badge variant="default">Admin ✅</Badge>
                 </div>
                 <div className="flex justify-between items-center text-sm">
@@ -203,7 +187,7 @@ export default function AdminPage() {
                 </div>
                 <div className="flex justify-between items-center text-sm">
                   <span>Email:</span>
-                  <span className="text-muted-foreground">{user?.emailAddresses?.[0]?.emailAddress}</span>
+                  <span className="text-muted-foreground">{user?.email}</span>
                 </div>
               </div>
             </div>
@@ -214,7 +198,7 @@ export default function AdminPage() {
               </div>
             )}
 
-            <Button 
+            <Button
               onClick={handleInitialize}
               disabled={loading}
               className="w-full"
@@ -226,7 +210,7 @@ export default function AdminPage() {
               <div className="text-xs text-muted-foreground">
                 This will create your user record in the database with admin role.
               </div>
-              
+
               <div className="p-3 bg-blue-50 border border-blue-200 rounded-md">
                 <div className="text-xs font-medium text-blue-900 mb-2">Next Steps After Initialization:</div>
                 <ol className="list-decimal list-inside space-y-1 text-xs text-blue-800">
@@ -244,4 +228,4 @@ export default function AdminPage() {
       </div>
     </div>
   );
-} 
+}

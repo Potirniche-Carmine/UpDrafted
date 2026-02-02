@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { AuthWrapper } from '../../../components/auth-wrapper';
-import { useAuth } from "@clerk/nextjs";
+import { useAuth } from "@/hooks/use-auth";
 import { UnifiedSportSelector } from "@/components/ui/unified-sport-selector";
 import { generateProfileUrl } from "@/lib/utils";
 

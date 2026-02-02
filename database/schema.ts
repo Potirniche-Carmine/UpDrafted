@@ -42,15 +42,93 @@ export const schools = pgTable('schools', {
   index('idx_schools_classification_name').on(table.classification, table.name), // Composite index for filtered searches
 ]);
 
-export const users = pgTable('users', {
+// Better-auth user table (singular name required by better-auth)
+export const user = pgTable('user', {
   id: text('id').primaryKey(),
   email: text('email').notNull().unique(),
-  role: userRoleEnum('role').notNull(),
+  name: text('name'),
+  emailVerified: boolean('email_verified').default(false).notNull(),
+  image: text('image'),
+  role: userRoleEnum('role'), // Nullable - null means needs onboarding
+  stripeCustomerId: text('stripe_customer_id'), // Added by Stripe plugin
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
 }, (table) => [
-  index('idx_users_role').on(table.role),
-  index('idx_users_email').on(table.email),
+  index('idx_user_role').on(table.role),
+  index('idx_user_email').on(table.email),
+  index('idx_user_stripe_customer').on(table.stripeCustomerId),
+]);
+
+// Alias for backward compatibility
+export const users = user;
+
+// Better-auth session table
+export const session = pgTable('session', {
+  id: text('id').primaryKey(),
+  userId: text('user_id').notNull().references(() => user.id, { onDelete: 'cascade' }),
+  token: text('token').notNull().unique(),
+  expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+  ipAddress: text('ip_address'),
+  userAgent: text('user_agent'),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+}, (table) => [
+  index('idx_session_user_id').on(table.userId),
+  index('idx_session_token').on(table.token),
+]);
+
+// Better-auth account table (for OAuth providers and password)
+export const account = pgTable('account', {
+  id: text('id').primaryKey(),
+  userId: text('user_id').notNull().references(() => user.id, { onDelete: 'cascade' }),
+  accountId: text('account_id').notNull(),
+  providerId: text('provider_id').notNull(),
+  accessToken: text('access_token'),
+  refreshToken: text('refresh_token'),
+  accessTokenExpiresAt: timestamp('access_token_expires_at', { withTimezone: true }),
+  refreshTokenExpiresAt: timestamp('refresh_token_expires_at', { withTimezone: true }),
+  scope: text('scope'),
+  idToken: text('id_token'),
+  password: text('password'),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+}, (table) => [
+  index('idx_account_user_id').on(table.userId),
+]);
+
+// Better-auth verification table (email verification, password reset)
+export const verification = pgTable('verification', {
+  id: text('id').primaryKey(),
+  identifier: text('identifier').notNull(),
+  value: text('value').notNull(),
+  expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
+}, (table) => [
+  index('idx_verification_identifier').on(table.identifier),
+]);
+
+// Better-auth subscription table (from Stripe plugin)
+export const subscription = pgTable('subscription', {
+  id: text('id').primaryKey(),
+  userId: text('user_id').notNull().references(() => user.id, { onDelete: 'cascade' }),
+  stripeSubscriptionId: text('stripe_subscription_id'),
+  stripeCustomerId: text('stripe_customer_id'),
+  plan: text('plan'),
+  status: text('status'),
+  referenceId: text('reference_id'),
+  periodStart: timestamp('period_start', { withTimezone: true }),
+  periodEnd: timestamp('period_end', { withTimezone: true }),
+  cancelAtPeriodEnd: boolean('cancel_at_period_end'),
+  seats: integer('seats'),
+  trialStart: timestamp('trial_start', { withTimezone: true }),
+  trialEnd: timestamp('trial_end', { withTimezone: true }),
+  metadata: jsonb('metadata'),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+}, (table) => [
+  index('idx_subscription_user_id').on(table.userId),
+  index('idx_subscription_stripe_id').on(table.stripeSubscriptionId),
 ]);
 
 export const athleteProfiles = pgTable('athlete_profiles', {
@@ -235,7 +313,7 @@ export const recruitingNeeds = pgTable('recruiting_needs', {
 export const recruitingProfileNeeds = pgTable('recruiting_profile_needs', {
   id: serial('id').primaryKey(),
   recruitingProfileId: integer('recruiting_profile_id').notNull().references(() => recruitingProfiles.id, { onDelete: 'cascade' }),
-  sport: text('sport').notNull(), 
+  sport: text('sport').notNull(),
   studentClassifications: studentClassificationEnum('student_classifications').array().notNull(),
   positions: text('positions').array().notNull(),
   scholarshipsAvailable: integer('scholarships_available'),
@@ -604,29 +682,29 @@ export type NewConversation = typeof conversations.$inferInsert;
 export const userSubscriptions = pgTable('user_subscriptions', {
   id: serial('id').primaryKey(),
   userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
-  
+
   // Stripe identifiers
   stripeCustomerId: text('stripe_customer_id'),
   stripeSubscriptionId: text('stripe_subscription_id'),
   stripePriceId: text('stripe_price_id'),
-  
+
   // Subscription details
   tier: subscriptionTierEnum('tier').notNull().default('free'),
   status: subscriptionStatusEnum('status').notNull().default('active'),
-  
+
   // Billing cycle
   currentPeriodStart: timestamp('current_period_start', { withTimezone: true }),
   currentPeriodEnd: timestamp('current_period_end', { withTimezone: true }),
   cancelAtPeriodEnd: boolean('cancel_at_period_end').default(false),
   canceledAt: timestamp('canceled_at', { withTimezone: true }),
-  
+
   // Trial information
   trialStart: timestamp('trial_start', { withTimezone: true }),
   trialEnd: timestamp('trial_end', { withTimezone: true }),
-  
+
   // Metadata
   metadata: jsonb('metadata'),
-  
+
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
 }, (table) => [
@@ -644,21 +722,21 @@ export const userSubscriptions = pgTable('user_subscriptions', {
 export const userUsageTracking = pgTable('user_usage_tracking', {
   id: serial('id').primaryKey(),
   userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
-  
+
   // Monthly usage counters (reset each billing cycle)
   profileViewsReceived: integer('profile_views_received').default(0),
   connectionsRequested: integer('connections_requested').default(0),
   messagesReceived: integer('messages_received').default(0),
   searchesPerformed: integer('searches_performed').default(0),
   analyticsViews: integer('analytics_views').default(0),
-  
+
   // Track when usage was last reset
   lastResetAt: timestamp('last_reset_at', { withTimezone: true }).defaultNow().notNull(),
-  
+
   // Current billing period tracking
   currentPeriodStart: timestamp('current_period_start', { withTimezone: true }).defaultNow().notNull(),
   currentPeriodEnd: timestamp('current_period_end', { withTimezone: true }),
-  
+
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
 }, (table) => [
@@ -671,36 +749,36 @@ export const userUsageTracking = pgTable('user_usage_tracking', {
 export const subscriptionFeatureLimits = pgTable('subscription_feature_limits', {
   id: serial('id').primaryKey(),
   tier: subscriptionTierEnum('tier').notNull(),
-  
+
   // Connection limits
   maxConnectionsPerMonth: integer('max_connections_per_month').default(-1), // -1 = unlimited
   maxActiveConnections: integer('max_active_connections').default(-1),
-  
+
   // Search and discovery limits
   maxSearchesPerDay: integer('max_searches_per_day').default(-1),
   advancedSearchEnabled: boolean('advanced_search_enabled').default(false),
-  
+
   // Analytics and insights
   analyticsEnabled: boolean('analytics_enabled').default(false),
   profileViewInsights: boolean('profile_view_insights').default(false),
   activityTracking: boolean('activity_tracking').default(false),
-  
+
   // Profile features
   priorityProfileRanking: boolean('priority_profile_ranking').default(false),
   customProfileThemes: boolean('custom_profile_themes').default(false),
   videoUploadsEnabled: boolean('video_uploads_enabled').default(true),
   maxVideoUploads: integer('max_video_uploads').default(3),
-  
+
   // Messaging and communication
   priorityMessaging: boolean('priority_messaging').default(false),
   messageRequestsEnabled: boolean('message_requests_enabled').default(true),
-  
+
   // Support level
   prioritySupport: boolean('priority_support').default(false),
-  
+
   // Export capabilities
   dataExportEnabled: boolean('data_export_enabled').default(false),
-  
+
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
 }, (table) => [
@@ -713,21 +791,21 @@ export const billingEvents = pgTable('billing_events', {
   id: serial('id').primaryKey(),
   userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
   subscriptionId: integer('subscription_id').references(() => userSubscriptions.id, { onDelete: 'set null' }),
-  
+
   // Stripe event details
   stripeEventId: text('stripe_event_id'),
   stripeInvoiceId: text('stripe_invoice_id'),
   stripePaymentIntentId: text('stripe_payment_intent_id'),
-  
+
   // Event information
   eventType: text('event_type').notNull(), // 'payment_succeeded', 'payment_failed', 'subscription_created', etc.
   amount: integer('amount'), // Amount in cents
   currency: text('currency').default('usd'),
   status: text('status').notNull(),
-  
+
   // Event data
   eventData: jsonb('event_data'),
-  
+
   // Timestamps
   eventTimestamp: timestamp('event_timestamp', { withTimezone: true }).notNull(),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),

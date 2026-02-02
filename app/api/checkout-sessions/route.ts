@@ -1,26 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { headers } from 'next/headers'
-import { auth, clerkClient } from '@clerk/nextjs/server'
+import { getSession } from '@/utils/roles'
 import { stripe } from '@/lib/stripe'
 import { SubscriptionManager } from '@/lib/subscription'
 
 export async function POST(req: NextRequest) {
   try {
-    const { userId } = await auth()
-    if (!userId) {
+    const session = await getSession();
+    if (!session?.user) {
       return NextResponse.json(
         { error: 'Authentication required' },
         { status: 401 }
       )
     }
 
-    // Get user details from Clerk to validate email
-    const clerk = await clerkClient()
-    const clerkUser = await clerk.users.getUser(userId)
-    const primaryEmailAddress = clerkUser.emailAddresses.find(
-      (email) => email.id === clerkUser.primaryEmailAddressId
-    )
-    const userEmail = primaryEmailAddress?.emailAddress
+    const userId = session.user.id;
+    const userEmail = session.user.email;
 
     if (!userEmail) {
       return NextResponse.json(
@@ -34,7 +29,7 @@ export async function POST(req: NextRequest) {
     if (hasActiveSubscription) {
       const subscription = await SubscriptionManager.getUserSubscription(userId)
       return NextResponse.json(
-        { 
+        {
           error: 'You already have an active subscription',
           subscription: {
             tier: subscription.tier,
@@ -48,7 +43,7 @@ export async function POST(req: NextRequest) {
 
     const headersList = await headers()
     const origin = headersList.get('origin') || headersList.get('referer')?.split('/').slice(0, 3).join('/')
-    
+
     const body = await req.json()
     const { priceId, mode = 'subscription' } = body
 
@@ -60,7 +55,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Create Checkout Sessions from body params
-    const session = await stripe.checkout.sessions.create({
+    const checkoutSession = await stripe.checkout.sessions.create({
       line_items: [
         {
           price: priceId,
@@ -75,28 +70,28 @@ export async function POST(req: NextRequest) {
       metadata: {
         userId: userId,
         priceId: priceId,
-        clerkEmail: userEmail, // Store the original Clerk email for verification
+        userEmail: userEmail, // Store in metadata
       },
       subscription_data: mode === 'subscription' ? {
         metadata: {
           userId: userId,
-          clerkEmail: userEmail, // Store in subscription metadata too
+          userEmail: userEmail, // Store in subscription metadata too
         },
       } : undefined,
     })
 
-    if (!session.url) {
+    if (!checkoutSession.url) {
       return NextResponse.json(
         { error: 'Failed to create checkout session' },
         { status: 500 }
       )
     }
 
-    return NextResponse.json({ url: session.url })
+    return NextResponse.json({ url: checkoutSession.url })
   } catch (error) {
     console.error('Checkout session creation error:', error)
     const errorMessage = error instanceof Error ? error.message : 'Internal server error'
-    const statusCode = error && typeof error === 'object' && 'statusCode' in error ? 
+    const statusCode = error && typeof error === 'object' && 'statusCode' in error ?
       (error.statusCode as number) : 500
     return NextResponse.json(
       { error: errorMessage },

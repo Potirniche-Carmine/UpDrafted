@@ -2,7 +2,7 @@
 
 import { notFound } from 'next/navigation';
 import { useEffect, useState, useCallback, useRef } from 'react';
-import { useAuth } from '@clerk/nextjs';
+import { useAuth } from '@/hooks/use-auth';
 import { AthleteProfileWrapper } from '../../../components/athlete-profile-wrapper';
 import { CoachProfileWrapper } from '../../../components/coach-profile-wrapper';
 import { RecruiterProfileWrapper } from '../../../components/recruiter-profile-wrapper';

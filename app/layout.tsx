@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 import { Roboto } from "next/font/google";
 import "./globals.css";
-import { ThemeProvider } from "@/components/theme-provider"; 
-import { ClerkProviderWrapper } from "@/components/clerk-theme-wrapper"; 
+import { ThemeProvider } from "@/components/theme-provider";
+import { AuthProvider } from "@/components/auth-provider";
 import { Header } from "@/components/header";
 import { Footer } from "@/components/footer";
 import { MobileBottomNav } from "@/components/mobile-bottom-nav";
@@ -12,7 +12,7 @@ import { generateMetadata } from "@/lib/seo";
 import { ToastContainer } from "@/components/ui/toast";
 import Script from "next/script";
 
-const roboto = Roboto({ 
+const roboto = Roboto({
   subsets: ["latin"],
   weight: ["300", "400", "500", "700"],
   display: "swap",
@@ -24,7 +24,7 @@ const roboto = Roboto({
 export const metadata: Metadata = generateMetadata({
   title: 'UpDrafted',
   description: 'The premier platform connecting student-athletes with D1, D2, D3, and JUCO college programs. Streamline your recruitment process with UpDrafted.',
-  noIndex: false 
+  noIndex: false
 });
 
 export default function RootLayout({
@@ -98,10 +98,7 @@ export default function RootLayout({
             enableSystem
             disableTransitionOnChange
           >
-            <ClerkProviderWrapper
-              afterSignOutUrl="/"
-              appearanceVariables={{ colorPrimary: 'green' }} 
-            >
+            <AuthProvider>
               <SubscriptionProvider>
                 <Header />
                 <main className="flex-grow container mx-auto max-w-screen-2xl px-4 sm:px-6 lg:px-8 py-8 pb-20 md:pb-8">
@@ -111,7 +108,7 @@ export default function RootLayout({
                 <MobileBottomNav />
                 <ToastContainer />
               </SubscriptionProvider>
-            </ClerkProviderWrapper>
+            </AuthProvider>
           </ThemeProvider>
         </QueryProvider>
       </body>

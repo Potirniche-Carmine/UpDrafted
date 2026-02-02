@@ -25,7 +25,7 @@ import {
   GraduationCap,
   Users,
 } from "lucide-react";
-import { useAuth } from "@clerk/nextjs";
+import { useAuth } from "@/hooks/use-auth";
 
 type EducationLevel = 'high_school' | 'undergraduate' | 'graduate' | 'associate';
 
