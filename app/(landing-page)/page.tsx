@@ -1,5 +1,4 @@
 import Link from "next/link";
-import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { CheckCircle, Shield, Users, ArrowRight } from "lucide-react";
 import { AuthWrapper } from "../../components/auth-wrapper";
@@ -12,112 +11,23 @@ function HomePageContent() {
     <div className="flex flex-col min-h-screen">
       {/* Hero Section */}
       <section className="relative w-full py-12 sm:py-16 md:py-20 lg:py-24 xl:py-32 2xl:py-40 overflow-hidden">
-        {/* Mobile Profile Screenshots - Vertical for mobile only */}
-        <div className="absolute inset-0 pointer-events-none sm:hidden">
-          {/* Mobile Athlete Profile Screenshot - Right Side */}
-          <div className="absolute right-[-80px] top-20 transform rotate-12 opacity-[0.15] dark:opacity-[0.18]">
-            <Image
-              src="/hero/athlete-light-mobile.webp"
-              alt="Athlete Profile Mobile"
-              width={200}
-              height={350}
-              className="w-[200px] h-auto rounded-2xl shadow-2xl block dark:hidden"
-              priority={true}
-              quality={75}
-            />
-            <Image
-              src="/hero/athlete-dark-mobile.webp"
-              alt="Athlete Profile Mobile Dark"
-              width={200}
-              height={350}
-              className="w-[200px] h-auto rounded-2xl shadow-2xl hidden dark:block"
-              priority={true}
-              quality={75}
-            />
-          </div>
+        {/* Subtle gradient background */}
+        <div className="absolute inset-0 bg-gradient-to-br from-[#01ae79]/5 via-transparent to-transparent dark:from-[#01ae79]/10 pointer-events-none"></div>
 
-          {/* Mobile Coach Dashboard Screenshot - Left Side */}
-          <div className="absolute left-[-60px] bottom-32 transform -rotate-8 opacity-[0.15] dark:opacity-[0.18]">
-            <Image
-              src="/hero/coach-light-mobile.webp"
-              alt="Coach Dashboard Mobile"
-              width={180}
-              height={300}
-              className="w-[180px] h-auto rounded-2xl shadow-2xl block dark:hidden"
-              priority={true}
-              quality={75}
-            />
-            <Image
-              src="/hero/coach-dark-mobile.webp"
-              alt="Coach Dashboard Mobile Dark"
-              width={180}
-              height={300}
-              className="w-[180px] h-auto rounded-2xl shadow-2xl hidden dark:block"
-              priority={true}
-              quality={75}
-            />
-          </div>
-        </div>
-
-        {/* Desktop Background Screenshots - Hidden on mobile */}
-        {/* Desktop Profile Screenshots - Hidden on mobile, shown on larger screens */}
-        <div className="absolute inset-0 pointer-events-none hidden sm:block overflow-hidden">
-          {/* Desktop Athlete Profile Screenshot */}
-          <div className="absolute right-[-50%] sm:right-[-45%] md:right-[-40%] lg:right-[-35%] xl:right-[-30%] 2xl:right-[-30%] top-8 sm:top-12 md:top-16 lg:top-20 xl:top-24 transform rotate-2 sm:rotate-3 md:rotate-4 opacity-[0.12] sm:opacity-[0.15] md:opacity-[0.18] lg:opacity-[0.20] dark:opacity-[0.15] dark:sm:opacity-[0.18] dark:md:opacity-[0.20] dark:lg:opacity-[0.22]">
-            <Image
-              src="/hero/athlete-light-desktop.webp"
-              alt="Athlete Profile Desktop"
-              width={800}
-              height={500}
-              className="w-[350px] h-auto sm:w-[450px] md:w-[550px] lg:w-[650px] xl:w-[750px] 2xl:w-[850px] rounded-lg sm:rounded-xl shadow-xl block dark:hidden"
-              priority={true}
-              quality={70}
-            />
-            <Image
-              src="/hero/athlete-dark-desktop.webp"
-              alt="Athlete Profile Desktop Dark"
-              width={800}
-              height={500}
-              className="w-[350px] h-auto sm:w-[450px] md:w-[550px] lg:w-[650px] xl:w-[750px] 2xl:w-[850px] rounded-lg sm:rounded-xl shadow-xl hidden dark:block"
-              priority={true}
-              quality={70}
-            />
-          </div>
-
-          {/* Desktop Coach Dashboard Screenshot */}
-          <div className="absolute left-[-45%] sm:left-[-40%] md:left-[-35%] lg:left-[-30%] xl:left-[-25%] 2xl:left-[-20%] bottom-4 sm:bottom-6 md:bottom-10 lg:bottom-12 xl:bottom-16 transform -rotate-1 sm:-rotate-2 md:-rotate-3 opacity-[0.12] sm:opacity-[0.15] md:opacity-[0.18] lg:opacity-[0.20] dark:opacity-[0.15] dark:sm:opacity-[0.18] dark:md:opacity-[0.20] dark:lg:opacity-[0.22]">
-            <Image
-              src="/hero/coach-light-desktop.webp"
-              alt="Coach Dashboard Desktop"
-              width={700}
-              height={450}
-              className="w-[300px] h-auto sm:w-[380px] md:w-[460px] lg:w-[540px] xl:w-[620px] 2xl:w-[700px] rounded-lg sm:rounded-xl shadow-xl block dark:hidden"
-              priority={true}
-              quality={70}
-            />
-            <Image
-              src="/hero/coach-dark-desktop.webp"
-              alt="Coach Dashboard Desktop Dark"
-              width={700}
-              height={450}
-              className="w-[300px] h-auto sm:w-[380px] md:w-[460px] lg:w-[540px] xl:w-[620px] 2xl:w-[700px] rounded-lg sm:rounded-xl shadow-xl hidden dark:block"
-              priority={true}
-              quality={70}
-            />
-          </div>
-        </div>
-        
         <div className="container px-4 md:px-6 mx-auto max-w-7xl relative z-10">
           <div className="text-center space-y-8">
-            {/* Main Tagline */}
-            <div className="space-y-4 sm:space-y-6 px-4 sm:px-0">
-              <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl xl:text-8xl font-bold tracking-tight leading-tight">
-                <span className="text-gray-900 dark:text-white">Your talent.</span><br />
-                <span className="text-gray-600 dark:text-gray-300">Their radar.</span><br />
-                <span className="text-[#01ae79]">Our platform.</span>
+            {/* Brand Slogan */}
+            <div className="space-y-6 sm:space-y-8 px-4 sm:px-0">
+              <h1 className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl xl:text-9xl font-bold tracking-tight leading-tight">
+                <span className="text-gray-900 dark:text-white">UpDrafted</span>
+                <br />
+                <span className="text-[#01ae79]">Aim Higher</span>
               </h1>
-              <p className="text-lg sm:text-xl md:text-2xl lg:text-3xl text-gray-600 dark:text-gray-300 max-w-3xl lg:max-w-4xl mx-auto font-light leading-relaxed">
-                For high school, college transfer, JUCO, and international athletes. One unified profile with all your achievements and direct connections to coaches.
+              <p className="text-xl sm:text-2xl md:text-3xl lg:text-4xl text-gray-600 dark:text-gray-300 max-w-4xl mx-auto font-light leading-relaxed">
+                The only free recruiting platform connecting athletes to the higher level.
+              </p>
+              <p className="text-base sm:text-lg md:text-xl text-gray-500 dark:text-gray-400 max-w-3xl mx-auto">
+                Built for high school, college transfer, JUCO, and international athletes ready to take their game to the next level
               </p>
             </div>
 
