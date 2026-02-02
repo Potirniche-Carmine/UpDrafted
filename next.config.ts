@@ -1,5 +1,4 @@
 import type { NextConfig } from "next";
-import withPWA from 'next-pwa';
 
 // CORS configuration based on environment
 const isDevelopment = process.env.NODE_ENV === 'development';
@@ -106,7 +105,11 @@ const nextConfig: NextConfig = {
       allowedOrigins: ['localhost:3000', 'updrafted.us'],
     },
     // Minimize middleware processing
-    middlewarePrefetch: 'flexible',
+    proxyPrefetch: 'flexible',
+  },
+  // Set Turbopack root to silence lockfile warning
+  turbopack: {
+    root: process.cwd(),
   },
   // Force static optimization where possible
   trailingSlash: false,
@@ -209,109 +212,9 @@ const nextConfig: NextConfig = {
   ],
 };
 
-const pwaConfig = withPWA({
-  dest: 'public',
-  disable: isDevelopment,
-  register: true,
-  skipWaiting: true,
-  // Include our custom icons in the precache
-  additionalManifestEntries: [
-    { url: '/icons/favicon-16x16.png', revision: null },
-    { url: '/icons/favicon-32x32.png', revision: null },
-    { url: '/icons/icon-192x192.png', revision: null },
-    { url: '/icons/icon-384x384.png', revision: null },
-    { url: '/icons/icon-512x512.png', revision: null },
-    { url: '/site.webmanifest', revision: null }
-  ],
-  runtimeCaching: [
-    // API Routes - Different strategies based on data type
-    {
-      urlPattern: /^.*\/api\/messages.*$/,
-      handler: 'NetworkFirst',
-      options: {
-        cacheName: 'api-messages',
-        networkTimeoutSeconds: 10,
-        expiration: {
-          maxEntries: 50,
-          maxAgeSeconds: 60 * 60, // 1 hour
-        },
-        cacheableResponse: { statuses: [0, 200] },
-      },
-    },
-    {
-      urlPattern: /^.*\/api\/notifications.*$/,
-      handler: 'NetworkFirst',
-      options: {
-        cacheName: 'api-notifications',
-        networkTimeoutSeconds: 5,
-        expiration: {
-          maxEntries: 30,
-          maxAgeSeconds: 15 * 60, // 15 minutes
-        },
-        cacheableResponse: { statuses: [0, 200] },
-      },
-    },
-    {
-      urlPattern: /^.*\/api\/profile.*$/,
-      handler: 'StaleWhileRevalidate',
-      options: {
-        cacheName: 'api-profiles',
-        expiration: {
-          maxEntries: 100,
-          maxAgeSeconds: 24 * 60 * 60, // 24 hours
-        },
-        cacheableResponse: { statuses: [0, 200] },
-      },
-    },
-    // All other API calls
-    {
-      urlPattern: /^.*\/api\/.*$/,
-      handler: 'NetworkFirst',
-      options: {
-        cacheName: 'api-other',
-        networkTimeoutSeconds: 10,
-        expiration: {
-          maxEntries: 100,
-          maxAgeSeconds: 60 * 60, // 1 hour
-        },
-        cacheableResponse: { statuses: [0, 200] },
-      },
-    },
-    // Static assets
-    {
-      urlPattern: /\.(?:png|jpg|jpeg|svg|gif|webp)$/,
-      handler: 'CacheFirst',
-      options: {
-        cacheName: 'images',
-        expiration: {
-          maxEntries: 200,
-          maxAgeSeconds: 30 * 24 * 60 * 60, // 30 days
-        },
-      },
-    },
-    // External resources - conservative caching strategy
-    {
-      urlPattern: /^https?.*/, 
-      handler: 'StaleWhileRevalidate',
-      options: {
-        cacheName: 'external-resources',
-        expiration: {
-          maxEntries: 100, // Increased capacity
-          maxAgeSeconds: 7 * 24 * 60 * 60, // 7 days
-        },
-        cacheableResponse: { statuses: [0, 200, 206] }, // Added 206 for partial content
-        plugins: [{
-          cacheWillUpdate: async ({ response }) => {
-            // Only cache successful responses and avoid caching error pages
-            return response.status === 200 ? response : null;
-          }
-        }]
-      },
-    },
-  ],
-});
+// Note: next-pwa uses webpack and is not fully compatible with Turbopack in Next.js 16
+// Temporarily disabled PWA until a Turbopack-compatible alternative is available
+// You can enable it by building with --webpack flag: npm run build -- --webpack
+// For now, the service worker and manifest files in /public will still work for basic PWA features
 
-// Type assertion needed for Next.js 15 compatibility with next-pwa
-const nextConfigWithPWA = pwaConfig(nextConfig as Parameters<typeof withPWA>[0]);
-
-export default nextConfigWithPWA;
+export default nextConfig;

@@ -12,7 +12,7 @@ function HomePageContent() {
       {/* Hero Section */}
       <section className="relative w-full py-12 sm:py-16 md:py-20 lg:py-24 xl:py-32 2xl:py-40 overflow-hidden">
         {/* Subtle gradient background */}
-        <div className="absolute inset-0 bg-gradient-to-br from-[#01ae79]/5 via-transparent to-transparent dark:from-[#01ae79]/10 pointer-events-none"></div>
+        <div className="absolute inset-0 pointer-events-none"></div>
 
         <div className="container px-4 md:px-6 mx-auto max-w-7xl relative z-10">
           <div className="text-center space-y-8">
@@ -21,7 +21,7 @@ function HomePageContent() {
               <h1 className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl xl:text-9xl font-bold tracking-tight leading-tight">
                 <span className="text-gray-900 dark:text-white">UpDrafted</span>
                 <br />
-                <span className="text-[#01ae79]">Aim Higher</span>
+                <span className="text-6xl text-[#01ae79]">Aim Higher</span>
               </h1>
               <p className="text-xl sm:text-2xl md:text-3xl lg:text-4xl text-gray-600 dark:text-gray-300 max-w-4xl mx-auto font-light leading-relaxed">
                 The only free recruiting platform connecting athletes to the higher level.
