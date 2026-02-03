@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { CheckCircle, Shield, Users, ArrowRight } from "lucide-react";
 import { AuthWrapper } from "../../components/auth-wrapper";
@@ -16,13 +17,25 @@ function HomePageContent() {
 
         <div className="container px-4 md:px-6 mx-auto max-w-7xl relative z-10">
           <div className="text-center space-y-8">
-            {/* Brand Slogan */}
-            <div className="space-y-6 sm:space-y-8 px-4 sm:px-0">
-              <h1 className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl xl:text-9xl font-bold tracking-tight leading-tight">
-                <span className="text-gray-900 dark:text-white">UpDrafted</span>
-                <br />
-                <span className="text-6xl text-[#01ae79]">Aim Higher</span>
-              </h1>
+            {/* Brand Logo and Slogan */}
+            <div className="space-y-4 sm:space-y-6 px-4 sm:px-0">
+              <div className="flex flex-col items-center justify-center gap-3 sm:gap-4">
+                <Image
+                  src="/updrafted-logo.webp"
+                  alt="UpDrafted Logo"
+                  width={600}
+                  height={200}
+                  priority
+                  placeholder="empty"
+                  className="w-auto h-auto max-w-[280px] sm:max-w-[400px] md:max-w-[500px] lg:max-w-[600px]"
+                  style={{
+                    maxHeight: "clamp(80px, 15vw, 180px)"
+                  }}
+                />
+                <h1 className="text-1xl sm:text-2xl md:text-3xl lg:text-4xl font-bold text-[#01ae79] tracking-tight">
+                  Aim Higher
+                </h1>
+              </div>
               <p className="text-xl sm:text-2xl md:text-3xl lg:text-4xl text-gray-600 dark:text-gray-300 max-w-4xl mx-auto font-light leading-relaxed">
                 The only free recruiting platform connecting athletes to the higher level.
               </p>

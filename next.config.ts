@@ -2,14 +2,14 @@ import type { NextConfig } from "next";
 
 // CORS configuration based on environment
 const isDevelopment = process.env.NODE_ENV === 'development';
-const allowedOrigins = isDevelopment 
+const allowedOrigins = isDevelopment
   ? ['http://localhost:3000', 'http://127.0.0.1:3000']
   : ['https://updrafted.us', 'https://www.updrafted.us'];
 
 const nextConfig: NextConfig = {
   // Move serverComponentsExternalPackages to root level (outside experimental)
   serverExternalPackages: ['@neondatabase/serverless'],
-  
+
   images: {
     dangerouslyAllowSVG: true,
     // Add local patterns for static assets
@@ -59,11 +59,11 @@ const nextConfig: NextConfig = {
     imageSizes: [16, 32, 48, 64, 80, 96, 128, 256],
     // Disable optimization for very small images (under 10KB as recommended)
     unoptimized: false,
-    // Quality settings for different use cases
-    qualities: [25, 50, 70, 75, 90, 100],
+    // Quality settings for different use cases (avoiding 90+ for proxy compatibility)
+    qualities: [25, 50, 70, 75, 80],
     loader: 'default',
   },
-  
+
   // Redirects for SEO and proper canonicalization
   redirects: async () => [
     // Redirect www to non-www

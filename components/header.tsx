@@ -268,7 +268,6 @@ export function Header() {
               width={150}
               height={50}
               priority
-              quality={90}
               placeholder="empty"
               sizes="(max-width: 640px) 100px, (max-width: 768px) 120px, (max-width: 1024px) 140px, 150px"
               className="mr-2 lg:mr-3"
@@ -296,7 +295,6 @@ export function Header() {
             width={150}
             height={50}
             priority
-            quality={90}
             placeholder="empty"
             sizes="(max-width: 640px) 100px, (max-width: 768px) 120px, (max-width: 1024px) 140px, 150px"
             className="mr-2 lg:mr-3"
