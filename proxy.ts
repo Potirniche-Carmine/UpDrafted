@@ -42,11 +42,26 @@ export default async function proxy(req: NextRequest) {
     const hasSession = hasSessionCookie(req);
 
     // Public routes that don't require authentication
-    const publicRoutes = ['/', '/sign-in', '/sign-up', '/about', '/contact', '/terms-of-service', '/privacy-policy', '/for-coaches', '/for-athletes', '/for-recruiters'];
+    const publicRoutes = [
+        '/', 
+        '/sign-in', 
+        '/sign-up',
+        '/forgot-password',
+        '/about', 
+        '/contact', 
+        '/terms-of-service', 
+        '/privacy-policy', 
+        '/for-coaches', 
+        '/for-athletes', 
+        '/for-recruiters'
+    ];
     const isPublicRoute = publicRoutes.some(route => pathname === route || pathname.startsWith(route + '/'));
 
-    // Auth pages - redirect to dashboard if has session cookie
-    if ((pathname.startsWith('/sign-in') || pathname.startsWith('/sign-up')) && hasSession) {
+    // Auth pages - redirect to dashboard if has session cookie (except for forgot-password)
+    const authPagesWithoutSession = ['/forgot-password'];
+    const isAuthPageWithoutSession = authPagesWithoutSession.some(route => pathname.startsWith(route));
+    
+    if ((pathname.startsWith('/sign-in') || pathname.startsWith('/sign-up')) && hasSession && !isAuthPageWithoutSession) {
         return NextResponse.redirect(new URL('/dashboard', req.url));
     }
 

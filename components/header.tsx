@@ -2,11 +2,12 @@
 
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Users, MessageSquare, Bell, LogIn, ChevronDown, Search, Menu, Sun, Moon, LogOut, User as UserIcon } from "lucide-react";
+import { Users, MessageSquare, Bell, LogIn, ChevronDown, Search, Menu, Sun, Moon, LogOut, User as UserIcon, Settings } from "lucide-react";
 import { useTheme } from "next-themes";
 import Image from "next/image";
 import { useState, useEffect } from "react";
 import { useRouter, usePathname } from "next/navigation";
+import { UserAccountModal } from "@/components/user-account-modal";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -73,8 +74,8 @@ function NavItemComponent({
       href={item.href}
       onClick={onClick}
       className={`transition-colors flex items-center px-2 md:px-3 py-2 group rounded-lg relative ${isActive
-          ? 'text-[#01ae79] bg-[#01ae79]/10 dark:bg-[#01ae79]/20'
-          : 'text-muted-foreground hover:text-[#01ae79] hover:bg-[#01ae79]/5 dark:hover:bg-[#01ae79]/10'
+        ? 'text-[#01ae79] bg-[#01ae79]/10 dark:bg-[#01ae79]/20'
+        : 'text-muted-foreground hover:text-[#01ae79] hover:bg-[#01ae79]/5 dark:hover:bg-[#01ae79]/10'
         } ${className}`}
       title={item.label}
     >
@@ -178,12 +179,21 @@ function UserButtonDropdown({
           </div>
         </div>
         <DropdownMenuSeparator />
-        {hasCompletedOnboarding && (
-          <DropdownMenuItem onClick={handleViewProfile} disabled={profileNavigating}>
-            <UserIcon className="mr-2 h-4 w-4" />
-            <span>{profileNavigating ? "Loading..." : "View Profile"}</span>
+        <DropdownMenuItem onClick={handleViewProfile} disabled={profileNavigating}>
+          <UserIcon className="mr-2 h-4 w-4" />
+          <span>{profileNavigating ? "Loading..." : "View Profile"}</span>
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={handleViewProfile} disabled={profileNavigating}>
+          <UserIcon className="mr-2 h-4 w-4" />
+          <span>{profileNavigating ? "Loading..." : "View Profile"}</span>
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <UserAccountModal>
+          <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+            <Settings className="mr-2 h-4 w-4" />
+            <span>Manage Account</span>
           </DropdownMenuItem>
-        )}
+        </UserAccountModal>
         <DropdownMenuSeparator />
         <DropdownMenuItem onClick={handleSignOut} className="text-destructive focus:text-destructive">
           <LogOut className="mr-2 h-4 w-4" />

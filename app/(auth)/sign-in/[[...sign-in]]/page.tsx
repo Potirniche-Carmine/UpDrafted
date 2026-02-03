@@ -1,20 +1,36 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { signIn } from "@/lib/auth-client";
 
 export default function SignInPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [successMessage, setSuccessMessage] = useState("");
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    // Show success message if redirected from email verification
+    if (searchParams.get("verified") === "true") {
+      setSuccessMessage("Email verified successfully! You can now sign in.");
+    }
+    
+    // Show error if email verification failed
+    const verificationError = searchParams.get("error");
+    if (verificationError) {
+      setError("Email verification failed. The link may have expired. Please try signing up again.");
+    }
+  }, [searchParams]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+    setSuccessMessage(""); // Clear success message on submit
     setLoading(true);
 
     try {
@@ -24,7 +40,12 @@ export default function SignInPage() {
       });
 
       if (result.error) {
-        setError(result.error.message || "Invalid email or password");
+        // Check if error is due to unverified email
+        if (result.error.status === 403) {
+          setError("Please verify your email address before signing in. Check your inbox for the verification link.");
+        } else {
+          setError(result.error.message || "Invalid email or password");
+        }
         setLoading(false);
         return;
       }
@@ -37,6 +58,21 @@ export default function SignInPage() {
     }
   };
 
+  const handleMagicLink = async () => {
+    if (!email) {
+      setError("Please enter your email address");
+      return;
+    }
+    setLoading(true);
+    try {
+      await signIn.magicLink({ email, callbackURL: "/dashboard" });
+      alert("Magic link sent! Check your email.");
+    } catch (err) {
+      setError("Failed to send magic link");
+    }
+    setLoading(false);
+  };
+
   return (
     <div className="flex min-h-[80vh] items-center justify-center">
       <div className="w-full max-w-md space-y-8 px-4">
@@ -47,57 +83,89 @@ export default function SignInPage() {
           </p>
         </div>
 
-        <form onSubmit={handleSubmit} className="mt-8 space-y-6">
+        <div className="mt-8 space-y-6">
+          {successMessage && (
+            <div className="rounded-lg bg-green-100 p-4 text-sm text-green-700">
+              {successMessage}
+            </div>
+          )}
           {error && (
             <div className="rounded-lg bg-destructive/10 p-4 text-sm text-destructive">
               {error}
             </div>
           )}
 
-          <div className="space-y-4">
-            <div>
-              <label htmlFor="email" className="block text-sm font-medium">
-                Email address
-              </label>
-              <input
-                id="email"
-                name="email"
-                type="email"
-                autoComplete="email"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="mt-1 block w-full rounded-lg border border-input bg-background px-4 py-3 text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
-                placeholder="you@example.com"
-              />
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <div className="space-y-4">
+              <div>
+                <label htmlFor="email" className="block text-sm font-medium">
+                  Email address
+                </label>
+                <input
+                  id="email"
+                  name="email"
+                  type="email"
+                  autoComplete="email"
+                  required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="mt-1 block w-full rounded-lg border border-input bg-background px-4 py-3 text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                  placeholder="you@example.com"
+                />
+              </div>
+
+              <div>
+                <div className="flex items-center justify-between">
+                  <label htmlFor="password" className="block text-sm font-medium">
+                    Password
+                  </label>
+                  <Link href="/forgot-password" className="text-sm text-primary hover:underline">
+                    Forgot password?
+                  </Link>
+                </div>
+                <input
+                  id="password"
+                  name="password"
+                  type="password"
+                  autoComplete="current-password"
+                  required
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="mt-1 block w-full rounded-lg border border-input bg-background px-4 py-3 text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                  placeholder="••••••••"
+                />
+              </div>
             </div>
 
-            <div>
-              <label htmlFor="password" className="block text-sm font-medium">
-                Password
-              </label>
-              <input
-                id="password"
-                name="password"
-                type="password"
-                autoComplete="current-password"
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="mt-1 block w-full rounded-lg border border-input bg-background px-4 py-3 text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
-                placeholder="••••••••"
-              />
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full rounded-lg bg-primary px-4 py-3 font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
+            >
+              {loading ? "Signing in..." : "Sign in"}
+            </button>
+          </form>
+
+          <div className="relative">
+            <div className="absolute inset-0 flex items-center">
+              <span className="w-full border-t" />
+            </div>
+            <div className="relative flex justify-center text-xs uppercase">
+              <span className="bg-background px-2 text-muted-foreground">
+                Or continue with
+              </span>
             </div>
           </div>
 
           <button
-            type="submit"
+            type="button"
+            onClick={handleMagicLink}
             disabled={loading}
-            className="w-full rounded-lg bg-primary px-4 py-3 font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
+            className="w-full rounded-lg border border-input bg-background px-4 py-3 font-medium text-foreground transition-colors hover:bg-accent hover:text-accent-foreground disabled:opacity-50"
           >
-            {loading ? "Signing in..." : "Sign in"}
+            Sign in with Magic Link
           </button>
-        </form>
+        </div>
 
         <p className="text-center text-sm text-muted-foreground">
           Don&apos;t have an account?{" "}

@@ -51,7 +51,7 @@ export const schools = pgTable('schools', {
 export const user = pgTable('user', {
   id: text('id').primaryKey(),
   email: text('email').notNull().unique(),
-  name: text('name'),
+  name: text('name').notNull().unique(),
   emailVerified: boolean('email_verified').default(false).notNull(),
   image: text('image'),
   role: userRoleEnum('role'), // Nullable - null means needs onboarding
@@ -61,6 +61,7 @@ export const user = pgTable('user', {
 }, (table) => [
   index('idx_user_role').on(table.role),
   index('idx_user_email').on(table.email),
+  index('idx_user_name').on(table.name),
   index('idx_user_stripe_customer').on(table.stripeCustomerId),
 ]);
 

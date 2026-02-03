@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useUser, useAuth } from "@/hooks/use-auth";
+import { authClient } from "@/lib/auth-client";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -126,14 +127,11 @@ export default function OnboardingForm({ role, onBack }: OnboardingFormProps) {
       });
 
       if (response.ok) {
-        // Refresh router to update server components with new role
-        router.refresh();
+        // Refresh session to Ensure the new role is picked up
+        await authClient.getSession();
 
-        // Give the system time to propagate the role changes
-        await new Promise(resolve => setTimeout(resolve, 2000));
-
-        // Keep user on loading screen - LoadingScreen will handle the redirect
-        // Don't call navigateToProfile here to avoid multiple redirects
+        // Force a hard redirect to the dashboard to ensure middleware and server components see the new role
+        window.location.href = "/dashboard";
       } else {
         const errorData = await response.json();
         if (errorData.validationErrors) {
