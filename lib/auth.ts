@@ -14,8 +14,8 @@ const stripeClient = new Stripe(process.env.STRIPE_SECRET_KEY!, {
 // Initialize Resend client
 const resend = new Resend(process.env.RESEND_API_KEY!);
 
-// Email configuration
-const EMAIL_FROM = process.env.EMAIL_FROM || "UpDrafted <onboarding@resend.dev>";
+// Email configuration - hardcoded since it's not sensitive
+const EMAIL_FROM = "UpDrafted <noreply@updrafted.us>";
 
 export const auth = betterAuth({
     database: drizzleAdapter(db, { provider: "pg" }),
