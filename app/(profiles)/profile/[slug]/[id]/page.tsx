@@ -1,8 +1,7 @@
- "use client";
+"use client";
 
 import { notFound } from 'next/navigation';
 import { useEffect, useState, useCallback, useRef } from 'react';
-import { useAuth } from '@clerk/nextjs';
 import { AthleteProfileWrapper } from '../../../components/athlete-profile-wrapper';
 import { CoachProfileWrapper } from '../../../components/coach-profile-wrapper';
 import { RecruiterProfileWrapper } from '../../../components/recruiter-profile-wrapper';
@@ -13,9 +12,9 @@ import type { CoachProfileData } from '../../../lib/base-profile-types';
 import type { RecruiterProfileData } from '../../../components/recruiter/recruiter-profile-types';
 
 // Global cache that persists across component mounts/unmounts
-const globalProfileCache = new Map<string, { 
-  data: ProfileApiResponse; 
-  timestamp: number; 
+const globalProfileCache = new Map<string, {
+  data: ProfileApiResponse;
+  timestamp: number;
   lastAccessed: number;
 }>();
 
@@ -26,32 +25,32 @@ const MAX_CACHE_SIZE = 150; // Increased from 100 to store more profiles
 const getCachedProfile = (profileId: string) => {
   const cacheKey = `profile-${profileId}`;
   const cached = globalProfileCache.get(cacheKey);
-  
+
   if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
     // Update last accessed time for LRU cleanup
     cached.lastAccessed = Date.now();
     globalProfileCache.set(cacheKey, cached);
     return cached.data;
   }
-  
+
   return null;
 };
 
 const setCachedProfile = (profileId: string, data: ProfileApiResponse) => {
   const cacheKey = `profile-${profileId}`;
   const now = Date.now();
-  
+
   globalProfileCache.set(cacheKey, {
     data,
     timestamp: now,
     lastAccessed: now
   });
-  
+
   // Clean up old cache entries using LRU strategy
   if (globalProfileCache.size > MAX_CACHE_SIZE) {
     const entries = Array.from(globalProfileCache.entries());
     const sortedByAccess = entries.sort((a, b) => a[1].lastAccessed - b[1].lastAccessed);
-    
+
     // Remove oldest 25% of entries or minimum 10, whichever is larger
     const entriesToRemove = Math.max(10, Math.floor(globalProfileCache.size * 0.25));
     for (let i = 0; i < entriesToRemove; i++) {
@@ -126,7 +125,7 @@ export default function ProfilePage({ params }: ProfilePageProps) {
   }
 
   return (
-    <AuthWrapper 
+    <AuthWrapper
       requireAuth={true}
     >
       <ProfileContentWrapper profileId={profileId} slug={slug} />
@@ -135,15 +134,15 @@ export default function ProfilePage({ params }: ProfilePageProps) {
 }
 
 function ProfileContent({ profileId, slug }: { profileId: string; slug: string | null }) {
-  const { getToken } = useAuth();
+  /* eslint-disable @typescript-eslint/no-unused-vars */
   const [profileData, setProfileData] = useState<ProfileApiResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
   const retryTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  
+
   // Check if we're in preview mode
-  const isPreviewMode = typeof window !== 'undefined' && 
+  const isPreviewMode = typeof window !== 'undefined' &&
     new URLSearchParams(window.location.search).get('preview') === 'true';
 
   const fetchProfile = useCallback(async (retryCount = 0, forceFresh = false) => {
@@ -173,28 +172,15 @@ function ProfileContent({ profileId, slug }: { profileId: string; slug: string |
       const abortController = new AbortController();
       abortControllerRef.current = abortController;
 
-      // Get auth token - AuthWrapper already verified user is authenticated
-      let token = await getToken();
-      
-      // If no token on first try, wait progressively longer and try again
-      if (!token && retryCount < 5) {
-        const delay = Math.min(500 * Math.pow(2, retryCount), 3000); // Exponential backoff, max 3s
-        await new Promise(resolve => setTimeout(resolve, delay));
-        token = await getToken();
-      }
-      
-      if (!token) {
-        throw new Error('No authentication token available after multiple attempts');
-      }
+      // AuthWrapper already verified user is authenticated
 
       const response = await fetch(`/api/profile/${slug}/${profileId}`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
           'Accept': 'application/json',
           // Add cache control headers to force fresh fetch when needed
-          ...(forceFresh && { 
+          ...(forceFresh && {
             'Cache-Control': 'no-cache, no-store, must-revalidate',
             'Pragma': 'no-cache',
             'Expires': '0'
@@ -215,7 +201,7 @@ function ProfileContent({ profileId, slug }: { profileId: string; slug: string |
           notFound();
           return;
         }
-        
+
         // If unauthorized and this is an early attempt, try again
         if (response.status === 401 && retryCount < 3) {
           const delay = 1000 * (retryCount + 1); // Progressive delay
@@ -224,7 +210,7 @@ function ProfileContent({ profileId, slug }: { profileId: string; slug: string |
           }, delay);
           return;
         }
-        
+
         // Try to get error details from response
         let errorMessage = `Failed to fetch profile: ${response.status}`;
         try {
@@ -238,45 +224,45 @@ function ProfileContent({ profileId, slug }: { profileId: string; slug: string |
         } catch {
           // If we can't parse the error response, use the default message
         }
-        
+
         throw new Error(errorMessage);
       }
 
       const data: ProfileApiResponse = await response.json();
-      
+
       // Cache the response in global cache
       setCachedProfile(profileId, data);
-      
+
       setProfileData(data);
     } catch (err) {
       // Don't set error if request was aborted
       if (err instanceof Error && err.name === 'AbortError') {
         return;
       }
-      
+
       console.error('Error fetching profile:', err);
       setError(err instanceof Error ? err.message : 'Failed to load profile');
     } finally {
       setLoading(false);
     }
-  }, [profileId, slug, getToken]);
+  }, [profileId, slug]);
 
   useEffect(() => {
     // Get navigation source from the global state manager
     const navigationSource = navigationStateManager.getNavigationSource();
-    
+
     // Determine if we should use cache or force fresh based on navigation source
     const shouldForceFresh = navigationSource === 'refresh' || navigationSource === 'direct';
-    
+
     // Small delay to allow for better auth context stability, but only if forcing fresh
     const delay = shouldForceFresh ? 100 : 0;
-    
+
     const timer = setTimeout(() => {
       fetchProfile(0, shouldForceFresh);
     }, delay);
-    
+
     return () => clearTimeout(timer);
-    
+
     // Cleanup function to abort request if component unmounts
     return () => {
       if (abortControllerRef.current) {
@@ -318,7 +304,7 @@ function ProfileContent({ profileId, slug }: { profileId: string; slug: string |
                 <div className="flex-shrink-0">
                   <div className="w-32 h-32 bg-muted rounded-full animate-pulse"></div>
                 </div>
-                
+
                 {/* Profile info skeleton */}
                 <div className="flex-1 space-y-4">
                   <div className="space-y-2">
@@ -326,14 +312,14 @@ function ProfileContent({ profileId, slug }: { profileId: string; slug: string |
                     <div className="h-4 bg-muted rounded animate-pulse w-48"></div>
                     <div className="h-4 bg-muted rounded animate-pulse w-56"></div>
                   </div>
-                  
+
                   <div className="flex gap-2">
                     <div className="h-6 bg-muted rounded animate-pulse w-20"></div>
                     <div className="h-6 bg-muted rounded animate-pulse w-24"></div>
                     <div className="h-6 bg-muted rounded animate-pulse w-28"></div>
                   </div>
                 </div>
-                
+
                 {/* Action buttons skeleton */}
                 <div className="flex flex-col gap-2 min-w-fit">
                   <div className="h-10 bg-muted rounded animate-pulse w-32"></div>
@@ -356,7 +342,7 @@ function ProfileContent({ profileId, slug }: { profileId: string; slug: string |
                   </div>
                 ))}
               </div>
-              
+
               {/* Content sections */}
               {[...Array(3)].map((_, i) => (
                 <div key={i} className="bg-card rounded-lg border p-6">
@@ -395,7 +381,7 @@ function ProfileContent({ profileId, slug }: { profileId: string; slug: string |
         <div className="text-center p-6">
           <h1 className="text-2xl font-bold text-destructive mb-2">Error Loading Profile</h1>
           <p className="text-muted-foreground mb-4">{error}</p>
-          <button 
+          <button
             onClick={() => fetchProfile(0, true)}
             className="px-4 py-2 bg-primary text-primary-foreground rounded hover:bg-primary/90 transition-colors"
           >

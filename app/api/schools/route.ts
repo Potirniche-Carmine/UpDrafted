@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { schoolOperations } from '@/database/db-utils';
-import { auth } from '@clerk/nextjs/server';
+import { getSession } from "@/utils/roles";
 
 export async function GET(request: NextRequest) {
   try {
@@ -26,7 +26,8 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const { userId } = await auth();
+    const session = await getSession();
+  const userId = session?.user?.id;
     
     if (!userId) {
       return NextResponse.json(

@@ -1,20 +1,21 @@
-import { auth } from '@clerk/nextjs/server'
+import { getSession } from '@/utils/roles'
 import { NextRequest, NextResponse } from 'next/server'
 import { userOperations } from '@/database/db-utils'
 
 export async function POST(request: NextRequest) {
   try {
-    const { userId, sessionClaims } = await auth()
-    
-    if (!userId) {
+    const session = await getSession()
+
+    if (!session?.user) {
       return NextResponse.json(
         { error: 'Unauthorized - Missing or invalid session token' },
         { status: 401 }
       )
     }
 
-    // Check if user is admin in Clerk
-    const userRole = sessionClaims?.metadata?.role as string;
+    const userId = session.user.id;
+    // Check if user is admin using better-auth role field
+    const userRole = session.user.role as string | undefined;
     if (userRole !== 'admin') {
       return NextResponse.json(
         { error: 'Forbidden - Admin role required' },
@@ -36,7 +37,7 @@ export async function POST(request: NextRequest) {
     const existingUser = await userOperations.getUserWithProfile(userId);
     if (existingUser) {
       return NextResponse.json(
-        { 
+        {
           message: 'Admin user already initialized',
           user: existingUser
         },
@@ -47,12 +48,13 @@ export async function POST(request: NextRequest) {
     // Create admin user in database
     const user = await userOperations.createUser({
       id: userId,
+      name: email.split('@')[0],
       email,
       role: 'admin',
     });
 
     return NextResponse.json(
-      { 
+      {
         message: 'Admin user initialized successfully',
         user
       },

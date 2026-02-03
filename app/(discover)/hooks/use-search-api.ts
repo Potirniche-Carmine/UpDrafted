@@ -2,7 +2,7 @@
 
 import { useCallback } from "react";
 import { sanitizeText } from '@/utils/sanitization';
-import { createSecureHeaders } from '@/utils/clerk-security';
+
 import type { FilterOption } from './use-filter-options';
 
 interface DiscoverUser {
@@ -95,14 +95,7 @@ export const useSearchAPI = ({
       }
       setError(null);
 
-      const windowWithClerk = window as unknown as {
-        Clerk?: {
-          session?: {
-            getToken: () => Promise<string>;
-          };
-        };
-      };
-      const token = await windowWithClerk.Clerk?.session?.getToken();
+
 
       // Prepare the search parameters - use 1 for new search, pageNum for pagination
       const actualPage = isNewSearch ? 1 : pageNum;
@@ -152,7 +145,11 @@ export const useSearchAPI = ({
       const requestWithPost = async () =>
         fetch('/api/discover', {
           method: 'POST',
-          headers: createSecureHeaders(token || ''),
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest'
+          },
           body: JSON.stringify({
             page: actualPage,
             pageSize: 10,
@@ -183,7 +180,11 @@ export const useSearchAPI = ({
       } else {
         // Use GET request for smaller filter sets
         response = await fetch(`${baseUrl}?${params.toString()}`, {
-          headers: createSecureHeaders(token || ''),
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest'
+          },
         });
       }
 
@@ -223,17 +224,17 @@ export const useSearchAPI = ({
       setInitialLoading(false);
     }
   }, [
-    selectedSports, 
-    selectedDivisions, 
-    selectedCountries, 
-    selectedStates, 
-    selectedPositions, 
-    selectedGraduatingClasses, 
-    selectedConferences, 
-    minHeight, 
-    minWeight, 
-    verifiedFilter, 
-    showStatesFilter, 
+    selectedSports,
+    selectedDivisions,
+    selectedCountries,
+    selectedStates,
+    selectedPositions,
+    selectedGraduatingClasses,
+    selectedConferences,
+    minHeight,
+    minWeight,
+    verifiedFilter,
+    showStatesFilter,
     effectiveRole,
     setAllUsers,
     setHasSearched,

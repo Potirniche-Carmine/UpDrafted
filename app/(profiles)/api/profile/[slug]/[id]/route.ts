@@ -4,12 +4,13 @@ import { userOperations, athleteOperations, coachOperations, recruitingOperation
 import { R2_PUBLIC_URL, constructR2Url } from '@/database/r2';
 import { NewAthleteProfile, NewAthleteMeasurable, NewAthleteVideo, NewAthleteExperience, NewCoachProfile, NewRecruitingProfile, verificationRequests, AthleteProfile, CoachProfile, RecruitingProfile, athleteExperience } from '@/database/schema';
 import { db } from '@/database/db';
+import { executeWithUser } from '@/lib/db-access';
 import { eq, and } from 'drizzle-orm';
 import { sanitizeProfileData } from '@/utils/sanitization';
 import { EducationLevel } from '@/app/(onboarding)/lib/onboarding';
 import { withRateLimit, invalidateCache } from '@/utils/security';
 import { PRESENT_DATE, parseDateWithErrorHandling, dateToStringWithErrorHandling, validateDateDataset } from '@/lib/date-utils';
-import { createClientErrorResponse, logErrorWithContext} from '@/utils/error-sanitization';
+import { createClientErrorResponse, logErrorWithContext } from '@/utils/error-sanitization';
 
 // Force Node.js runtime to avoid expensive edge function costs
 export const runtime = 'nodejs';
@@ -36,7 +37,7 @@ function transformProfileData(profileData: Record<string, any>, profileType: str
     if (profileData.userId) {
       transformed.userId = profileData.userId;
     }
-    
+
     // Transform profile image from R3 key to URL using proper R2 configuration
     if (profileData.profileImageR3Key) {
       transformed.profileImage = constructR2Url(R2_PUBLIC_URL, profileData.profileImageR3Key);
@@ -125,14 +126,14 @@ function transformProfileData(profileData: Record<string, any>, profileType: str
       transformed.campExperience = profileData.experience.map((exp: { id: number; type: string; name: string; city: string; country: string; state?: string; startDate: string; endDate: string; sport: string; description: string }) => {
         // Handle start date - convert from database string to Date object using proper timezone handling
         const [startDate, startDateError] = parseDateWithErrorHandling(
-          exp.startDate, 
+          exp.startDate,
           `camp experience start date for "${exp.name}" (ID: ${exp.id})`,
           new Date()
         );
 
         // Handle end date - convert from database string to Date object using proper timezone handling
         const [endDate, endDateError] = parseDateWithErrorHandling(
-          exp.endDate, 
+          exp.endDate,
           `camp experience end date for "${exp.name}" (ID: ${exp.id})`,
           PRESENT_DATE
         );
@@ -174,7 +175,7 @@ function transformProfileData(profileData: Record<string, any>, profileType: str
     } else {
       transformed.maxPrepsUrl = undefined;
     }
-    
+
     if (!transformed.sports247Url || transformed.sports247Url.trim() === '') {
       transformed.sports247Url = undefined;
     }
@@ -182,7 +183,7 @@ function transformProfileData(profileData: Record<string, any>, profileType: str
     if (!transformed.espnUrl || transformed.espnUrl.trim() === '') {
       transformed.espnUrl = undefined;
     }
-    
+
     if (!transformed.hudlUrl || transformed.hudlUrl.trim() === '') {
       transformed.hudlUrl = undefined;
     }
@@ -198,24 +199,24 @@ function transformProfileData(profileData: Record<string, any>, profileType: str
     if (profileData.userId) {
       transformed.userId = profileData.userId;
     }
-    
+
     // Transform profile image from R3 key to URL using proper R2 configuration
     if (profileData.profileImageR3Key) {
       transformed.profileImage = constructR2Url(R2_PUBLIC_URL, profileData.profileImageR3Key);
     }
-    
+
     // Transform organization logo from R3 key to URL using proper R2 configuration
     if (profileData.organizationLogoR3Key) {
       transformed.organizationLogo = constructR2Url(R2_PUBLIC_URL, profileData.organizationLogoR3Key);
     }
-    
+
     // For recruiter profiles, preserve sportSpecificNeeds
     if (profileType === 'recruiter' && profileData.sportSpecificNeeds) {
       transformed.sportSpecificNeeds = profileData.sportSpecificNeeds;
-      transformed.sportSpecificNeedsKeys = typeof profileData.sportSpecificNeeds === 'object' ? 
+      transformed.sportSpecificNeedsKeys = typeof profileData.sportSpecificNeeds === 'object' ?
         Object.keys(profileData.sportSpecificNeeds) : [];
     }
-    
+
     // Add country field
     if (profileData.country) {
       transformed.country = profileData.country;
@@ -228,29 +229,29 @@ function transformProfileData(profileData: Record<string, any>, profileType: str
 // Basic input validation schemas
 const validateBasicFields = (data: Record<string, unknown>) => {
   const errors: string[] = [];
-  
+
   // String length validation
   if (data.fullName && (typeof data.fullName !== 'string' || data.fullName.length > 100)) {
     errors.push('Full name must be a string under 100 characters');
   }
-  
+
   if (data.city && (typeof data.city !== 'string' || data.city.length > 50)) {
     errors.push('City must be a string under 50 characters');
   }
-  
+
   if (data.personalStatement && (typeof data.personalStatement !== 'string' || data.personalStatement.length > 1000)) {
     errors.push('Personal statement must be under 1000 characters');
   }
-  
+
   // Numeric validation - allow null/undefined for optional fields
   if (data.gpa !== undefined && data.gpa !== null && (typeof data.gpa !== 'number' || data.gpa < 0 || data.gpa > 5)) {
     errors.push('GPA must be a number between 0 and 5');
   }
-  
+
   if (data.graduationYear && (typeof data.graduationYear !== 'number' || data.graduationYear < 2020 || data.graduationYear > 2040)) {
     errors.push('Graduation year must be between 2020 and 2040');
   }
-  
+
   // URL validation
   if (data.maxPrepsUrl && typeof data.maxPrepsUrl === 'string' && data.maxPrepsUrl.length > 0) {
     try {
@@ -262,7 +263,7 @@ const validateBasicFields = (data: Record<string, unknown>) => {
       errors.push('MaxPreps URL must be a valid URL');
     }
   }
-  
+
   return errors;
 };
 
@@ -280,7 +281,7 @@ function sanitizeForViewing(profileData: Record<string, any>, profileType: strin
 
   // For other users viewing the profile, remove sensitive information
   const sanitized = { ...profileData };
-  
+
   // Remove sensitive user data that should only be visible to the profile owner
   if (sanitized.user) {
     delete sanitized.user.email;
@@ -310,7 +311,7 @@ export async function GET(
   try {
     // SECURITY: Validate request size and URL length to prevent DoS attacks
     const url = new URL(request.url);
-    
+
     // Limit total URL length (including query params)
     const MAX_URL_LENGTH = 2048; // Standard browser limit
     if (request.url.length > MAX_URL_LENGTH) {
@@ -340,31 +341,6 @@ export async function GET(
 
     // SECURITY NOTE: This is where REAL auth happens
     // Client-side AuthWrapper is just for UX - this is the actual security layer
-    
-    // Validate required Clerk headers for client-side requests
-    const authHeader = request.headers.get('authorization');
-    
-    // For client-side requests, we only strictly require authorization
-    if (!authHeader) {
-      return NextResponse.json(
-        { 
-          error: 'Missing authorization header',
-          details: 'Authorization header is required'
-        },
-        { status: 401 }
-      );
-    }
-
-    // Check Bearer token format
-    if (!authHeader.startsWith('Bearer ')) {
-      return NextResponse.json(
-        { 
-          error: 'Invalid authorization format',
-          details: 'Authorization header must use Bearer token format'
-        },
-        { status: 401 }
-      );
-    }
 
     // Require any authenticated role
     const auth = await requireAnyRole();
@@ -377,518 +353,520 @@ export async function GET(
     if (!rateLimitResult.success) {
       return rateLimitResult.response;
     }
-    const { slug, id: profileUserId } = await params;
+    return await executeWithUser(async (tx) => {
+      const { slug, id: profileUserId } = await params;
 
-    // Validate the profile user ID format
-    if (!profileUserId || typeof profileUserId !== 'string' || profileUserId.trim() === '') {
-      return NextResponse.json(
-        { error: 'Invalid user ID' },
-        { status: 400 }
-      );
-    }
-
-    // Prevent potential injection attacks by validating the ID format
-    if (!/^[a-zA-Z0-9_-]+$/.test(profileUserId)) {
-      return NextResponse.json(
-        { error: 'Invalid user ID format' },
-        { status: 400 }
-      );
-    }
-
-    // Validate the slug format
-    if (!slug || typeof slug !== 'string' || slug.trim() === '') {
-      return NextResponse.json(
-        { error: 'Invalid slug' },
-        { status: 400 }
-      );
-    }
-
-    // Prevent potential injection attacks by validating the slug format
-    if (!/^[a-zA-Z0-9\s-]+$/.test(slug)) {
-      return NextResponse.json(
-        { error: 'Invalid slug format' },
-        { status: 400 }
-      );
-    }
-
-    // Check if the current user is viewing their own profile
-    const isOwnProfile = currentUserId === profileUserId;
-    const isAdmin = currentUserRole === 'admin';
-
-    // ADMIN DEMO PROFILE HANDLING
-    // If admin is viewing their own profile, check if they're viewing as a different role
-    let adminViewingRole = null;
-    let shouldShowDemoProfile = false;
-
-    if (isAdmin && isOwnProfile) {
-      try {
-        const adminPrefs = await adminOperations.getAdminRolePreferences(currentUserId);
-        if (adminPrefs && adminPrefs.currentViewingRole) {
-          adminViewingRole = adminPrefs.currentViewingRole;
-          shouldShowDemoProfile = true;
-        }
-      } catch {
-        // Continue with normal flow if admin preferences fail
+      // Validate the profile user ID format
+      if (!profileUserId || typeof profileUserId !== 'string' || profileUserId.trim() === '') {
+        return NextResponse.json(
+          { error: 'Invalid user ID' },
+          { status: 400 }
+        );
       }
-    }
 
-    // If admin should show demo profile, fetch and return demo profile
-    if (shouldShowDemoProfile && adminViewingRole) {
-      try {
-        const demoProfiles = await adminOperations.getDemoProfiles(currentUserId);
-                 let demoProfileData = null;
-         const profileType = adminViewingRole;
+      // Prevent potential injection attacks by validating the ID format
+      if (!/^[a-zA-Z0-9_-]+$/.test(profileUserId)) {
+        return NextResponse.json(
+          { error: 'Invalid user ID format' },
+          { status: 400 }
+        );
+      }
+
+      // Validate the slug format
+      if (!slug || typeof slug !== 'string' || slug.trim() === '') {
+        return NextResponse.json(
+          { error: 'Invalid slug' },
+          { status: 400 }
+        );
+      }
+
+      // Prevent potential injection attacks by validating the slug format
+      if (!/^[a-zA-Z0-9\s-]+$/.test(slug)) {
+        return NextResponse.json(
+          { error: 'Invalid slug format' },
+          { status: 400 }
+        );
+      }
+
+      // Check if the current user is viewing their own profile
+      const isOwnProfile = currentUserId === profileUserId;
+      const isAdmin = currentUserRole === 'admin';
+
+      // ADMIN DEMO PROFILE HANDLING
+      // If admin is viewing their own profile, check if they're viewing as a different role
+      let adminViewingRole = null;
+      let shouldShowDemoProfile = false;
+
+      if (isAdmin && isOwnProfile) {
+        try {
+          const adminPrefs = await adminOperations.getAdminRolePreferences(currentUserId, tx);
+          if (adminPrefs && adminPrefs.currentViewingRole) {
+            adminViewingRole = adminPrefs.currentViewingRole;
+            shouldShowDemoProfile = true;
+          }
+        } catch {
+          // Continue with normal flow if admin preferences fail
+        }
+      }
+
+      // If admin should show demo profile, fetch and return demo profile
+      if (shouldShowDemoProfile && adminViewingRole) {
+        try {
+          const demoProfiles = await adminOperations.getDemoProfiles(currentUserId, tx);
+          let demoProfileData = null;
+          const profileType = adminViewingRole;
 
           if (adminViewingRole === 'athlete' && demoProfiles.athlete) {
-           // Use the demo athlete profile
-           demoProfileData = demoProfiles.athlete;
-         } else if (adminViewingRole === 'coach' && demoProfiles.coach) {
-           // Use the demo coach profile
-           demoProfileData = demoProfiles.coach;
-         } else if (adminViewingRole === 'recruiter' && demoProfiles.recruiter) {
-           // Use the demo recruiter profile
-           demoProfileData = demoProfiles.recruiter;
-         }
-
-        if (demoProfileData) {
-          // Transform the demo profile data to match the component interface
-          const transformedProfile = transformProfileData(demoProfileData, profileType);
-
-          // Fetch REAL verification status for the current user (admin) when viewing demo profiles
-          let realVerificationStatus = {};
-          
-          if (profileType === 'athlete') {
-            try {
-              // Fetch general verification request for the current admin user
-              const generalVerificationRequest = await db
-                .select({
-                  status: verificationRequests.status,
-                  submittedAt: verificationRequests.submittedAt,
-                  reviewedAt: verificationRequests.reviewedAt,
-                  rejectionReason: verificationRequests.rejectionReason
-                })
-                .from(verificationRequests)
-                .where(and(
-                  eq(verificationRequests.userId, currentUserId), // Use current user's ID, not demo profile
-                  eq(verificationRequests.verificationType, 'general')
-                ))
-                .limit(1);
-
-              // Fetch transfer portal verification request for the current admin user
-              const transferPortalVerificationRequest = await db
-                .select({
-                  status: verificationRequests.status,
-                  submittedAt: verificationRequests.submittedAt,
-                  reviewedAt: verificationRequests.reviewedAt,
-                  rejectionReason: verificationRequests.rejectionReason
-                })
-                .from(verificationRequests)
-                .where(and(
-                  eq(verificationRequests.userId, currentUserId), // Use current user's ID, not demo profile
-                  eq(verificationRequests.verificationType, 'transfer_portal')
-                ))
-                .limit(1);
-
-              // Handle general verification status
-              if (generalVerificationRequest.length > 0) {
-                const verification = generalVerificationRequest[0];
-                
-                if (verification.status === 'pending' || verification.status === 'under_review') {
-                  realVerificationStatus = {
-                    hasPendingVerification: true,
-                    pendingSubmittedAt: verification.submittedAt.toISOString()
-                  };
-                } else if (verification.status === 'rejected') {
-                  realVerificationStatus = {
-                    hasRejectedVerification: true,
-                    rejectionReason: verification.rejectionReason,
-                    rejectedAt: verification.reviewedAt?.toISOString(),
-                    submittedAt: verification.submittedAt.toISOString()
-                  };
-                }
-              }
-
-              // Handle transfer portal verification status
-              if (transferPortalVerificationRequest.length > 0) {
-                const verification = transferPortalVerificationRequest[0];
-                
-                if (verification.status === 'pending' || verification.status === 'under_review') {
-                  realVerificationStatus = {
-                    ...realVerificationStatus,
-                    hasPendingTransferPortalVerification: true,
-                    transferPortalPendingSubmittedAt: verification.submittedAt.toISOString()
-                  };
-                } else if (verification.status === 'rejected') {
-                  realVerificationStatus = {
-                    ...realVerificationStatus,
-                    hasRejectedTransferPortalVerification: true,
-                    transferPortalRejectionReason: verification.rejectionReason,
-                    transferPortalRejectedAt: verification.reviewedAt?.toISOString(),
-                    transferPortalSubmittedAt: verification.submittedAt.toISOString()
-                  };
-                }
-              }
-            } catch {
-              // Continue without verification status if there's an error
-            }
-          } else if (profileType === 'coach' || profileType === 'recruiter') {
-            try {
-              // Fetch general verification request for coaches/recruiters
-              const verificationRequest = await db
-                .select({
-                  status: verificationRequests.status,
-                  submittedAt: verificationRequests.submittedAt,
-                  reviewedAt: verificationRequests.reviewedAt,
-                  rejectionReason: verificationRequests.rejectionReason
-                })
-                .from(verificationRequests)
-                .where(and(
-                  eq(verificationRequests.userId, currentUserId), // Use current user's ID
-                  eq(verificationRequests.verificationType, 'general')
-                ))
-                .limit(1);
-
-              if (verificationRequest.length > 0) {
-                const verification = verificationRequest[0];
-                
-                if (verification.status === 'pending' || verification.status === 'under_review') {
-                  realVerificationStatus = {
-                    hasPendingVerification: true,
-                    pendingSubmittedAt: verification.submittedAt.toISOString()
-                  };
-                } else if (verification.status === 'rejected') {
-                  realVerificationStatus = {
-                    hasRejectedVerification: true,
-                    rejectionReason: verification.rejectionReason,
-                    rejectedAt: verification.reviewedAt?.toISOString(),
-                    submittedAt: verification.submittedAt.toISOString()
-                  };
-                }
-              }
-            } catch {
-              // Continue without verification status if there's an error
-            }
+            // Use the demo athlete profile
+            demoProfileData = demoProfiles.athlete;
+          } else if (adminViewingRole === 'coach' && demoProfiles.coach) {
+            // Use the demo coach profile
+            demoProfileData = demoProfiles.coach;
+          } else if (adminViewingRole === 'recruiter' && demoProfiles.recruiter) {
+            // Use the demo recruiter profile
+            demoProfileData = demoProfiles.recruiter;
           }
 
-          const responseData = {
-            success: true,
-            profile: transformedProfile,
-            profileType,
-            isOwnProfile: true,
-            isAdmin: true,
-            canEdit: true,
-            currentUserRole,
-            isDemoProfile: true, // Flag to indicate this is a demo profile
-            adminViewingRole,
-            // Add REAL verification status from database
-            ...realVerificationStatus
-          };
+          if (demoProfileData) {
+            // Transform the demo profile data to match the component interface
+            const transformedProfile = transformProfileData(demoProfileData, profileType);
 
-          return NextResponse.json(responseData);
+            // Fetch REAL verification status for the current user (admin) when viewing demo profiles
+            let realVerificationStatus = {};
+
+            if (profileType === 'athlete') {
+              try {
+                // Fetch general verification request for the current admin user
+                const generalVerificationRequest = await tx
+                  .select({
+                    status: verificationRequests.status,
+                    submittedAt: verificationRequests.submittedAt,
+                    reviewedAt: verificationRequests.reviewedAt,
+                    rejectionReason: verificationRequests.rejectionReason
+                  })
+                  .from(verificationRequests)
+                  .where(and(
+                    eq(verificationRequests.userId, currentUserId), // Use current user's ID, not demo profile
+                    eq(verificationRequests.verificationType, 'general')
+                  ))
+                  .limit(1);
+
+                // Fetch transfer portal verification request for the current admin user
+                const transferPortalVerificationRequest = await tx
+                  .select({
+                    status: verificationRequests.status,
+                    submittedAt: verificationRequests.submittedAt,
+                    reviewedAt: verificationRequests.reviewedAt,
+                    rejectionReason: verificationRequests.rejectionReason
+                  })
+                  .from(verificationRequests)
+                  .where(and(
+                    eq(verificationRequests.userId, currentUserId), // Use current user's ID, not demo profile
+                    eq(verificationRequests.verificationType, 'transfer_portal')
+                  ))
+                  .limit(1);
+
+                // Handle general verification status
+                if (generalVerificationRequest.length > 0) {
+                  const verification = generalVerificationRequest[0];
+
+                  if (verification.status === 'pending' || verification.status === 'under_review') {
+                    realVerificationStatus = {
+                      hasPendingVerification: true,
+                      pendingSubmittedAt: verification.submittedAt.toISOString()
+                    };
+                  } else if (verification.status === 'rejected') {
+                    realVerificationStatus = {
+                      hasRejectedVerification: true,
+                      rejectionReason: verification.rejectionReason,
+                      rejectedAt: verification.reviewedAt?.toISOString(),
+                      submittedAt: verification.submittedAt.toISOString()
+                    };
+                  }
+                }
+
+                // Handle transfer portal verification status
+                if (transferPortalVerificationRequest.length > 0) {
+                  const verification = transferPortalVerificationRequest[0];
+
+                  if (verification.status === 'pending' || verification.status === 'under_review') {
+                    realVerificationStatus = {
+                      ...realVerificationStatus,
+                      hasPendingTransferPortalVerification: true,
+                      transferPortalPendingSubmittedAt: verification.submittedAt.toISOString()
+                    };
+                  } else if (verification.status === 'rejected') {
+                    realVerificationStatus = {
+                      ...realVerificationStatus,
+                      hasRejectedTransferPortalVerification: true,
+                      transferPortalRejectionReason: verification.rejectionReason,
+                      transferPortalRejectedAt: verification.reviewedAt?.toISOString(),
+                      transferPortalSubmittedAt: verification.submittedAt.toISOString()
+                    };
+                  }
+                }
+              } catch {
+                // Continue without verification status if there's an error
+              }
+            } else if (profileType === 'coach' || profileType === 'recruiter') {
+              try {
+                // Fetch general verification request for coaches/recruiters
+                const verificationRequest = await tx
+                  .select({
+                    status: verificationRequests.status,
+                    submittedAt: verificationRequests.submittedAt,
+                    reviewedAt: verificationRequests.reviewedAt,
+                    rejectionReason: verificationRequests.rejectionReason
+                  })
+                  .from(verificationRequests)
+                  .where(and(
+                    eq(verificationRequests.userId, currentUserId), // Use current user's ID
+                    eq(verificationRequests.verificationType, 'general')
+                  ))
+                  .limit(1);
+
+                if (verificationRequest.length > 0) {
+                  const verification = verificationRequest[0];
+
+                  if (verification.status === 'pending' || verification.status === 'under_review') {
+                    realVerificationStatus = {
+                      hasPendingVerification: true,
+                      pendingSubmittedAt: verification.submittedAt.toISOString()
+                    };
+                  } else if (verification.status === 'rejected') {
+                    realVerificationStatus = {
+                      hasRejectedVerification: true,
+                      rejectionReason: verification.rejectionReason,
+                      rejectedAt: verification.reviewedAt?.toISOString(),
+                      submittedAt: verification.submittedAt.toISOString()
+                    };
+                  }
+                }
+              } catch {
+                // Continue without verification status if there's an error
+              }
+            }
+
+            const responseData = {
+              success: true,
+              profile: transformedProfile,
+              profileType,
+              isOwnProfile: true,
+              isAdmin: true,
+              canEdit: true,
+              currentUserRole,
+              isDemoProfile: true, // Flag to indicate this is a demo profile
+              adminViewingRole,
+              // Add REAL verification status from database
+              ...realVerificationStatus
+            };
+
+            return NextResponse.json(responseData);
+          }
+        } catch {
+          // Fall through to normal profile fetching if demo profile fails
         }
-      } catch {
-        // Fall through to normal profile fetching if demo profile fails
       }
-    }
 
-    // Track profile view if not viewing own profile
-    // Skip activity logging if viewer is admin OR profile owner is admin (for demo profiles)
-    if (!isOwnProfile && currentUserRole !== 'admin') {
+      // Track profile view if not viewing own profile
+      // Skip activity logging if viewer is admin OR profile owner is admin (for demo profiles)
+      if (!isOwnProfile && currentUserRole !== 'admin') {
+        try {
+          // Check if the profile owner is an admin (to skip logging for demo profiles)
+          const profileOwner = await userOperations.getUserWithProfile(profileUserId, tx);
+          const profileOwnerRole = profileOwner?.role;
+
+          // Only log activity if profile owner is NOT an admin
+          if (profileOwnerRole !== 'admin') {
+            await activityOperations.logActivity(currentUserId, profileUserId, 'profile_view', {
+              viewerRole: currentUserRole,
+              timestamp: new Date().toISOString()
+            }, tx);
+
+            // Create notification for profile view
+            await notificationOperations.createProfileViewNotification(profileUserId, currentUserId, tx);
+          }
+        } catch {
+          // Log error but don't fail the request
+        }
+      }
+
+      // Get the user with their profile data
+      const userWithProfile = await userOperations.getUserWithProfile(profileUserId, tx);
+
+      if (!userWithProfile) {
+        return NextResponse.json(
+          { error: 'User not found' },
+          { status: 404 }
+        );
+      }
+
+      // Determine the user's role and get appropriate profile data
+      let profileData = null;
+      let profileType = null;
+      let verificationStatus = null;
+
       try {
-        // Check if the profile owner is an admin (to skip logging for demo profiles)
-        const profileOwner = await userOperations.getUserWithProfile(profileUserId);
-        const profileOwnerRole = profileOwner?.role;
-        
-        // Only log activity if profile owner is NOT an admin
-        if (profileOwnerRole !== 'admin') {
-          await activityOperations.logActivity(currentUserId, profileUserId, 'profile_view', {
-            viewerRole: currentUserRole,
-            timestamp: new Date().toISOString()
-          });
-          
-          // Create notification for profile view
-          await notificationOperations.createProfileViewNotification(profileUserId, currentUserId);
+        if (userWithProfile.role === 'athlete' && userWithProfile.athleteProfile) {
+          profileType = 'athlete';
+          // Get full athlete profile with related data
+          const athleteProfile = await athleteOperations.getAthleteProfile(profileUserId, tx);
+          profileData = athleteProfile;
+
+          // Check for verification request status if it's the user's own profile
+          if (isOwnProfile) {
+            // Fetch general verification request
+            const generalVerificationRequest = await db
+              .select({
+                status: verificationRequests.status,
+                submittedAt: verificationRequests.submittedAt,
+                reviewedAt: verificationRequests.reviewedAt,
+                rejectionReason: verificationRequests.rejectionReason
+              })
+              .from(verificationRequests)
+              .where(and(
+                eq(verificationRequests.userId, profileUserId),
+                eq(verificationRequests.verificationType, 'general')
+              ))
+              .limit(1);
+
+            // Fetch transfer portal verification request
+            const transferPortalVerificationRequest = await db
+              .select({
+                status: verificationRequests.status,
+                submittedAt: verificationRequests.submittedAt,
+                reviewedAt: verificationRequests.reviewedAt,
+                rejectionReason: verificationRequests.rejectionReason
+              })
+              .from(verificationRequests)
+              .where(and(
+                eq(verificationRequests.userId, profileUserId),
+                eq(verificationRequests.verificationType, 'transfer_portal')
+              ))
+              .limit(1);
+
+
+
+            // Handle general verification status
+            if (generalVerificationRequest.length > 0) {
+              const verification = generalVerificationRequest[0];
+
+              if (verification.status === 'pending' || verification.status === 'under_review') {
+                verificationStatus = {
+                  hasPendingVerification: true,
+                  pendingSubmittedAt: verification.submittedAt.toISOString()
+                };
+              } else if (verification.status === 'rejected') {
+                verificationStatus = {
+                  hasRejectedVerification: true,
+                  rejectionReason: verification.rejectionReason,
+                  rejectedAt: verification.reviewedAt?.toISOString(),
+                  submittedAt: verification.submittedAt.toISOString()
+                };
+              } else if (verification.status === 'approved') {
+                // This should already be reflected in the isVerified field on the profile
+              }
+            }
+
+            // Handle transfer portal verification status
+            if (transferPortalVerificationRequest.length > 0) {
+              const verification = transferPortalVerificationRequest[0];
+
+              if (verification.status === 'pending' || verification.status === 'under_review') {
+                verificationStatus = {
+                  ...verificationStatus,
+                  hasPendingTransferPortalVerification: true,
+                  transferPortalPendingSubmittedAt: verification.submittedAt.toISOString()
+                };
+              } else if (verification.status === 'rejected') {
+                verificationStatus = {
+                  ...verificationStatus,
+                  hasRejectedTransferPortalVerification: true,
+                  transferPortalRejectionReason: verification.rejectionReason,
+                  transferPortalRejectedAt: verification.reviewedAt?.toISOString(),
+                  transferPortalSubmittedAt: verification.submittedAt.toISOString()
+                };
+              } else if (verification.status === 'approved') {
+                // This should already be reflected in the transferPortalVerifiedAt field on the profile
+              }
+            }
+          }
+        } else if (userWithProfile.role === 'coach' && userWithProfile.coachProfile) {
+          profileType = 'coach';
+          // Get full coach profile with related data
+          const coachProfile = await coachOperations.getCoachProfile(profileUserId, tx);
+          profileData = coachProfile;
+
+          // Check for verification request status if it's the user's own profile
+          if (isOwnProfile) {
+            const verificationRequest = await db
+              .select({
+                status: verificationRequests.status,
+                submittedAt: verificationRequests.submittedAt,
+                reviewedAt: verificationRequests.reviewedAt,
+                rejectionReason: verificationRequests.rejectionReason
+              })
+              .from(verificationRequests)
+              .where(eq(verificationRequests.userId, profileUserId))
+              .limit(1);
+
+            if (verificationRequest.length > 0) {
+              const verification = verificationRequest[0];
+
+              if (verification.status === 'pending' || verification.status === 'under_review') {
+                verificationStatus = {
+                  hasPendingVerification: true,
+                  pendingSubmittedAt: verification.submittedAt.toISOString()
+                };
+              } else if (verification.status === 'rejected') {
+                verificationStatus = {
+                  hasRejectedVerification: true,
+                  rejectionReason: verification.rejectionReason,
+                  rejectedAt: verification.reviewedAt?.toISOString(),
+                  submittedAt: verification.submittedAt.toISOString()
+                };
+              } else if (verification.status === 'approved') {
+                // This should already be reflected in the isVerified field on the profile
+              }
+            }
+          }
+        } else if (userWithProfile.role === 'recruiter' && userWithProfile.recruitingProfile) {
+          profileType = 'recruiter';
+          // Get full recruiting profile with related data
+          const recruitingProfile = await recruitingOperations.getRecruitingProfile(profileUserId, tx);
+          profileData = recruitingProfile;
+
+          // Check for verification request status if it's the user's own profile
+          if (isOwnProfile) {
+            const verificationRequest = await db
+              .select({
+                status: verificationRequests.status,
+                submittedAt: verificationRequests.submittedAt,
+                reviewedAt: verificationRequests.reviewedAt,
+                rejectionReason: verificationRequests.rejectionReason
+              })
+              .from(verificationRequests)
+              .where(eq(verificationRequests.userId, profileUserId))
+              .limit(1);
+
+            if (verificationRequest.length > 0) {
+              const verification = verificationRequest[0];
+
+              if (verification.status === 'pending' || verification.status === 'under_review') {
+                verificationStatus = {
+                  hasPendingVerification: true,
+                  pendingSubmittedAt: verification.submittedAt.toISOString()
+                };
+              } else if (verification.status === 'rejected') {
+                verificationStatus = {
+                  hasRejectedVerification: true,
+                  rejectionReason: verification.rejectionReason,
+                  rejectedAt: verification.reviewedAt?.toISOString(),
+                  submittedAt: verification.submittedAt.toISOString()
+                };
+              } else if (verification.status === 'approved') {
+                // This should already be reflected in the isVerified field on the profile
+              }
+            }
+          }
         }
-      } catch {
-        // Log error but don't fail the request
+      } catch (dbError) {
+        console.error('Database error fetching profile:', dbError);
+        return NextResponse.json(
+          { error: 'Failed to fetch profile data' },
+          { status: 500 }
+        );
       }
-    }
 
-    // Get the user with their profile data
-    const userWithProfile = await userOperations.getUserWithProfile(profileUserId);
+      if (!profileData) {
+        return NextResponse.json(
+          { error: 'Profile not found' },
+          { status: 404 }
+        );
+      }
 
-    if (!userWithProfile) {
-      return NextResponse.json(
-        { error: 'User not found' },
-        { status: 404 }
-      );
-    }
+      // Validate that the slug matches the profile's full name
+      const profileFullName = profileData.fullName;
+      if (!profileFullName) {
+        return NextResponse.json(
+          { error: 'Profile name not found' },
+          { status: 500 }
+        );
+      }
 
-    // Determine the user's role and get appropriate profile data
-    let profileData = null;
-    let profileType = null;
-    let verificationStatus = null;
+      // Create a slug from the full name for comparison
+      const expectedSlug = profileFullName.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+      const providedSlug = slug.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
 
-    try {
-      if (userWithProfile.role === 'athlete' && userWithProfile.athleteProfile) {
-        profileType = 'athlete';
-        // Get full athlete profile with related data
-        const athleteProfile = await athleteOperations.getAthleteProfile(profileUserId);
-        profileData = athleteProfile;
+      if (expectedSlug !== providedSlug) {
+        return NextResponse.json(
+          { error: 'Profile not found' },
+          { status: 404 }
+        );
+      }
 
-        // Check for verification request status if it's the user's own profile
-        if (isOwnProfile) {
-          // Fetch general verification request
-          const generalVerificationRequest = await db
-            .select({
-              status: verificationRequests.status,
-              submittedAt: verificationRequests.submittedAt,
-              reviewedAt: verificationRequests.reviewedAt,
-              rejectionReason: verificationRequests.rejectionReason
-            })
-            .from(verificationRequests)
-            .where(and(
-              eq(verificationRequests.userId, profileUserId),
-              eq(verificationRequests.verificationType, 'general')
-            ))
-            .limit(1);
+      // Sanitize the profile data based on viewing permissions
+      const sanitizedProfile = sanitizeForViewing(profileData, profileType, isOwnProfile, isAdmin);
 
-          // Fetch transfer portal verification request
-          const transferPortalVerificationRequest = await db
-            .select({
-              status: verificationRequests.status,
-              submittedAt: verificationRequests.submittedAt,
-              reviewedAt: verificationRequests.reviewedAt,
-              rejectionReason: verificationRequests.rejectionReason
-            })
-            .from(verificationRequests)
-            .where(and(
-              eq(verificationRequests.userId, profileUserId),
-              eq(verificationRequests.verificationType, 'transfer_portal')
-            ))
-            .limit(1);
+      if (!sanitizedProfile || !profileType) {
+        return NextResponse.json(
+          { error: 'Profile data could not be processed' },
+          { status: 500 }
+        );
+      }
 
+      // Transform the profile data to match the component interface
+      const transformedProfile = transformProfileData(sanitizedProfile, profileType);
 
-
-          // Handle general verification status
-          if (generalVerificationRequest.length > 0) {
-            const verification = generalVerificationRequest[0];
-            
-            if (verification.status === 'pending' || verification.status === 'under_review') {
-              verificationStatus = {
-                hasPendingVerification: true,
-                pendingSubmittedAt: verification.submittedAt.toISOString()
-              };
-            } else if (verification.status === 'rejected') {
-              verificationStatus = {
-                hasRejectedVerification: true,
-                rejectionReason: verification.rejectionReason,
-                rejectedAt: verification.reviewedAt?.toISOString(),
-                submittedAt: verification.submittedAt.toISOString()
-              };
-            } else if (verification.status === 'approved') {
-              // This should already be reflected in the isVerified field on the profile
+      // Check connection status if viewing another user's profile
+      let connectionStatus = "none";
+      let connectionDirection = null; // "outgoing" or "incoming" for pending requests
+      let connectionId = null;
+      if (!isOwnProfile) {
+        try {
+          const existingConnection = await connectionOperations.getConnectionBetweenUsers(currentUserId, profileUserId, tx);
+          if (existingConnection) {
+            connectionStatus = existingConnection.status;
+            connectionId = existingConnection.id;
+            if (existingConnection.status === 'pending') {
+              // Determine direction: if current user is fromUserId, it's outgoing; if toUserId, it's incoming
+              connectionDirection = existingConnection.fromUserId === currentUserId ? "outgoing" : "incoming";
             }
           }
-
-          // Handle transfer portal verification status
-          if (transferPortalVerificationRequest.length > 0) {
-            const verification = transferPortalVerificationRequest[0];
-            
-            if (verification.status === 'pending' || verification.status === 'under_review') {
-              verificationStatus = {
-                ...verificationStatus,
-                hasPendingTransferPortalVerification: true,
-                transferPortalPendingSubmittedAt: verification.submittedAt.toISOString()
-              };
-            } else if (verification.status === 'rejected') {
-              verificationStatus = {
-                ...verificationStatus,
-                hasRejectedTransferPortalVerification: true,
-                transferPortalRejectionReason: verification.rejectionReason,
-                transferPortalRejectedAt: verification.reviewedAt?.toISOString(),
-                transferPortalSubmittedAt: verification.submittedAt.toISOString()
-              };
-            } else if (verification.status === 'approved') {
-              // This should already be reflected in the transferPortalVerifiedAt field on the profile
-            }
-          }
-        }
-      } else if (userWithProfile.role === 'coach' && userWithProfile.coachProfile) {
-        profileType = 'coach';
-        // Get full coach profile with related data
-        const coachProfile = await coachOperations.getCoachProfile(profileUserId);
-        profileData = coachProfile;
-
-        // Check for verification request status if it's the user's own profile
-        if (isOwnProfile) {
-          const verificationRequest = await db
-            .select({
-              status: verificationRequests.status,
-              submittedAt: verificationRequests.submittedAt,
-              reviewedAt: verificationRequests.reviewedAt,
-              rejectionReason: verificationRequests.rejectionReason
-            })
-            .from(verificationRequests)
-            .where(eq(verificationRequests.userId, profileUserId))
-            .limit(1);
-
-          if (verificationRequest.length > 0) {
-            const verification = verificationRequest[0];
-            
-            if (verification.status === 'pending' || verification.status === 'under_review') {
-              verificationStatus = {
-                hasPendingVerification: true,
-                pendingSubmittedAt: verification.submittedAt.toISOString()
-              };
-            } else if (verification.status === 'rejected') {
-              verificationStatus = {
-                hasRejectedVerification: true,
-                rejectionReason: verification.rejectionReason,
-                rejectedAt: verification.reviewedAt?.toISOString(),
-                submittedAt: verification.submittedAt.toISOString()
-              };
-            } else if (verification.status === 'approved') {
-              // This should already be reflected in the isVerified field on the profile
-            }
-          }
-        }
-      } else if (userWithProfile.role === 'recruiter' && userWithProfile.recruitingProfile) {
-        profileType = 'recruiter';
-        // Get full recruiting profile with related data
-        const recruitingProfile = await recruitingOperations.getRecruitingProfile(profileUserId);
-        profileData = recruitingProfile;
-
-        // Check for verification request status if it's the user's own profile
-        if (isOwnProfile) {
-          const verificationRequest = await db
-            .select({
-              status: verificationRequests.status,
-              submittedAt: verificationRequests.submittedAt,
-              reviewedAt: verificationRequests.reviewedAt,
-              rejectionReason: verificationRequests.rejectionReason
-            })
-            .from(verificationRequests)
-            .where(eq(verificationRequests.userId, profileUserId))
-            .limit(1);
-
-          if (verificationRequest.length > 0) {
-            const verification = verificationRequest[0];
-            
-            if (verification.status === 'pending' || verification.status === 'under_review') {
-              verificationStatus = {
-                hasPendingVerification: true,
-                pendingSubmittedAt: verification.submittedAt.toISOString()
-              };
-            } else if (verification.status === 'rejected') {
-              verificationStatus = {
-                hasRejectedVerification: true,
-                rejectionReason: verification.rejectionReason,
-                rejectedAt: verification.reviewedAt?.toISOString(),
-                submittedAt: verification.submittedAt.toISOString()
-              };
-            } else if (verification.status === 'approved') {
-              // This should already be reflected in the isVerified field on the profile
-            }
-          }
+        } catch {
+          // Don't fail the whole request if connection check fails
         }
       }
-    } catch (dbError) {
-      console.error('Database error fetching profile:', dbError);
-      return NextResponse.json(
-        { error: 'Failed to fetch profile data' },
-        { status: 500 }
-      );
-    }
 
-    if (!profileData) {
-      return NextResponse.json(
-        { error: 'Profile not found' },
-        { status: 404 }
-      );
-    }
+      // Add verification status to the response if applicable
+      const responseData = {
+        success: true,
+        profile: transformedProfile,
+        profileType,
+        isOwnProfile,
+        isAdmin,
+        canEdit: isOwnProfile || isAdmin,
+        currentUserRole,
+        connectionStatus: !isOwnProfile ? connectionStatus : undefined,
+        connectionDirection: !isOwnProfile ? connectionDirection : undefined,
+        connectionId: !isOwnProfile ? connectionId : undefined,
+        ...(verificationStatus && verificationStatus)
+      };
 
-    // Validate that the slug matches the profile's full name
-    const profileFullName = profileData.fullName;
-    if (!profileFullName) {
-      return NextResponse.json(
-        { error: 'Profile name not found' },
-        { status: 500 }
-      );
-    }
-
-    // Create a slug from the full name for comparison
-    const expectedSlug = profileFullName.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
-    const providedSlug = slug.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
-    
-    if (expectedSlug !== providedSlug) {
-      return NextResponse.json(
-        { error: 'Profile not found' },
-        { status: 404 }
-      );
-    }
-
-    // Sanitize the profile data based on viewing permissions
-    const sanitizedProfile = sanitizeForViewing(profileData, profileType, isOwnProfile, isAdmin);
-
-    if (!sanitizedProfile || !profileType) {
-      return NextResponse.json(
-        { error: 'Profile data could not be processed' },
-        { status: 500 }
-      );
-    }
-
-    // Transform the profile data to match the component interface
-    const transformedProfile = transformProfileData(sanitizedProfile, profileType);
-
-    // Check connection status if viewing another user's profile
-    let connectionStatus = "none";
-    let connectionDirection = null; // "outgoing" or "incoming" for pending requests
-    let connectionId = null;
-    if (!isOwnProfile) {
-      try {
-        const existingConnection = await connectionOperations.getConnectionBetweenUsers(currentUserId, profileUserId);
-        if (existingConnection) {
-          connectionStatus = existingConnection.status;
-          connectionId = existingConnection.id;
-          if (existingConnection.status === 'pending') {
-            // Determine direction: if current user is fromUserId, it's outgoing; if toUserId, it's incoming
-            connectionDirection = existingConnection.fromUserId === currentUserId ? "outgoing" : "incoming";
-          }
-        }
-      } catch {
-        // Don't fail the whole request if connection check fails
+      // Handle CORS properly
+      if (isOwnProfile) {
+        // Return full profile data for the user - verification status at top level
+        return NextResponse.json(responseData);
+      } else {
+        // Return public profile data for other users
+        const publicProfileData = sanitizeForViewing(responseData, profileType, isOwnProfile, isAdmin);
+        return NextResponse.json(publicProfileData || responseData);
       }
-    }
-
-    // Add verification status to the response if applicable
-    const responseData = {
-      success: true,
-      profile: transformedProfile,
-      profileType,
-      isOwnProfile,
-      isAdmin,
-      canEdit: isOwnProfile || isAdmin,
-      currentUserRole,
-      connectionStatus: !isOwnProfile ? connectionStatus : undefined,
-      connectionDirection: !isOwnProfile ? connectionDirection : undefined,
-      connectionId: !isOwnProfile ? connectionId : undefined,
-      ...(verificationStatus && verificationStatus)
-    };
-
-    // Handle CORS properly
-    if (isOwnProfile) {
-      // Return full profile data for the user - verification status at top level
-      return NextResponse.json(responseData);
-    } else {
-      // Return public profile data for other users
-      const publicProfileData = sanitizeForViewing(responseData, profileType, isOwnProfile, isAdmin);
-      return NextResponse.json(publicProfileData || responseData);
-    }
+    }, { user: { id: currentUserId, role: currentUserRole } });
 
   } catch (error) {
     console.error('Error in profile GET:', error);
-    return NextResponse.json({ 
+    return NextResponse.json({
       error: 'Failed to retrieve profile',
       details: 'An unexpected error occurred'
     }, { status: 500 });
@@ -902,7 +880,7 @@ export async function PUT(
   try {
     // SECURITY: Validate request size and URL length to prevent DoS attacks
     const url = new URL(request.url);
-    
+
     // Limit total URL length (including query params)
     const MAX_URL_LENGTH = 2048;
     if (request.url.length > MAX_URL_LENGTH) {
@@ -988,12 +966,12 @@ export async function PUT(
         const normalizeUrl = (url: string | null): string => {
           if (!url) return '';
           let urlToNormalize = url.toLowerCase().trim();
-          
+
           // Add https:// if no protocol is present
           if (!urlToNormalize.match(/^[a-zA-Z][a-zA-Z0-9+.-]*:/)) {
             urlToNormalize = 'https://' + urlToNormalize;
           }
-          
+
           try {
             // Parse and normalize the URL
             const parsed = new URL(urlToNormalize);
@@ -1007,10 +985,10 @@ export async function PUT(
 
         const newMaxPrepsUrl = sanitizedData.maxPrepsUrl as string;
         const currentMaxPrepsUrl = currentProfile.maxprepsUrl;
-        
+
         const normalizedNew = normalizeUrl(newMaxPrepsUrl);
         const normalizedCurrent = normalizeUrl(currentMaxPrepsUrl);
-        
+
         // Block both changing to a different URL and removing/clearing the URL
         if (normalizedNew !== normalizedCurrent) {
           console.warn('MaxPreps URL modification blocked for verified user:', {
@@ -1036,7 +1014,7 @@ export async function PUT(
 
     let profileType = userWithProfile.role;
     const isAdminUser = profileType === 'admin';
-    
+
     // Special handling for admin users with demo profiles
     if (isAdminUser) {
       // For admin users, determine profile type from the data structure being sent
@@ -1056,7 +1034,7 @@ export async function PUT(
         );
       }
     }
-    
+
     let updatedProfile: AthleteProfile | CoachProfile | RecruitingProfile | null = null;
 
     // Update profile based on type
@@ -1072,7 +1050,7 @@ export async function PUT(
       }
       // First, update the athlete profile data
       const profileUpdateData: Partial<NewAthleteProfile> = {};
-      
+
       // Map common fields with proper type casting
       if (sanitizedData.fullName !== undefined) profileUpdateData.fullName = sanitizedData.fullName as string;
       if (sanitizedData.sport !== undefined) profileUpdateData.sport = sanitizedData.sport as string;
@@ -1094,30 +1072,30 @@ export async function PUT(
       if (sanitizedData.intendedMajor !== undefined) profileUpdateData.intendedMajor = sanitizedData.intendedMajor as string;
       if (sanitizedData.personalStatement !== undefined) profileUpdateData.personalStatement = sanitizedData.personalStatement as string;
       if (sanitizedData.country !== undefined) profileUpdateData.country = sanitizedData.country as string;
-      
+
       // Handle URL fields with correct field names
       if (sanitizedData.maxPrepsUrl !== undefined) profileUpdateData.maxprepsUrl = sanitizedData.maxPrepsUrl as string;
       if (sanitizedData.sports247Url !== undefined) profileUpdateData.sports247Url = sanitizedData.sports247Url as string;
       if (sanitizedData.espnUrl !== undefined) profileUpdateData.espnUrl = sanitizedData.espnUrl as string;
       if (sanitizedData.hudlUrl !== undefined) profileUpdateData.hudlUrl = sanitizedData.hudlUrl as string;
       if (sanitizedData.hudlEmbedUrl !== undefined) profileUpdateData.hudlEmbedUrl = sanitizedData.hudlEmbedUrl as string;
-      
+
       // Handle verification status
       if (sanitizedData.isVerified !== undefined) profileUpdateData.isVerified = sanitizedData.isVerified as boolean;
-      
+
       // Handle social media - extract from socialMedia object
       if (sanitizedData.socialMedia !== undefined) {
         const socialMedia = sanitizedData.socialMedia as { instagram?: string; twitter?: string };
         profileUpdateData.instagramHandle = socialMedia?.instagram || null;
         profileUpdateData.twitterHandle = socialMedia?.twitter || null;
       }
-      
+
       // For admin users, include camp experience data in the profile update
       if (isAdminUser && sanitizedData.campExperience !== undefined) {
         // @ts-expect-error - We know this is safe for admin operations
         profileUpdateData.campExperience = sanitizedData.campExperience;
       }
-      
+
       try {
         // Use admin operations for admin users (demo profiles), regular operations for normal users
         if (isAdminUser) {
@@ -1129,7 +1107,7 @@ export async function PUT(
         console.error('Database error during athlete profile update:', dbError);
         throw dbError;
       }
-      
+
       // Handle measurables updates if provided
       if (sanitizedData.measurables !== undefined && Array.isArray(sanitizedData.measurables)) {
         // Transform client measurables data to database format, preserving client IDs as clientId
@@ -1148,7 +1126,7 @@ export async function PUT(
           // Store client ID for reference (if it's a temp ID)
           ...(typeof measurable.id === 'string' ? { clientId: measurable.id } : {})
         }));
-        
+
         // Replace all existing measurables with new ones
         if (updatedProfile?.id) {
           await athleteOperations.replaceAthleteMeasurables(updatedProfile.id, measurablesData);
@@ -1170,7 +1148,7 @@ export async function PUT(
           embedUrl: video.embedUrl,
           sortOrder: video.sortOrder || 0
         }));
-        
+
         // Replace all existing videos with new ones
         if (updatedProfile?.id) {
           await athleteOperations.replaceAthleteVideos(updatedProfile.id, videosData);
@@ -1245,7 +1223,7 @@ export async function PUT(
 
           // Create a map of existing experiences by their ID for quick lookup
           const existingExperiencesMap = new Map(existingExperiences.map(exp => [exp.id, exp]));
-          
+
           // Create a map of frontend experiences by their ID (if they have one)
           const frontendExperiencesMap = new Map();
           const frontendExperiencesWithoutId: NewAthleteExperience[] = [];
@@ -1282,7 +1260,7 @@ export async function PUT(
             await db.transaction(async (tx) => {
               // Transaction safety: track operations for rollback logging
               const operationsLog: string[] = [];
-              
+
               try {
                 // First, update existing experiences (before any deletions)
                 for (const { id, data } of existingExperiencesToUpdate) {
@@ -1322,7 +1300,7 @@ export async function PUT(
                   }
                 }
 
-            
+
               } catch (innerError) {
                 // Log the transaction operations attempted before failure
                 console.error('Transaction rollback triggered. Operations attempted:', operationsLog);
@@ -1331,13 +1309,13 @@ export async function PUT(
             });
           } catch (transactionError) {
             console.error('Camp experience transaction failed:', transactionError);
-            
+
             // Provide detailed error response for transaction failures
             throw new Error(`Database transaction failed during camp experience update: ${transactionError instanceof Error ? transactionError.message : 'Unknown transaction error'}. All changes have been rolled back.`);
           }
         }
       }
-      
+
       // Re-fetch the complete profile with all related data to ensure consistency
       let refetchedProfile;
       if (isAdminUser) {
@@ -1349,7 +1327,7 @@ export async function PUT(
       if (refetchedProfile) {
         updatedProfile = refetchedProfile;
       }
-      
+
     } else if (profileType === 'coach') {
       // If country is being changed from 'United States' to another country, set state to null only if not already null/undefined
       if (
@@ -1362,7 +1340,7 @@ export async function PUT(
       }
       // Update coach profile
       const profileUpdateData: Partial<NewCoachProfile> = {};
-      
+
       // Map common fields with proper type casting
       if (sanitizedData.fullName !== undefined) profileUpdateData.fullName = sanitizedData.fullName as string;
       if (sanitizedData.title !== undefined) profileUpdateData.title = sanitizedData.title as string;
@@ -1386,7 +1364,7 @@ export async function PUT(
 
       // Update the coach profile in the database
       updatedProfile = await coachOperations.updateCoachProfile(profileUserId, profileUpdateData);
-      
+
       // Handle recruiting needs updates if provided
       if (sanitizedData.recruitingNeeds !== undefined && updatedProfile?.id) {
         const recruitingNeeds = sanitizedData.recruitingNeeds as {
@@ -1395,17 +1373,17 @@ export async function PUT(
           scholarshipsAvailable?: number;
           recruitingPhilosophy?: string;
         };
-        
+
         const recruitingNeedsData = {
           studentClassifications: (recruitingNeeds.studentClassifications || []) as ('high_school' | 'university_transfers' | 'juco_students' | 'graduate_transfers' | 'international_students')[],
           positions: recruitingNeeds.positions || [],
           scholarshipsAvailable: recruitingNeeds.scholarshipsAvailable ?? null,
           recruitingPhilosophy: recruitingNeeds.recruitingPhilosophy || null
         };
-        
+
         // Check if recruiting needs exist, if not create them, otherwise update them
         const existingNeeds = await recruitingNeedsOperations.getRecruitingNeedsByCoachId(updatedProfile.id);
-        
+
         if (existingNeeds) {
           await recruitingNeedsOperations.updateRecruitingNeeds(updatedProfile.id, recruitingNeedsData);
         } else {
@@ -1415,13 +1393,13 @@ export async function PUT(
           });
         }
       }
-      
+
       // Re-fetch the complete profile with all related data to ensure consistency
       const refetchedProfile = await coachOperations.getCoachProfile(profileUserId);
       if (refetchedProfile) {
         updatedProfile = refetchedProfile;
       }
-      
+
     } else if (profileType === 'recruiter') {
       // If country is being changed from 'United States' to another country, set state to null only if not already null/undefined
       if (
@@ -1434,7 +1412,7 @@ export async function PUT(
       }
       // Update recruiting profile
       const profileUpdateData: Partial<NewRecruitingProfile> = {};
-      
+
       // Map common fields with proper type casting
       if (sanitizedData.fullName !== undefined) profileUpdateData.fullName = sanitizedData.fullName as string;
       if (sanitizedData.title !== undefined) profileUpdateData.title = sanitizedData.title as string;
@@ -1459,29 +1437,31 @@ export async function PUT(
 
       // Update the recruiting profile in the database
       updatedProfile = await recruitingOperations.updateRecruitingProfile(profileUserId, profileUpdateData);
-      
+
       // Handle sport-specific recruiting needs updates if provided
       if (sanitizedData.sportSpecificNeeds !== undefined && updatedProfile?.id) {
-        const sportSpecificNeeds = sanitizedData.sportSpecificNeeds as { [sport: string]: {
-          studentClassifications?: string[];
-          positions: string[];
-          scholarshipsAvailable?: number;
-          recruitingPhilosophy?: string;
-        } };
-        
+        const sportSpecificNeeds = sanitizedData.sportSpecificNeeds as {
+          [sport: string]: {
+            studentClassifications?: string[];
+            positions: string[];
+            scholarshipsAvailable?: number;
+            recruitingPhilosophy?: string;
+          }
+        };
+
         // Get existing recruiting needs for this profile
         const existingNeeds = await recruitingNeedsOperations.getAllRecruitingProfileNeeds(updatedProfile.id);
-        
+
         const existingSports = new Set(existingNeeds.map(need => need.sport));
         const newSports = new Set(Object.keys(sportSpecificNeeds));
-        
+
         // Delete recruiting needs for sports that are no longer included
         for (const sport of existingSports) {
           if (!newSports.has(sport)) {
             await recruitingNeedsOperations.deleteRecruitingProfileNeedsBySport(updatedProfile.id, sport);
           }
         }
-        
+
         // Create or update recruiting needs for each sport
         for (const [sport, needs] of Object.entries(sportSpecificNeeds)) {
           const needsData = {
@@ -1492,7 +1472,7 @@ export async function PUT(
             scholarshipsAvailable: needs.scholarshipsAvailable ?? null,
             recruitingPhilosophy: needs.recruitingPhilosophy || null
           };
-          
+
           if (existingSports.has(sport)) {
             // Update existing recruiting needs
             await recruitingNeedsOperations.updateRecruitingProfileNeeds(updatedProfile.id, sport, needsData);
@@ -1502,13 +1482,13 @@ export async function PUT(
           }
         }
       }
-      
+
       // Re-fetch the complete profile with all related data to ensure consistency
       const refetchedProfile = await recruitingOperations.getRecruitingProfile(profileUserId);
       if (refetchedProfile) {
         updatedProfile = refetchedProfile;
       }
-      
+
     } else {
       return NextResponse.json(
         { error: 'Invalid profile type' },
@@ -1537,12 +1517,12 @@ export async function PUT(
   } catch (error) {
     // Use the new error sanitization utility for secure error handling
     const errorResponse = createClientErrorResponse(error, 'profile update');
-    
+
     // Log the full error details for debugging
     logErrorWithContext(error, 'Profile update operation', {
       requestMethod: 'PUT'
     });
-    
+
     return NextResponse.json(errorResponse, { status: 500 });
   }
 } 

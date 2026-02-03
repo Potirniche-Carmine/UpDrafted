@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useUser } from '@clerk/nextjs';
+import { useUser } from '@/hooks/use-auth';
 import { navigationStateManager } from '../app/(profiles)/lib/navigation-state';
 import { generateProfileUrl } from '../lib/utils';
 
@@ -18,7 +18,7 @@ export function useProfileNavigation(): UseProfileNavigationReturn {
 
   const navigateToProfile = async (userId?: string) => {
     const targetUserId = userId || user?.id;
-    
+
     if (!targetUserId || !isSignedIn || !isLoaded) {
       const errorMsg = 'Cannot navigate to profile: user not authenticated or not loaded';
       setError(errorMsg);
@@ -33,13 +33,13 @@ export function useProfileNavigation(): UseProfileNavigationReturn {
     try {
       setIsNavigating(true);
       setError(null);
-      
+
       // Set navigation source to indicate this is internal navigation
       navigationStateManager.setNavigationSource('internal');
-      
+
       // Fetch the user's profile data to get their fullName for slug generation
       let profileUrl: string;
-      
+
       if (userId) {
         // If navigating to another user's profile, we need to fetch their profile data
         try {
@@ -69,8 +69,8 @@ export function useProfileNavigation(): UseProfileNavigationReturn {
             if (profileData.profile?.fullName) {
               profileUrl = generateProfileUrl(profileData.profile.fullName, targetUserId);
             } else {
-              // Fallback to Clerk metadata if no database fullName
-              const fallbackFullName = user?.fullName || user?.firstName + ' ' + user?.lastName;
+              // Fallback to better-auth user data if no database fullName
+              const fallbackFullName = user?.name || 'User';
               if (fallbackFullName) {
                 profileUrl = generateProfileUrl(fallbackFullName, targetUserId);
               } else {
@@ -79,8 +79,8 @@ export function useProfileNavigation(): UseProfileNavigationReturn {
               }
             }
           } else {
-            // Fallback to Clerk metadata if API call fails
-            const fallbackFullName = user?.fullName || user?.firstName + ' ' + user?.lastName;
+            // Fallback to better-auth user data if API call fails
+            const fallbackFullName = user?.name || 'User';
             if (fallbackFullName) {
               profileUrl = generateProfileUrl(fallbackFullName, targetUserId);
             } else {
@@ -89,8 +89,8 @@ export function useProfileNavigation(): UseProfileNavigationReturn {
             }
           }
         } catch {
-          // Fallback to Clerk metadata if API call fails
-          const fallbackFullName = user?.fullName || user?.firstName + ' ' + user?.lastName;
+          // Fallback to better-auth user data if API call fails
+          const fallbackFullName = user?.name || 'User';
           if (fallbackFullName) {
             profileUrl = generateProfileUrl(fallbackFullName, targetUserId);
           } else {
@@ -99,20 +99,20 @@ export function useProfileNavigation(): UseProfileNavigationReturn {
           }
         }
       }
-      
+
       // Pre-warm the profile route by prefetching it
       await router.prefetch(profileUrl);
-      
+
       // Small delay to ensure auth context is stable and prefetch completes
       await new Promise(resolve => setTimeout(resolve, 150));
-      
+
       // Navigate to profile
       await router.push(profileUrl);
-      
+
     } catch {
       const errorMsg = 'Error navigating to profile';
       setError(errorMsg);
-      
+
       // Fallback to window location if router.push fails
       try {
         // Use fallback URL format

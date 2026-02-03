@@ -1,10 +1,10 @@
 "use client";
 
-import { useUser } from '@clerk/nextjs';
+import { useUser } from '@/hooks/use-auth';
 import { useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { 
+import {
   ArrowRight,
   Bell,
   Calendar,
@@ -70,188 +70,188 @@ const getUserContent = (role: string, handleViewProfile: () => void, profileNavi
     case 'athlete':
       return {
         primaryNav: [
-          { 
-            label: profileNavigating ? "Loading..." : "View Profile", 
-            onClick: handleViewProfile, 
-            icon: Eye, 
-            description: "Check and update your profile", 
-            color: "#01ae79" 
+          {
+            label: profileNavigating ? "Loading..." : "View Profile",
+            onClick: handleViewProfile,
+            icon: Eye,
+            description: "Check and update your profile",
+            color: "#01ae79"
           },
-          { 
-            label: "Discover", 
-            href: "/discover", 
-            icon: Users, 
-            description: "Find schools and coaches", 
-            color: "#4f46e5" 
+          {
+            label: "Discover",
+            href: "/discover",
+            icon: Users,
+            description: "Find schools and coaches",
+            color: "#4f46e5"
           },
-          { 
-            label: "Connections", 
-            href: "/connections", 
-            icon: Users, 
-            description: "Manage your network", 
-            color: "#0ea5e9" 
+          {
+            label: "Connections",
+            href: "/connections",
+            icon: Users,
+            description: "Manage your network",
+            color: "#0ea5e9"
           },
-          { 
-            label: "Messages", 
-            href: "/messages", 
-            icon: MessageSquare, 
-            description: "Check your conversations", 
-            color: "#f59e0b" 
+          {
+            label: "Messages",
+            href: "/messages",
+            icon: MessageSquare,
+            description: "Check your conversations",
+            color: "#f59e0b"
           },
-          { 
-            label: "Notifications", 
-            href: "/notifications", 
-            icon: Bell, 
-            description: "View your notifications", 
-            color: "#ef4444" 
+          {
+            label: "Notifications",
+            href: "/notifications",
+            icon: Bell,
+            description: "View your notifications",
+            color: "#ef4444"
           },
-          { 
-            label: "Activity", 
-            href: "/activity", 
-            icon: BarChart3, 
-            description: "Track profile views and insights", 
-            color: "#8b5cf6" 
+          {
+            label: "Activity",
+            href: "/activity",
+            icon: BarChart3,
+            description: "Track profile views and insights",
+            color: "#8b5cf6"
           }
         ]
       };
     case 'coach':
       return {
         primaryNav: [
-          { 
-            label: profileNavigating ? "Loading..." : "View Profile", 
-            onClick: handleViewProfile, 
-            icon: Eye, 
-            description: "Check and update your profile", 
-            color: "#01ae79" 
+          {
+            label: profileNavigating ? "Loading..." : "View Profile",
+            onClick: handleViewProfile,
+            icon: Eye,
+            description: "Check and update your profile",
+            color: "#01ae79"
           },
-          { 
-            label: "Discover", 
-            href: "/discover", 
-            icon: Users, 
-            description: "Find talented athletes", 
-            color: "#4f46e5" 
+          {
+            label: "Discover",
+            href: "/discover",
+            icon: Users,
+            description: "Find talented athletes",
+            color: "#4f46e5"
           },
-          { 
-            label: "Connections", 
-            href: "/connections", 
-            icon: Users, 
-            description: "Manage your network", 
-            color: "#0ea5e9" 
+          {
+            label: "Connections",
+            href: "/connections",
+            icon: Users,
+            description: "Manage your network",
+            color: "#0ea5e9"
           },
-          { 
-            label: "Messages", 
-            href: "/messages", 
-            icon: MessageSquare, 
-            description: "Check your conversations", 
-            color: "#f59e0b" 
+          {
+            label: "Messages",
+            href: "/messages",
+            icon: MessageSquare,
+            description: "Check your conversations",
+            color: "#f59e0b"
           },
-          { 
-            label: "Notifications", 
-            href: "/notifications", 
-            icon: Bell, 
-            description: "View your notifications", 
-            color: "#ef4444" 
+          {
+            label: "Notifications",
+            href: "/notifications",
+            icon: Bell,
+            description: "View your notifications",
+            color: "#ef4444"
           },
-          { 
-            label: "Activity", 
-            href: "/activity", 
-            icon: BarChart3, 
-            description: "Track profile views and insights", 
-            color: "#8b5cf6" 
+          {
+            label: "Activity",
+            href: "/activity",
+            icon: BarChart3,
+            description: "Track profile views and insights",
+            color: "#8b5cf6"
           }
         ]
       };
     case 'recruiter':
       return {
         primaryNav: [
-          { 
-            label: profileNavigating ? "Loading..." : "View Profile", 
-            onClick: handleViewProfile, 
-            icon: Eye, 
-            description: "Check and update your profile", 
-            color: "#01ae79" 
+          {
+            label: profileNavigating ? "Loading..." : "View Profile",
+            onClick: handleViewProfile,
+            icon: Eye,
+            description: "Check and update your profile",
+            color: "#01ae79"
           },
-          { 
-            label: "Discover", 
-            href: "/discover", 
-            icon: Users, 
-            description: "Find talented athletes", 
-            color: "#4f46e5" 
+          {
+            label: "Discover",
+            href: "/discover",
+            icon: Users,
+            description: "Find talented athletes",
+            color: "#4f46e5"
           },
-          { 
-            label: "Connections", 
-            href: "/connections", 
-            icon: Users, 
-            description: "Manage your network", 
-            color: "#0ea5e9" 
+          {
+            label: "Connections",
+            href: "/connections",
+            icon: Users,
+            description: "Manage your network",
+            color: "#0ea5e9"
           },
-          { 
-            label: "Messages", 
-            href: "/messages", 
-            icon: MessageSquare, 
-            description: "Check your conversations", 
-            color: "#f59e0b" 
+          {
+            label: "Messages",
+            href: "/messages",
+            icon: MessageSquare,
+            description: "Check your conversations",
+            color: "#f59e0b"
           },
-          { 
-            label: "Notifications", 
-            href: "/notifications", 
-            icon: Bell, 
-            description: "View your notifications", 
-            color: "#ef4444" 
+          {
+            label: "Notifications",
+            href: "/notifications",
+            icon: Bell,
+            description: "View your notifications",
+            color: "#ef4444"
           },
-          { 
-            label: "Activity", 
-            href: "/activity", 
-            icon: BarChart3, 
-            description: "Track profile views and insights", 
-            color: "#8b5cf6" 
+          {
+            label: "Activity",
+            href: "/activity",
+            icon: BarChart3,
+            description: "Track profile views and insights",
+            color: "#8b5cf6"
           }
         ]
       };
     case 'admin':
       return {
         primaryNav: [
-          { 
-            label: "Admin Controls", 
-            href: "/admin", 
-            icon: Eye, 
-            description: "Access admin management tools", 
-            color: "#dc2626" 
+          {
+            label: "Admin Controls",
+            href: "/admin",
+            icon: Eye,
+            description: "Access admin management tools",
+            color: "#dc2626"
           },
-          { 
-            label: "Discover", 
-            href: "/discover", 
-            icon: Users, 
-            description: "View all platform users", 
-            color: "#4f46e5" 
+          {
+            label: "Discover",
+            href: "/discover",
+            icon: Users,
+            description: "View all platform users",
+            color: "#4f46e5"
           },
-          { 
-            label: "Connections", 
-            href: "/connections", 
-            icon: Users, 
-            description: "Monitor connections", 
-            color: "#0ea5e9" 
+          {
+            label: "Connections",
+            href: "/connections",
+            icon: Users,
+            description: "Monitor connections",
+            color: "#0ea5e9"
           },
-          { 
-            label: "Messages", 
-            href: "/messages", 
-            icon: MessageSquare, 
-            description: "Monitor conversations", 
-            color: "#f59e0b" 
+          {
+            label: "Messages",
+            href: "/messages",
+            icon: MessageSquare,
+            description: "Monitor conversations",
+            color: "#f59e0b"
           },
-          { 
-            label: "Notifications", 
-            href: "/notifications", 
-            icon: Bell, 
-            description: "View system notifications", 
-            color: "#ef4444" 
+          {
+            label: "Notifications",
+            href: "/notifications",
+            icon: Bell,
+            description: "View system notifications",
+            color: "#ef4444"
           },
-          { 
-            label: "Activity", 
-            href: "/activity", 
-            icon: BarChart3, 
-            description: "Monitor platform activity", 
-            color: "#8b5cf6" 
+          {
+            label: "Activity",
+            href: "/activity",
+            icon: BarChart3,
+            description: "Monitor platform activity",
+            color: "#8b5cf6"
           }
         ]
       };
@@ -259,12 +259,12 @@ const getUserContent = (role: string, handleViewProfile: () => void, profileNavi
       // Fallback for unknown roles
       return {
         primaryNav: [
-          { 
-            label: "Discover", 
-            href: "/discover", 
-            icon: Users, 
-            description: "Explore the platform", 
-            color: "#4f46e5" 
+          {
+            label: "Discover",
+            href: "/discover",
+            icon: Users,
+            description: "Explore the platform",
+            color: "#4f46e5"
           }
         ]
       };
@@ -273,7 +273,7 @@ const getUserContent = (role: string, handleViewProfile: () => void, profileNavi
 
 export default function DashboardPage() {
   const { navigateToProfile, isNavigating: profileNavigating } = useProfileNavigation();
-  
+
   // Scroll to top when dashboard loads
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -286,9 +286,9 @@ export default function DashboardPage() {
 
   return (
     <AuthWrapper>
-      <DashboardContent 
-        handleViewProfile={handleViewProfile} 
-        profileNavigating={profileNavigating} 
+      <DashboardContent
+        handleViewProfile={handleViewProfile}
+        profileNavigating={profileNavigating}
       />
       <PWAInstallPrompt />
     </AuthWrapper>
@@ -296,17 +296,17 @@ export default function DashboardPage() {
 }
 
 // Dashboard content component
-function DashboardContent({ 
-  handleViewProfile, 
-  profileNavigating 
-}: { 
-  handleViewProfile: () => Promise<void>; 
-  profileNavigating: boolean; 
+function DashboardContent({
+  handleViewProfile,
+  profileNavigating
+}: {
+  handleViewProfile: () => Promise<void>;
+  profileNavigating: boolean;
 }) {
   const { user } = useUser();
-  
+
   // Get user role directly from user metadata instead of useRoleView
-  const userRole = user?.publicMetadata?.role as string || 'athlete';
+  const userRole = user?.role as string || 'athlete';
 
   // Get current date for calendar display
   const currentDate = new Date();
@@ -400,10 +400,10 @@ function DashboardContent({
                     </div>
                   ))}
                   <div className="pt-3">
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      className="w-full border-[#01ae79] text-[#01ae79] hover:bg-[#01ae79] hover:text-white text-sm py-2.5 shadow-sm" 
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-full border-[#01ae79] text-[#01ae79] hover:bg-[#01ae79] hover:text-white text-sm py-2.5 shadow-sm"
                       onClick={() => window.open('https://www.ncsasports.org/ncaa-eligibility-center/recruiting-rules', '_blank')}
                     >
                       <span className="truncate">NCAA Rules & Periods</span>
@@ -421,33 +421,31 @@ function DashboardContent({
 }
 
 // Navigation card component
-function NavCard({ 
-  item, 
+function NavCard({
+  item,
   profileNavigating
-}: { 
-  item: NavItem, 
+}: {
+  item: NavItem,
   profileNavigating: boolean
 }) {
   const IconComponent = item.icon;
   const isViewProfileAction = 'onClick' in item && (item.label.includes("Profile") || item.label.includes("Loading"));
   const shouldDisable = isViewProfileAction && profileNavigating;
-  
+
   if ('onClick' in item) {
     return (
-      <Card 
-        className={`group transition-all duration-300 border shadow-sm bg-gradient-to-br from-card to-card/60 ${
-          shouldDisable 
-            ? 'opacity-50 cursor-not-allowed' 
-            : 'hover:shadow-lg hover:shadow-[#01ae79]/10 hover:border-[#01ae79]/30 hover:from-card hover:to-[#01ae79]/5 cursor-pointer'
-        }`} 
+      <Card
+        className={`group transition-all duration-300 border shadow-sm bg-gradient-to-br from-card to-card/60 ${shouldDisable
+          ? 'opacity-50 cursor-not-allowed'
+          : 'hover:shadow-lg hover:shadow-[#01ae79]/10 hover:border-[#01ae79]/30 hover:from-card hover:to-[#01ae79]/5 cursor-pointer'
+          }`}
         onClick={shouldDisable ? undefined : item.onClick}
       >
         <CardContent className="flex flex-col items-center text-center p-4 min-h-[120px] justify-center">
-          <div className={`h-12 w-12 rounded-full bg-gradient-to-br from-[${item.color}]/10 to-[${item.color}]/20 border border-[${item.color}]/20 flex items-center justify-center mb-3 shadow-sm ${
-            profileNavigating && isViewProfileAction ? 'animate-pulse' : ''
-          }`}>
-            <IconComponent 
-              className={`h-6 w-6 text-[${item.color}]`} 
+          <div className={`h-12 w-12 rounded-full bg-gradient-to-br from-[${item.color}]/10 to-[${item.color}]/20 border border-[${item.color}]/20 flex items-center justify-center mb-3 shadow-sm ${profileNavigating && isViewProfileAction ? 'animate-pulse' : ''
+            }`}>
+            <IconComponent
+              className={`h-6 w-6 text-[${item.color}]`}
             />
           </div>
           <h3 className="font-semibold text-foreground mb-2 text-base">{item.label}</h3>
@@ -456,14 +454,14 @@ function NavCard({
       </Card>
     );
   }
-  
+
   return (
     <Link href={item.href}>
       <Card className="group transition-all duration-300 hover:shadow-lg hover:shadow-[#01ae79]/10 border shadow-sm bg-gradient-to-br from-card to-card/60 hover:border-[#01ae79]/30 hover:from-card hover:to-[#01ae79]/5 cursor-pointer h-full">
         <CardContent className="flex flex-col items-center text-center p-4 min-h-[120px] justify-center">
           <div className={`h-12 w-12 rounded-full bg-gradient-to-br from-[${item.color}]/10 to-[${item.color}]/20 border border-[${item.color}]/20 flex items-center justify-center mb-3 shadow-sm`}>
-            <IconComponent 
-              className={`h-6 w-6 text-[${item.color}]`} 
+            <IconComponent
+              className={`h-6 w-6 text-[${item.color}]`}
             />
           </div>
           <h3 className="font-semibold text-foreground mb-2 text-base">{item.label}</h3>

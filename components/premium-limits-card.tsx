@@ -8,7 +8,7 @@ import { Progress } from '@/components/ui/progress'
 import { Crown, Users, Eye, MessageSquare, TrendingUp, ArrowRight, CreditCard, ExternalLink, Loader2 } from 'lucide-react'
 import Link from 'next/link'
 import { useSubscription } from '@/components/providers/subscription-provider'
-import { useUser } from '@clerk/nextjs'
+import { useUser } from '@/hooks/use-auth'
 import { useToast } from '@/components/ui/toast'
 
 // Global request cache to prevent duplicate API calls with longer cache time
@@ -34,7 +34,7 @@ interface UsageLimits {
 
 async function fetchUsageLimits(): Promise<UsageLimits> {
   const cacheKey = 'usage-limits'
-  
+
   // Check if there's already a recent request in cache
   const cached = requestCache.get(cacheKey)
   if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
@@ -50,16 +50,16 @@ async function fetchUsageLimits(): Promise<UsageLimits> {
   })
 
   // Cache the promise with timestamp
-  requestCache.set(cacheKey, { 
-    promise: requestPromise, 
-    timestamp: Date.now() 
+  requestCache.set(cacheKey, {
+    promise: requestPromise,
+    timestamp: Date.now()
   })
-  
+
   // Clean up cache entry after completion (but keep successful results cached)
   requestPromise.catch(() => {
     requestCache.delete(cacheKey)
   })
-  
+
   return requestPromise
 }
 
@@ -71,7 +71,7 @@ export function PremiumLimitsCard() {
   const [fetchingUsage, setFetchingUsage] = useState(false)
   const [isCreatingSession, setIsCreatingSession] = useState(false)
 
-  const userRole = (user?.publicMetadata?.role as string) || 'athlete'
+  const userRole = (user?.role as string) || 'athlete'
 
   // Subscription management handler
   const handleManageSubscription = async () => {
@@ -145,9 +145,9 @@ export function PremiumLimitsCard() {
       if (!user || loading) {
         return
       }
-      
+
       setFetchingUsage(true)
-      
+
       try {
         const data = await fetchUsageLimits()
         setUsageData(data)
@@ -178,20 +178,20 @@ export function PremiumLimitsCard() {
   const isPremium = subscription?.isPremium && subscription?.status === 'active'
   const connectionLimit = features?.maxConnectionsPerMonth || 5
   const connectionUsage = usageData?.connections || { current: 0, limit: connectionLimit, monthlyUsed: 0, monthlyLimit: connectionLimit }
-  
+
   // Calculate percentages
-  const monthlyConnectionPercent = connectionUsage.monthlyLimit > 0 
+  const monthlyConnectionPercent = connectionUsage.monthlyLimit > 0
     ? Math.min((connectionUsage.monthlyUsed / connectionUsage.monthlyLimit) * 100, 100)
     : 0
-  
-  const activeConnectionPercent = usageData?.activeConnections.limit 
+
+  const activeConnectionPercent = usageData?.activeConnections.limit
     ? Math.min((usageData.activeConnections.current / usageData.activeConnections.limit) * 100, 100)
     : 0
 
   // Determine upgrade messaging based on role
   const getUpgradeMessage = () => {
     if (isPremium) return null
-    
+
     switch (userRole) {
       case 'athlete':
         return {
@@ -284,7 +284,7 @@ export function PremiumLimitsCard() {
               {features?.profileViewInsights ? 'Enabled' : 'Premium'}
             </Badge>
           </div>
-          
+
           <div className="flex items-center justify-between text-sm">
             <div className="flex items-center gap-2">
               <TrendingUp className="h-4 w-4 text-muted-foreground" />
@@ -342,7 +342,7 @@ export function PremiumLimitsCard() {
             {/* Renewal info */}
             {subscription.currentPeriodEnd && (
               <div className="text-sm text-muted-foreground bg-muted/30 rounded-md p-3 border-l-2 border-muted-foreground/20">
-                {subscription.cancelAtPeriodEnd 
+                {subscription.cancelAtPeriodEnd
                   ? (
                     <div className="flex items-center gap-2">
                       <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
@@ -359,10 +359,10 @@ export function PremiumLimitsCard() {
             )}
 
             {/* Manage subscription button */}
-            <Button 
+            <Button
               onClick={handleManageSubscription}
               disabled={isCreatingSession}
-              variant="outline" 
+              variant="outline"
               size="sm"
               className="w-full"
             >

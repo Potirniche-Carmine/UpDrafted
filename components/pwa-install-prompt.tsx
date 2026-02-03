@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { X, Download, Smartphone } from 'lucide-react';
-import { useUser } from '@clerk/nextjs';
+import { useUser } from '@/hooks/use-auth';
 
 interface BeforeInstallPromptEvent extends Event {
   prompt(): Promise<void>;
@@ -26,19 +26,19 @@ const checkInstallability = async (): Promise<boolean> => {
   try {
     // Check if we're in a secure context
     if (!window.isSecureContext) return false;
-    
+
     // Check if service worker is available
     if (!('serviceWorker' in navigator)) return false;
-    
+
     // Check if we have a manifest
     const manifestLink = document.querySelector('link[rel="manifest"]');
     if (!manifestLink) return false;
-    
+
     // Try to fetch the manifest to ensure it's valid
     const manifestHref = (manifestLink as HTMLLinkElement).href;
     const response = await fetch(manifestHref);
     const manifest = await response.json();
-    
+
     // Basic manifest validation
     return !!(manifest.name && manifest.icons && manifest.start_url);
   } catch (error) {
@@ -60,43 +60,43 @@ export function PWAInstallPrompt() {
     // Check if app is already installed (standalone mode)
     const checkStandalone = () => {
       return window.matchMedia('(display-mode: standalone)').matches ||
-             window.matchMedia('(display-mode: fullscreen)').matches ||
-             window.matchMedia('(display-mode: minimal-ui)').matches ||
-             (window.navigator as unknown as { standalone?: boolean }).standalone === true;
+        window.matchMedia('(display-mode: fullscreen)').matches ||
+        window.matchMedia('(display-mode: minimal-ui)').matches ||
+        (window.navigator as unknown as { standalone?: boolean }).standalone === true;
     };
 
     // Check if device is mobile
     const checkMobile = () => {
       return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
-             window.innerWidth <= 768;
+        window.innerWidth <= 768;
     };
 
     // Check if user has previously dismissed the prompt
     const checkDismissed = () => {
       const dismissedValue = localStorage.getItem('pwa-install-dismissed');
       if (!dismissedValue || dismissedValue === 'false') return false;
-      
+
       if (dismissedValue === 'true') return true;
-      
+
       const dismissTime = parseInt(dismissedValue);
       const threeDaysInMs = 3 * 24 * 60 * 60 * 1000; // 3 days
       const now = Date.now();
-      
+
       return (now - dismissTime) < threeDaysInMs;
     };
-    
+
     // Track dashboard visits to avoid showing on first visit
     const checkShouldShowBasedOnVisits = () => {
       const visitCountStr = localStorage.getItem('pwa-dashboard-visits');
       const visitCount = visitCountStr ? parseInt(visitCountStr) : 0;
-      
+
       // Increment visit count
       localStorage.setItem('pwa-dashboard-visits', String(visitCount + 1));
-      
+
       // Show after 2nd visit (user has used the app at least once before)
       return visitCount >= 1;
     };
-    
+
     const initializePrompt = async () => {
       const standalone = checkStandalone();
       const mobile = checkMobile();
@@ -104,20 +104,20 @@ export function PWAInstallPrompt() {
       const hasEnoughVisits = checkShouldShowBasedOnVisits();
       const installable = await checkInstallability();
       const browser = getBrowserType();
-      
+
       setIsStandalone(standalone);
       setIsMobile(mobile);
       setIsInstallable(installable);
       setBrowserType(browser);
 
       // Enhanced conditions for showing prompt
-      const shouldShow = isSignedIn && 
-                        mobile && 
-                        !standalone && 
-                        !dismissed &&
-                        hasEnoughVisits &&
-                        installable &&
-                        window.location.pathname === '/dashboard';
+      const shouldShow = isSignedIn &&
+        mobile &&
+        !standalone &&
+        !dismissed &&
+        hasEnoughVisits &&
+        installable &&
+        window.location.pathname === '/dashboard';
 
       // Show prompt if we have conditions met AND either have deferred prompt OR are on supported browser
       if (shouldShow && (deferredPrompt || ['chrome', 'edge', 'safari'].includes(browser))) {
@@ -136,7 +136,7 @@ export function PWAInstallPrompt() {
       e.preventDefault();
       const promptEvent = e as BeforeInstallPromptEvent;
       setDeferredPrompt(promptEvent);
-      
+
       // Store the event globally for debugging
       (window as Window & { deferredPrompt?: BeforeInstallPromptEvent }).deferredPrompt = promptEvent;
     };
@@ -174,7 +174,7 @@ export function PWAInstallPrompt() {
         // Trigger the native browser install prompt
         await deferredPrompt.prompt();
         const { outcome } = await deferredPrompt.userChoice;
-        
+
         if (outcome === 'accepted') {
           // User installed the app
           localStorage.setItem('pwa-install-dismissed', 'true');
@@ -184,7 +184,7 @@ export function PWAInstallPrompt() {
           localStorage.setItem('pwa-install-dismissed', Date.now().toString());
           setShowPrompt(false);
         }
-        
+
         setDeferredPrompt(null);
       } catch (error) {
         console.error('Error during install prompt:', error);
@@ -206,7 +206,7 @@ export function PWAInstallPrompt() {
           '3. Tap "Add" to confirm\n\n' +
           'Would you like to see this tip again later?'
         );
-        
+
         if (!shouldShowTip) {
           localStorage.setItem('pwa-install-dismissed', 'true');
         } else {

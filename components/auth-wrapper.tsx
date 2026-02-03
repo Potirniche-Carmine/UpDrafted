@@ -1,6 +1,6 @@
 "use client";
 
-import { useUser, useAuth } from '@clerk/nextjs';
+import { useUser, useAuth } from '@/hooks/use-auth';
 import { useRouter, usePathname } from 'next/navigation';
 import { useEffect, useState, ReactNode, useCallback } from 'react';
 import { Button } from "@/components/ui/button";
@@ -26,7 +26,7 @@ interface OnboardingWrapperProps {
 // Component for when user already completed onboarding
 function OnboardingCompleted() {
   const router = useRouter();
-  
+
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <Card className="max-w-md w-full">
@@ -40,7 +40,7 @@ function OnboardingCompleted() {
           <p className="text-muted-foreground">
             It looks like you&apos;ve already set up your profile. Head back to your dashboard to continue.
           </p>
-          <Button 
+          <Button
             onClick={() => router.push('/dashboard')}
             className="w-full bg-[#01ae79] hover:bg-[#01ae79]/90 text-white"
           >
@@ -54,12 +54,11 @@ function OnboardingCompleted() {
 }
 
 // Dedicated OnboardingWrapper - more restrictive for onboarding flow
-export function OnboardingWrapper({ 
-  children, 
-  loadingComponent 
+export function OnboardingWrapper({
+  children,
+  loadingComponent
 }: OnboardingWrapperProps) {
   const { isSignedIn, isLoaded, user } = useUser();
-  const { getToken } = useAuth();
   const router = useRouter();
   const [isAuthorized, setIsAuthorized] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -67,10 +66,10 @@ export function OnboardingWrapper({
 
   const handleRedirect = useCallback(async (path: string) => {
     setIsRedirecting(true);
-    
+
     // Add a small delay to show loading state and make transition smoother
     await new Promise(resolve => setTimeout(resolve, 500));
-    
+
     router.push(path);
   }, [router]);
 
@@ -85,23 +84,10 @@ export function OnboardingWrapper({
       }
 
       // Check if user already has a role (completed onboarding)
-      const userRole = user?.publicMetadata?.role as string;
+      const userRole = user?.role as string;
       if (userRole && ['athlete', 'coach', 'recruiter'].includes(userRole)) {
         // User already completed onboarding, redirect to dashboard
         await handleRedirect('/dashboard');
-        return;
-      }
-
-      // Ensure we have a valid token
-      try {
-        const token = await getToken();
-        if (!token) {
-          await handleRedirect('/');
-          return;
-        }
-      } catch (error) {
-        console.error('Error getting auth token:', error);
-        await handleRedirect('/');
         return;
       }
 
@@ -111,7 +97,7 @@ export function OnboardingWrapper({
     };
 
     checkOnboardingAuth();
-  }, [isLoaded, isSignedIn, user, getToken, handleRedirect]);
+  }, [isLoaded, isSignedIn, user, handleRedirect]);
 
   // Show loading state or redirecting state
   if (isLoading || !isLoaded || isRedirecting) {
@@ -124,10 +110,10 @@ export function OnboardingWrapper({
             <div className="w-2 h-2 bg-[#01ae79] rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
           </div>
           <p className="text-sm text-muted-foreground">
-            {isRedirecting 
-              ? 'Redirecting...' 
-              : !isLoaded 
-                ? 'Loading...' 
+            {isRedirecting
+              ? 'Redirecting...'
+              : !isLoaded
+                ? 'Loading...'
                 : 'Checking authentication...'
             }
           </p>
@@ -145,9 +131,9 @@ export function OnboardingWrapper({
   return null;
 }
 
-export function AuthWrapper({ 
-  children, 
-  requireAuth = true, 
+export function AuthWrapper({
+  children,
+  requireAuth = true,
   requireRole = [],
   fallbackPath = '/sign-in',
   loadingComponent,
@@ -155,7 +141,6 @@ export function AuthWrapper({
   type = 'default'
 }: AuthWrapperProps) {
   const { isSignedIn, isLoaded, user } = useUser();
-  const { getToken } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
   const [isAuthorized, setIsAuthorized] = useState(false);
@@ -179,10 +164,10 @@ export function AuthWrapper({
 
   const handleRedirect = useCallback(async (path: string) => {
     setIsRedirecting(true);
-    
+
     // Add a small delay to show loading state and make transition smoother
     await new Promise(resolve => setTimeout(resolve, 500));
-    
+
     router.push(path);
   }, [router]);
 
@@ -194,8 +179,8 @@ export function AuthWrapper({
       if (type === 'landing') {
         if (isSignedIn) {
           // Check if user has completed onboarding (has a role)
-          const userRole = user?.publicMetadata?.role as string;
-          
+          const userRole = user?.role as string;
+
           if (userRole && ['athlete', 'coach', 'recruiter'].includes(userRole)) {
             // User has completed onboarding, redirect to dashboard
             await handleRedirect('/dashboard');
@@ -219,16 +204,16 @@ export function AuthWrapper({
           await handleRedirect('/');
           return;
         }
-        
+
         // Check if user already has a role (completed onboarding)
-        const userRole = user?.publicMetadata?.role as string;
+        const userRole = user?.role as string;
         if (userRole && ['athlete', 'coach', 'recruiter'].includes(userRole)) {
           // User already completed onboarding, show completion message
           setIsAuthorized(false); // This will trigger showing OnboardingCompleted
           setIsLoading(false);
           return;
         }
-        
+
         // User is signed in but hasn't completed onboarding - allow access
         setIsAuthorized(true);
         setIsLoading(false);
@@ -249,10 +234,10 @@ export function AuthWrapper({
       }
 
       // Get user role for role-based checks
-      const userRole = user?.publicMetadata?.role as string;
+      const userRole = user?.role as string;
 
       // Check role requirements
-      if (requireRole.length > 0) {        
+      if (requireRole.length > 0) {
         if (!userRole || !requireRole.includes(userRole)) {
           // Redirect based on user's role or to onboarding
           if (!userRole) {
@@ -271,45 +256,12 @@ export function AuthWrapper({
         }
       }
 
-        // Ensure we have a valid token for API calls
-        try {
-          const token = await getToken();
-          if (!token && requireAuth) {
-            console.warn('No authentication token available, redirecting to sign-in');
-            await handleRedirect(getRedirectPath());
-            return;
-          }
-
-          // If server-side verification is required, verify with backend
-          if (enforceServerSide && !serverVerified) {
-            const response = await fetch('/api/auth/verify', {
-              headers: {
-                'Authorization': `Bearer ${token}`,
-                'Accept': 'application/json',
-                'Content-Type': 'application/json'
-              }
-            });
-            
-            if (!response.ok) {
-              console.warn('Server-side auth verification failed, redirecting');
-              await handleRedirect(getRedirectPath());
-              return;
-            }
-            
-            setServerVerified(true);
-          }
-        } catch (error) {
-          console.error('Error getting auth token:', error);
-          if (requireAuth) {
-            await handleRedirect(getRedirectPath());
-            return;
-          }
-        }      setIsAuthorized(true);
+      setIsAuthorized(true);
       setIsLoading(false);
     };
 
     checkAuth();
-  }, [isLoaded, isSignedIn, user, requireAuth, requireRole, getToken, enforceServerSide, serverVerified, getRedirectPath, handleRedirect, type, pathname]);
+  }, [isLoaded, isSignedIn, user, requireAuth, requireRole, enforceServerSide, serverVerified, getRedirectPath, handleRedirect, type, pathname]);
 
   // Show loading state or redirecting state
   if (isLoading || !isLoaded || isRedirecting) {
@@ -322,10 +274,10 @@ export function AuthWrapper({
             <div className="w-2 h-2 bg-[#01ae79] rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
           </div>
           <p className="text-sm text-muted-foreground">
-            {isRedirecting 
-              ? 'Redirecting...' 
-              : !isLoaded 
-                ? 'Loading...' 
+            {isRedirecting
+              ? 'Redirecting...'
+              : !isLoaded
+                ? 'Loading...'
                 : 'Checking authentication...'
             }
           </p>

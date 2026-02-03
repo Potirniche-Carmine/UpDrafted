@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Loader2, Crown } from 'lucide-react'
-import { useAuth } from '@clerk/nextjs'
+import { useAuth } from '@/hooks/use-auth'
 import { useRouter } from 'next/navigation'
 import { useSubscription } from '@/components/providers/subscription-provider'
 import { Alert, AlertDescription } from '@/components/ui/alert'

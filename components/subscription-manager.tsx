@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from 'react'
-import { useUser } from '@clerk/nextjs'
+import { useUser } from '@/hooks/use-auth'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -19,14 +19,14 @@ export function SubscriptionManager({ className }: SubscriptionManagerProps) {
   const { subscription, loading, refetch } = useSubscription()
   const { error: showError } = useToast()
   const [isCreatingSession, setIsCreatingSession] = useState(false)
-  
+
   // Check for URL parameters that might indicate return from Stripe portal
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search)
-    const fromStripe = urlParams.has('session_id') || 
-                      urlParams.has('payment_intent') || 
-                      document.referrer.includes('stripe.com')
-    
+    const fromStripe = urlParams.has('session_id') ||
+      urlParams.has('payment_intent') ||
+      document.referrer.includes('stripe.com')
+
     if (fromStripe) {
       console.log('🔄 Detected return from Stripe, refetching subscription...')
       // Wait a moment for webhooks to process, then refetch
@@ -38,7 +38,7 @@ export function SubscriptionManager({ className }: SubscriptionManagerProps) {
   useEffect(() => {
     // Clear any existing interval first to prevent memory leaks
     let interval: NodeJS.Timeout | null = null
-    
+
     if (subscription?.isPremium) {
       interval = setInterval(() => {
         // Only refetch if user has been active recently (tab is visible)
@@ -57,7 +57,7 @@ export function SubscriptionManager({ className }: SubscriptionManagerProps) {
     }
   }, [subscription?.isPremium, refetch])
 
-  const userRole = user?.publicMetadata?.role as string
+  const userRole = user?.role as string
 
   // Listen for when user returns from Stripe portal
   // Refetch immediately when user returns from any external navigation (like Stripe portal)
@@ -216,7 +216,7 @@ export function SubscriptionManager({ className }: SubscriptionManagerProps) {
 
         {subscription.isPremium && subscription.currentPeriodEnd && (
           <div className="text-sm text-muted-foreground bg-muted/30 rounded-md p-3 border-l-2 border-muted-foreground/20">
-            {subscription.cancelAtPeriodEnd 
+            {subscription.cancelAtPeriodEnd
               ? (
                 <div className="flex items-center gap-2">
                   <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
@@ -234,7 +234,7 @@ export function SubscriptionManager({ className }: SubscriptionManagerProps) {
 
         <div className="flex gap-2">
           {subscription.isPremium ? (
-            <Button 
+            <Button
               onClick={handleManageSubscription}
               disabled={isCreatingSession}
               className="flex items-center gap-2"
@@ -259,7 +259,7 @@ export function SubscriptionManager({ className }: SubscriptionManagerProps) {
 
         {subscription.isPremium && (
           <div className="text-xs text-muted-foreground pt-2 border-t">
-            You can change between monthly and yearly billing, update payment methods, 
+            You can change between monthly and yearly billing, update payment methods,
             view invoices, and cancel your subscription through the billing portal.
           </div>
         )}

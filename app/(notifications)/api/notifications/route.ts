@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/database/db';
 import { notifications } from '@/database/schema';
-import { auth } from '@clerk/nextjs/server';
+import { getSession } from '@/utils/roles';
 import { eq, desc, and } from 'drizzle-orm';
 import { profileOperations, notificationOperations } from '@/database/db-utils';
 import { withRateLimit } from '@/utils/security';
@@ -37,24 +37,24 @@ function formatTimeAgo(date: Date): string {
   if (diffInMins < 60) return `${diffInMins}m ago`;
   if (diffInHours < 24) return `${diffInHours}h ago`;
   if (diffInDays < 7) return `${diffInDays}d ago`;
-  
+
   return date.toLocaleDateString();
 }
 
 export async function GET(request: NextRequest) {
   try {
-    // Check if user is authenticated
-    const { userId, sessionClaims } = await auth();
-    
-    if (!userId) {
+    const session = await getSession();
+
+    if (!session?.user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const userRole = sessionClaims?.metadata?.role as string;
-    
+    const userId = session.user.id;
+    const userRole = session.user.role as string | undefined;
+
     // If user doesn't have a valid role (likely in onboarding), return empty state
     if (!userRole || !['admin', 'athlete', 'coach', 'recruiter'].includes(userRole)) {
-      return NextResponse.json({ 
+      return NextResponse.json({
         success: true,
         unreadCount: 0
       });
@@ -87,54 +87,54 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    // Check if user is authenticated
-    const { userId, sessionClaims } = await auth();
-    
-    if (!userId) {
+    const session = await getSession();
+
+    if (!session?.user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const userRole = sessionClaims?.metadata?.role as string;
-    
+    const userId = session.user.id;
+    const userRole = session.user.role as string | undefined;
+
     // If user doesn't have a valid role (likely in onboarding), return access forbidden
     if (!userRole || !['admin', 'athlete', 'coach', 'recruiter'].includes(userRole)) {
-      return NextResponse.json({ 
-        error: 'Access forbidden - Valid role required' 
+      return NextResponse.json({
+        error: 'Access forbidden - Valid role required'
       }, { status: 403 });
     }
 
     const role = userRole as 'admin' | 'athlete' | 'coach' | 'recruiter';
-    
+
     // Apply rate limiting for notifications operations
     const rateLimitCheck = await withRateLimit(request, 'general', userId, role);
     if (!rateLimitCheck.success) return rateLimitCheck.response;
-    
+
     // Parse request body and get operation type
     const body = await request.json();
     const { operation } = body as BaseRequestBody;
-    
+
     if (!operation) {
       return NextResponse.json({
         success: false,
         error: 'Missing operation parameter'
       }, { status: 400 });
     }
-    
+
     // Route to appropriate handler based on operation
     switch (operation) {
       case 'markAsRead':
         return await handleMarkAsRead(userId, body as MarkAsReadRequestBody);
-      
+
       case 'markAllAsRead':
         return await handleMarkAllAsRead(userId);
 
 
-      
+
       case 'dismissAllNotifications':
         return await handleDeleteAllNotifications(userId);
-      
 
-      
+
+
       default:
         return NextResponse.json({
           success: false,
@@ -143,7 +143,7 @@ export async function POST(request: NextRequest) {
     }
   } catch (error) {
     console.error('Error in notifications API:', error);
-    
+
     return NextResponse.json({
       success: false,
       error: 'Operation failed'
@@ -176,7 +176,7 @@ async function handleGetNotifications(userId: string, body: GetNotificationsRequ
       })
       .from(notifications)
       .where(
-        unreadOnly 
+        unreadOnly
           ? and(eq(notifications.userId, userId), eq(notifications.isRead, false))
           : eq(notifications.userId, userId)
       )
@@ -188,7 +188,7 @@ async function handleGetNotifications(userId: string, body: GetNotificationsRequ
 
     // Check if user has premium access to profile view insights
     const hasProfileViewInsights = await SubscriptionManager.hasPremiumAccess(userId);
-    
+
     // Keep all notifications (including profile views), but we'll modify the metadata later
     const filteredNotifications = userNotifications;
 
@@ -215,7 +215,7 @@ async function handleGetNotifications(userId: string, body: GetNotificationsRequ
       profileImageUrl?: string | null;
       role: string;
     }>();
-    
+
     if (actorUserIds.size > 0) {
       try {
         // Add timeout for profile fetching too
@@ -230,8 +230,8 @@ async function handleGetNotifications(userId: string, body: GetNotificationsRequ
           } catch (error) {
             console.warn(`Error fetching profile for user ${actorUserId}:`, error);
             // Return fallback data instead of null
-            return { 
-              actorUserId, 
+            return {
+              actorUserId,
               profile: {
                 fullName: 'Unknown User',
                 profileImageUrl: null,
@@ -240,15 +240,19 @@ async function handleGetNotifications(userId: string, body: GetNotificationsRequ
             };
           }
         });
-        
+
         const profileResults = await Promise.race([
           Promise.all(profilePromises),
           profileTimeout
         ]);
-        
+
         profileResults.forEach(({ actorUserId, profile }) => {
           if (profile) {
-            actorProfilesMap.set(actorUserId, profile);
+            actorProfilesMap.set(actorUserId, {
+              fullName: profile.fullName,
+              profileImageUrl: profile.profileImageUrl,
+              role: profile.role || 'user',
+            });
           }
         });
       } catch (error) {
@@ -361,7 +365,7 @@ async function handleGetNotifications(userId: string, body: GetNotificationsRequ
       success: true,
       notifications: enhancedNotifications,
     });
-    
+
     // Add rate limit headers to response
     for (const [header, value] of Object.entries(rateLimitHeaders)) {
       response.headers.set(header, value);
@@ -369,12 +373,12 @@ async function handleGetNotifications(userId: string, body: GetNotificationsRequ
     return response;
   } catch (error) {
     console.error('Error fetching notifications:', error);
-    
+
     // Return a more specific error message
-    const errorMessage = error instanceof Error && error.message === 'Query timeout' 
+    const errorMessage = error instanceof Error && error.message === 'Query timeout'
       ? 'Request timed out - please try again'
       : 'Failed to fetch notifications';
-      
+
     return NextResponse.json({
       success: false,
       error: errorMessage
@@ -424,7 +428,7 @@ async function handleGetUnreadCount(userId: string, rateLimitHeaders: Record<str
       success: true,
       unreadCount,
     });
-    
+
     // Add rate limit headers to response
     for (const [header, value] of Object.entries(rateLimitHeaders)) {
       response.headers.set(header, value);
@@ -457,4 +461,3 @@ async function handleDeleteAllNotifications(userId: string) {
   }
 }
 
- 

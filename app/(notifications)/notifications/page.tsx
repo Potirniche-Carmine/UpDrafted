@@ -7,7 +7,7 @@ import { Bell, UserPlus, MessageCircle, Trash2, Circle, Check, User, Lock } from
 import { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { AuthWrapper } from '../../../components/auth-wrapper';
 import { useNotifications } from '@/hooks/use-notifications';
-import { useAuth } from '@clerk/nextjs';
+import { useAuth } from '@/hooks/use-auth';
 import { useRouter } from 'next/navigation';
 
 interface Notification {
@@ -31,7 +31,7 @@ const getNotificationIcon = (type: Notification['type'], isLocked?: boolean) => 
   if (isLocked) {
     return <Lock className="h-5 w-5 text-amber-500" />;
   }
-  
+
   switch (type) {
     case 'newConnection': return <UserPlus className="h-5 w-5 text-green-500" />;
     case 'newMessage': return <MessageCircle className="h-5 w-5 text-purple-500" />;
@@ -49,19 +49,19 @@ export default function NotificationsPage() {
   const [error, setError] = useState<string | null>(null);
   const hasFetchedRef = useRef(false);
   const isRequestInProgressRef = useRef(false);
-  
-  const { getToken } = useAuth();
+
+
   const { setUnreadCount } = useNotifications();
   const router = useRouter();
 
   const filteredNotifications = useMemo(() => {
     let filtered = notifications;
-    
+
     // Apply read/unread filter
     if (activeFilter === 'unread') {
       filtered = filtered.filter(n => !n.isRead);
     }
-    
+
     return filtered;
   }, [notifications, activeFilter]);
 
@@ -72,17 +72,11 @@ export default function NotificationsPage() {
     if (isRequestInProgressRef.current) {
       return;
     }
-    
+
     isRequestInProgressRef.current = true;
-    
+
     try {
       setLoading(true);
-      
-      const token = await getToken();
-      
-      if (!token) {
-        throw new Error('No authentication token available');
-      }
 
       const params = new URLSearchParams({
         operation: 'getNotifications',
@@ -90,12 +84,9 @@ export default function NotificationsPage() {
         offset: '0',
         unreadOnly: unreadOnly.toString()
       });
-      
+
       const response = await fetch(`/api/notifications?${params.toString()}`, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
+        method: 'GET'
       });
 
       if (!response.ok) {
@@ -103,7 +94,7 @@ export default function NotificationsPage() {
       }
 
       const data = await response.json();
-      
+
       if (data.success) {
         setNotifications(data.notifications);
         setError(null);
@@ -118,21 +109,16 @@ export default function NotificationsPage() {
       setLoading(false);
       isRequestInProgressRef.current = false;
     }
-  }, [getToken, setUnreadCount]);
+  }, [setUnreadCount]);
 
   const markAsRead = useCallback(async (id: number) => {
     try {
-      const token = await getToken();
-      
-      if (!token) return;
-
       const response = await fetch('/api/notifications', {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ 
+        body: JSON.stringify({
           operation: 'markAsRead',
           notificationId: id
         })
@@ -144,21 +130,16 @@ export default function NotificationsPage() {
     } catch {
       // Silently handle error
     }
-  }, [getToken]);
+  }, []);
 
   const markAllAsRead = useCallback(async () => {
     try {
-      const token = await getToken();
-      
-      if (!token) return;
-
       const response = await fetch('/api/notifications', {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ 
+        body: JSON.stringify({
           operation: 'markAllAsRead'
         })
       });
@@ -170,21 +151,16 @@ export default function NotificationsPage() {
     } catch {
       // Silently handle error
     }
-  }, [getToken, setUnreadCount]);
+  }, [setUnreadCount]);
 
   const deleteAllNotifications = useCallback(async () => {
     try {
-      const token = await getToken();
-      
-      if (!token) return;
-
       const response = await fetch('/api/notifications', {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ 
+        body: JSON.stringify({
           operation: 'dismissAllNotifications'
         })
       });
@@ -200,13 +176,13 @@ export default function NotificationsPage() {
         } else {
           console.error('Failed to dismiss notifications:', data.error);
         }
-              } else {
-          console.error('Failed to dismiss notifications:', response.statusText);
-        }
-      } catch (error) {
-        console.error('Error dismissing notifications:', error);
+      } else {
+        console.error('Failed to dismiss notifications:', response.statusText);
       }
-  }, [getToken, setUnreadCount]);
+    } catch (error) {
+      console.error('Error dismissing notifications:', error);
+    }
+  }, [setUnreadCount]);
 
   useEffect(() => {
     if (!hasFetchedRef.current) {
@@ -223,7 +199,7 @@ export default function NotificationsPage() {
     if (!notification.isRead) {
       markAsRead(notification.id);
     }
-    
+
     // Navigate to the link if it exists
     if (notification.link) {
       router.push(notification.link);
@@ -282,7 +258,7 @@ export default function NotificationsPage() {
         <div className="max-w-5xl mx-auto">
           {/* Unified notifications panel */}
           <div className="h-full flex flex-col border border-border/50 rounded-xl shadow-lg bg-card overflow-hidden">
-            
+
             {/* Integrated Header */}
             <div className="p-4 md:p-6 border-b border-border/50 bg-gradient-to-r from-[#01ae79]/5 to-[#01ae79]/10 dark:from-[#01ae79]/2 dark:to-[#01ae79]/10">
               <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-6">
@@ -302,7 +278,7 @@ export default function NotificationsPage() {
                   </div>
                 </div>
               </div>
-              
+
               <div className="space-y-4">
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                   <div className="flex space-x-2">
@@ -312,31 +288,30 @@ export default function NotificationsPage() {
                         variant={activeFilter === filter ? "default" : "outline"}
                         size="sm"
                         onClick={() => setActiveFilter(filter)}
-                        className={`transition-all duration-200 capitalize ${
-                          activeFilter === filter
+                        className={`transition-all duration-200 capitalize ${activeFilter === filter
                             ? 'bg-[#01ae79] hover:bg-[#01ae79]/90 text-white'
                             : 'border-border/50 hover:border-[#01ae79]/30 dark:hover:border-[#01ae79]/40'
-                        }`}
+                          }`}
                       >
                         {filter}
                       </Button>
                     ))}
                   </div>
-                  
+
                   <div className="flex space-x-2">
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      onClick={markAllAsRead} 
-                      disabled={notifications.every(n => n.isRead) || filteredNotifications.filter(n=>!n.isRead).length === 0}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={markAllAsRead}
+                      disabled={notifications.every(n => n.isRead) || filteredNotifications.filter(n => !n.isRead).length === 0}
                       className="border-[#01ae79]/30 hover:bg-[#01ae79]/5 dark:border-[#01ae79]/40 dark:hover:bg-[#01ae79]/10 text-sm"
                     >
                       <Check className="h-4 w-4 mr-1" /> Mark all read
                     </Button>
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      onClick={deleteAllNotifications} 
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={deleteAllNotifications}
                       disabled={notifications.length === 0}
                       className="text-red-600 border-red-200 hover:bg-red-50 dark:text-red-400 dark:border-red-800 dark:hover:bg-red-950/20 text-sm"
                     >
@@ -355,35 +330,34 @@ export default function NotificationsPage() {
                     <div
                       key={notification.id}
                       onClick={() => handleNotificationClick(notification)}
-                      className={`group p-4 rounded-lg border transition-all duration-200 cursor-pointer hover:shadow-sm ${
-                        notification.isLocked
+                      className={`group p-4 rounded-lg border transition-all duration-200 cursor-pointer hover:shadow-sm ${notification.isLocked
                           ? 'bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-950/20 dark:to-orange-950/20 border-amber-200 dark:border-amber-800/40 hover:border-amber-300 dark:hover:border-amber-700/60'
-                          : notification.isRead 
-                          ? 'bg-card/70 dark:bg-card/50 hover:bg-card border-border/40 hover:border-[#01ae79]/20 dark:hover:border-[#01ae79]/30' 
-                          : 'bg-[#01ae79]/5 dark:bg-[#01ae79]/10 hover:bg-[#01ae79]/10 dark:hover:bg-[#01ae79]/20 border-[#01ae79]/30 dark:border-[#01ae79]/40'
-                      }`}
+                          : notification.isRead
+                            ? 'bg-card/70 dark:bg-card/50 hover:bg-card border-border/40 hover:border-[#01ae79]/20 dark:hover:border-[#01ae79]/30'
+                            : 'bg-[#01ae79]/5 dark:bg-[#01ae79]/10 hover:bg-[#01ae79]/10 dark:hover:bg-[#01ae79]/20 border-[#01ae79]/30 dark:border-[#01ae79]/40'
+                        }`}
                     >
                       <div className="flex items-start space-x-3">
                         {!notification.isRead && (
-                          <Circle 
-                            fill="currentColor" 
-                            className="h-2 w-2 text-[#01ae79] mt-2 flex-shrink-0" 
+                          <Circle
+                            fill="currentColor"
+                            className="h-2 w-2 text-[#01ae79] mt-2 flex-shrink-0"
                           />
                         )}
                         {notification.isRead && (
                           <div className="w-2 h-2 mt-2 flex-shrink-0"></div>
                         )}
-                        
+
                         <div className="flex-shrink-0 mt-0.5">
-                          {!notification.isLocked && notification.actorImageUrl && 
-                           notification.actorImageUrl !== 'undefined' && 
-                           !notification.actorImageUrl.startsWith('undefined/') &&
-                           (notification.actorImageUrl.startsWith('http://') || 
-                            notification.actorImageUrl.startsWith('https://') || 
-                            notification.actorImageUrl.startsWith('/')) ? (
+                          {!notification.isLocked && notification.actorImageUrl &&
+                            notification.actorImageUrl !== 'undefined' &&
+                            !notification.actorImageUrl.startsWith('undefined/') &&
+                            (notification.actorImageUrl.startsWith('http://') ||
+                              notification.actorImageUrl.startsWith('https://') ||
+                              notification.actorImageUrl.startsWith('/')) ? (
                             <Avatar className="w-10 h-10 ring-2 ring-[#01ae79]/20 dark:ring-[#01ae79]/30 group-hover:ring-[#01ae79]/40 dark:group-hover:ring-[#01ae79]/50 transition-colors">
-                              <AvatarImage 
-                                src={notification.actorImageUrl} 
+                              <AvatarImage
+                                src={notification.actorImageUrl}
                                 alt={notification.actorName || 'Notification'}
                                 className="object-cover"
                               />
@@ -392,16 +366,15 @@ export default function NotificationsPage() {
                               </AvatarFallback>
                             </Avatar>
                           ) : (
-                            <div className={`w-10 h-10 rounded-full flex items-center justify-center ring-2 transition-colors ${
-                              notification.isLocked 
+                            <div className={`w-10 h-10 rounded-full flex items-center justify-center ring-2 transition-colors ${notification.isLocked
                                 ? 'bg-amber-100 dark:bg-amber-900/20 ring-amber-200 dark:ring-amber-800/40'
                                 : 'bg-[#01ae79]/10 dark:bg-[#01ae79]/20 ring-[#01ae79]/30 dark:ring-[#01ae79]/40'
-                            }`}>
+                              }`}>
                               {getNotificationIcon(notification.type, notification.isLocked)}
                             </div>
                           )}
                         </div>
-                        
+
                         <div className="flex-1 min-w-0">
                           <p className="text-sm text-foreground leading-relaxed">
                             {notification.isLocked ? (
@@ -423,13 +396,12 @@ export default function NotificationsPage() {
                               </span>
                             )}
                           </p>
-                          <p className={`text-xs mt-1 ${
-                            notification.isRead 
-                              ? 'text-muted-foreground' 
+                          <p className={`text-xs mt-1 ${notification.isRead
+                              ? 'text-muted-foreground'
                               : notification.isLocked
-                              ? 'text-amber-600 dark:text-amber-400 font-medium'
-                              : 'text-[#01ae79] dark:text-[#01ae79] font-medium'
-                          }`}>
+                                ? 'text-amber-600 dark:text-amber-400 font-medium'
+                                : 'text-[#01ae79] dark:text-[#01ae79] font-medium'
+                            }`}>
                             {notification.timestamp}
                           </p>
                         </div>

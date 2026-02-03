@@ -34,7 +34,7 @@ import { ConnectionDialog } from "../shared/connection-dialog";
 import { SendOverChatDialog } from "../shared/send-over-chat-dialog";
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
 import { useToast } from "@/components/ui/toast";
-import { useUser } from "@clerk/nextjs";
+import { useUser } from "@/hooks/use-auth";
 import { generateProfileSlug, generateProfileUrl } from '@/lib/utils';
 import { useRouter } from "next/navigation";
 import { showUnverifiedAccountWarning } from '@/utils/toast-helpers';
@@ -451,7 +451,7 @@ export function AthleteProfile({
   // Get admin role information for demo profile uploads
   const { isAdmin, viewingAs } = useRoleView();
   const { user } = useUser();
-  const effectiveRole = user?.publicMetadata?.role as string;
+  const effectiveRole = user?.role as string;
   const [connectionDialogOpen, setConnectionDialogOpen] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
   const [currentConnectionStatus, setCurrentConnectionStatus] = useState(connectionStatus);

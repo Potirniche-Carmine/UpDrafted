@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { usePathname } from 'next/navigation';
-import { useAuth } from '@clerk/nextjs';
+import { useAuth } from "@/hooks/use-auth";
 
 interface NotificationsState {
   unreadCount: number;
@@ -12,7 +12,7 @@ interface NotificationsState {
   setUnreadCount: (count: number) => void;
   setHasCheckedOnStartup: (checked: boolean) => void;
   setIsFetching: (fetching: boolean) => void;
-  fetchUnreadCount: (token: string) => Promise<void>;
+  fetchUnreadCount: () => Promise<void>;
 }
 
 const useNotificationsStore = create(
@@ -30,7 +30,7 @@ const useNotificationsStore = create(
       },
       setHasCheckedOnStartup: (checked) => set({ hasCheckedOnStartup: checked }),
       setIsFetching: (fetching) => set({ isFetching: fetching }),
-      fetchUnreadCount: async (token) => {
+      fetchUnreadCount: async () => {
         // Prevent concurrent requests - but reset if stuck
         const currentState = get();
         if (currentState.isFetching) {
@@ -41,13 +41,12 @@ const useNotificationsStore = create(
             return;
           }
         }
-        
+
         set({ isFetching: true });
         try {
           const response = await fetch('/api/notifications?operation=getUnreadCount', {
             method: 'GET',
             headers: {
-              'Authorization': `Bearer ${token}`,
               'Accept': 'application/json',
               'Content-Type': 'application/json'
             }
@@ -103,18 +102,18 @@ const POLLING_INTERVAL = 45 * 1000; // 45 seconds - more responsive polling
 
 // React hook to use the store and fetch data
 export const useNotifications = () => {
-  const { 
-    unreadCount, 
+  const {
+    unreadCount,
     lastFetched,
-    hasCheckedOnStartup, 
+    hasCheckedOnStartup,
     isFetching,
-    fetchUnreadCount, 
-    setUnreadCount, 
+    fetchUnreadCount,
+    setUnreadCount,
     setHasCheckedOnStartup
   } = useNotificationsStore();
   const [localIsFetching, setLocalIsFetching] = useState(false);
   const pathname = usePathname();
-  const { getToken, isSignedIn, isLoaded } = useAuth();
+  const { isSignedIn, isLoaded } = useAuth();
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const isOnNotificationsPage = pathname === '/notifications';
   const lastFetchRef = useRef<number>(0);
@@ -124,40 +123,35 @@ export const useNotifications = () => {
     if (!isLoaded || !isSignedIn) {
       return;
     }
-    
+
     // Don't fetch if we're on the notifications page (banner count is cleared there)
     if (pathname === '/notifications') {
       // Clear the count immediately when on notifications page
       setUnreadCount(0);
       return;
     }
-    
+
     // Don't fetch if user is in onboarding (they don't have notifications yet)
     if (pathname?.startsWith('/onboarding')) {
       setUnreadCount(0);
       return;
     }
-    
+
     // Check if we need to respect cooldown
     const now = Date.now();
     const timeSinceLastFetch = now - lastFetchRef.current;
-    
+
     if (!force && timeSinceLastFetch < FETCH_COOLDOWN) {
       return; // Too soon to fetch again
     }
-    
+
     lastFetchRef.current = now;
-    
+
     setLocalIsFetching(true);
     try {
-      const token = await getToken();
-      if (!token) {
-        console.warn('No authentication token available');
-        return;
-      }
-      await fetchUnreadCount(token);
+      await fetchUnreadCount();
     } catch (error) {
-      console.error('Error fetching notifications count with token:', error);
+      console.error('Error fetching notifications count:', error);
       // Reset state on auth errors to prevent stuck loading states
       if (error instanceof Error && error.message.includes('auth')) {
         setUnreadCount(0);
@@ -166,7 +160,7 @@ export const useNotifications = () => {
     } finally {
       setLocalIsFetching(false);
     }
-  }, [isLoaded, pathname, fetchUnreadCount, setUnreadCount, isSignedIn, getToken, setHasCheckedOnStartup]);
+  }, [isLoaded, pathname, fetchUnreadCount, setUnreadCount, isSignedIn, setHasCheckedOnStartup]);
 
   // Check once on app startup/login
   useEffect(() => {
@@ -202,9 +196,6 @@ export const useNotifications = () => {
 
     // Only set up polling if user is authenticated
     if (isSignedIn) {
-      // Always fetch once on page navigation (remove cooldown for page changes)
-      fetchWithToken(true);
-      
       // Set up interval for periodic polling
       intervalRef.current = setInterval(() => {
         if (!document.hidden && !isOnNotificationsPage && isSignedIn) {
@@ -237,7 +228,7 @@ export const useNotifications = () => {
           if (now - lastFetchRef.current > FETCH_COOLDOWN) {
             fetchWithToken();
           }
-          
+
           // Restart polling if not already running
           if (!intervalRef.current) {
             intervalRef.current = setInterval(() => {
@@ -254,7 +245,7 @@ export const useNotifications = () => {
     };
 
     document.addEventListener('visibilitychange', handleVisibilityChange);
-    
+
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
@@ -286,17 +277,17 @@ export const useNotifications = () => {
     };
 
     window.addEventListener('notifications-dismissed', handleNotificationsDismissed);
-    
+
     return () => {
       window.removeEventListener('notifications-dismissed', handleNotificationsDismissed);
     };
   }, [fetchWithToken]);
 
-  return { 
+  return {
     // Return 0 for unread count when on notifications page or onboarding to hide banner
-    unreadCount: (isOnNotificationsPage || pathname?.startsWith('/onboarding')) ? 0 : unreadCount, 
-    isFetching: isFetching || localIsFetching, 
-    refetch, 
+    unreadCount: (isOnNotificationsPage || pathname?.startsWith('/onboarding')) ? 0 : unreadCount,
+    isFetching: isFetching || localIsFetching,
+    refetch,
     setUnreadCount,
     lastFetched
   };

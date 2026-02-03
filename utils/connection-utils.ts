@@ -27,32 +27,22 @@ export const handleAcceptConnection = async ({
   toast
 }: AcceptConnectionParams): Promise<void> => {
   setIsConnecting(true);
-  
+
   try {
     // Check if connectionId is provided and not empty
     if (!connectionId) {
       throw new Error('Connection ID is required to accept connection');
     }
-    
+
     const connectionId_num = Number(connectionId);
     if (isNaN(connectionId_num) || connectionId_num <= 0) {
       throw new Error("Connection ID must be a valid positive number");
     }
 
-    const windowWithClerk = window as unknown as {
-      Clerk?: {
-        session?: {
-          getToken: () => Promise<string>;
-        };
-      };
-    };
-    const token = await windowWithClerk.Clerk?.session?.getToken();
-
     const response = await fetch('/api/connections', {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`,
       },
       body: JSON.stringify({
         connectionId: connectionId
@@ -130,12 +120,12 @@ export const getPartnerUserId = (currentUserId: string | number, connection: Con
 
   // Convert currentUserId to string for comparison - connection properties are already strings
   const currentId = String(currentUserId);
-  
+
   // Safety check - ensure we're not dealing with the same user
   if (currentId === connection.toUserId && currentId === connection.fromUserId) {
     throw new Error('Invalid connection: user cannot be connected to themselves');
   }
-  
+
   return currentId === connection.toUserId ? connection.fromUserId : connection.toUserId;
 };
 
@@ -155,7 +145,7 @@ export const getOriginalRequesterId = (currentUserId: string | number, connectio
 
   // Convert currentUserId to string for comparison - connection properties are already strings
   const currentId = String(currentUserId);
-  
+
   // The original requester is the one who is NOT the current user
   return currentId === connection.fromUserId ? connection.toUserId : connection.fromUserId;
 };

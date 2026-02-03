@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { requireAnyRole } from '@/utils/roles';
+import { requireAnyRole, getSession } from '@/utils/roles';
 import { reportOperations, userOperations } from '@/database/db-utils';
-import { clerkClient } from '@clerk/nextjs/server';
 import { withRateLimit } from '@/utils/security';
 import { getCachedWithType, setCachedWithType, createErrorResponse, createSuccessResponse } from '@/utils/security';
 
@@ -48,20 +47,18 @@ export async function POST(request: NextRequest) {
     // Ensure the reporter exists in our database
     const reporterUser = await userOperations.getUserWithProfile(reporterId);
     if (!reporterUser) {
-      // Get user info from Clerk to create the database record
+      // Get user info from session to create the database record if needed (rare case)
       try {
-        const client = await clerkClient();
-        const clerkUser = await client.users.getUser(reporterId);
-        const email = clerkUser.primaryEmailAddress?.emailAddress || 
-                     clerkUser.emailAddresses?.[0]?.emailAddress || 
-                     `${reporterId}@placeholder.com`;
-        
-        // Create the user if they don't exist (they're authenticated in Clerk but not in our DB)
-        await userOperations.createUser({
-          id: reporterId,
-          email: email,
-          role: 'athlete' // Default role, this should be determined by their actual role
-        });
+        const session = await getSession();
+        if (session?.user) {
+          // Create the user if they don't exist
+          await userOperations.createUser({
+            id: reporterId,
+            name: session.user.name || session.user.email.split('@')[0],
+            email: session.user.email,
+            role: session.user.role as any || 'athlete'
+          });
+        }
       } catch (error) {
         console.error('Error creating reporter user:', error);
         return createErrorResponse('Unable to verify reporter account', 500);
@@ -120,21 +117,21 @@ export async function GET(request: NextRequest) {
       // Admins can see all reports
       const limit = parseInt(searchParams.get('limit') || '50');
       const offset = parseInt(searchParams.get('offset') || '0');
-      
+
       // Try cache first for admin reports
       const cacheKey = `reports:admin:${limit}:${offset}`;
       const cachedReports = await getCachedWithType<ReportsResponse>(cacheKey);
-      
+
       if (cachedReports) {
         return createSuccessResponse(cachedReports, rateLimitCheck.headers);
       }
 
       const reports = await reportOperations.getAllReports(limit, offset);
       const result = { reports };
-      
+
       // Cache admin reports for a short time
       await setCachedWithType(cacheKey, result, 'searchResults');
-      
+
       return createSuccessResponse(result, rateLimitCheck.headers);
     } else if (reportedUserId) {
       // Users can only see reports they've made for a specific user (to check if already reported)
@@ -144,17 +141,17 @@ export async function GET(request: NextRequest) {
       // Users can see reports they've made
       const cacheKey = `reports:user:${userId}`;
       const cachedUserReports = await getCachedWithType<ReportsResponse>(cacheKey);
-      
+
       if (cachedUserReports) {
         return createSuccessResponse(cachedUserReports, rateLimitCheck.headers);
       }
 
       const reports = await reportOperations.getReportsByReporter(userId);
       const result = { reports };
-      
+
       // Cache user reports
       await setCachedWithType(cacheKey, result, 'profileInfo');
-      
+
       return createSuccessResponse(result, rateLimitCheck.headers);
     }
 
@@ -162,4 +159,4 @@ export async function GET(request: NextRequest) {
     console.error('Error fetching reports:', error);
     return createErrorResponse('Internal server error', 500);
   }
-} 
+}

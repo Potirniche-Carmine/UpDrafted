@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Loader2, CheckCircle, User, Shield, Sparkles } from "lucide-react";
 import { UserRole } from "../lib/types";
 import { useRouter } from "next/navigation";
-import { useUser } from "@clerk/nextjs";
+import { useUser } from "@/hooks/use-auth";
 import { generateProfileUrl } from "@/lib/utils";
 
 interface LoadingScreenProps {
@@ -61,28 +61,28 @@ export function LoadingScreen({ role }: LoadingScreenProps) {
             // Fetch profile data from database to get the correct fullName
             const response = await fetch(`/api/profile?userId=${user.id}`);
             let profileUrl: string;
-            
+
             if (response.ok) {
               const profileData = await response.json();
               if (profileData.profile?.fullName) {
                 profileUrl = generateProfileUrl(profileData.profile.fullName, user.id);
               } else {
-                // Fallback to Clerk metadata if no database fullName
-                const fallbackFullName = user?.fullName || `${user?.firstName} ${user?.lastName}`;
+                // Fallback to better-auth user name if no database fullName
+                const fallbackFullName = user?.name || 'User';
                 profileUrl = fallbackFullName ? generateProfileUrl(fallbackFullName, user.id) : `/profile/${user.id}`;
               }
             } else {
-              // Fallback to Clerk metadata if API call fails
-              const fallbackFullName = user?.fullName || `${user?.firstName} ${user?.lastName}`;
+              // Fallback to better-auth user name if API call fails
+              const fallbackFullName = user?.name || 'User';
               profileUrl = fallbackFullName ? generateProfileUrl(fallbackFullName, user.id) : `/profile/${user.id}`;
             }
-            
+
             // Direct navigation to profile - avoid dashboard
             await router.push(profileUrl);
           } catch (error) {
             console.error('Auto-redirect failed:', error);
-            // Fallback to Clerk metadata if fetch fails
-            const fallbackFullName = user?.fullName || `${user?.firstName} ${user?.lastName}`;
+            // Fallback to better-auth user name if fetch fails
+            const fallbackFullName = user?.name || 'User';
             const fallbackUrl = fallbackFullName ? generateProfileUrl(fallbackFullName, user.id) : `/profile/${user.id}`;
             await router.push(fallbackUrl);
           }
@@ -101,7 +101,7 @@ export function LoadingScreen({ role }: LoadingScreenProps) {
         clearTimeout(fallbackTimer);
       };
     }
-  }, [completedSteps.length, router, user?.id, user?.fullName, user?.firstName, user?.lastName, isRedirecting]);
+  }, [completedSteps.length, router, user?.id, user?.name, isRedirecting]);
 
   const handleManualRedirect = async () => {
     if (user?.id && !isRedirecting) {
@@ -110,27 +110,27 @@ export function LoadingScreen({ role }: LoadingScreenProps) {
         // Fetch profile data from database to get the correct fullName
         const response = await fetch(`/api/profile?userId=${user.id}`);
         let profileUrl: string;
-        
+
         if (response.ok) {
           const profileData = await response.json();
           if (profileData.profile?.fullName) {
             profileUrl = generateProfileUrl(profileData.profile.fullName, user.id);
           } else {
-            // Fallback to Clerk metadata if no database fullName
-            const fallbackFullName = user?.fullName || `${user?.firstName} ${user?.lastName}`;
+            // Fallback to better-auth user name if no database fullName
+            const fallbackFullName = user?.name || 'User';
             profileUrl = fallbackFullName ? generateProfileUrl(fallbackFullName, user.id) : `/profile/${user.id}`;
           }
         } else {
-          // Fallback to Clerk metadata if API call fails
-          const fallbackFullName = user?.fullName || `${user?.firstName} ${user?.lastName}`;
+          // Fallback to better-auth user name if API call fails
+          const fallbackFullName = user?.name || 'User';
           profileUrl = fallbackFullName ? generateProfileUrl(fallbackFullName, user.id) : `/profile/${user.id}`;
         }
-        
+
         await router.push(profileUrl);
       } catch (error) {
         console.error('Manual redirect failed:', error);
-        // Fallback to Clerk metadata if fetch fails
-        const fallbackFullName = user?.fullName || `${user?.firstName} ${user?.lastName}`;
+        // Fallback to better-auth user name if fetch fails
+        const fallbackFullName = user?.name || 'User';
         const fallbackUrl = fallbackFullName ? generateProfileUrl(fallbackFullName, user.id) : `/profile/${user.id}`;
         window.location.href = fallbackUrl;
       }
@@ -171,8 +171,8 @@ export function LoadingScreen({ role }: LoadingScreenProps) {
               {isRedirecting ? 'Taking you to your profile...' : `Creating Your ${getRoleDisplayName(role)} Profile`}
             </h2>
             <p className="text-muted-foreground">
-              {isRedirecting 
-                ? 'Just a moment...' 
+              {isRedirecting
+                ? 'Just a moment...'
                 : 'Please wait while we set everything up for you...'
               }
             </p>
@@ -188,22 +188,20 @@ export function LoadingScreen({ role }: LoadingScreenProps) {
                 return (
                   <div
                     key={index}
-                    className={`flex items-center gap-3 p-3 rounded-lg transition-all duration-500 ${
-                      isCurrent
+                    className={`flex items-center gap-3 p-3 rounded-lg transition-all duration-500 ${isCurrent
                         ? 'bg-[#01ae79]/10 border border-[#01ae79]/30'
                         : isCompleted
-                        ? 'bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800'
-                        : 'bg-muted/50 border border-transparent'
-                    }`}
+                          ? 'bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800'
+                          : 'bg-muted/50 border border-transparent'
+                      }`}
                   >
                     <div
-                      className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center transition-all duration-500 ${
-                        isCompleted
+                      className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center transition-all duration-500 ${isCompleted
                           ? 'bg-green-500 text-white'
                           : isCurrent
-                          ? 'bg-[#01ae79] text-white'
-                          : 'bg-muted text-muted-foreground'
-                      }`}
+                            ? 'bg-[#01ae79] text-white'
+                            : 'bg-muted text-muted-foreground'
+                        }`}
                     >
                       {isCompleted ? (
                         <CheckCircle className="h-4 w-4" />
@@ -214,13 +212,12 @@ export function LoadingScreen({ role }: LoadingScreenProps) {
                       )}
                     </div>
                     <span
-                      className={`text-sm font-medium transition-colors duration-500 ${
-                        isCompleted
+                      className={`text-sm font-medium transition-colors duration-500 ${isCompleted
                           ? 'text-green-700 dark:text-green-300'
                           : isCurrent
-                          ? 'text-[#01ae79]'
-                          : 'text-muted-foreground'
-                      }`}
+                            ? 'text-[#01ae79]'
+                            : 'text-muted-foreground'
+                        }`}
                     >
                       {step.message}
                     </span>
@@ -236,7 +233,7 @@ export function LoadingScreen({ role }: LoadingScreenProps) {
               <p className="text-sm text-muted-foreground">
                 Something went wrong? Click here to see your profile.
               </p>
-              <Button 
+              <Button
                 onClick={handleManualRedirect}
                 disabled={isRedirecting}
                 className="w-full bg-[#01ae79] hover:bg-[#01ae79]/90"

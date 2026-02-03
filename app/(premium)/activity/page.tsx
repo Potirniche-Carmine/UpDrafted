@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback, useRef } from "react";
-import { useAuth } from "@clerk/nextjs";
+import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -47,13 +47,13 @@ const getProfileImageUrl = (profileImage: string | null): string | null => {
   if (!profileImage || typeof profileImage !== 'string') {
     return null;
   }
-  
+
   const cleanedProfileImage = profileImage.replace('undefined/', '');
 
   if (cleanedProfileImage.startsWith('http')) {
     return cleanedProfileImage;
   }
-  
+
   const baseUrl = process.env.NEXT_PUBLIC_R2_PUBLIC_URL || 'https://pub-19c0754937db426497ca014f0e2a297c.r2.dev';
   return `${baseUrl}/${cleanedProfileImage}`;
 };
@@ -88,7 +88,7 @@ const getTimeAgo = (dateString: string) => {
 
 // Activity Content Component
 function ActivityLogContent() {
-  const { getToken, isSignedIn, isLoaded } = useAuth();
+  const { isSignedIn, isLoaded } = useAuth();
   const [activities, setActivities] = useState<ActivityItem[]>([]);
   const [insights, setInsights] = useState<{
     totalViews: number;
@@ -100,7 +100,7 @@ function ActivityLogContent() {
   const [isPremium, setIsPremium] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  
+
   // Add ref to prevent duplicate calls
   const isFetching = useRef(false);
   const hasInitialized = useRef(false);
@@ -112,20 +112,12 @@ function ActivityLogContent() {
     }
 
     isFetching.current = true;
-    
-    try {
-      const token = await getToken();
-      if (!token) {
-        setError('Authentication failed');
-        setLoading(false);
-        return;
-      }
 
+    try {
       const response = await fetch('/api/activity', {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
           'Accept': 'application/json',
         },
       });
@@ -136,9 +128,9 @@ function ActivityLogContent() {
         setError(data.error || 'Failed to fetch activity data');
         return;
       }
-      
+
       setIsPremium(data.isPremium);
-      
+
       if (data.isPremium && data.activities) {
         setActivities(data.activities);
         setInsights(null);
@@ -153,11 +145,11 @@ function ActivityLogContent() {
       setLoading(false);
       isFetching.current = false;
     }
-  }, [getToken]);
+  }, []);
 
   useEffect(() => {
     if (!isLoaded || !isSignedIn || hasInitialized.current) return;
-    
+
     hasInitialized.current = true;
     fetchActivityData();
   }, [isLoaded, isSignedIn, fetchActivityData]);
@@ -210,7 +202,7 @@ function ActivityLogContent() {
                     {isPremium ? 'Unique Viewers' : 'This Week'}
                   </p>
                   <p className="text-2xl font-bold text-foreground">
-                    {loading ? '...' : isPremium 
+                    {loading ? '...' : isPremium
                       ? new Set(activities.map(a => a.viewer.id)).size
                       : (insights?.viewsThisWeek ?? 0)
                     }
@@ -231,11 +223,11 @@ function ActivityLogContent() {
                     {isPremium ? 'This Week' : 'Today'}
                   </p>
                   <p className="text-2xl font-bold text-foreground">
-                    {loading ? '...' : isPremium 
+                    {loading ? '...' : isPremium
                       ? activities.filter(a => {
-                          const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
-                          return new Date(a.createdAt) > weekAgo;
-                        }).length
+                        const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+                        return new Date(a.createdAt) > weekAgo;
+                      }).length
                       : (insights?.viewsToday ?? 0)
                     }
                   </p>
@@ -314,10 +306,10 @@ function ActivityLogContent() {
                   <div className="flex items-center justify-between p-4 rounded-lg border border-border/50 bg-card/50 hover:bg-card/80 hover:border-[#01ae79]/30 transition-all duration-200 cursor-pointer group">
                     <div className="flex items-center gap-4">
                       <Avatar className="w-12 h-12">
-                        <AvatarImage 
-                          src={getProfileImageUrl(activity.viewer.profileImage) || undefined} 
-                          alt={activity.viewer.name} 
-                          className="object-cover" 
+                        <AvatarImage
+                          src={getProfileImageUrl(activity.viewer.profileImage) || undefined}
+                          alt={activity.viewer.name}
+                          className="object-cover"
                         />
                         <AvatarFallback className="text-sm font-semibold bg-gradient-to-br from-[#01ae79]/10 to-[#01ae79]/20 text-[#01ae79]">
                           {activity.viewer.name.split(' ').map(n => n[0]).join('').toUpperCase()}

@@ -1,0 +1,151 @@
+"use client";
+
+import { useSession as useBetterAuthSession, signIn as betterAuthSignIn, signUp as betterAuthSignUp, signOut as betterAuthSignOut } from "@/lib/auth-client";
+
+// Types matching what Clerk provided
+export type Roles = 'admin' | 'athlete' | 'coach' | 'recruiter';
+
+export interface User {
+    id: string;
+    email: string;
+    role?: Roles | null;
+    name?: string | null;
+    image?: string | null;
+    emailVerified?: boolean;
+    // Additional fields for backward compatibility
+    primaryEmail?: string;
+    primaryEmailAddress?: { emailAddress: string };
+}
+
+interface UseUserReturn {
+    user: User | null;
+    isLoaded: boolean;
+    isSignedIn: boolean;
+}
+
+interface UseAuthReturn {
+    userId: string | null;
+    isLoaded: boolean;
+    isSignedIn: boolean;
+    getToken: () => Promise<string | null>;
+}
+
+/**
+ * Drop-in replacement for Clerk's useUser hook.
+ * Returns the current user from better-auth session.
+ */
+export function useUser(): UseUserReturn {
+    const { data: session, isPending } = useBetterAuthSession();
+
+    if (isPending) {
+        return { user: null, isLoaded: false, isSignedIn: false };
+    }
+
+    if (!session?.user) {
+        return { user: null, isLoaded: true, isSignedIn: false };
+    }
+
+    const user: User = {
+        id: session.user.id,
+        email: session.user.email,
+        role: (session.user as { role?: Roles }).role,
+        name: session.user.name,
+        image: session.user.image ?? null,
+        emailVerified: session.user.emailVerified,
+        primaryEmail: session.user.email,
+        primaryEmailAddress: { emailAddress: session.user.email },
+    };
+
+    return {
+        user,
+        isLoaded: true,
+        isSignedIn: true,
+    };
+}
+
+/**
+ * Drop-in replacement for Clerk's useAuth hook.
+ * Returns auth state from better-auth session.
+ */
+export function useAuth(): UseAuthReturn {
+    const { data: session, isPending } = useBetterAuthSession();
+
+    return {
+        userId: session?.user?.id ?? null,
+        isLoaded: !isPending,
+        isSignedIn: !!session?.user,
+        // better-auth uses cookies, so no token needed for API calls
+        getToken: async () => null,
+    };
+}
+
+// Re-export sign in/out functions for convenience
+export const signIn = betterAuthSignIn;
+export const signUp = betterAuthSignUp;
+export const signOut = betterAuthSignOut;
+
+// Legacy component placeholders - these should be replaced with custom components
+export function SignedIn({ children }: { children: React.ReactNode }) {
+    const { isSignedIn, isLoaded } = useAuth();
+    if (!isLoaded) return null;
+    return isSignedIn ? <>{ children } </> : null;
+}
+
+export function SignedOut({ children }: { children: React.ReactNode }) {
+    const { isSignedIn, isLoaded } = useAuth();
+    if (!isLoaded) return null;
+    return !isSignedIn ? <>{ children } </> : null;
+}
+
+// Placeholder for UserButton - needs custom implementation
+export function UserButton({
+    afterSignOutUrl
+}: {
+    afterSignOutUrl?: string;
+}) {
+    const { user, isLoaded } = useUser();
+    const handleSignOut = async () => {
+        await signOut();
+        if (afterSignOutUrl) {
+            window.location.href = afterSignOutUrl;
+        }
+    };
+
+    if (!isLoaded || !user) return null;
+
+    return (
+        <button 
+      onClick= { handleSignOut }
+    className = "flex items-center gap-2 text-sm hover:opacity-80"
+        >
+        {
+            user.image ? (
+                <img src= { user.image } alt={ user.name || 'User' } className="w-8 h-8 rounded-full" />
+      ) : (
+                    <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-medium" >
+                    { user.name?.[0] || user.email[0].toUpperCase() }
+                </div>
+                )
+}
+</button>
+  );
+}
+
+// Sign in/up buttons
+export function SignInButton({ children }: { children?: React.ReactNode }) {
+    return (
+        <a href= "/sign-in" className = "inline-flex" >
+            { children || <button>Sign In </button>
+}
+</a>
+  );
+}
+
+export function SignUpButton({ children }: { children?: React.ReactNode }) {
+    return (
+        <a href= "/sign-up" className = "inline-flex" >
+            { children || <button>Sign Up </button>
+}
+</a>
+  );
+}
