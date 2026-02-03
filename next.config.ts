@@ -2,6 +2,7 @@ import type { NextConfig } from "next";
 
 // CORS configuration based on environment
 const isDevelopment = process.env.NODE_ENV === 'development';
+const isDevDeploy = process.env.IS_DEV_DEPLOY === 'true';
 const allowedOrigins = isDevelopment
   ? ['http://localhost:3000', 'http://127.0.0.1:3000']
   : ['https://updrafted.us', 'https://www.updrafted.us'];
@@ -101,8 +102,9 @@ const nextConfig: NextConfig = {
   experimental: {
     optimizePackageImports: ['lucide-react', '@radix-ui/react-icons'],
     // Optimize for Node.js runtime where possible
+    // Optimize for Node.js runtime where possible
     serverActions: {
-      allowedOrigins: ['localhost:3000', 'updrafted.us'],
+      allowedOrigins: isDevDeploy ? undefined : ['localhost:3000', 'updrafted.us'],
     },
     // Minimize middleware processing
     proxyPrefetch: 'flexible',
@@ -143,14 +145,16 @@ const nextConfig: NextConfig = {
           key: 'Permissions-Policy',
           value: 'camera=(), microphone=(), geolocation=()'
         },
-        {
-          key: 'Strict-Transport-Security',
-          value: 'max-age=31536000; includeSubDomains; preload'
-        },
-        {
-          key: 'Content-Security-Policy',
-          value: 'upgrade-insecure-requests'
-        }
+        ...(isDevDeploy ? [] : [
+          {
+            key: 'Strict-Transport-Security',
+            value: 'max-age=31536000; includeSubDomains; preload'
+          },
+          {
+            key: 'Content-Security-Policy',
+            value: 'upgrade-insecure-requests'
+          }
+        ])
       ],
     },
     // CORS headers for API routes

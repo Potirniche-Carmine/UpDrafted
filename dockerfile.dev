@@ -14,6 +14,7 @@ COPY . .
 ENV NODE_ENV=production
 # Skip strict environment validation for build
 ENV SKIP_ENV_VALIDATION=true
+ENV IS_DEV_DEPLOY=true
 
 # Build the application
 # We mount the secret 'env_file' to /run/secrets/env_file
@@ -40,6 +41,7 @@ COPY --from=builder /app/package.json ./package.json
 
 # Set NODE_ENV to production for runtime
 ENV NODE_ENV=production
+ENV IS_DEV_DEPLOY=true
 
 EXPOSE 3000
 
