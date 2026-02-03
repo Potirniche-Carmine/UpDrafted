@@ -1,7 +1,6 @@
 "use client";
 
 import { useRoleView } from "@/hooks/use-role-view";
-import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -26,7 +25,7 @@ export function AdminRoleSwitcher() {
     setVerificationStatus
   } = useRoleView();
 
-  const { getToken } = useAuth();
+
 
   const [demoProfiles, setDemoProfiles] = useState<DemoProfiles>({
     athlete: null,
@@ -36,7 +35,6 @@ export function AdminRoleSwitcher() {
   const [loadingProfiles, setLoadingProfiles] = useState(true);
   const hasFetchedProfiles = useRef(false);
 
-  // Fetch demo profiles
   useEffect(() => {
     const fetchDemoProfiles = async () => {
       if (!isAdmin || hasFetchedProfiles.current) return;
@@ -67,7 +65,7 @@ export function AdminRoleSwitcher() {
       setLoadingProfiles(false);
       hasFetchedProfiles.current = false; // Reset for when user becomes admin
     }
-  }, [isAdmin, getToken]);
+  }, [isAdmin]);
 
   if (!isAdmin) {
     return null;

@@ -2,7 +2,6 @@
 
 import { notFound } from 'next/navigation';
 import { useEffect, useState, useCallback, useRef } from 'react';
-import { useAuth } from '@/hooks/use-auth';
 import { AthleteProfileWrapper } from '../../../components/athlete-profile-wrapper';
 import { CoachProfileWrapper } from '../../../components/coach-profile-wrapper';
 import { RecruiterProfileWrapper } from '../../../components/recruiter-profile-wrapper';
@@ -135,7 +134,7 @@ export default function ProfilePage({ params }: ProfilePageProps) {
 }
 
 function ProfileContent({ profileId, slug }: { profileId: string; slug: string | null }) {
-  const { getToken } = useAuth();
+  /* eslint-disable @typescript-eslint/no-unused-vars */
   const [profileData, setProfileData] = useState<ProfileApiResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -246,7 +245,7 @@ function ProfileContent({ profileId, slug }: { profileId: string; slug: string |
     } finally {
       setLoading(false);
     }
-  }, [profileId, slug, getToken]);
+  }, [profileId, slug]);
 
   useEffect(() => {
     // Get navigation source from the global state manager
