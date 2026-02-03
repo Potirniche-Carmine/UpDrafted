@@ -37,11 +37,13 @@ import { sanitizeAndEncryptMessage } from '@/utils/encryption';
 import { R2_PUBLIC_URL, constructR2Url } from './r2/config';
 import { dateToStringWithErrorHandling } from '@/lib/date-utils';
 
+type DbOrTx = typeof db | Parameters<Parameters<typeof db.transaction>[0]>[0];
+
 // User operations
 export const userOperations = {
   // Get user by ID with profile
-  async getUserWithProfile(userId: string) {
-    const user = await db.query.users.findFirst({
+  async getUserWithProfile(userId: string, tx: DbOrTx = db) {
+    const user = await tx.query.users.findFirst({
       where: eq(users.id, userId),
       with: {
         athleteProfile: true,
@@ -53,14 +55,14 @@ export const userOperations = {
   },
 
   // Create new user
-  async createUser(userData: NewUser) {
-    const [user] = await db.insert(users).values(userData).returning();
+  async createUser(userData: NewUser, tx: DbOrTx = db) {
+    const [user] = await tx.insert(users).values(userData).returning();
     return user;
   },
 
   // Update user
-  async updateUser(userId: string, userData: Partial<NewUser>) {
-    const [user] = await db
+  async updateUser(userId: string, userData: Partial<NewUser>, tx: DbOrTx = db) {
+    const [user] = await tx
       .update(users)
       .set({ ...userData, updatedAt: new Date() })
       .where(eq(users.id, userId))
@@ -97,8 +99,8 @@ export const userOperations = {
 // Athlete operations
 export const athleteOperations = {
   // Get athlete profile with all related data
-  async getAthleteProfile(userId: string) {
-    const athleteProfile = await db.query.athleteProfiles.findFirst({
+  async getAthleteProfile(userId: string, tx: DbOrTx = db) {
+    const athleteProfile = await tx.query.athleteProfiles.findFirst({
       where: eq(athleteProfiles.userId, userId),
       with: {
         user: true,
@@ -291,8 +293,8 @@ export const athleteExperienceOperations = {
 // Coach operations
 export const coachOperations = {
   // Get coach profile with all related data
-  async getCoachProfile(userId: string) {
-    const coachProfile = await db.query.coachProfiles.findFirst({
+  async getCoachProfile(userId: string, tx: DbOrTx = db) {
+    const coachProfile = await tx.query.coachProfiles.findFirst({
       where: eq(coachProfiles.userId, userId),
       with: {
         user: true,
@@ -359,8 +361,8 @@ export const coachOperations = {
 // Recruiting operations
 export const recruitingOperations = {
   // Get recruiting profile with all related data
-  async getRecruitingProfile(userId: string) {
-    const profile = await db.query.recruitingProfiles.findFirst({
+  async getRecruitingProfile(userId: string, tx: DbOrTx = db) {
+    const profile = await tx.query.recruitingProfiles.findFirst({
       where: eq(recruitingProfiles.userId, userId),
       with: {
         user: true,
@@ -373,7 +375,7 @@ export const recruitingOperations = {
     }
 
     // Get all recruiting needs for this profile
-    const recruitingNeeds = await db.query.recruitingProfileNeeds.findMany({
+    const recruitingNeeds = await tx.query.recruitingProfileNeeds.findMany({
       where: eq(recruitingProfileNeeds.recruitingProfileId, profile.id)
     });
 
@@ -812,8 +814,8 @@ export const connectionOperations = {
   },
 
   // Check if a connection exists between two users
-  async getConnectionBetweenUsers(fromUserId: string, toUserId: string) {
-    const connection = await db.query.connections.findFirst({
+  async getConnectionBetweenUsers(fromUserId: string, toUserId: string, tx: DbOrTx = db) {
+    const connection = await tx.query.connections.findFirst({
       where: or(
         and(eq(connections.fromUserId, fromUserId), eq(connections.toUserId, toUserId)),
         and(eq(connections.fromUserId, toUserId), eq(connections.toUserId, fromUserId))
@@ -1036,7 +1038,7 @@ export const connectionOperations = {
 // Activity logging
 export const activityOperations = {
   // Log activity - Updates existing record if same viewer/viewed/action, otherwise creates new
-  async logActivity(viewerId: string, viewedUserId: string, action: string, metadata?: Record<string, unknown>) {
+  async logActivity(viewerId: string, viewedUserId: string, action: string, metadata?: Record<string, unknown>, tx: DbOrTx = db) {
     // Don't log if viewer and viewed are the same (self-viewing)
     if (viewerId === viewedUserId) {
       return { action: 'skipped', reason: 'self-view' };
@@ -1044,8 +1046,8 @@ export const activityOperations = {
 
     // Check if viewer or viewed user is an admin - skip logging for admin immunity
     const [viewer, viewedUser] = await Promise.all([
-      userOperations.getUserWithProfile(viewerId),
-      userOperations.getUserWithProfile(viewedUserId)
+      userOperations.getUserWithProfile(viewerId, tx),
+      userOperations.getUserWithProfile(viewedUserId, tx)
     ]);
 
     if (viewer?.role === 'admin' || viewedUser?.role === 'admin') {
@@ -1053,7 +1055,7 @@ export const activityOperations = {
     }
 
     // Check if a record already exists for this combination
-    const existingRecord = await db.query.activityLog.findFirst({
+    const existingRecord = await tx.query.activityLog.findFirst({
       where: and(
         eq(activityLog.viewerId, viewerId),
         eq(activityLog.viewedUserId, viewedUserId),
@@ -1063,7 +1065,7 @@ export const activityOperations = {
 
     if (existingRecord) {
       // Update the existing record with new timestamp and metadata
-      await db
+      await tx
         .update(activityLog)
         .set({
           createdAt: new Date(),
@@ -1074,7 +1076,7 @@ export const activityOperations = {
       return { action: 'updated', recordId: existingRecord.id };
     } else {
       // Create a new record
-      const [newRecord] = await db.insert(activityLog).values({
+      const [newRecord] = await tx.insert(activityLog).values({
         viewerId,
         viewedUserId,
         action,
@@ -1084,6 +1086,8 @@ export const activityOperations = {
       return { action: 'created', recordId: newRecord.id };
     }
   },
+
+
 
   // Get user activity
   async getUserActivity(userId: string, limit = 50) {
@@ -1699,8 +1703,8 @@ export const messageOperations = {
 // Profile operations - for accessing user profiles
 export const profileOperations = {
   // Get user with all profile types
-  async getUserWithProfile(userId: string) {
-    return await db.query.users.findFirst({
+  async getUserWithProfile(userId: string, tx: DbOrTx = db) {
+    return await tx.query.users.findFirst({
       where: eq(users.id, userId),
       with: {
         athleteProfile: true,
@@ -1711,8 +1715,8 @@ export const profileOperations = {
   },
 
   // Get user profile image and name based on their role
-  async getUserProfileInfo(userId: string) {
-    const user = await this.getUserWithProfile(userId);
+  async getUserProfileInfo(userId: string, tx: DbOrTx = db) {
+    const user = await this.getUserWithProfile(userId, tx);
 
     if (!user) return null;
 
@@ -1761,8 +1765,8 @@ export const profileOperations = {
 // Notification operations
 export const notificationOperations = {
   // Create a new notification
-  async createNotification(userId: string, type: 'profileView' | 'newConnection' | 'newMessage' | 'systemUpdate' | 'premiumFeature' | 'connectionAccepted', title: string, message: string, metadata?: Record<string, unknown>) {
-    const [notification] = await db.insert(notifications).values({
+  async createNotification(userId: string, type: 'profileView' | 'newConnection' | 'newMessage' | 'systemUpdate' | 'premiumFeature' | 'connectionAccepted', title: string, message: string, metadata?: Record<string, unknown>, tx: DbOrTx = db) {
+    const [notification] = await tx.insert(notifications).values({
       userId,
       type,
       title,
@@ -1873,26 +1877,26 @@ export const notificationOperations = {
   // Helper function to create profile view notification (first time only)
   // Note: This creates notifications only for genuinely first-time profile views
   // Users can clear notifications without affecting the activity log persistence
-  async createProfileViewNotification(viewedUserId: string, viewerUserId: string) {
+  async createProfileViewNotification(viewedUserId: string, viewerUserId: string, tx: DbOrTx = db) {
     try {
       // Check if viewer or viewed user is an admin - skip notifications for admin immunity
       const [viewer, viewedUser] = await Promise.all([
-        userOperations.getUserWithProfile(viewerUserId),
-        userOperations.getUserWithProfile(viewedUserId)
+        userOperations.getUserWithProfile(viewerUserId, tx),
+        userOperations.getUserWithProfile(viewedUserId, tx)
       ]);
 
       if (viewer?.role === 'admin' || viewedUser?.role === 'admin') {
         return null; // Skip notification for admin immunity
       }
 
-      const viewerInfo = await profileOperations.getUserProfileInfo(viewerUserId);
+      const viewerInfo = await profileOperations.getUserProfileInfo(viewerUserId, tx);
       if (!viewerInfo) return null;
 
       // Check if this viewer has viewed this profile before (check activityLog, not notifications)
       // This ensures we only create notifications for truly first-time views
       try {
         // Check the activityLog to see if this is a genuine first-time view
-        const existingActivity = await db.query.activityLog.findFirst({
+        const existingActivity = await tx.query.activityLog.findFirst({
           where: and(
             eq(activityLog.viewerId, viewerUserId),
             eq(activityLog.viewedUserId, viewedUserId),
@@ -1919,7 +1923,8 @@ export const notificationOperations = {
         {
           actorUserId: viewerUserId,
           viewerName: viewerInfo.fullName,
-        }
+        },
+        tx
       );
     } catch (error) {
       console.error('Error creating profile view notification:', error);
@@ -2010,8 +2015,8 @@ export const notificationOperations = {
 // Admin operations
 export const adminOperations = {
   // Get admin role preferences
-  async getAdminRolePreferences(userId: string) {
-    return await db.query.adminRolePreferences.findFirst({
+  async getAdminRolePreferences(userId: string, tx: DbOrTx = db) {
+    return await tx.query.adminRolePreferences.findFirst({
       where: eq(adminRolePreferences.userId, userId),
     });
   },
@@ -2037,8 +2042,8 @@ export const adminOperations = {
   },
 
   // Get demo profiles for admin
-  async getDemoProfiles(userId: string) {
-    const athlete = await db.query.athleteProfiles.findFirst({
+  async getDemoProfiles(userId: string, tx: DbOrTx = db) {
+    const athlete = await tx.query.athleteProfiles.findFirst({
       where: and(
         eq(athleteProfiles.userId, userId),
         eq(athleteProfiles.isDemoProfile, true)
@@ -2054,7 +2059,7 @@ export const adminOperations = {
       }
     });
 
-    const coach = await db.query.coachProfiles.findFirst({
+    const coach = await tx.query.coachProfiles.findFirst({
       where: and(
         eq(coachProfiles.userId, userId),
         eq(coachProfiles.isDemoProfile, true)
@@ -2066,13 +2071,14 @@ export const adminOperations = {
       }
     });
 
-    const recruiter = await db.query.recruitingProfiles.findFirst({
+    const recruiter = await tx.query.recruitingProfiles.findFirst({
       where: and(
         eq(recruitingProfiles.userId, userId),
         eq(recruitingProfiles.isDemoProfile, true)
       ),
       with: {
         user: true,
+        school: true,
       }
     });
 
@@ -2080,7 +2086,7 @@ export const adminOperations = {
     let recruiterWithNeeds = recruiter;
     if (recruiter) {
       // Get all recruiting needs for this demo profile
-      const recruitingNeeds = await db.query.recruitingProfileNeeds.findMany({
+      const recruitingNeeds = await tx.query.recruitingProfileNeeds.findMany({
         where: eq(recruitingProfileNeeds.recruitingProfileId, recruiter.id)
       });
 

@@ -12,7 +12,12 @@ import {
   unique,
   real,
 } from 'drizzle-orm/pg-core';
-import { relations } from 'drizzle-orm';
+import { relations, sql } from 'drizzle-orm';
+import { pgPolicy } from 'drizzle-orm/pg-core';
+
+// Helper for RLS policies
+const authUid = sql`current_setting('app.current_user_id')`;
+const authRole = sql`current_setting('app.current_user_role')`;
 
 export const userRoleEnum = pgEnum('user_role', ['athlete', 'coach', 'recruiter', 'admin']);
 export const coachRoleEnum = pgEnum('coach_role', ['coach', 'recruiter']);
@@ -340,7 +345,17 @@ export const connections = pgTable('connections', {
   index('idx_connections_from_status').on(table.fromUserId, table.status),
   index('idx_connections_to_status').on(table.toUserId, table.status),
   unique('connections_users_unique').on(table.fromUserId, table.toUserId),
-]);
+  pgPolicy('connections_read_policy', {
+    for: 'select',
+    to: 'public',
+    using: sql`${table.fromUserId} = ${authUid} OR ${table.toUserId} = ${authUid} OR ${authRole} = 'admin'`,
+  }),
+  pgPolicy('connections_insert_policy', {
+    for: 'insert',
+    to: 'public',
+    withCheck: sql`${table.fromUserId} = ${authUid}`,
+  }),
+]).enableRLS();
 
 export const activityLog = pgTable('activity_log', {
   id: serial('id').primaryKey(),
@@ -394,7 +409,22 @@ export const messages = pgTable('messages', {
   index('idx_messages_conversation_created').on(table.conversationId, table.createdAt.desc()),
   index('idx_messages_sender_read').on(table.senderId, table.isRead),
   index('idx_messages_conversation_read').on(table.conversationId, table.isRead),
-]);
+  pgPolicy('messages_read_policy', {
+    for: 'select',
+    to: 'public',
+    using: sql`${table.senderId} = ${authUid} OR 
+      EXISTS (
+        SELECT 1 FROM conversations c 
+        WHERE c.id = ${table.conversationId} 
+        AND (c.user1_id = ${authUid} OR c.user2_id = ${authUid})
+      ) OR ${authRole} = 'admin'`,
+  }),
+  pgPolicy('messages_insert_policy', {
+    for: 'insert',
+    to: 'public',
+    withCheck: sql`${table.senderId} = ${authUid}`, // Only send as yourself
+  }),
+]).enableRLS();
 
 export const verificationRequests = pgTable('verification_requests', {
   id: serial('id').primaryKey(),
@@ -416,7 +446,17 @@ export const verificationRequests = pgTable('verification_requests', {
   index('idx_verification_requests_submitted_at').on(table.submittedAt),
   index('idx_verification_requests_verification_type').on(table.verificationType),
   unique('verification_requests_user_id_verification_type_unique').on(table.userId, table.verificationType),
-]);
+  pgPolicy('verification_requests_read_policy', {
+    for: 'select',
+    to: 'public',
+    using: sql`${table.userId} = ${authUid} OR ${authRole} = 'admin'`,
+  }),
+  pgPolicy('verification_requests_insert_policy', {
+    for: 'insert',
+    to: 'public',
+    withCheck: sql`${table.userId} = ${authUid}`,
+  }),
+]).enableRLS();
 
 export const verificationFiles = pgTable('verification_files', {
   id: serial('id').primaryKey(),
@@ -451,7 +491,17 @@ export const reports = pgTable('reports', {
   index('idx_reports_reported_user_id').on(table.reportedUserId),
   index('idx_reports_status').on(table.status),
   index('idx_reports_submitted_at').on(table.submittedAt),
-]);
+  pgPolicy('reports_read_policy', {
+    for: 'select',
+    to: 'public',
+    using: sql`${authRole} = 'admin'`,
+  }),
+  pgPolicy('reports_insert_policy', {
+    for: 'insert',
+    to: 'public',
+    withCheck: sql`${table.reporterId} = ${authUid}`,
+  }),
+]).enableRLS();
 
 export const notifications = pgTable('notifications', {
   id: serial('id').primaryKey(),
@@ -470,7 +520,12 @@ export const notifications = pgTable('notifications', {
   index('idx_notifications_created_at').on(table.createdAt),
   // Composite index for the most common query pattern
   index('idx_notifications_user_unread').on(table.userId, table.isRead, table.createdAt),
-]);
+  pgPolicy('notifications_read_policy', {
+    for: 'select',
+    to: 'public',
+    using: sql`${table.userId} = ${authUid} OR ${authRole} = 'admin'`,
+  }),
+]).enableRLS();
 
 export const adminRolePreferences = pgTable('admin_role_preferences', {
   id: serial('id').primaryKey(),
@@ -716,7 +771,12 @@ export const userSubscriptions = pgTable('user_subscriptions', {
   index('idx_user_subscriptions_period_end').on(table.currentPeriodEnd),
   unique('user_subscriptions_user_id_unique').on(table.userId),
   unique('user_subscriptions_stripe_subscription_id_unique').on(table.stripeSubscriptionId),
-]);
+  pgPolicy('user_subscriptions_read_policy', {
+    for: 'select',
+    to: 'public',
+    using: sql`${table.userId} = ${authUid} OR ${authRole} = 'admin'`,
+  }),
+]).enableRLS();
 
 // Usage tracking for premium features
 export const userUsageTracking = pgTable('user_usage_tracking', {

@@ -42,7 +42,7 @@ export default async function proxy(req: NextRequest) {
     const hasSession = hasSessionCookie(req);
 
     // Public routes that don't require authentication
-    const publicRoutes = ['/', '/sign-in', '/sign-up', '/pricing', '/about', '/contact', '/legal', '/privacy', '/terms'];
+    const publicRoutes = ['/', '/sign-in', '/sign-up', '/about', '/contact', '/terms-of-service', '/privacy-policy', '/for-coaches', '/for-athletes', '/for-recruiters'];
     const isPublicRoute = publicRoutes.some(route => pathname === route || pathname.startsWith(route + '/'));
 
     // Auth pages - redirect to dashboard if has session cookie

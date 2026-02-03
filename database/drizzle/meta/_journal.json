@@ -8,6 +8,13 @@
       "when": 1770073200509,
       "tag": "0000_magical_pretty_boy",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1770078274948,
+      "tag": "0001_fast_leo",
+      "breakpoints": true
     }
   ]
 }
