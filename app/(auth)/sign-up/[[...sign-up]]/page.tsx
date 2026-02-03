@@ -7,7 +7,7 @@ import { signUp } from "@/lib/auth-client";
 
 export default function SignUpPage() {
   const router = useRouter();
-  const [name, setName] = useState("");
+  const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -20,12 +20,12 @@ export default function SignUpPage() {
     setError("");
 
     // Username validation
-    if (name.length > 10) {
+    if (username.length > 10) {
       setError("Username must be 10 characters or less");
       return;
     }
 
-    if (!/^[a-zA-Z0-9]*$/.test(name)) {
+    if (!/^[a-zA-Z0-9]*$/.test(username)) {
       setError("Username can only contain letters and numbers");
       return;
     }
@@ -62,7 +62,8 @@ export default function SignUpPage() {
       const result = await signUp.email({
         email,
         password,
-        name,
+        name: username, // Use username as display name
+        username,
         callbackURL: "/sign-in", // Redirect to sign-in after email verification
       });
 
@@ -139,17 +140,17 @@ export default function SignUpPage() {
 
           <div className="space-y-4">
             <div>
-              <label htmlFor="name" className="block text-sm font-medium">
+              <label htmlFor="username" className="block text-sm font-medium">
                 Username
               </label>
               <input
-                id="name"
-                name="name"
+                id="username"
+                name="username"
                 type="text"
                 autoComplete="username"
                 required
-                value={name}
-                onChange={(e) => setName(e.target.value)}
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
                 maxLength={10}
                 pattern="[a-zA-Z0-9]*"
                 className="mt-1 block w-full rounded-lg border border-input bg-background px-4 py-3 text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"

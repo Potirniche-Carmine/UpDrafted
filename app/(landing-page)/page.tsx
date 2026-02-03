@@ -12,7 +12,7 @@ function HomePageContent() {
       {/* Hero Section */}
       <section className="relative w-full py-12 sm:py-16 md:py-20 lg:py-24 xl:py-32 2xl:py-40 overflow-hidden">
         {/* Subtle gradient background */}
-        <div className="absolute inset-0 bg-linear-to-br from-[#01ae79]/5 via-transparent to-transparent dark:from-[#01ae79]/10 pointer-events-none"></div>
+        <div className="absolute inset-0 bg-linear-to-tl from-[#01ae79]/5 via-transparent to-transparent dark:from-[#01ae79]/10 pointer-events-none"></div>
 
         <div className="container px-4 md:px-6 mx-auto max-w-7xl relative z-10">
           <div className="text-center space-y-8">

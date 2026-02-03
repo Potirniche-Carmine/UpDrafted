@@ -1,31 +1,36 @@
 "use client";
 
 import { useState } from "react";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { authClient } from "@/lib/auth-client";
 import { useRouter } from "next/navigation";
-import { AlertCircle, CheckCircle2 } from "lucide-react";
+import { AlertCircle, CheckCircle2, ArrowLeft } from "lucide-react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
-export function UserAccountModal({ children }: { children: React.ReactNode }) {
-    const [open, setOpen] = useState(false);
+export function UserAccountPage() {
     const router = useRouter();
 
     return (
-        <Dialog open={open} onOpenChange={setOpen}>
-            <DialogTrigger asChild>
-                {children}
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-[500px]">
-                <DialogHeader>
-                    <DialogTitle>Manage Account</DialogTitle>
-                    <DialogDescription>
-                        Update your account settings here.
-                    </DialogDescription>
-                </DialogHeader>
+        <div className="min-h-screen bg-background">
+            <div className="max-w-4xl mx-auto p-4 sm:p-6 lg:p-8">
+                <div className="mb-6">
+                    <Button
+                        variant="ghost"
+                        onClick={() => router.back()}
+                        className="mb-4"
+                    >
+                        <ArrowLeft className="mr-2 h-4 w-4" />
+                        Back
+                    </Button>
+                    <h1 className="text-3xl font-bold">Account Settings</h1>
+                    <p className="text-muted-foreground mt-2">
+                        Manage your account settings and preferences
+                    </p>
+                </div>
+
                 <Tabs defaultValue="email" className="w-full">
                     <TabsList className="grid w-full grid-cols-3">
                         <TabsTrigger value="email">Email</TabsTrigger>
@@ -34,19 +39,49 @@ export function UserAccountModal({ children }: { children: React.ReactNode }) {
                     </TabsList>
 
                     <TabsContent value="email">
-                        <ChangeEmailForm />
+                        <Card>
+                            <CardHeader>
+                                <CardTitle>Change Email</CardTitle>
+                                <CardDescription>
+                                    Update your email address. You'll need to verify your new email.
+                                </CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                                <ChangeEmailForm />
+                            </CardContent>
+                        </Card>
                     </TabsContent>
 
                     <TabsContent value="password">
-                        <ChangePasswordForm />
+                        <Card>
+                            <CardHeader>
+                                <CardTitle>Change Password</CardTitle>
+                                <CardDescription>
+                                    Update your password to keep your account secure.
+                                </CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                                <ChangePasswordForm />
+                            </CardContent>
+                        </Card>
                     </TabsContent>
 
                     <TabsContent value="danger">
-                        <DeleteAccountForm onClose={() => setOpen(false)} />
+                        <Card className="border-destructive/50">
+                            <CardHeader>
+                                <CardTitle className="text-destructive">Danger Zone</CardTitle>
+                                <CardDescription>
+                                    Irreversible and destructive actions
+                                </CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                                <DeleteAccountForm />
+                            </CardContent>
+                        </Card>
                     </TabsContent>
                 </Tabs>
-            </DialogContent>
-        </Dialog>
+            </div>
+        </div>
     );
 }
 
@@ -81,9 +116,9 @@ function ChangeEmailForm() {
     };
 
     return (
-        <div className="space-y-4 py-4">
+        <div className="space-y-4">
             {message && (
-                <div className={`p-3 rounded-md text-sm flex items-center gap-2 ${message.type === 'success' ? 'bg-green-100 text-green-700' : 'bg-destructive/10 text-destructive'}`}>
+                <div className={`p-3 rounded-md text-sm flex items-center gap-2 ${message.type === 'success' ? 'bg-green-100 text-green-700 dark:bg-green-900/20 dark:text-green-400' : 'bg-destructive/10 text-destructive'}`}>
                     {message.type === 'success' ? <CheckCircle2 className="h-4 w-4" /> : <AlertCircle className="h-4 w-4" />}
                     {message.text}
                 </div>
@@ -150,9 +185,9 @@ function ChangePasswordForm() {
     };
 
     return (
-        <div className="space-y-4 py-4">
+        <div className="space-y-4">
             {message && (
-                <div className={`p-3 rounded-md text-sm flex items-center gap-2 ${message.type === 'success' ? 'bg-green-100 text-green-700' : 'bg-destructive/10 text-destructive'}`}>
+                <div className={`p-3 rounded-md text-sm flex items-center gap-2 ${message.type === 'success' ? 'bg-green-100 text-green-700 dark:bg-green-900/20 dark:text-green-400' : 'bg-destructive/10 text-destructive'}`}>
                     {message.type === 'success' ? <CheckCircle2 className="h-4 w-4" /> : <AlertCircle className="h-4 w-4" />}
                     {message.text}
                 </div>
@@ -192,7 +227,7 @@ function ChangePasswordForm() {
     );
 }
 
-function DeleteAccountForm({ onClose }: { onClose: () => void }) {
+function DeleteAccountForm() {
     const [loading, setLoading] = useState(false);
     const [confirmText, setConfirmText] = useState("");
     const router = useRouter();
@@ -217,7 +252,6 @@ function DeleteAccountForm({ onClose }: { onClose: () => void }) {
                 setLoading(false);
             } else {
                 // Success - redirect to home
-                onClose();
                 router.push("/");
             }
         } catch (err) {
@@ -227,7 +261,7 @@ function DeleteAccountForm({ onClose }: { onClose: () => void }) {
     };
 
     return (
-        <div className="space-y-4 py-4">
+        <div className="space-y-4">
             <div className="rounded-md bg-destructive/10 p-4 border border-destructive/20">
                 <h3 className="text-destructive font-medium flex items-center gap-2">
                     <AlertCircle className="h-4 w-4" />

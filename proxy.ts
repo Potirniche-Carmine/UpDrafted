@@ -31,28 +31,29 @@ export default async function proxy(req: NextRequest) {
     const { pathname } = req.nextUrl;
 
     // Skip all processing for webhook routes, auth routes, static files, and public assets
+    // These routes handle their own authentication/authorization
     if (pathname.startsWith('/api/webhooks/') ||
         pathname.startsWith('/api/auth/') ||
         pathname.startsWith('/api/activity/cleanup') ||
         pathname.startsWith('/_next/') ||
         pathname.includes('.')) {
-        return NextResponse.next();
+        return addSecurityHeaders(NextResponse.next());
     }
 
     const hasSession = hasSessionCookie(req);
 
     // Public routes that don't require authentication
     const publicRoutes = [
-        '/', 
-        '/sign-in', 
+        '/',
+        '/sign-in',
         '/sign-up',
-        '/forgot-password',
-        '/about', 
-        '/contact', 
-        '/terms-of-service', 
-        '/privacy-policy', 
-        '/for-coaches', 
-        '/for-athletes', 
+        '/reset-password',
+        '/about',
+        '/contact',
+        '/terms-of-service',
+        '/privacy-policy',
+        '/for-coaches',
+        '/for-athletes',
         '/for-recruiters'
     ];
     const isPublicRoute = publicRoutes.some(route => pathname === route || pathname.startsWith(route + '/'));
@@ -60,7 +61,7 @@ export default async function proxy(req: NextRequest) {
     // Auth pages - redirect to dashboard if has session cookie (except for forgot-password)
     const authPagesWithoutSession = ['/forgot-password'];
     const isAuthPageWithoutSession = authPagesWithoutSession.some(route => pathname.startsWith(route));
-    
+
     if ((pathname.startsWith('/sign-in') || pathname.startsWith('/sign-up')) && hasSession && !isAuthPageWithoutSession) {
         return NextResponse.redirect(new URL('/dashboard', req.url));
     }

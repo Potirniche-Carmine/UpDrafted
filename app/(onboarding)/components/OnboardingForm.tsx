@@ -127,10 +127,8 @@ export default function OnboardingForm({ role, onBack }: OnboardingFormProps) {
       });
 
       if (response.ok) {
-        // Refresh session to Ensure the new role is picked up
-        await authClient.getSession();
-
-        // Force a hard redirect to the dashboard to ensure middleware and server components see the new role
+        // Force a hard refresh to reload Better Auth cookies and session
+        // This ensures the new role is immediately recognized without re-login
         window.location.href = "/dashboard";
       } else {
         const errorData = await response.json();

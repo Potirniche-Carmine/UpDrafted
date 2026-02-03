@@ -196,9 +196,6 @@ export const useNotifications = () => {
 
     // Only set up polling if user is authenticated
     if (isSignedIn) {
-      // Always fetch once on page navigation (remove cooldown for page changes)
-      fetchWithToken(true);
-
       // Set up interval for periodic polling
       intervalRef.current = setInterval(() => {
         if (!document.hidden && !isOnNotificationsPage && isSignedIn) {

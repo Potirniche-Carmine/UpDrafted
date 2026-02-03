@@ -1,7 +1,7 @@
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { stripe } from "@better-auth/stripe";
-import { emailOTP } from "better-auth/plugins";
+import { emailOTP, magicLink, username } from "better-auth/plugins";
 import { db } from "@/database/db";
 import Stripe from "stripe";
 import { Resend } from "resend";
@@ -34,7 +34,7 @@ export const auth = betterAuth({
                 html: `
                     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
                         <h2 style="color: #01ae79;">Reset Your Password</h2>
-                        <p>Hi ${user.name || 'there'},</p>
+                        <p>Hi there,</p>
                         <p>We received a request to reset your password. Click the button below to create a new password:</p>
                         <div style="text-align: center; margin: 30px 0;">
                             <a href="${url}" style="background-color: #01ae79; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; display: inline-block;">Reset Password</a>
@@ -59,7 +59,7 @@ export const auth = betterAuth({
                 html: `
                     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
                         <h2 style="color: #01ae79;">Welcome to UpDrafted!</h2>
-                        <p>Hi ${user.name || 'there'},</p>
+                        <p>Hi there,</p>
                         <p>Thanks for signing up! Please verify your email address by clicking the button below:</p>
                         <div style="text-align: center; margin: 30px 0;">
                             <a href="${url}" style="background-color: #01ae79; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; display: inline-block;">Verify Email</a>
@@ -74,14 +74,19 @@ export const auth = betterAuth({
         },
     },
 
-    // Magic Link
-    magicLink: {
-        enabled: true,
-        sendOnSignUp: false,
+    // Account configuration
+    account: {
+        accountLinking: {
+            enabled: false,
+        },
     },
 
-    // Extend the user model with role field
+    // User configuration
     user: {
+        // Enable account deletion
+        deleteUser: {
+            enabled: true,
+        },
         additionalFields: {
             role: {
                 type: "string",
@@ -101,7 +106,7 @@ export const auth = betterAuth({
                     html: `
                         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
                             <h2 style="color: #01ae79;">Verify Your New Email</h2>
-                            <p>Hi ${user.name || 'there'},</p>
+                            <p>Hi there,</p>
                             <p>We received a request to change your email address. Click the button below to verify your new email:</p>
                             <div style="text-align: center; margin: 30px 0;">
                                 <a href="${url}" style="background-color: #01ae79; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; display: inline-block;">Verify New Email</a>
@@ -146,16 +151,43 @@ export const auth = betterAuth({
                 ],
             },
         }),
+        magicLink({
+            sendMagicLink: async ({ email, url }: { email: string; url: string }) => {
+                await resend.emails.send({
+                    from: EMAIL_FROM,
+                    to: email,
+                    subject: "Sign in to UpDrafted - Magic Link",
+                    html: `
+                        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                            <h2 style="color: #01ae79;">Sign in to UpDrafted</h2>
+                            <p>Click the button below to sign in to your account:</p>
+                            <div style="text-align: center; margin: 30px 0;">
+                                <a href="${url}" style="background-color: #01ae79; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; display: inline-block;">Sign In</a>
+                            </div>
+                            <p>Or copy and paste this link into your browser:</p>
+                            <p style="color: #666; word-break: break-all;">${url}</p>
+                            <p>This link will expire in 10 minutes.</p>
+                            <p>If you didn't request this, you can safely ignore this email.</p>
+                            <p>Best regards,<br>The UpDrafted Team</p>
+                        </div>
+                    `,
+                });
+            },
+        }),
+        username({
+            // Map username fields to use the existing 'name' field
+            // This tells Better Auth to use 'name' for both username and displayUsername
+        }),
         emailOTP({
             async sendVerificationOTP({ email, otp, type }) {
-                const subject = type === "forget-password" 
-                    ? "Password Reset Code - UpDrafted" 
+                const subject = type === "forget-password"
+                    ? "Password Reset Code - UpDrafted"
                     : "Verification Code - UpDrafted";
-                
-                const title = type === "forget-password" 
-                    ? "Reset Your Password" 
+
+                const title = type === "forget-password"
+                    ? "Reset Your Password"
                     : "Verify Your Email";
-                
+
                 const message = type === "forget-password"
                     ? "Enter this code to reset your password:"
                     : "Enter this code to verify your email:";

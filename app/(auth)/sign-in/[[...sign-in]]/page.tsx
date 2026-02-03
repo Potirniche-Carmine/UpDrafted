@@ -4,26 +4,37 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { signIn } from "@/lib/auth-client";
+import { ForgotPasswordDialog } from "@/components/forgot-password-dialog";
+import { MagicLinkDialog } from "@/components/magic-link-dialog";
 
 export default function SignInPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [email, setEmail] = useState("");
+  const [emailOrUsername, setEmailOrUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
   const [loading, setLoading] = useState(false);
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const [showMagicLink, setShowMagicLink] = useState(false);
 
   useEffect(() => {
     // Show success message if redirected from email verification
     if (searchParams.get("verified") === "true") {
       setSuccessMessage("Email verified successfully! You can now sign in.");
     }
-    
+
+    // Show success message if redirected from password reset
+    if (searchParams.get("reset") === "success") {
+      setSuccessMessage("Password reset successfully! You can now sign in with your new password.");
+    }
+
     // Show error if email verification failed
     const verificationError = searchParams.get("error");
-    if (verificationError) {
+    if (verificationError === "verification-failed") {
       setError("Email verification failed. The link may have expired. Please try signing up again.");
+    } else if (verificationError === "magic-link-failed") {
+      setError("Magic link verification failed. The link may have expired. Please request a new one.");
     }
   }, [searchParams]);
 
@@ -34,17 +45,28 @@ export default function SignInPage() {
     setLoading(true);
 
     try {
-      const result = await signIn.email({
-        email,
-        password,
-      });
+      // Detect if input is email or username (simple check: contains @)
+      const isEmail = emailOrUsername.includes("@");
+
+      let result;
+      if (isEmail) {
+        result = await signIn.email({
+          email: emailOrUsername,
+          password,
+        });
+      } else {
+        result = await signIn.username({
+          username: emailOrUsername,
+          password,
+        });
+      }
 
       if (result.error) {
         // Check if error is due to unverified email
         if (result.error.status === 403) {
           setError("Please verify your email address before signing in. Check your inbox for the verification link.");
         } else {
-          setError(result.error.message || "Invalid email or password");
+          setError(result.error.message || "Invalid credentials");
         }
         setLoading(false);
         return;
@@ -58,20 +80,7 @@ export default function SignInPage() {
     }
   };
 
-  const handleMagicLink = async () => {
-    if (!email) {
-      setError("Please enter your email address");
-      return;
-    }
-    setLoading(true);
-    try {
-      await signIn.magicLink({ email, callbackURL: "/dashboard" });
-      alert("Magic link sent! Check your email.");
-    } catch (err) {
-      setError("Failed to send magic link");
-    }
-    setLoading(false);
-  };
+
 
   return (
     <div className="flex min-h-[80vh] items-center justify-center">
@@ -98,19 +107,19 @@ export default function SignInPage() {
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="space-y-4">
               <div>
-                <label htmlFor="email" className="block text-sm font-medium">
-                  Email address
+                <label htmlFor="emailOrUsername" className="block text-sm font-medium">
+                  Email or Username
                 </label>
                 <input
-                  id="email"
-                  name="email"
-                  type="email"
-                  autoComplete="email"
+                  id="emailOrUsername"
+                  name="emailOrUsername"
+                  type="text"
+                  autoComplete="username email"
                   required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  value={emailOrUsername}
+                  onChange={(e) => setEmailOrUsername(e.target.value)}
                   className="mt-1 block w-full rounded-lg border border-input bg-background px-4 py-3 text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
-                  placeholder="you@example.com"
+                  placeholder="you@example.com or username"
                 />
               </div>
 
@@ -119,9 +128,13 @@ export default function SignInPage() {
                   <label htmlFor="password" className="block text-sm font-medium">
                     Password
                   </label>
-                  <Link href="/forgot-password" className="text-sm text-primary hover:underline">
+                  <button
+                    type="button"
+                    onClick={() => setShowForgotPassword(true)}
+                    className="text-sm text-primary hover:underline"
+                  >
                     Forgot password?
-                  </Link>
+                  </button>
                 </div>
                 <input
                   id="password"
@@ -159,7 +172,7 @@ export default function SignInPage() {
 
           <button
             type="button"
-            onClick={handleMagicLink}
+            onClick={() => setShowMagicLink(true)}
             disabled={loading}
             className="w-full rounded-lg border border-input bg-background px-4 py-3 font-medium text-foreground transition-colors hover:bg-accent hover:text-accent-foreground disabled:opacity-50"
           >
@@ -173,6 +186,18 @@ export default function SignInPage() {
             Sign up
           </Link>
         </p>
+
+        <ForgotPasswordDialog
+          open={showForgotPassword}
+          onOpenChange={setShowForgotPassword}
+          defaultEmail={emailOrUsername.includes("@") ? emailOrUsername : ""}
+        />
+
+        <MagicLinkDialog
+          open={showMagicLink}
+          onOpenChange={setShowMagicLink}
+          defaultEmail={emailOrUsername.includes("@") ? emailOrUsername : ""}
+        />
       </div>
     </div>
   );

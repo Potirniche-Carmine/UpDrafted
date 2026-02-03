@@ -1,6 +1,6 @@
 import { createAuthClient } from "better-auth/react";
 import { stripeClient } from "@better-auth/stripe/client";
-import { magicLinkClient, emailOTPClient } from "better-auth/client/plugins";
+import { magicLinkClient, emailOTPClient, usernameClient } from "better-auth/client/plugins";
 
 // Create the auth client for use in React components
 export const authClient = createAuthClient({
@@ -13,6 +13,7 @@ export const authClient = createAuthClient({
         }),
         magicLinkClient(),
         emailOTPClient(),
+        usernameClient(),
     ],
 });
 

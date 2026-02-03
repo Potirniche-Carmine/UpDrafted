@@ -7,7 +7,7 @@ import { useTheme } from "next-themes";
 import Image from "next/image";
 import { useState, useEffect } from "react";
 import { useRouter, usePathname } from "next/navigation";
-import { UserAccountModal } from "@/components/user-account-modal";
+
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -155,7 +155,7 @@ function UserButtonDropdown({
             />
           ) : (
             <div className="w-9 h-9 rounded-full bg-[#01ae79]/10 flex items-center justify-center text-[#01ae79] font-medium ring-2 ring-[#01ae79]/20 dark:ring-[#01ae79]/30">
-              {user.name?.[0] || user.email[0].toUpperCase()}
+              {(user.name?.[0] || user.email[0]).toUpperCase()}
             </div>
           )}
           {hasCompletedOnboarding && (
@@ -183,17 +183,11 @@ function UserButtonDropdown({
           <UserIcon className="mr-2 h-4 w-4" />
           <span>{profileNavigating ? "Loading..." : "View Profile"}</span>
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={handleViewProfile} disabled={profileNavigating}>
-          <UserIcon className="mr-2 h-4 w-4" />
-          <span>{profileNavigating ? "Loading..." : "View Profile"}</span>
-        </DropdownMenuItem>
         <DropdownMenuSeparator />
-        <UserAccountModal>
-          <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
-            <Settings className="mr-2 h-4 w-4" />
-            <span>Manage Account</span>
-          </DropdownMenuItem>
-        </UserAccountModal>
+        <DropdownMenuItem onClick={() => router.push('/account')}>
+          <Settings className="mr-2 h-4 w-4" />
+          <span>Manage Account</span>
+        </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem onClick={handleSignOut} className="text-destructive focus:text-destructive">
           <LogOut className="mr-2 h-4 w-4" />

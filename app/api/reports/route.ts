@@ -54,6 +54,7 @@ export async function POST(request: NextRequest) {
           // Create the user if they don't exist
           await userOperations.createUser({
             id: reporterId,
+            name: session.user.name || session.user.email.split('@')[0],
             email: session.user.email,
             role: session.user.role as any || 'athlete'
           });
