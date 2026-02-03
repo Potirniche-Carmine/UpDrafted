@@ -44,15 +44,9 @@ export function AdminRoleSwitcher() {
       hasFetchedProfiles.current = true;
 
       try {
-        const token = await getToken();
-        if (!token) {
-          console.error('No auth token available');
-          return;
-        }
 
         const response = await fetch('/api/admin/demo-profiles', {
           headers: {
-            'Authorization': `Bearer ${token}`,
             'Accept': 'application/json',
           }
         });

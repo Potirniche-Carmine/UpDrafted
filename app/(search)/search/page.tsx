@@ -105,7 +105,7 @@ function SearchPageContent() {
   const initialPage = parseInt(searchParams.get('page') || '1');
   const initialRole = searchParams.get('role') || 'all';
   const initialSport = searchParams.get('sport') || 'all';
-  
+
   const [inputValue, setInputValue] = useState(initialQuery);
   const [searchTerm, setSearchTerm] = useState(initialQuery);
   const [roleFilter, setRoleFilter] = useState<string>(initialRole);
@@ -117,7 +117,7 @@ function SearchPageContent() {
   const [totalPages, setTotalPages] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
   const [lastLoadedPage, setLastLoadedPage] = useState(0);
-  const { getToken } = useAuth();
+
 
   // Add debounce and prevent duplicate calls
   const searchRequestRef = useRef<AbortController | null>(null);
@@ -135,24 +135,23 @@ function SearchPageContent() {
 
     // Create unique identifier for the search request
     const searchParams = `${query}-${Math.ceil(page / PAGES_TO_LOAD)}`;
-    
+
     // Prevent duplicate requests
     if (lastSearchParamsRef.current === searchParams) {
       return;
     }
-    
+
     // Cancel previous request if still pending
     if (searchRequestRef.current) {
       searchRequestRef.current.abort();
     }
-    
+
     // Create new abort controller for this request
     searchRequestRef.current = new AbortController();
     lastSearchParamsRef.current = searchParams;
 
     setIsLoading(true);
     try {
-      const token = await getToken();
       const params = new URLSearchParams({
         q: query,
         page: Math.ceil(page / PAGES_TO_LOAD).toString(),
@@ -160,12 +159,9 @@ function SearchPageContent() {
       });
 
       const response = await fetch(`/api/search?${params.toString()}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
         signal: searchRequestRef.current.signal
       });
-      
+
       if (response.ok) {
         const data = await response.json();
         // Append new results to existing ones
@@ -193,7 +189,7 @@ function SearchPageContent() {
       setIsLoading(false);
       searchRequestRef.current = null;
     }
-  }, [getToken]);
+  }, []);
 
   // Track if initial search has been performed
   const hasPerformedInitialSearch = useRef(false);
@@ -229,12 +225,12 @@ function SearchPageContent() {
 
     // Update filtered results
     setFilteredResults(filtered.filter(Boolean));
-    
+
     // Update pagination for filtered results
     const totalFilteredResults = filtered.filter(Boolean).length;
     setTotalResults(totalFilteredResults);
     setTotalPages(Math.ceil(totalFilteredResults / RESULTS_PER_PAGE));
-    
+
     // Reset to first page when filters change
     setCurrentPage(1);
   }, [allResults, roleFilter, sportFilter]);
@@ -244,13 +240,13 @@ function SearchPageContent() {
     if (inputValue.length >= 3) {
       // Update the actual search term
       setSearchTerm(inputValue);
-      
+
       // Update URL with current search parameters and filters
       const params = new URLSearchParams();
       params.set('q', inputValue);
       if (roleFilter !== 'all') params.set('role', roleFilter);
       if (sportFilter !== 'all') params.set('sport', sportFilter);
-      
+
       // Reset page to 1 and perform search
       setCurrentPage(1);
       router.replace(`/search?${params.toString()}`);
@@ -278,12 +274,12 @@ function SearchPageContent() {
     if (!profileImage) {
       return null;
     }
-    
+
     // If it's already a full URL, return as is
     if (profileImage.startsWith('http')) {
       return profileImage;
     }
-    
+
     // Construct the full R2 URL using environment variable or fallback to known R2 domain
     const baseUrl = process.env.NEXT_PUBLIC_R2_PUBLIC_URL || 'https://pub-19c0754937db426497ca014f0e2a297c.r2.dev';
     return `${baseUrl}/${profileImage}`;
@@ -325,15 +321,15 @@ function SearchPageContent() {
                   onChange={(e) => setInputValue(e.target.value)}
                 />
               </div>
-              <Button 
-                type="submit" 
+              <Button
+                type="submit"
                 className="h-14 sm:h-12 w-full sm:w-auto px-8 bg-[#01ae79] hover:bg-[#01ae79]/90 text-white font-medium text-base"
                 disabled={inputValue.length < 3}
               >
                 Search
               </Button>
             </div>
-            
+
             {/* Always visible filters */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
               <div>
@@ -350,7 +346,7 @@ function SearchPageContent() {
                   </SelectContent>
                 </Select>
               </div>
-              
+
               <div>
                 <label className="block text-sm font-medium mb-2">Sport</label>
                 <UnifiedSportSelector
@@ -400,100 +396,100 @@ function SearchPageContent() {
         </div>
       ) : getCurrentPageResults().length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 mb-6 sm:mb-8">{getCurrentPageResults().map((user) => (
-            <Link key={user.id} href={generateProfileUrl(user.fullName, user.id)}>
-              <Card className="hover:shadow-lg transition-all duration-200 hover:border-green-200 dark:hover:border-green-800 group h-full">
-                <CardContent className="p-4 sm:p-6">
-                  <div className="flex items-start gap-3 md:gap-4">
-                    <div className="relative flex-shrink-0">
-                      <Avatar className="w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 ring-2 ring-[#01ae79]/20 group-hover:ring-[#01ae79]/50 transition-all duration-200">
-                        <AvatarImage 
-                          src={getProfileImageUrl(user.profileImage) || undefined} 
-                          alt={user.fullName}
-                          className="object-cover"
-                        />
-                        <AvatarFallback className="bg-muted text-muted-foreground">
-                          <Users className="w-6 h-6" />
-                        </AvatarFallback>
-                      </Avatar>
-                      {user.isVerified && (
-                        <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-green-500 rounded-full flex items-center justify-center ring-2 ring-background">
-                          <Shield className="h-3 w-3 text-white stroke-[4]" />
+          <Link key={user.id} href={generateProfileUrl(user.fullName, user.id)}>
+            <Card className="hover:shadow-lg transition-all duration-200 hover:border-green-200 dark:hover:border-green-800 group h-full">
+              <CardContent className="p-4 sm:p-6">
+                <div className="flex items-start gap-3 md:gap-4">
+                  <div className="relative flex-shrink-0">
+                    <Avatar className="w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 ring-2 ring-[#01ae79]/20 group-hover:ring-[#01ae79]/50 transition-all duration-200">
+                      <AvatarImage
+                        src={getProfileImageUrl(user.profileImage) || undefined}
+                        alt={user.fullName}
+                        className="object-cover"
+                      />
+                      <AvatarFallback className="bg-muted text-muted-foreground">
+                        <Users className="w-6 h-6" />
+                      </AvatarFallback>
+                    </Avatar>
+                    {user.isVerified && (
+                      <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-green-500 rounded-full flex items-center justify-center ring-2 ring-background">
+                        <Shield className="h-3 w-3 text-white stroke-[4]" />
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-start justify-between mb-2">
+                      <h3 className="font-semibold text-foreground truncate text-sm md:text-base">
+                        {user.fullName}
+                      </h3>
+                    </div>
+
+                    <div className="flex items-center gap-2 mb-2 flex-wrap">
+                      {getRoleBadge(user.role, user.division, user.educationLevel)}
+                    </div>
+
+                    <div className="space-y-1">
+                      {/* Sport/Title */}
+                      <div className="flex items-center gap-2 text-xs md:text-sm text-muted-foreground">
+                        <Building2 className="w-3 h-3 md:w-4 md:h-4 flex-shrink-0 text-[#01ae79]" />
+                        <span className="font-medium">{user.role === 'athlete' ? user.sport : user.title}</span>
+                      </div>
+
+                      {/* Location */}
+                      <div className="flex items-center gap-2 text-xs md:text-sm text-muted-foreground">
+                        <MapPin className="w-3 h-3 md:w-4 md:h-4 flex-shrink-0 text-[#01ae79]" />
+                        <span className="font-medium">{user.city}, {user.state}</span>
+                      </div>
+
+                      {/* Organization */}
+                      <p className="text-xs md:text-sm font-medium text-muted-foreground truncate">
+                        {user.organizationName}
+                      </p>
+
+                      {/* Athlete-specific: Height & Weight */}
+                      {user.role === 'athlete' && (user.height || user.weight) && (
+                        <div className="flex items-center gap-2 text-xs md:text-sm text-muted-foreground">
+                          <Users className="w-3 h-3 md:w-4 md:h-4 flex-shrink-0 text-[#01ae79]" />
+                          <span className="font-medium">
+                            {[
+                              user.height,
+                              user.weight ? `${user.weight} lbs` : null
+                            ].filter(Boolean).join(' / ')}
+                          </span>
+                        </div>
+                      )}
+
+                      {/* Graduation Year */}
+                      {user.graduationYear && (
+                        <div className="flex items-center gap-2 text-xs md:text-sm text-muted-foreground">
+                          <Clock className="w-3 h-3 md:w-4 md:h-4 flex-shrink-0 text-[#01ae79]" />
+                          <span className="font-medium">Class of {user.graduationYear}</span>
+                        </div>
+                      )}
+
+                      {/* Positions for athletes */}
+                      {user.role === 'athlete' && user.positions && user.positions.length > 0 && (
+                        <div className="flex items-center gap-2 text-xs md:text-sm text-muted-foreground">
+                          <Target className="w-3 h-3 md:w-4 md:h-4 flex-shrink-0 text-[#01ae79]" />
+                          <span className="font-medium">{user.positions.join(', ')}</span>
+                        </div>
+                      )}
+
+                      {/* Title for coaches/recruiters */}
+                      {user.title && user.role !== 'athlete' && (
+                        <div className="flex items-center gap-2 text-xs md:text-sm text-muted-foreground">
+                          <School className="w-3 h-3 md:w-4 md:h-4 flex-shrink-0 text-[#01ae79]" />
+                          <span className="font-medium truncate">{user.title}</span>
                         </div>
                       )}
                     </div>
-                    
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-start justify-between mb-2">
-                        <h3 className="font-semibold text-foreground truncate text-sm md:text-base">
-                          {user.fullName}
-                        </h3>
-                      </div>
-                      
-                      <div className="flex items-center gap-2 mb-2 flex-wrap">
-                        {getRoleBadge(user.role, user.division, user.educationLevel)}
-                      </div>
-                      
-                      <div className="space-y-1">
-                        {/* Sport/Title */}
-                        <div className="flex items-center gap-2 text-xs md:text-sm text-muted-foreground">
-                          <Building2 className="w-3 h-3 md:w-4 md:h-4 flex-shrink-0 text-[#01ae79]" />
-                          <span className="font-medium">{user.role === 'athlete' ? user.sport : user.title}</span>
-                        </div>
-                        
-                        {/* Location */}
-                        <div className="flex items-center gap-2 text-xs md:text-sm text-muted-foreground">
-                          <MapPin className="w-3 h-3 md:w-4 md:h-4 flex-shrink-0 text-[#01ae79]" />
-                          <span className="font-medium">{user.city}, {user.state}</span>
-                        </div>
-                        
-                        {/* Organization */}
-                        <p className="text-xs md:text-sm font-medium text-muted-foreground truncate">
-                          {user.organizationName}
-                        </p>
-                        
-                        {/* Athlete-specific: Height & Weight */}
-                        {user.role === 'athlete' && (user.height || user.weight) && (
-                          <div className="flex items-center gap-2 text-xs md:text-sm text-muted-foreground">
-                            <Users className="w-3 h-3 md:w-4 md:h-4 flex-shrink-0 text-[#01ae79]" />
-                            <span className="font-medium">
-                              {[
-                                user.height, 
-                                user.weight ? `${user.weight} lbs` : null
-                              ].filter(Boolean).join(' / ')}
-                            </span>
-                          </div>
-                        )}
-                        
-                        {/* Graduation Year */}
-                        {user.graduationYear && (
-                          <div className="flex items-center gap-2 text-xs md:text-sm text-muted-foreground">
-                            <Clock className="w-3 h-3 md:w-4 md:h-4 flex-shrink-0 text-[#01ae79]" />
-                            <span className="font-medium">Class of {user.graduationYear}</span>
-                          </div>
-                        )}
-                        
-                        {/* Positions for athletes */}
-                        {user.role === 'athlete' && user.positions && user.positions.length > 0 && (
-                          <div className="flex items-center gap-2 text-xs md:text-sm text-muted-foreground">
-                            <Target className="w-3 h-3 md:w-4 md:h-4 flex-shrink-0 text-[#01ae79]" />
-                            <span className="font-medium">{user.positions.join(', ')}</span>
-                          </div>
-                        )}
-                        
-                        {/* Title for coaches/recruiters */}
-                        {user.title && user.role !== 'athlete' && (
-                          <div className="flex items-center gap-2 text-xs md:text-sm text-muted-foreground">
-                            <School className="w-3 h-3 md:w-4 md:h-4 flex-shrink-0 text-[#01ae79]" />
-                            <span className="font-medium truncate">{user.title}</span>
-                          </div>
-                        )}
-                      </div>
-                    </div>
                   </div>
-                </CardContent>
-              </Card>
-            </Link>
-          ))}
+                </div>
+              </CardContent>
+            </Card>
+          </Link>
+        ))}
         </div>
       ) : (
         <div className="text-center py-12 sm:py-16">
@@ -521,7 +517,7 @@ function SearchPageContent() {
           >
             Previous
           </Button>
-          
+
           <div className="flex items-center gap-1 flex-wrap justify-center">
             {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => {
               // Show first page, last page, current page, and pages around current
@@ -535,7 +531,7 @@ function SearchPageContent() {
               } else {
                 page = currentPage - 2 + i;
               }
-              
+
               return (
                 <Button
                   key={page}
@@ -549,7 +545,7 @@ function SearchPageContent() {
               );
             })}
           </div>
-          
+
           <Button
             variant="outline"
             onClick={() => setCurrentPage(currentPage + 1)}

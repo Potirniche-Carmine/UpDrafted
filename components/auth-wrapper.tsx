@@ -141,7 +141,6 @@ export function AuthWrapper({
   type = 'default'
 }: AuthWrapperProps) {
   const { isSignedIn, isLoaded, user } = useUser();
-  const { getToken } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
   const [isAuthorized, setIsAuthorized] = useState(false);

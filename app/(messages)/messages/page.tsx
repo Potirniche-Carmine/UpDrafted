@@ -1,7 +1,7 @@
 "use client";
 
 import { Button } from '@/components/ui/button';
-import { MessageSquare, Send, Search, Users, ArrowLeft, Lock, Flag, Crown, Eye} from 'lucide-react';
+import { MessageSquare, Send, Search, Users, ArrowLeft, Lock, Flag, Crown, Eye } from 'lucide-react';
 import { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import { Badge } from "@/components/ui/badge";
 import Link from 'next/link';
@@ -75,7 +75,7 @@ const getProfileImageUrl = (profileImage: string | null): string | null => {
   if (!profileImage || typeof profileImage !== 'string') {
     return null;
   }
-  
+
   // Clean up "undefined/" from the path, which seems to be a data issue
   const cleanedProfileImage = profileImage.replace('undefined/', '');
 
@@ -83,7 +83,7 @@ const getProfileImageUrl = (profileImage: string | null): string | null => {
   if (cleanedProfileImage.startsWith('http')) {
     return cleanedProfileImage;
   }
-  
+
   // Construct the full R2 URL using environment variable or fallback to known R2 domain
   const baseUrl = process.env.NEXT_PUBLIC_R2_PUBLIC_URL || 'https://pub-19c0754937db426497ca014f0e2a297c.r2.dev';
   return `${baseUrl}/${cleanedProfileImage}`;
@@ -153,7 +153,7 @@ const getRoleBadge = (role: string, division?: string, educationLevel?: string) 
 export default function MessagingPage() {
   // State for conversations and messaging
   const [conversations, setConversations] = useState<Conversation[]>([]);
-  const [messagesCache, setMessagesCache] = useState<{[key: number]: Message[]}>({});
+  const [messagesCache, setMessagesCache] = useState<{ [key: number]: Message[] }>({});
   const [selectedConversationId, setSelectedConversationId] = useState<number | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [newMessage, setNewMessage] = useState('');
@@ -162,18 +162,18 @@ export default function MessagingPage() {
   const [error, setError] = useState<string | null>(null);
   const { isOffline } = useOfflineStatus();
   const [isNewMessageDialogOpen, setIsNewMessageDialogOpen] = useState(false);
-  const [connections, setConnections] = useState<Array<{id: string, name: string, imageUrl: string | null, role: string, division?: string, educationLevel?: string}>>([]);
+  const [connections, setConnections] = useState<Array<{ id: string, name: string, imageUrl: string | null, role: string, division?: string, educationLevel?: string }>>([]);
   const [loadingConnections, setLoadingConnections] = useState(false);
   const [connectionSearchTerm, setConnectionSearchTerm] = useState("");
   const [initialLoadComplete, setInitialLoadComplete] = useState(false);
   const [reportDialogOpen, setReportDialogOpen] = useState(false);
   const [targetConnectionId, setTargetConnectionId] = useState<string | null>(null);
   const [showReadReceiptUpgrade, setShowReadReceiptUpgrade] = useState(false);
-  
+
   // Get premium features
   const features = useFeatureAccess();
   const hasReadReceiptAccess = features.profileViewInsights; // Using profileViewInsights as proxy for read receipts premium feature
-  
+
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const fetchingConversations = useRef(false);
@@ -184,12 +184,12 @@ export default function MessagingPage() {
     const urlParams = new URLSearchParams(window.location.search);
     //const conversationParam = urlParams.get('conversation');
     const messageParam = urlParams.get('message');
-    
+
     // If there's a message parameter, pre-fill the message input
     if (messageParam) {
       const decodedMessage = decodeURIComponent(messageParam);
       setNewMessage(decodedMessage);
-      
+
       // Focus the textarea after a short delay to ensure it's rendered
       setTimeout(() => {
         if (textareaRef.current) {
@@ -198,7 +198,7 @@ export default function MessagingPage() {
       }, 100);
     }
   }, []); // Only run once on mount
-  
+
 
 
   // Handle mobile keyboard visibility and scroll behavior
@@ -209,13 +209,13 @@ export default function MessagingPage() {
     const handleFocus = () => {
       // Only scroll into view on mobile devices to handle keyboard visibility
       const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth <= 768;
-      
+
       if (isMobile) {
         // Small delay to ensure keyboard is showing
         setTimeout(() => {
           // Scroll the textarea into view on mobile
-          textarea.scrollIntoView({ 
-            behavior: 'smooth', 
+          textarea.scrollIntoView({
+            behavior: 'smooth',
             block: 'center',
             inline: 'nearest'
           });
@@ -243,13 +243,13 @@ export default function MessagingPage() {
     if (!selectedConversationId || !messagesCache[selectedConversationId]) {
       return [];
     }
-    
+
     // Get messages and sort them by createdAt timestamp to ensure consistent ordering
     // This ensures oldest messages are at the top and newest at the bottom
     const sortedMessages = [...messagesCache[selectedConversationId]].sort((a, b) => {
       return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
     });
-    
+
     return sortedMessages;
   }, [selectedConversationId, messagesCache]);
 
@@ -265,7 +265,7 @@ export default function MessagingPage() {
 
   // Use ref to track if component is mounted
   const isMounted = useRef(true);
-  
+
   useEffect(() => {
     return () => {
       isMounted.current = false;
@@ -278,24 +278,13 @@ export default function MessagingPage() {
 
     fetchingConversations.current = true;
     setLoading(true);
-    
+
     try {
-      // Get auth token
-      const windowWithClerk = window as WindowWithClerk;
-      const token = await windowWithClerk.Clerk?.session?.getToken();
-      
-      if (!token) {
-        console.error('No auth token available for fetchConversations');
-        setLoading(false);
-        return;
-      }
-      
       // Fetch both conversations and connections in parallel
       const [conversationsResponse, connectionsResponse] = await Promise.all([
         fetch('/api/messages', {
           method: 'POST',
           headers: {
-            'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json'
           },
           body: JSON.stringify({
@@ -304,13 +293,10 @@ export default function MessagingPage() {
           })
         }),
         fetch('/api/connections', {
-          method: 'GET',
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
+          method: 'GET'
         })
       ]);
-      
+
       // Check conversations response
       if (!conversationsResponse.ok) {
         const errorText = await conversationsResponse.text();
@@ -324,30 +310,30 @@ export default function MessagingPage() {
         console.error('Connections API failed:', connectionsResponse.status, errorText);
         throw new Error(`Failed to fetch connections (${connectionsResponse.status}): ${errorText.substring(0, 100)}`);
       }
-      
+
       const conversationsResult = await conversationsResponse.json();
       const connectionsResult = await connectionsResponse.json();
-      
+
       // Debug logging removed for production
-      
+
       // Check for API-level errors
       if (!conversationsResult.success) {
         console.error('Conversations API returned error:', conversationsResult.error);
         throw new Error(`Conversations API error: ${conversationsResult.error}`);
       }
-      
+
       if (!connectionsResult.success) {
         console.error('Connections API returned error:', connectionsResult.error);
         throw new Error(`Connections API error: ${connectionsResult.error}`);
       }
-      
+
       // Process the data
       const existingConversations = conversationsResult.conversations || [];
       const connectedUsers = connectionsResult.connected || [];
-      
+
       // Get list of partner IDs from existing conversations
       const existingPartnerIds = existingConversations.map((convo: Conversation) => convo.partnerId);
-      
+
       // Find connected users who don't have conversations yet
       const missingConversations = connectedUsers
         .filter((conn: ApiConnection) => !existingPartnerIds.includes(conn.otherUser.userId))
@@ -365,53 +351,47 @@ export default function MessagingPage() {
           division: conn.otherUser.division,
           educationLevel: conn.otherUser.educationLevel,
         }));
-      
+
       // Combine existing conversations with missing connections
       const allConversations = [...existingConversations, ...missingConversations];
-      
+
       // Removed verbose logging for production
-      
+
       setConversations(allConversations);
-      
+
       // Mark initial load as complete
       setInitialLoadComplete(true);
     } catch (error) {
       console.error('Error fetching conversations:', error);
       setError(error instanceof Error ? error.message : 'Failed to fetch conversations');
-      
+
       // Fall back to just loading conversations if connections fail
       try {
         // Attempting fallback to conversations only (silently)
-        const windowWithClerk = window as WindowWithClerk;
-        const token = await windowWithClerk.Clerk?.session?.getToken();
-        
-        if (token) {
-          const fallbackResponse = await fetch('/api/messages', {
-            method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${token}`,
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-              operation: 'getConversations',
-              includeFirstConversationMessages: false,
-            })
-          });
-          
-          if (fallbackResponse.ok) {
-            const fallbackResult = await fallbackResponse.json();
-            if (fallbackResult.success) {
-              // Fallback successful
-              setConversations(fallbackResult.conversations || []);
-              setInitialLoadComplete(true);
-              return;
-            }
+        const fallbackResponse = await fetch('/api/messages', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            operation: 'getConversations',
+            includeFirstConversationMessages: false,
+          })
+        });
+
+        if (fallbackResponse.ok) {
+          const fallbackResult = await fallbackResponse.json();
+          if (fallbackResult.success) {
+            // Fallback successful
+            setConversations(fallbackResult.conversations || []);
+            setInitialLoadComplete(true);
+            return;
           }
         }
       } catch (fallbackError) {
         console.error('Fallback also failed:', fallbackError);
       }
-      
+
       setConversations([]);
       setInitialLoadComplete(true); // Still mark as complete to prevent infinite loading
     } finally {
@@ -422,7 +402,7 @@ export default function MessagingPage() {
 
   // Use a stable reference for fetchConversations to prevent infinite re-renders
   const stableFetchConversations = useRef(fetchConversations);
-  
+
   // Update the stable reference when needed (but only runs once due to empty deps)
   useEffect(() => {
     stableFetchConversations.current = fetchConversations;
@@ -434,33 +414,23 @@ export default function MessagingPage() {
     const timeoutId = setTimeout(() => {
       stableFetchConversations.current();
     }, 500);
-    
+
     return () => clearTimeout(timeoutId);
-  // Empty dependency array ensures this only runs once on mount
+    // Empty dependency array ensures this only runs once on mount
   }, []);
 
   // Fetch messages for the selected conversation
   const fetchMessages = useCallback(async (conversationId: number) => {
     if (!conversationId || fetchingMessages.current) return;
-    
+
     fetchingMessages.current = true;
     setLoading(true);
     setError(null);
-    
+
     try {
-      const windowWithClerk = window as unknown as {
-        Clerk?: {
-          session?: {
-            getToken: () => Promise<string>;
-          };
-        };
-      };
-      const token = await windowWithClerk.Clerk?.session?.getToken();
-      
       const response = await fetch('/api/messages', {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
@@ -470,33 +440,33 @@ export default function MessagingPage() {
           offset: 0
         })
       });
-      
+
       if (!response.ok) {
         throw new Error('Failed to fetch messages');
       }
-      
+
       const result = await response.json();
-      
+
       if (result.success) {
         // Just check if the connection is active, nothing else needed
-        
+
         // Update cache with fetched messages
         setMessagesCache(prevCache => ({
           ...prevCache,
           [conversationId]: result.messages || []
         }));
-        
+
         // Update conversations list to mark this conversation as read and update connection status
         setConversations(prevConversations => {
-          const updatedConversations = prevConversations.map(conv => 
-            conv.id === conversationId 
+          const updatedConversations = prevConversations.map(conv =>
+            conv.id === conversationId
               ? { ...conv, unreadCount: 0, connectionActive: result.conversation.connectionActive }
               : conv
           );
-          
+
           return updatedConversations;
         });
-        
+
         // Don't update unread count here - we'll do it in a useEffect
       } else {
         throw new Error(result.error || 'Failed to fetch messages');
@@ -549,27 +519,27 @@ export default function MessagingPage() {
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newMessage.trim() || !selectedConversationId || sendingMessage || !activeConversation?.connectionActive) return;
-    
+
     // Prevent sending messages when offline
     if (isOffline) {
       setError('Cannot send messages while offline. Please check your connection.');
       return;
     }
-    
+
     // Check word limit (400 words max)
     const wordCount = getWordCount(newMessage);
     if (wordCount > 400) {
       alert(`Message too long! Please limit your message to 400 words. Current count: ${wordCount} words.`);
       return;
     }
-    
+
     setSendingMessage(true);
     const messageContent = newMessage.trim();
-    
+
     try {
       // Clear the message input immediately for better UX
       setNewMessage('');
-      
+
       // Create temporary message for immediate display
       const tempMsg: Message = {
         id: Date.now(), // Temporary ID, will be updated on refresh
@@ -581,40 +551,29 @@ export default function MessagingPage() {
         createdAt: new Date().toISOString(),
         messageType: 'text'
       };
-      
+
       // Update messages cache immediately
       setMessagesCache(prevCache => ({
         ...prevCache,
         [selectedConversationId]: [...(prevCache[selectedConversationId] || []), tempMsg]
       }));
-      
+
       // Update conversation preview on the left side immediately
       setConversations(prevConversations => {
-        return prevConversations.map(conv => 
-          conv.id === selectedConversationId 
-            ? { 
-                ...conv, 
-                lastMessagePreview: messageContent,
-                lastMessageTime: new Date().toISOString()
-              }
+        return prevConversations.map(conv =>
+          conv.id === selectedConversationId
+            ? {
+              ...conv,
+              lastMessagePreview: messageContent,
+              lastMessageTime: new Date().toISOString()
+            }
             : conv
         );
       });
-      
-      // Get auth token
-      const windowWithClerk = window as unknown as {
-        Clerk?: {
-          session?: {
-            getToken: () => Promise<string>;
-          };
-        };
-      };
-      const token = await windowWithClerk.Clerk?.session?.getToken();
-      
+
       const response = await fetch('/api/messages', {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
@@ -623,7 +582,7 @@ export default function MessagingPage() {
           message: messageContent
         })
       });
-      
+
       if (!response.ok) {
         const result = await response.json().catch(() => ({})); // Handle cases where body is not JSON
         console.error('Failed to send message:', result.error || 'Server returned an error');
@@ -643,12 +602,12 @@ export default function MessagingPage() {
         // which might be desired UX. For now, we'll leave it.
         return; // Stop execution
       }
-      
+
       // On success, we might want to refetch conversations to get the real message from the server
       // For now, the optimistic update stands.
     } catch (error) {
       console.error('Error sending message:', error);
-      
+
       // Revert the optimistic UI updates on any unexpected error
       setNewMessage(messageContent);
       setMessagesCache(prevCache => {
@@ -673,8 +632,8 @@ export default function MessagingPage() {
   // Filter conversations based on search term
   const filteredConversations = useMemo(() => {
     if (searchTerm.trim()) {
-      return conversations.filter(conv => 
-        conv.partnerName.toLowerCase().includes(searchTerm.toLowerCase()) || 
+      return conversations.filter(conv =>
+        conv.partnerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
         (conv.lastMessagePreview && conv.lastMessagePreview.toLowerCase().includes(searchTerm.toLowerCase()))
       );
     }
@@ -685,32 +644,19 @@ export default function MessagingPage() {
   /* eslint-disable-next-line @typescript-eslint/no-unused-vars */
   const fetchConnections = useCallback(async () => {
     setLoadingConnections(true);
-    
+
     try {
       // Always fetch fresh connections to ensure new connections are included
-      // Get auth token
-      const windowWithClerk = window as unknown as {
-        Clerk?: {
-          session?: {
-            getToken: () => Promise<string>;
-          };
-        };
-      };
-      const token = await windowWithClerk.Clerk?.session?.getToken();
-      
       const response = await fetch('/api/connections', {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
+        method: 'GET'
       });
-      
+
       if (!response.ok) {
         throw new Error('Failed to fetch connections');
       }
-      
+
       const result = await response.json();
-      
+
       if (result.success) {
         if (!result.success || !Array.isArray(result.connections)) {
           setConnections([]);
@@ -727,15 +673,15 @@ export default function MessagingPage() {
             division: conn.otherUser.division,
             educationLevel: conn.otherUser.educationLevel,
           }));
-        
+
         // Get list of partner IDs from existing conversations
         const existingPartnerIds = conversations.map(convo => convo.partnerId);
-        
+
         // Filter out connections that already have conversations or are already shown
         const filteredUsers = connectedUsers.filter(
-          (conn: {id: string}) => !existingPartnerIds.includes(conn.id)
+          (conn: { id: string }) => !existingPartnerIds.includes(conn.id)
         );
-        
+
         setConnections(filteredUsers);
       }
     } catch (error) {
@@ -744,27 +690,17 @@ export default function MessagingPage() {
       setLoadingConnections(false);
     }
   }, [conversations]);
-  
+
   // Start new conversation with a user
   const startConversation = useCallback(async (userId: string) => {
     // Starting conversation – production log removed
     setIsNewMessageDialogOpen(false);
     setLoading(true);
-    
-    try {
-      const windowWithClerk = window as unknown as {
-        Clerk?: {
-          session?: {
-            getToken: () => Promise<string>;
-          };
-        };
-      };
-      const token = await windowWithClerk.Clerk?.session?.getToken();
 
+    try {
       const response = await fetch('/api/messages', {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
@@ -793,11 +729,11 @@ export default function MessagingPage() {
       setLoading(false);
     }
   }, [fetchConversations]);
-  
+
   // Auto-create conversation when coming from profile share
   const handleAutoCreateConversation = useCallback(async (partnerId: string) => {
     setLoading(true);
-    
+
     try {
       const windowWithClerk = window as unknown as {
         Clerk?: {
@@ -824,17 +760,17 @@ export default function MessagingPage() {
 
       if (result.success) {
         const newConversationId = result.conversationId;
-        
+
         // Select the new conversation
         setSelectedConversationId(newConversationId);
         setTargetConnectionId(null);
-        
+
         // Clean up URL parameters
         const newUrl = new URL(window.location.href);
         newUrl.searchParams.delete('conversation');
         newUrl.searchParams.delete('message');
         window.history.replaceState({}, '', newUrl.toString());
-        
+
         // Refresh conversations list to get the new conversation
         fetchConversations();
       } else {
@@ -856,7 +792,7 @@ export default function MessagingPage() {
       // Store the current message to preserve it after conversation creation
       const currentMessage = newMessage;
       await startConversation(conversation.partnerId);
-      
+
       // Restore the message after a short delay to ensure the conversation is selected
       setTimeout(() => {
         if (currentMessage) {
@@ -872,11 +808,11 @@ export default function MessagingPage() {
       setSelectedConversationId(conversation.id);
     }
   }, [startConversation, newMessage]);
-  
+
   // Filter connections based on search
   const filteredConnections = useMemo(() => {
     if (!connectionSearchTerm) return connections;
-    return connections.filter(conn => 
+    return connections.filter(conn =>
       conn.name.toLowerCase().includes(connectionSearchTerm.toLowerCase())
     );
   }, [connections, connectionSearchTerm]);
@@ -885,18 +821,18 @@ export default function MessagingPage() {
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const conversationParam = urlParams.get('conversation');
-    
+
     if (conversationParam && conversations.length > 0 && initialLoadComplete) {
-      
+
       // First, try to find an existing conversation
-      const targetConversation = conversations.find(conv => 
+      const targetConversation = conversations.find(conv =>
         conv.partnerId === conversationParam || conv.id.toString() === conversationParam
       );
-      
+
       if (targetConversation) {
         setSelectedConversationId(targetConversation.id);
         setTargetConnectionId(null);
-        
+
         // Clean up URL parameters after successful selection
         setTimeout(() => {
           const newUrl = new URL(window.location.href);
@@ -909,10 +845,10 @@ export default function MessagingPage() {
         const newConnection = conversations.find(conv => conv.id === 0 && conv.partnerId === conversationParam);
         if (newConnection) {
           setTargetConnectionId(conversationParam);
-          
+
           // Automatically create the conversation and select it
           handleAutoCreateConversation(conversationParam);
-        } 
+        }
       }
     }
   }, [conversations, initialLoadComplete, handleAutoCreateConversation]); // Re-run when conversations are loaded and initial load is complete
@@ -923,10 +859,10 @@ export default function MessagingPage() {
         <div className="max-w-7xl mx-auto">
           {/* Unified messaging interface */}
           <div className="flex border border-border/50 rounded-xl shadow-lg bg-card overflow-hidden" style={{ height: '80vh' }}>
-            
+
             {/* Sidebar - Conversations */}
             <div className={`${selectedConversationId ? 'hidden md:flex' : 'flex'} w-full md:w-80 lg:w-96 border-r border-border/50 flex-col bg-gradient-to-b from-[#01ae79]/20 to-[#01ae79]/20 dark:from-[#01ae79]/10 dark:to-[#01ae79]/10`}>
-              
+
               {/* Sidebar Header with search */}
               <div className="p-4 border-b border-border/50 bg-card/50 backdrop-blur-sm space-y-4">
                 <div className="flex items-center justify-between">
@@ -947,7 +883,7 @@ export default function MessagingPage() {
                   </div>
                   {/* New conversation button removed – all connections already appear in the list */}
                 </div>
-                
+
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <input
@@ -973,13 +909,12 @@ export default function MessagingPage() {
                       <div
                         key={`${convo.id}-${convo.partnerId}`}
                         onClick={() => handleConversationClick(convo)}
-                        className={`p-4 rounded-lg cursor-pointer transition-all duration-200 ${
-                          selectedConversationId === convo.id
+                        className={`p-4 rounded-lg cursor-pointer transition-all duration-200 ${selectedConversationId === convo.id
                             ? 'bg-[#01ae79]/10 dark:bg-[#01ae79]/20 border border-[#01ae79]/30 dark:border-[#01ae79]/40 shadow-sm'
                             : targetConnectionId === convo.partnerId && convo.id === 0
-                            ? 'bg-amber-500/10 dark:bg-amber-500/20 border border-amber-500/30 dark:border-amber-500/40 shadow-sm animate-pulse'
-                            : 'hover:bg-[#01ae79]/5 dark:hover:bg-[#01ae79]/10 border border-transparent hover:border-[#01ae79]/20 dark:hover:border-[#01ae79]/30'
-                        }`}
+                              ? 'bg-amber-500/10 dark:bg-amber-500/20 border border-amber-500/30 dark:border-amber-500/40 shadow-sm animate-pulse'
+                              : 'hover:bg-[#01ae79]/5 dark:hover:bg-[#01ae79]/10 border border-transparent hover:border-[#01ae79]/20 dark:hover:border-[#01ae79]/30'
+                          }`}
                       >
                         <div className="flex items-center space-x-3">
                           <div className="relative flex-shrink-0">
@@ -992,23 +927,22 @@ export default function MessagingPage() {
                           </div>
                           <div className="flex-1 min-w-0">
                             <div className="flex justify-between items-center mb-1">
-                              <h3 className={`text-base font-semibold truncate ${
-                                selectedConversationId === convo.id 
-                                  ? 'text-[#01ae79] dark:text-[#01ae79]' 
+                              <h3 className={`text-base font-semibold truncate ${selectedConversationId === convo.id
+                                  ? 'text-[#01ae79] dark:text-[#01ae79]'
                                   : 'text-foreground'
-                              }`}>
+                                }`}>
                                 {convo.partnerName}
                               </h3>
                               <span className="text-xs text-muted-foreground dark:text-muted-foreground flex-shrink-0">
-                                {convo.lastMessageTime 
+                                {convo.lastMessageTime
                                   ? formatMessageTimestamp(convo.lastMessageTime)
                                   : ''}
                               </span>
                             </div>
                             <div className="flex justify-between items-center">
                               <p className="text-xs text-muted-foreground truncate">
-                                {convo.lastMessagePreview || (convo.id === 0 ? 
-                                  (targetConnectionId === convo.partnerId ? 'Click to start messaging and share profile' : 'Click to start messaging') 
+                                {convo.lastMessagePreview || (convo.id === 0 ?
+                                  (targetConnectionId === convo.partnerId ? 'Click to start messaging and share profile' : 'Click to start messaging')
                                   : 'No messages yet')}
                               </p>
                               {convo.unreadCount > 0 && (
@@ -1102,13 +1036,13 @@ export default function MessagingPage() {
                   </div>
 
                   {/* Offline Indicator */}
-                  <OfflineIndicator 
-                    className="p-4 pb-0" 
+                  <OfflineIndicator
+                    className="p-4 pb-0"
                     onRetry={() => window.location.reload()}
                   />
 
                   {/* Messages Area */}
-                  <div 
+                  <div
                     ref={messagesContainerRef}
                     className="flex-grow p-4 space-y-4 overflow-y-auto bg-gradient-to-b from-transparent to-[#01ae79]/5 dark:to-[#01ae79]/5"
                   >
@@ -1120,32 +1054,29 @@ export default function MessagingPage() {
                       <div className="flex flex-col justify-end min-h-full">
                         <div>
                           {messages.map((msg) => (
-                            <div 
+                            <div
                               key={msg.id}
                               className={`flex ${msg.isFromCurrentUser ? 'justify-end' : 'justify-start'} mb-4`}
                             >
-                              <div className={`max-w-[75%] md:max-w-[70%] p-3 rounded-2xl shadow-sm relative ${
-                                msg.isFromCurrentUser 
-                                  ? 'bg-[#01ae79] text-white rounded-br-md' 
-                                  : `bg-card border text-foreground rounded-bl-md ${
-                                      !msg.isRead
-                                        ? 'border-[#01ae79]/30 dark:border-[#01ae79]/40 bg-[#01ae79]/5 dark:bg-[#01ae79]/10' 
-                                        : 'border-border/40'
-                                    }`
-                              }`}>
+                              <div className={`max-w-[75%] md:max-w-[70%] p-3 rounded-2xl shadow-sm relative ${msg.isFromCurrentUser
+                                  ? 'bg-[#01ae79] text-white rounded-br-md'
+                                  : `bg-card border text-foreground rounded-bl-md ${!msg.isRead
+                                    ? 'border-[#01ae79]/30 dark:border-[#01ae79]/40 bg-[#01ae79]/5 dark:bg-[#01ae79]/10'
+                                    : 'border-border/40'
+                                  }`
+                                }`}>
                                 {!msg.isRead && !msg.isFromCurrentUser && (
                                   <div className="absolute -left-2 top-1/2 transform -translate-y-1/2 w-2 h-2 bg-[#01ae79] rounded-full transition-opacity duration-300"></div>
                                 )}
                                 <p className="text-sm leading-relaxed">{msg.content}</p>
                                 <div className="flex items-center justify-between mt-2">
-                                  <p className={`text-xs ${
-                                    msg.isFromCurrentUser 
-                                      ? 'text-white/80' 
+                                  <p className={`text-xs ${msg.isFromCurrentUser
+                                      ? 'text-white/80'
                                       : 'text-muted-foreground'
-                                  }`}>
+                                    }`}>
                                     {formatMessageTimestamp(msg.createdAt)}
                                   </p>
-                                  
+
                                   {/* Read Receipt Display - Premium Feature */}
                                   {msg.isFromCurrentUser && (
                                     <div className="flex items-center ml-2">
@@ -1214,20 +1145,19 @@ export default function MessagingPage() {
                         />
                         {/* Word Count Display */}
                         {newMessage.trim() && (
-                          <div className={`absolute -bottom-6 right-0 text-xs ${
-                            getWordCount(newMessage) > 400 
-                              ? 'text-red-500' 
-                              : getWordCount(newMessage) > 350 
-                                ? 'text-yellow-500' 
+                          <div className={`absolute -bottom-6 right-0 text-xs ${getWordCount(newMessage) > 400
+                              ? 'text-red-500'
+                              : getWordCount(newMessage) > 350
+                                ? 'text-yellow-500'
                                 : 'text-gray-400'
-                          }`}>
+                            }`}>
                             {getWordCount(newMessage)}/400 words
                           </div>
                         )}
                       </div>
-                      <Button 
-                        type="submit" 
-                        size="icon" 
+                      <Button
+                        type="submit"
+                        size="icon"
                         disabled={!newMessage.trim() || sendingMessage || !activeConversation?.connectionActive || isOffline}
                         className="bg-[#01ae79] hover:bg-[#01ae79]/90 text-white h-12 w-12 rounded-full shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
                       >
@@ -1262,8 +1192,8 @@ export default function MessagingPage() {
                   </div>
                   <h3 className="text-2xl font-semibold text-foreground mb-2">Welcome to Messages</h3>
                   <p className="text-muted-foreground mb-6 max-w-md">
-                    {conversations.length > 0 
-                      ? 'Choose a conversation from the sidebar to start messaging.' 
+                    {conversations.length > 0
+                      ? 'Choose a conversation from the sidebar to start messaging.'
                       : 'Connect with athletes, coaches and recruiters to start messaging.'}
                   </p>
                   {conversations.length === 0 && (
@@ -1279,7 +1209,7 @@ export default function MessagingPage() {
             </div>
           </div>
         </div>
-        
+
         {/* New Message Dialog */}
         <Dialog open={isNewMessageDialogOpen} onOpenChange={setIsNewMessageDialogOpen}>
           <DialogContent className="max-w-md bg-card border-border/50">
@@ -1360,13 +1290,13 @@ export default function MessagingPage() {
                 Read Receipts - Premium Feature
               </DialogTitle>
               <DialogDescription>
-                {activeConversation?.partnerRole === 'athlete' 
-                  ? "See when the athlete has read your messages" 
+                {activeConversation?.partnerRole === 'athlete'
+                  ? "See when the athlete has read your messages"
                   : activeConversation?.partnerRole === 'coach'
-                  ? "See when the coach has read your messages"
-                  : activeConversation?.partnerRole === 'recruiter'
-                  ? "See when the recruiter has read your messages"
-                  : "See when your messages have been read by other users"}
+                    ? "See when the coach has read your messages"
+                    : activeConversation?.partnerRole === 'recruiter'
+                      ? "See when the recruiter has read your messages"
+                      : "See when your messages have been read by other users"}
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4">
@@ -1386,16 +1316,16 @@ export default function MessagingPage() {
                     Access all premium communication features
                   </li>
                 </ul>
-                
+
                 <div className="mt-4 p-3 bg-[#01ae79]/5 dark:bg-[#01ae79]/10 rounded-lg border border-[#01ae79]/20">
                   <p className="text-xs text-[#01ae79] dark:text-[#01ae79]/90 font-medium">
                     {activeConversation?.partnerRole === 'athlete'
                       ? "Know if the athlete has seen your recruitment message or coaching advice!"
-                      : activeConversation?.partnerRole === 'coach' 
-                      ? "Track if the coach has read your athlete profile or collaboration request!"
-                      : activeConversation?.partnerRole === 'recruiter'
-                      ? "See if the recruiter has viewed your athlete showcase or partnership inquiry!"
-                      : "Never wonder if your important messages have been seen!"}
+                      : activeConversation?.partnerRole === 'coach'
+                        ? "Track if the coach has read your athlete profile or collaboration request!"
+                        : activeConversation?.partnerRole === 'recruiter'
+                          ? "See if the recruiter has viewed your athlete showcase or partnership inquiry!"
+                          : "Never wonder if your important messages have been seen!"}
                   </p>
                 </div>
               </div>
