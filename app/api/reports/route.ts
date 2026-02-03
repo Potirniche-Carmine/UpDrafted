@@ -52,9 +52,12 @@ export async function POST(request: NextRequest) {
         const session = await getSession();
         if (session?.user) {
           // Create the user if they don't exist
+          const username = session.user.name || session.user.email.split('@')[0];
           await userOperations.createUser({
             id: reporterId,
-            name: session.user.name || session.user.email.split('@')[0],
+            name: username,
+            username: username,
+            displayUsername: username,
             email: session.user.email,
             role: session.user.role as any || 'athlete'
           });

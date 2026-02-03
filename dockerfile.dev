@@ -1,4 +1,4 @@
-# Stage 1: Build application for development
+# Stage 1: Build application
 FROM node:20-alpine AS builder
 
 WORKDIR /app
@@ -34,27 +34,31 @@ ENV NEXT_PUBLIC_STRIPE_PRICE_COACH_YEARLY=$NEXT_PUBLIC_STRIPE_PRICE_COACH_YEARLY
 ENV NEXT_PUBLIC_STRIPE_PRICE_RECRUITER_MONTHLY=$NEXT_PUBLIC_STRIPE_PRICE_RECRUITER_MONTHLY
 ENV NEXT_PUBLIC_STRIPE_PRICE_RECRUITER_YEARLY=$NEXT_PUBLIC_STRIPE_PRICE_RECRUITER_YEARLY
 
-# For development, we don't need to build - we'll run dev server
-# But we still need dependencies installed
-# Skip strict environment validation
+# Skip strict environment validation for build
 ENV SKIP_ENV_VALIDATION=true
+# Set NODE_ENV to production for build
+ENV NODE_ENV=production
 
-# Stage 2: Create the final development image
+# Build the application
+RUN npm run build
+
+# Stage 2: Create the final image
 FROM node:20-alpine AS runner
 
 WORKDIR /app
 
-# Install development dependencies for better debugging
+# Install runtime dependencies
 RUN apk add --no-cache curl
 
-# Copy everything from builder (source code + node_modules)
-COPY --from=builder /app ./
+# Copy built artifacts and dependencies
+COPY --from=builder /app/public ./public
+COPY --from=builder /app/.next ./.next
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/package.json ./package.json
 
-# Set NODE_ENV to development for proper Next.js dev server behavior
-ENV NODE_ENV=development
+# Set NODE_ENV to production for runtime
+ENV NODE_ENV=production
 
-# Expose the standard Next.js port
 EXPOSE 3000
 
-# Start the development server with hot reloading
-CMD ["npm", "run", "dev"]
+CMD ["npm", "start"]

@@ -1124,6 +1124,8 @@ export const onboardingOperations = {
     const user = await userOperations.createOrUpdateUser(userId, {
       id: userId,
       name: profileData.fullName,
+      username: profileData.fullName,
+      displayUsername: profileData.fullName,
       email,
       role: 'athlete',
     });
@@ -1201,6 +1203,8 @@ export const onboardingOperations = {
     const user = await userOperations.createOrUpdateUser(userId, {
       id: userId,
       name: profileData.fullName,
+      username: profileData.fullName,
+      displayUsername: profileData.fullName,
       email,
       role: 'coach'
     });
@@ -1253,6 +1257,8 @@ export const onboardingOperations = {
     const user = await userOperations.createOrUpdateUser(userId, {
       id: userId,
       name: profileData.fullName,
+      username: profileData.fullName,
+      displayUsername: profileData.fullName,
       email,
       role: 'recruiter'
     });

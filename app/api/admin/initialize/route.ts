@@ -46,9 +46,12 @@ export async function POST(request: NextRequest) {
     }
 
     // Create admin user in database
+    const username = email.split('@')[0];
     const user = await userOperations.createUser({
       id: userId,
-      name: email.split('@')[0],
+      name: username,
+      username: username,
+      displayUsername: username,
       email,
       role: 'admin',
     });
