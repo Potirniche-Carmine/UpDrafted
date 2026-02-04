@@ -45,21 +45,10 @@ export default function SignInPage() {
     setLoading(true);
 
     try {
-      // Detect if input is email or username (simple check: contains @)
-      const isEmail = emailOrUsername.includes("@");
-
-      let result;
-      if (isEmail) {
-        result = await signIn.email({
-          email: emailOrUsername,
-          password,
-        });
-      } else {
-        result = await signIn.username({
-          username: emailOrUsername,
-          password,
-        });
-      }
+      const result = await signIn.email({
+        email: emailOrUsername,
+        password,
+      });
 
       if (result.error) {
         // Check if error is due to unverified email
@@ -107,19 +96,19 @@ export default function SignInPage() {
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="space-y-4">
               <div>
-                <label htmlFor="emailOrUsername" className="block text-sm font-medium">
-                  Email or Username
+                <label htmlFor="email" className="block text-sm font-medium">
+                  Email Address
                 </label>
                 <input
-                  id="emailOrUsername"
-                  name="emailOrUsername"
-                  type="text"
-                  autoComplete="username email"
+                  id="email"
+                  name="email"
+                  type="email"
+                  autoComplete="email"
                   required
                   value={emailOrUsername}
                   onChange={(e) => setEmailOrUsername(e.target.value)}
                   className="mt-1 block w-full rounded-lg border border-input bg-background px-4 py-3 text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
-                  placeholder="you@example.com or username"
+                  placeholder="you@example.com"
                 />
               </div>
 

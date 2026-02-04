@@ -1,7 +1,7 @@
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { stripe } from "@better-auth/stripe";
-import { emailOTP, magicLink, username } from "better-auth/plugins";
+import { emailOTP, magicLink } from "better-auth/plugins";
 import { db } from "@/database/db";
 import Stripe from "stripe";
 import { Resend } from "resend";
@@ -174,10 +174,7 @@ export const auth = betterAuth({
                 });
             },
         }),
-        username({
-            // Map username fields to use the existing 'name' field
-            // This tells Better Auth to use 'name' for both username and displayUsername
-        }),
+
         emailOTP({
             async sendVerificationOTP({ email, otp, type }) {
                 const subject = type === "forget-password"

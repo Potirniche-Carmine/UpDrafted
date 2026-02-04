@@ -63,7 +63,6 @@ export default function SignUpPage() {
         email,
         password,
         name: username, // Use username as display name
-        username,
         callbackURL: "/sign-in", // Redirect to sign-in after email verification
       });
 
