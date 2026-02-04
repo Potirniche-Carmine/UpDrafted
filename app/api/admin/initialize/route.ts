@@ -50,8 +50,6 @@ export async function POST(request: NextRequest) {
     const user = await userOperations.createUser({
       id: userId,
       name: username,
-      username: username,
-      displayUsername: username,
       email,
       role: 'admin',
     });

@@ -127,8 +127,16 @@ export default function OnboardingForm({ role, onBack }: OnboardingFormProps) {
       });
 
       if (response.ok) {
-        // Force a hard refresh to reload Better Auth cookies and session
-        // This ensures the new role is immediately recognized without re-login
+        // Force a session refresh to update the token with the new role
+        try {
+          await authClient.getSession({
+            query: {
+              disableCookieCache: true
+            }
+          });
+        } catch (e) {
+          console.error("Failed to refresh session", e);
+        }
         window.location.href = "/dashboard";
       } else {
         const errorData = await response.json();

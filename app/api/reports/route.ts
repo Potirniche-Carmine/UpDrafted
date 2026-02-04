@@ -56,8 +56,6 @@ export async function POST(request: NextRequest) {
           await userOperations.createUser({
             id: reporterId,
             name: username,
-            username: username,
-            displayUsername: username,
             email: session.user.email,
             role: session.user.role as any || 'athlete'
           });
