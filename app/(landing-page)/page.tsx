@@ -23,16 +23,16 @@ function HomePageContent() {
                 <Image
                   src="/updrafted-logo.webp"
                   alt="UpDrafted Logo"
-                  width={600}
-                  height={200}
+                  width={1400}
+                  height={467}
                   priority
                   placeholder="empty"
-                  className="w-auto h-auto max-w-[280px] sm:max-w-[400px] md:max-w-[500px] lg:max-w-[600px]"
+                  className="w-auto h-auto max-w-[380px] sm:max-w-[900px] md:max-w-[1100px] lg:max-w-[1300px] xl:max-w-[1400px]"
                   style={{
-                    maxHeight: "clamp(80px, 15vw, 180px)"
+                    maxHeight: "clamp(120px, 28vw, 420px)"
                   }}
                 />
-                <h1 className="text-1xl sm:text-2xl md:text-3xl lg:text-4xl font-bold text-[#01ae79] tracking-tight">
+                <h1 className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-semibold text-[#01ae79] tracking-tight">
                   Aim Higher
                 </h1>
               </div>
