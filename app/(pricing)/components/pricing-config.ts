@@ -3,12 +3,12 @@
 
 // Simple direct access to environment variables for better reliability
 const STRIPE_PRICE_IDS = {
-  ATHLETE_MONTHLY: process.env.NEXT_PUBLIC_STRIPE_PRICE_ATHLETE_MONTHLY || '',
-  ATHLETE_YEARLY: process.env.NEXT_PUBLIC_STRIPE_PRICE_ATHLETE_YEARLY || '',
-  COACH_MONTHLY: process.env.NEXT_PUBLIC_STRIPE_PRICE_COACH_MONTHLY || '',
-  COACH_YEARLY: process.env.NEXT_PUBLIC_STRIPE_PRICE_COACH_YEARLY || '',
-  RECRUITER_MONTHLY: process.env.NEXT_PUBLIC_STRIPE_PRICE_RECRUITER_MONTHLY || '',
-  RECRUITER_YEARLY: process.env.NEXT_PUBLIC_STRIPE_PRICE_RECRUITER_YEARLY || '',
+  ATHLETE_MONTHLY: process.env.NEXT_PUBLIC_STRIPE_PRICE_ATHLETE_MONTHLY || 'price_athlete_monthly_placeholder',
+  ATHLETE_YEARLY: process.env.NEXT_PUBLIC_STRIPE_PRICE_ATHLETE_YEARLY || 'price_athlete_yearly_placeholder',
+  COACH_MONTHLY: process.env.NEXT_PUBLIC_STRIPE_PRICE_COACH_MONTHLY || 'price_coach_monthly_placeholder',
+  COACH_YEARLY: process.env.NEXT_PUBLIC_STRIPE_PRICE_COACH_YEARLY || 'price_coach_yearly_placeholder',
+  RECRUITER_MONTHLY: process.env.NEXT_PUBLIC_STRIPE_PRICE_RECRUITER_MONTHLY || 'price_recruiter_monthly_placeholder',
+  RECRUITER_YEARLY: process.env.NEXT_PUBLIC_STRIPE_PRICE_RECRUITER_YEARLY || 'price_recruiter_yearly_placeholder',
 };
 
 // Debug logging for missing price IDs in development

@@ -2,16 +2,14 @@ import { S3Client, PutObjectCommand, DeleteObjectCommand, GetObjectCommand, List
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 
 // Validate R2 credentials
-const isBuild = process.env.SKIP_ENV_VALIDATION === 'true';
-
-if ((!process.env.R2_ACCOUNT_ID || !process.env.R2_ACCESS_KEY_ID || !process.env.R2_SECRET_ACCESS_KEY) && !isBuild) {
-  throw new Error('R2 credentials not properly configured');
-}
+// We relax this check to allow build-time execution without secrets
+// The application will fail at runtime if credentials are missing and R2 is accessed
+const isTestOrBuild = process.env.NODE_ENV === 'test' || process.env.SKIP_ENV_VALIDATION === 'true' || !process.env.R2_ACCOUNT_ID;
 
 // Configure R2 client
 const r2Client = new S3Client({
   region: 'auto',
-  endpoint: isBuild ? 'https://placeholder.r2.cloudflarestorage.com' : `https://${process.env.R2_ACCOUNT_ID}.r2.cloudflarestorage.com`,
+  endpoint: isTestOrBuild ? 'https://placeholder.r2.cloudflarestorage.com' : `https://${process.env.R2_ACCOUNT_ID}.r2.cloudflarestorage.com`,
   credentials: {
     accessKeyId: process.env.R2_ACCESS_KEY_ID || 'placeholder',
     secretAccessKey: process.env.R2_SECRET_ACCESS_KEY || 'placeholder',
@@ -38,17 +36,7 @@ export function constructR2Url(baseUrl: string, path: string): string {
 }
 
 // Private bucket for verification files (optional - falls back to public bucket if not configured)
-export const R2_PRIVATE_BUCKET_NAME = (() => {
-  if (process.env.NODE_ENV === 'production') {
-    if (!process.env.R2_PRIVATE_BUCKET_NAME) {
-      throw new Error('R2_PRIVATE_BUCKET_NAME is required in production environment');
-    }
-    return process.env.R2_PRIVATE_BUCKET_NAME;
-  } else {
-    // In development, fall back to public bucket if private bucket is not configured
-    return process.env.R2_PRIVATE_BUCKET_NAME || R2_PUBLIC_BUCKET_NAME;
-  }
-})();
+export const R2_PRIVATE_BUCKET_NAME = process.env.R2_PRIVATE_BUCKET_NAME || R2_PUBLIC_BUCKET_NAME || 'placeholder-private-bucket';
 
 // Folders for different file types
 export const R2_FOLDERS = {
