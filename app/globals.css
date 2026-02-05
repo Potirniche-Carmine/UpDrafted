@@ -208,62 +208,6 @@
     min-width: 0;
   }
 
-  /* University logos carousel animation */
-  .animate-scroll {
-    animation: scroll 40s linear infinite;
-    will-change: transform;
-  }
-
-  /* Pause animation on hover for better UX */
-  .animate-scroll:hover {
-    animation-play-state: paused;
-  }
-
-  /* Mobile - faster animation */
-  @media (max-width: 640px) {
-    .animate-scroll {
-      animation: scroll 10s linear infinite;
-    }
-  }
-
-  /* Tablet - medium speed */
-  @media (min-width: 641px) and (max-width: 1024px) {
-    .animate-scroll {
-      animation: scroll 30s linear infinite;
-    }
-  }
-
-  /* Large screens - slower for better visibility */
-  @media (min-width: 1025px) {
-    .animate-scroll {
-      animation: scroll 32s linear infinite;
-    }
-  }
-
-  /* Extra large screens - even slower */
-  @media (min-width: 1536px) {
-    .animate-scroll {
-      animation: scroll 32s linear infinite;
-    }
-  }
-
-  /* Optimize for low-end devices */
-  @media (prefers-reduced-motion: reduce) {
-    .animate-scroll {
-      animation: none;
-      transform: translateX(-25%);
-    }
-  }
-
-  @keyframes scroll {
-    0% {
-      transform: translateX(0);
-    }
-    100% {
-      transform: translateX(-50%);
-    }
-  }
-
   /* Safe area support for mobile devices with notches/home indicators */
   .safe-area-bottom {
     padding-bottom: env(safe-area-inset-bottom);
@@ -279,5 +223,23 @@
 
   .safe-area-right {
     padding-right: env(safe-area-inset-right);
+  }
+}
+
+/* Sports carousel animation - defined outside @layer for compatibility */
+@keyframes infiniteScroll {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  @keyframes infiniteScroll {
+    0%, 100% {
+      transform: translateX(0);
+    }
   }
 }

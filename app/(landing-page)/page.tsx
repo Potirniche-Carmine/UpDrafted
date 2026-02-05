@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { CheckCircle, Shield, Users, ArrowRight } from "lucide-react";
 import { AuthWrapper } from "../../components/auth-wrapper";
 import { pageMetadata } from "@/lib/seo";
+import { SportsCarousel } from "@/components/sports-carousel";
 
 export const metadata = pageMetadata.home();
 
@@ -90,64 +91,7 @@ function HomePageContent() {
       </section>
 
       {/* Sports Carousel */}
-      <section className="w-full py-8 sm:py-12 lg:py-16 bg-gray-50 dark:bg-gray-900/50 border-y border-gray-200 dark:border-gray-800">
-        <div className="container px-4 md:px-6 mx-auto max-w-7xl">
-          <p className="text-center text-sm sm:text-base text-gray-500 dark:text-gray-400 mb-6 sm:mb-8 lg:mb-12">
-            Supporting athletes across all major sports
-          </p>
-          <div className="relative overflow-hidden">
-            <div className="flex animate-scroll space-x-3 sm:space-x-4 md:space-x-6 lg:space-x-8 items-center">
-              {/* Sports with professional styling */}
-              <div className="shrink-0 h-10 sm:h-12 md:h-14 lg:h-16 flex items-center justify-center px-3 sm:px-4 md:px-6 lg:px-8 bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 min-w-22.5 sm:min-w-30 md:min-w-35 lg:min-w-40">
-                <span className="text-xs sm:text-sm md:text-base lg:text-lg font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide">Football</span>
-              </div>
-              <div className="shrink-0 h-10 sm:h-12 md:h-14 lg:h-16 flex items-center justify-center px-3 sm:px-4 md:px-6 lg:px-8 bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 min-w-22.5 sm:min-w-30 md:min-w-35 lg:min-w-40">
-                <span className="text-xs sm:text-sm md:text-base lg:text-lg font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide">Basketball</span>
-              </div>
-              <div className="shrink-0 h-10 sm:h-12 md:h-14 lg:h-16 flex items-center justify-center px-3 sm:px-4 md:px-6 lg:px-8 bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 min-w-22.5 sm:min-w-30 md:min-w-35 lg:min-w-40">
-                <span className="text-xs sm:text-sm md:text-base lg:text-lg font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide">Baseball</span>
-              </div>
-              <div className="shrink-0 h-10 sm:h-12 md:h-14 lg:h-16 flex items-center justify-center px-3 sm:px-4 md:px-6 lg:px-8 bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 min-w-22.5 sm:min-w-30 md:min-w-35 lg:min-w-40">
-                <span className="text-xs sm:text-sm md:text-base lg:text-lg font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide">Softball</span>
-              </div>
-              <div className="shrink-0 h-10 sm:h-12 md:h-14 lg:h-16 flex items-center justify-center px-3 sm:px-4 md:px-6 lg:px-8 bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 min-w-22.5 sm:min-w-30 md:min-w-35 lg:min-w-40">
-                <span className="text-xs sm:text-sm md:text-base lg:text-lg font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide">Soccer</span>
-              </div>
-              <div className="shrink-0 h-10 sm:h-12 md:h-14 lg:h-16 flex items-center justify-center px-3 sm:px-4 md:px-6 lg:px-8 bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 min-w-25 sm:min-w-32.5 md:min-w-37.5 lg:min-w-42.5">
-                <span className="text-xs sm:text-sm md:text-base lg:text-lg font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide">Track & Field</span>
-              </div>
-              <div className="shrink-0 h-10 sm:h-12 md:h-14 lg:h-16 flex items-center justify-center px-3 sm:px-4 md:px-6 lg:px-8 bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 min-w-22.5 sm:min-w-30 md:min-w-35 lg:min-w-40">
-                <span className="text-xs sm:text-sm md:text-base lg:text-lg font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide">Swimming</span>
-              </div>
-              <div className="shrink-0 h-10 sm:h-12 md:h-14 lg:h-16 flex items-center justify-center px-3 sm:px-4 md:px-6 lg:px-8 bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 min-w-22.5 sm:min-w-30 md:min-w-35 lg:min-w-40">
-                <span className="text-xs sm:text-sm md:text-base lg:text-lg font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide">Tennis</span>
-              </div>
-              <div className="shrink-0 h-10 sm:h-12 md:h-14 lg:h-16 flex items-center justify-center px-3 sm:px-4 md:px-6 lg:px-8 bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 min-w-22.5 sm:min-w-30 md:min-w-35 lg:min-w-40">
-                <span className="text-xs sm:text-sm md:text-base lg:text-lg font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide">Volleyball</span>
-              </div>
-              <div className="shrink-0 h-10 sm:h-12 md:h-14 lg:h-16 flex items-center justify-center px-3 sm:px-4 md:px-6 lg:px-8 bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 min-w-22.5 sm:min-w-30 md:min-w-35 lg:min-w-40">
-                <span className="text-xs sm:text-sm md:text-base lg:text-lg font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide">Lacrosse</span>
-              </div>
-              <div className="shrink-0 h-10 sm:h-12 md:h-14 lg:h-16 flex items-center justify-center px-3 sm:px-4 md:px-6 lg:px-8 bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 min-w-22.5 sm:min-w-30 md:min-w-35 lg:min-w-40">
-                <span className="text-xs sm:text-sm md:text-base lg:text-lg font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide">Wrestling</span>
-              </div>
-              <div className="shrink-0 h-10 sm:h-12 md:h-14 lg:h-16 flex items-center justify-center px-3 sm:px-4 md:px-6 lg:px-8 bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 min-w-22.5 sm:min-w-30 md:min-w-35 lg:min-w-40">
-                <span className="text-xs sm:text-sm md:text-base lg:text-lg font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide">Golf</span>
-              </div>
-              {/* Duplicate for seamless loop */}
-              <div className="shrink-0 h-10 sm:h-12 md:h-14 lg:h-16 flex items-center justify-center px-3 sm:px-4 md:px-6 lg:px-8 bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 min-w-22.5 sm:min-w-30 md:min-w-35 lg:min-w-40">
-                <span className="text-xs sm:text-sm md:text-base lg:text-lg font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide">Football</span>
-              </div>
-              <div className="shrink-0 h-10 sm:h-12 md:h-14 lg:h-16 flex items-center justify-center px-3 sm:px-4 md:px-6 lg:px-8 bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 min-w-22.5 sm:min-w-30 md:min-w-35 lg:min-w-40">
-                <span className="text-xs sm:text-sm md:text-base lg:text-lg font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide">Basketball</span>
-              </div>
-              <div className="shrink-0 h-10 sm:h-12 md:h-14 lg:h-16 flex items-center justify-center px-3 sm:px-4 md:px-6 lg:px-8 bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 min-w-22.5 sm:min-w-30 md:min-w-35 lg:min-w-40">
-                <span className="text-xs sm:text-sm md:text-base lg:text-lg font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide">Baseball</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
+      <SportsCarousel />
 
       {/* How It Works Section */}
       <section className="w-full py-12 sm:py-16 md:py-20 lg:py-24">
