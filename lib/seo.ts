@@ -88,7 +88,9 @@ export function generateMetadata({
   const url = `${siteConfig.url}${path}`
 
   return {
-    metadataBase: new URL(siteConfig.url),
+    metadataBase: new URL(
+      siteConfig.url.startsWith('http') ? siteConfig.url : 'https://updrafted.us'
+    ),
     title: metaTitle,
     description: metaDescription,
     keywords: siteConfig.keywords,
