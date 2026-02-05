@@ -7,12 +7,13 @@ import Stripe from "stripe";
 import { Resend } from "resend";
 
 // Initialize Stripe client
-const stripeClient = new Stripe(process.env.STRIPE_SECRET_KEY!, {
+const isBuild = process.env.SKIP_ENV_VALIDATION === 'true';
+const stripeClient = new Stripe(process.env.STRIPE_SECRET_KEY || (isBuild ? 'sk_test_placeholder' : ''), {
     apiVersion: "2025-01-27.acacia" as Stripe.LatestApiVersion,
 });
 
 // Initialize Resend client
-const resend = new Resend(process.env.RESEND_API_KEY!);
+const resend = new Resend(process.env.RESEND_API_KEY || (isBuild ? 're_placeholder' : ''));
 
 // Email configuration - hardcoded since it's not sensitive
 const EMAIL_FROM = "UpDrafted <noreply@updrafted.us>";
@@ -136,18 +137,18 @@ export const auth = betterAuth({
     plugins: [
         stripe({
             stripeClient,
-            stripeWebhookSecret: process.env.STRIPE_WEBHOOK_SECRET!,
+            stripeWebhookSecret: process.env.STRIPE_WEBHOOK_SECRET || (isBuild ? 'whsec_placeholder' : ''),
             createCustomerOnSignUp: true,
             subscription: {
                 enabled: true,
                 plans: [
                     { name: "free", priceId: "price_free" },
-                    { name: "pro_athlete_monthly", priceId: process.env.STRIPE_ATHLETE_MONTHLY_PRICE_ID! },
-                    { name: "pro_athlete_yearly", priceId: process.env.STRIPE_ATHLETE_YEARLY_PRICE_ID! },
-                    { name: "pro_coach_monthly", priceId: process.env.STRIPE_COACH_MONTHLY_PRICE_ID! },
-                    { name: "pro_coach_yearly", priceId: process.env.STRIPE_COACH_YEARLY_PRICE_ID! },
-                    { name: "pro_recruiter_monthly", priceId: process.env.STRIPE_RECRUITER_MONTHLY_PRICE_ID! },
-                    { name: "pro_recruiter_yearly", priceId: process.env.STRIPE_RECRUITER_YEARLY_PRICE_ID! },
+                    { name: "pro_athlete_monthly", priceId: process.env.STRIPE_ATHLETE_MONTHLY_PRICE_ID || (isBuild ? 'price_placeholder_1' : '') },
+                    { name: "pro_athlete_yearly", priceId: process.env.STRIPE_ATHLETE_YEARLY_PRICE_ID || (isBuild ? 'price_placeholder_2' : '') },
+                    { name: "pro_coach_monthly", priceId: process.env.STRIPE_COACH_MONTHLY_PRICE_ID || (isBuild ? 'price_placeholder_3' : '') },
+                    { name: "pro_coach_yearly", priceId: process.env.STRIPE_COACH_YEARLY_PRICE_ID || (isBuild ? 'price_placeholder_4' : '') },
+                    { name: "pro_recruiter_monthly", priceId: process.env.STRIPE_RECRUITER_MONTHLY_PRICE_ID || (isBuild ? 'price_placeholder_5' : '') },
+                    { name: "pro_recruiter_yearly", priceId: process.env.STRIPE_RECRUITER_YEARLY_PRICE_ID || (isBuild ? 'price_placeholder_6' : '') },
                 ],
             },
         }),
@@ -214,7 +215,7 @@ export const auth = betterAuth({
 
     // Trust proxy for production environments
     trustedOrigins: [
-        process.env.NEXT_PUBLIC_APP_URL!,
+        process.env.NEXT_PUBLIC_APP_URL || (isBuild ? 'http://localhost:3000' : ''),
         "https://updrafted.us",
     ].filter(Boolean),
 });
