@@ -40,4 +40,6 @@ export const env = {
 
   // R2
   R2_PUBLIC_URL: process.env.NEXT_PUBLIC_R2_PUBLIC_URL || process.env.R2_PUBLIC_URL,
+  R2_PROFILE_BUCKET_NAME: process.env.R2_PROFILE_BUCKET_NAME,
+  R2_PRIVATE_BUCKET_NAME: process.env.R2_PRIVATE_BUCKET_NAME,
 };

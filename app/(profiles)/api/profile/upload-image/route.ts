@@ -142,27 +142,9 @@ export async function POST(request: NextRequest) {
           : userWithProfile.recruitingProfile?.organizationLogoR3Key || null;
       }
 
-      // Delete old image if exists (try both database key and client-provided URL)
-      const imagesToDelete = [];
-      if (currentImageKey) {
-        imagesToDelete.push(currentImageKey);
-      }
-      if (currentImageUrl && currentImageUrl !== currentImageKey) {
-        const oldKey = getR2KeyFromUrl(currentImageUrl);
-        if (oldKey !== currentImageKey) {
-          imagesToDelete.push(oldKey);
-        }
-      }
-
-      // Delete all old images
-      for (const keyToDelete of imagesToDelete) {
-        try {
-          await deleteFromR2(keyToDelete, false);
-        } catch (error) {
-          console.error(`Failed to delete old image ${keyToDelete}:`, error);
-          // Continue - don't fail the upload if old image deletion fails
-        }
-      }
+      // Upload new image (automatically handles cleanup of old images in the folder)
+      // We don't need to manually delete the old key here anymore because the upload function
+      // now enforces a "clean folder" policy for profile/org images.
 
       // Upload new image
       const uploadResult = imageType === 'profile'

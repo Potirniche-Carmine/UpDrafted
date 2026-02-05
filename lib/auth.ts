@@ -94,6 +94,14 @@ export const auth = betterAuth({
         // Enable account deletion
         deleteUser: {
             enabled: true,
+            afterDelete: async (user) => {
+                // Delete all user files from R2
+                try {
+                    await import("@/database/r2/uploads").then(m => m.deleteAllUserFiles(user.id));
+                } catch (error) {
+                    console.error(`Failed to cleanup R2 files for user ${user.id}:`, error);
+                }
+            },
         },
         additionalFields: {
             role: {
