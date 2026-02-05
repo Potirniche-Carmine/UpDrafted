@@ -222,7 +222,9 @@ export const auth = betterAuth({
 
     // Trust proxy for production environments
     trustedOrigins: [
-        process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000',
+        (process.env.NEXT_PUBLIC_APP_URL && !process.env.NEXT_PUBLIC_APP_URL.includes('PLACEHOLDER') && process.env.NEXT_PUBLIC_APP_URL.startsWith('http'))
+            ? process.env.NEXT_PUBLIC_APP_URL 
+            : 'http://localhost:3000',
         "https://updrafted.us",
     ].filter(Boolean),
 });
