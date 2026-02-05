@@ -27,21 +27,12 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build and Push
-        env:
-          ENV_FILE_PATH: ${{ secrets.PROD_ENV_FILE_PATH }}
         run: |
-          # Verify environment file exists
-          if [ ! -f "$ENV_FILE_PATH" ]; then
-            echo "Error: Environment file not found at $ENV_FILE_PATH"
-            exit 1
-          fi
-          
           IMAGE_ID=ghcr.io/${{ github.repository_owner }}/updraftedprod
           IMAGE_ID=$(echo $IMAGE_ID | tr '[:upper:]' '[:lower:]')
           
-          # Build with single env file secret
-          DOCKER_BUILDKIT=1 docker build \
-            --secret id=env_file,src="$ENV_FILE_PATH" \
+          # Build without secrets (using placeholders defined in Dockerfile)
+          docker build \
             -t $IMAGE_ID:latest .
           
           docker push $IMAGE_ID:latest
@@ -71,22 +62,13 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build and Push
-        env:
-          ENV_FILE_PATH: ${{ secrets.DEV_ENV_FILE_PATH }}
         run: |
-          # Verify environment file exists
-          if [ ! -f "$ENV_FILE_PATH" ]; then
-            echo "Error: Environment file not found at $ENV_FILE_PATH"
-            exit 1
-          fi
-          
           IMAGE_ID=ghcr.io/${{ github.repository_owner }}/updrafteddev
           IMAGE_ID=$(echo $IMAGE_ID | tr '[:upper:]' '[:lower:]')
           
-          # Build with single env file secret
-          DOCKER_BUILDKIT=1 docker build \
+          # Build without secrets (using placeholders defined in Dockerfile)
+          docker build \
             -f dockerfile.dev \
-            --secret id=env_file,src="$ENV_FILE_PATH" \
             -t $IMAGE_ID:latest .
           
           docker push $IMAGE_ID:latest

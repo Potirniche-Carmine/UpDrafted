@@ -1,31 +1,32 @@
 import { z } from 'zod';
+import { CONFIG } from './config';
 
 // Base validation schemas
 export const BaseValidation = {
   // User ID validation
   userId: z.string().min(1, 'User ID is required').max(100, 'User ID too long'),
-  
+
   // Email validation
   email: z.string().email('Invalid email format').max(255, 'Email too long'),
-  
+
   // Text content validation
   text: z.string().max(10000, 'Text too long'),
   shortText: z.string().max(500, 'Text too long'),
-  
+
   // Numbers
   positiveInt: z.number().int().positive('Must be a positive integer'),
   nonNegativeInt: z.number().int().min(0, 'Must be non-negative'),
-  
+
   // IDs
   id: z.number().int().positive('Invalid ID'),
   optionalId: z.number().int().positive('Invalid ID').optional(),
-  
+
   // Pagination
   limit: z.number().int().min(1, 'Limit must be at least 1').max(100, 'Limit cannot exceed 100').default(20),
   offset: z.number().int().min(0, 'Offset must be non-negative').default(0),
-  
+
   // File validation
-  fileSize: z.number().int().min(1, 'File cannot be empty').max(10 * 1024 * 1024, 'File too large (max 10MB)'),
+  fileSize: z.number().int().min(1, 'File cannot be empty').max(CONFIG.FILES.MAX_SIZE_DEFAULT, `File too large (max ${CONFIG.FILES.MAX_SIZE_DEFAULT / 1024 / 1024}MB)`),
   fileName: z.string().min(1, 'Filename required').max(255, 'Filename too long'),
   mimeType: z.string().regex(/^[a-zA-Z0-9][a-zA-Z0-9!#$&\-^_]*\/[a-zA-Z0-9][a-zA-Z0-9!#$&\-^_.]*$/, 'Invalid MIME type'),
 };
@@ -34,7 +35,7 @@ export const BaseValidation = {
 export const MessageValidation = {
   // Message operations
   operation: z.enum(['getConversations', 'getMessages', 'sendMessage', 'markRead', 'getUnreadCount', 'getOrCreateConversation']),
-  
+
   // Send message validation
   sendMessage: z.object({
     operation: z.literal('sendMessage'),
@@ -53,7 +54,7 @@ export const MessageValidation = {
         return wordCount <= 400;
       }, 'Message exceeds 400 word limit')
   }),
-  
+
   // Get messages validation
   getMessages: z.object({
     operation: z.literal('getMessages'),
@@ -65,7 +66,7 @@ export const MessageValidation = {
     limit: BaseValidation.limit,
     offset: BaseValidation.offset,
   }),
-  
+
   // Mark read validation
   markRead: z.object({
     operation: z.literal('markRead'),
@@ -75,18 +76,18 @@ export const MessageValidation = {
       return num;
     }),
   }),
-  
+
   // Get conversations validation
   getConversations: z.object({
     operation: z.literal('getConversations'),
     includeFirstConversationMessages: z.boolean().optional(),
   }),
-  
+
   // Get unread count validation
   getUnreadCount: z.object({
     operation: z.literal('getUnreadCount'),
   }),
-  
+
   // Create conversation validation
   getOrCreateConversation: z.object({
     operation: z.literal('getOrCreateConversation'),
@@ -99,17 +100,17 @@ export const FileValidation = {
   // Image upload validation
   imageUpload: z.object({
     file: z.object({
-      size: z.number().int().min(1, 'File cannot be empty').max(5 * 1024 * 1024, 'Image too large (max 5MB)'),
+      size: z.number().int().min(1, 'File cannot be empty').max(CONFIG.FILES.MAX_SIZE_IMAGE, `Image too large (max ${CONFIG.FILES.MAX_SIZE_IMAGE / 1024 / 1024}MB)`),
       type: z.string().regex(/^image\/(jpeg|jpg|png|webp)$/i, 'Invalid image type. Only JPEG, PNG, and WebP allowed'),
       name: z.string().min(1, 'Filename required').max(255, 'Filename too long'),
     }),
     imageType: z.enum(['profile', 'organization']),
   }),
-  
+
   // Verification file upload validation
   verificationUpload: z.object({
     file: z.object({
-      size: z.number().int().min(1, 'File cannot be empty').max(10 * 1024 * 1024, 'File too large (max 10MB)'),
+      size: z.number().int().min(1, 'File cannot be empty').max(CONFIG.FILES.MAX_SIZE_DOCUMENT, `File too large (max ${CONFIG.FILES.MAX_SIZE_DOCUMENT / 1024 / 1024}MB)`),
       type: z.string().regex(/^(application\/pdf|image\/(jpeg|jpg|png|webp))$/i, 'Invalid file type. Only PDF and image files allowed'),
       name: z.string().min(1, 'Filename required').max(255, 'Filename too long'),
     }),
@@ -146,7 +147,7 @@ export const ConnectionValidation = {
     toUserId: BaseValidation.userId,
     notes: z.string().max(500, 'Notes too long').optional(),
   }),
-  
+
   // Update connection validation
   updateConnection: z.object({
     connectionId: BaseValidation.id,
@@ -193,7 +194,7 @@ export const Sanitization = {
       .replace(/on\w+\s*=/gi, '') // Remove event handlers
       .trim();
   },
-  
+
   // Clean file names
   cleanFileName: (input: string): string => {
     return input
@@ -202,7 +203,7 @@ export const Sanitization = {
       .replace(/^[._-]+|[._-]+$/g, '') // Remove leading/trailing special chars
       .substring(0, 255); // Limit length
   },
-  
+
   // Validate and clean search queries
   cleanSearchQuery: (input: string): string => {
     return input
@@ -221,20 +222,20 @@ export const RateLimitValidation = {
       // Message operations
       sendMessage: { athlete: 50, coach: 100, recruiter: 100, admin: 200 },
       getMessages: { athlete: 200, coach: 300, recruiter: 300, admin: 500 },
-      
+
       // File operations
       fileUpload: { athlete: 10, coach: 20, recruiter: 20, admin: 50 },
-      
+
       // Search operations
       search: { athlete: 100, coach: 150, recruiter: 150, admin: 300 },
-      
+
       // Default
       default: { athlete: 100, coach: 150, recruiter: 150, admin: 300 },
     };
-    
+
     const operationLimits = limits[operation as keyof typeof limits] || limits.default;
     const maxRequests = operationLimits[userRole as keyof typeof operationLimits] || operationLimits.athlete;
-    
+
     return {
       maxRequests,
       windowMs: 60 * 1000, // 1 minute window
@@ -249,7 +250,7 @@ export const RateLimitValidation = {
  * @throws Error if admin role is being assigned through non-webhook context
  */
 export const validateRoleAssignment = (
-  role: string, 
+  role: string,
   context: 'api' | 'webhook' | 'onboarding'
 ): void => {
   if (role === 'admin') {
@@ -257,7 +258,7 @@ export const validateRoleAssignment = (
       throw new Error('Admin role can only be assigned through Clerk dashboard, not via API');
     }
   }
-  
+
   // Validate role is one of the allowed values
   const allowedRoles = ['athlete', 'coach', 'recruiter'];
   if (context !== 'webhook' && !allowedRoles.includes(role)) {
@@ -273,14 +274,14 @@ export const validateRoleAssignment = (
  */
 export const validateRoleEscalation = (
   requestingUserId: string,
-  targetUserId: string, 
+  targetUserId: string,
   newRole: string
 ): void => {
   // Users cannot assign admin role to themselves or others
   if (newRole === 'admin') {
     throw new Error('Admin role assignment is not permitted through this endpoint');
   }
-  
+
   // Users can only change their own role during onboarding
   if (requestingUserId !== targetUserId) {
     throw new Error('Users can only modify their own role during onboarding');

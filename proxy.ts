@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
+import { CONFIG } from './utils/config';
 
 /**
  * Proxy (middleware) for route protection and security headers.
@@ -43,24 +44,10 @@ export default async function proxy(req: NextRequest) {
     const hasSession = hasSessionCookie(req);
 
     // Public routes that don't require authentication
-    const publicRoutes = [
-        '/',
-        '/sign-in',
-        '/sign-up',
-        '/reset-password',
-        '/about',
-        '/contact',
-        '/terms-of-service',
-        '/privacy-policy',
-        '/for-coaches',
-        '/for-athletes',
-        '/for-recruiters'
-    ];
-    const isPublicRoute = publicRoutes.some(route => pathname === route || pathname.startsWith(route + '/'));
+    const isPublicRoute = CONFIG.ROUTES.PUBLIC.some(route => pathname === route || pathname.startsWith(route + '/'));
 
     // Auth pages - redirect to dashboard if has session cookie (except for forgot-password)
-    const authPagesWithoutSession = ['/forgot-password'];
-    const isAuthPageWithoutSession = authPagesWithoutSession.some(route => pathname.startsWith(route));
+    const isAuthPageWithoutSession = CONFIG.ROUTES.AUTH_PAGES_NO_SESSION.some(route => pathname.startsWith(route));
 
     if ((pathname.startsWith('/sign-in') || pathname.startsWith('/sign-up')) && hasSession && !isAuthPageWithoutSession) {
         return NextResponse.redirect(new URL('/dashboard', req.url));
@@ -88,7 +75,7 @@ export default async function proxy(req: NextRequest) {
             if (contentLength) {
                 const size = parseInt(contentLength);
                 const isFileUpload = pathname.includes('/upload') || pathname.includes('/verification');
-                const sizeLimit = isFileUpload ? 50 * 1024 * 1024 : 10 * 1024 * 1024;
+                const sizeLimit = isFileUpload ? CONFIG.SECURITY.MAX_BODY_SIZE_UPLOAD : CONFIG.SECURITY.MAX_BODY_SIZE_DEFAULT;
 
                 if (size > sizeLimit) {
                     return NextResponse.json(

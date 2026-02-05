@@ -1,65 +1,61 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { CONFIG } from './config';
+import { getRedisConfig, isDevelopment } from './env';
 
 // ==================== CONFIGURATION ====================
 
-const isDev = process.env.NODE_ENV === 'development';
-
 export const SECURITY_CONFIG = {
-  redis: {
-    url: process.env.REDIS_URL,
-    token: process.env.REDIS_TOKEN,
-    enabled: !!process.env.REDIS_URL && !!process.env.REDIS_TOKEN,
-  },
+  redis: getRedisConfig(),
   cache: {
-    profileInfo: isDev ? 60 : 300, // 1min dev, 5min prod
-    searchResults: isDev ? 30 : 180, // 30s dev, 3min prod
-    userConnections: isDev ? 60 : 120, // 1min dev, 2min prod
-    usageLimits: isDev ? 120 : 900, // 2min dev, 15min prod
-    notifications: isDev ? 30 : 60, // 30s dev, 1min prod
-    discover: isDev ? 60 : 300, // 1min dev, 5min prod
+    profileInfo: isDevelopment ? CONFIG.CACHE.SHORT : CONFIG.CACHE.MEDIUM,
+    searchResults: isDevelopment ? 30 : CONFIG.CACHE.MEDIUM,
+    userConnections: isDevelopment ? CONFIG.CACHE.SHORT : 120,
+    usageLimits: isDevelopment ? 120 : 900,
+    notifications: isDevelopment ? 30 : CONFIG.CACHE.SHORT,
+    discover: isDevelopment ? CONFIG.CACHE.SHORT : CONFIG.CACHE.MEDIUM,
   },
   rateLimit: {
     fileUpload: {
-      athlete: { requests: isDev ? 50 : 20, windowMs: 60 * 60 * 1000 },
-      coach: { requests: isDev ? 100 : 30, windowMs: 60 * 60 * 1000 },
-      recruiter: { requests: isDev ? 100 : 30, windowMs: 60 * 60 * 1000 },
-      admin: { requests: isDev ? 200 : 100, windowMs: 60 * 60 * 1000 }
+      athlete: { requests: isDevelopment ? 50 : 20, windowMs: CONFIG.SECURITY.RATE_LIMITS.WINDOW_MS },
+      coach: { requests: isDevelopment ? 100 : 30, windowMs: CONFIG.SECURITY.RATE_LIMITS.WINDOW_MS },
+      recruiter: { requests: isDevelopment ? 100 : 30, windowMs: CONFIG.SECURITY.RATE_LIMITS.WINDOW_MS },
+      admin: { requests: isDevelopment ? 200 : 100, windowMs: CONFIG.SECURITY.RATE_LIMITS.WINDOW_MS }
     },
     general: {
-      athlete: { requests: isDev ? 500 : 200, windowMs: 15 * 60 * 1000 },
-      coach: { requests: isDev ? 1000 : 300, windowMs: 15 * 60 * 1000 },
-      recruiter: { requests: isDev ? 1000 : 300, windowMs: 15 * 60 * 1000 },
-      admin: { requests: isDev ? 2000 : 1000, windowMs: 15 * 60 * 1000 }
+      athlete: { requests: isDevelopment ? 500 : 200, windowMs: 15 * 60 * 1000 },
+      coach: { requests: isDevelopment ? 1000 : 300, windowMs: 15 * 60 * 1000 },
+      recruiter: { requests: isDevelopment ? 1000 : 300, windowMs: 15 * 60 * 1000 },
+      admin: { requests: isDevelopment ? 2000 : 1000, windowMs: 15 * 60 * 1000 }
     },
     messaging: {
-      athlete: { requests: isDev ? 200 : 100, windowMs: 60 * 60 * 1000 },
-      coach: { requests: isDev ? 300 : 150, windowMs: 60 * 60 * 1000 },
-      recruiter: { requests: isDev ? 300 : 150, windowMs: 60 * 60 * 1000 },
-      admin: { requests: isDev ? 1000 : 500, windowMs: 60 * 60 * 1000 }
+      athlete: { requests: isDevelopment ? 200 : 100, windowMs: CONFIG.SECURITY.RATE_LIMITS.WINDOW_MS },
+      coach: { requests: isDevelopment ? 300 : 150, windowMs: CONFIG.SECURITY.RATE_LIMITS.WINDOW_MS },
+      recruiter: { requests: isDevelopment ? 300 : 150, windowMs: CONFIG.SECURITY.RATE_LIMITS.WINDOW_MS },
+      admin: { requests: isDevelopment ? 1000 : 500, windowMs: CONFIG.SECURITY.RATE_LIMITS.WINDOW_MS }
     },
     search: {
-      athlete: { requests: isDev ? 1000 : 300, windowMs: 60 * 60 * 1000 },
-      coach: { requests: isDev ? 1500 : 500, windowMs: 60 * 60 * 1000 },
-      recruiter: { requests: isDev ? 1500 : 500, windowMs: 60 * 60 * 1000 },
-      admin: { requests: isDev ? 3000 : 1000, windowMs: 60 * 60 * 1000 }
+      athlete: { requests: isDevelopment ? 1000 : 300, windowMs: CONFIG.SECURITY.RATE_LIMITS.WINDOW_MS },
+      coach: { requests: isDevelopment ? 1500 : 500, windowMs: CONFIG.SECURITY.RATE_LIMITS.WINDOW_MS },
+      recruiter: { requests: isDevelopment ? 1500 : 500, windowMs: CONFIG.SECURITY.RATE_LIMITS.WINDOW_MS },
+      admin: { requests: isDevelopment ? 3000 : 1000, windowMs: CONFIG.SECURITY.RATE_LIMITS.WINDOW_MS }
     },
     connections: {
-      athlete: { requests: isDev ? 100 : 50, windowMs: 60 * 60 * 1000 },
-      coach: { requests: isDev ? 150 : 75, windowMs: 60 * 60 * 1000 },
-      recruiter: { requests: isDev ? 150 : 75, windowMs: 60 * 60 * 1000 },
-      admin: { requests: isDev ? 500 : 200, windowMs: 60 * 60 * 1000 }
+      athlete: { requests: isDevelopment ? 100 : 50, windowMs: CONFIG.SECURITY.RATE_LIMITS.WINDOW_MS },
+      coach: { requests: isDevelopment ? 150 : 75, windowMs: CONFIG.SECURITY.RATE_LIMITS.WINDOW_MS },
+      recruiter: { requests: isDevelopment ? 150 : 75, windowMs: CONFIG.SECURITY.RATE_LIMITS.WINDOW_MS },
+      admin: { requests: isDevelopment ? 500 : 200, windowMs: CONFIG.SECURITY.RATE_LIMITS.WINDOW_MS }
     },
     notifications: {
-      athlete: { requests: isDev ? 200 : 100, windowMs: 60 * 60 * 1000 },
-      coach: { requests: isDev ? 300 : 150, windowMs: 60 * 60 * 1000 },
-      recruiter: { requests: isDev ? 300 : 150, windowMs: 60 * 60 * 1000 },
-      admin: { requests: isDev ? 1000 : 500, windowMs: 60 * 60 * 1000 }
+      athlete: { requests: isDevelopment ? 200 : 100, windowMs: CONFIG.SECURITY.RATE_LIMITS.WINDOW_MS },
+      coach: { requests: isDevelopment ? 300 : 150, windowMs: CONFIG.SECURITY.RATE_LIMITS.WINDOW_MS },
+      recruiter: { requests: isDevelopment ? 300 : 150, windowMs: CONFIG.SECURITY.RATE_LIMITS.WINDOW_MS },
+      admin: { requests: isDevelopment ? 1000 : 500, windowMs: CONFIG.SECURITY.RATE_LIMITS.WINDOW_MS }
     },
     reports: {
-      athlete: { requests: isDev ? 20 : 10, windowMs: 60 * 60 * 1000 },
-      coach: { requests: isDev ? 50 : 25, windowMs: 60 * 60 * 1000 },
-      recruiter: { requests: isDev ? 50 : 25, windowMs: 60 * 60 * 1000 },
-      admin: { requests: isDev ? 200 : 100, windowMs: 60 * 60 * 1000 }
+      athlete: { requests: isDevelopment ? 20 : 10, windowMs: CONFIG.SECURITY.RATE_LIMITS.WINDOW_MS },
+      coach: { requests: isDevelopment ? 50 : 25, windowMs: CONFIG.SECURITY.RATE_LIMITS.WINDOW_MS },
+      recruiter: { requests: isDevelopment ? 50 : 25, windowMs: CONFIG.SECURITY.RATE_LIMITS.WINDOW_MS },
+      admin: { requests: isDevelopment ? 200 : 100, windowMs: CONFIG.SECURITY.RATE_LIMITS.WINDOW_MS }
     }
   }
 } as const;
@@ -71,20 +67,20 @@ let redisClient: any = null;
 
 async function getRedisClient() {
   if (!SECURITY_CONFIG.redis.enabled || !SECURITY_CONFIG.redis.url) return null;
-  
+
   if (!redisClient) {
     try {
       const { Redis } = await import('@upstash/redis');
-      redisClient = new Redis({ 
-        url: SECURITY_CONFIG.redis.url, 
-        token: SECURITY_CONFIG.redis.token 
+      redisClient = new Redis({
+        url: SECURITY_CONFIG.redis.url,
+        token: SECURITY_CONFIG.redis.token
       });
     } catch (error) {
       console.warn('Redis connection failed, falling back to memory:', error);
       return null;
     }
   }
-  
+
   return redisClient;
 }
 
@@ -94,7 +90,7 @@ export type UserRole = 'athlete' | 'coach' | 'recruiter' | 'admin';
 export type RateLimitType = keyof typeof SECURITY_CONFIG.rateLimit;
 export type CacheType = keyof typeof SECURITY_CONFIG.cache;
 
-export type SecurityEventType = 
+export type SecurityEventType =
   | 'rate_limit_exceeded'
   | 'invalid_token'
   | 'csrf_attempt'
@@ -182,7 +178,7 @@ class RateLimiter {
     const windowStart = Math.floor(now / config.windowMs) * config.windowMs;
 
     const redis = await getRedisClient();
-    
+
     if (redis) {
       return this.checkLimitRedis(redis, key, config, windowStart, now);
     } else {
@@ -201,13 +197,13 @@ class RateLimiter {
     try {
       const redisKey = `ratelimit:${key}:${windowStart}`;
       const current = await redis.incr(redisKey);
-      
+
       if (current === 1) {
         await redis.expire(redisKey, Math.ceil(config.windowMs / 1000));
       }
 
       const resetTime = windowStart + config.windowMs;
-      
+
       if (current > config.requests) {
         // Track violations in Redis
         const violationKey = `violations:${key}`;
@@ -253,7 +249,7 @@ class RateLimiter {
         strikes: 0
       };
       this.memoryStore.set(key, newEntry);
-      
+
       return {
         allowed: true,
         remaining: config.requests - 1,
@@ -263,7 +259,7 @@ class RateLimiter {
 
     if (entry.count >= config.requests) {
       entry.strikes += 1;
-      
+
       if (entry.strikes >= 5) {
         this.blacklist.add(key);
       }
@@ -316,7 +312,7 @@ class Cache {
 
   async get<T>(key: string): Promise<T | null> {
     const redis = await getRedisClient();
-    
+
     if (redis) {
       try {
         const data = await redis.get(key);
@@ -337,7 +333,7 @@ class Cache {
 
   async set<T>(key: string, data: T, ttlSeconds: number): Promise<void> {
     const redis = await getRedisClient();
-    
+
     if (redis) {
       try {
         await redis.setex(key, ttlSeconds, JSON.stringify(data));
@@ -355,7 +351,7 @@ class Cache {
 
   async del(key: string): Promise<void> {
     const redis = await getRedisClient();
-    
+
     if (redis) {
       try {
         await redis.del(key);
@@ -369,7 +365,7 @@ class Cache {
 
   async invalidatePattern(pattern: string): Promise<void> {
     const redis = await getRedisClient();
-    
+
     if (redis) {
       try {
         const keys = await redis.keys(pattern);
@@ -408,21 +404,21 @@ interface FileTypeConfig {
 
 const ALLOWED_FILE_TYPES = {
   images: {
-    'image/jpeg': { maxSize: 5 * 1024 * 1024, extensions: ['.jpg', '.jpeg'] },
-    'image/png': { maxSize: 5 * 1024 * 1024, extensions: ['.png'] },
-    'image/webp': { maxSize: 5 * 1024 * 1024, extensions: ['.webp'] }
+    'image/jpeg': { maxSize: CONFIG.FILES.MAX_SIZE_IMAGE, extensions: ['.jpg', '.jpeg'] },
+    'image/png': { maxSize: CONFIG.FILES.MAX_SIZE_IMAGE, extensions: ['.png'] },
+    'image/webp': { maxSize: CONFIG.FILES.MAX_SIZE_IMAGE, extensions: ['.webp'] }
   },
   documents: {
-    'application/pdf': { maxSize: 10 * 1024 * 1024, extensions: ['.pdf'] }
+    'application/pdf': { maxSize: CONFIG.FILES.MAX_SIZE_DOCUMENT, extensions: ['.pdf'] }
   },
   videos: {
-    'video/mp4': { maxSize: 50 * 1024 * 1024, extensions: ['.mp4'] },
-    'video/quicktime': { maxSize: 50 * 1024 * 1024, extensions: ['.mov'] }
+    'video/mp4': { maxSize: CONFIG.FILES.MAX_SIZE_VIDEO, extensions: ['.mp4'] },
+    'video/quicktime': { maxSize: CONFIG.FILES.MAX_SIZE_VIDEO, extensions: ['.mov'] }
   }
 } as const;
 
 export async function validateFileSecure(
-  file: File, 
+  file: File,
   allowedTypes: keyof typeof ALLOWED_FILE_TYPES
 ): Promise<FileSecurityResult> {
   try {
@@ -431,8 +427,8 @@ export async function validateFileSecure(
       return { isValid: false, error: 'File is empty' };
     }
 
-    if (file.size > 50 * 1024 * 1024) {
-      return { isValid: false, error: 'File size exceeds maximum limit (50MB)' };
+    if (file.size > CONFIG.FILES.MAX_SIZE_VIDEO) {
+      return { isValid: false, error: `File size exceeds maximum limit (${CONFIG.FILES.MAX_SIZE_VIDEO / 1024 / 1024}MB)` };
     }
 
     // Check allowed types
@@ -510,9 +506,9 @@ export async function scanContent(buffer: ArrayBuffer): Promise<{ safe: boolean;
 
 function extractClientInfo(request: NextRequest): Pick<SecurityEventDetails, 'ip' | 'userAgent'> {
   return {
-    ip: request.headers.get('x-forwarded-for')?.split(',')[0] || 
-        request.headers.get('x-real-ip') || 
-        'unknown',
+    ip: request.headers.get('x-forwarded-for')?.split(',')[0] ||
+      request.headers.get('x-real-ip') ||
+      'unknown',
     userAgent: request.headers.get('user-agent') || 'unknown',
   };
 }
@@ -531,7 +527,7 @@ export function logSecurityEvent(
   };
 
   const logMessage = JSON.stringify(logEntry, null, 2);
-  
+
   switch (level) {
     case 'critical':
     case 'error':
@@ -553,7 +549,7 @@ export function logSecurityEventWithRequest(
   level: SecurityLogEntry['level'] = 'warning'
 ): void {
   const clientInfo = extractClientInfo(request);
-  
+
   const details: SecurityEventDetails = {
     ...clientInfo,
     endpoint: request.nextUrl.pathname,
@@ -628,14 +624,14 @@ export const SecurityEvents = {
 export function getClientIP(request: NextRequest): string {
   const forwarded = request.headers.get('x-forwarded-for');
   const realIP = request.headers.get('x-real-ip');
-  
+
   if (forwarded) {
     return forwarded.split(',')[0].trim();
   }
   if (realIP) {
     return realIP;
   }
-  
+
   return 'unknown';
 }
 
@@ -663,13 +659,13 @@ export async function withRateLimit(
 
   if (!result.allowed) {
     headers['Retry-After'] = result.retryAfter?.toString() || '60';
-    
+
     return {
       success: false,
       response: NextResponse.json(
-        { 
+        {
           error: 'Rate limit exceeded',
-          retryAfter: result.retryAfter 
+          retryAfter: result.retryAfter
         },
         { status: 429, headers }
       ),
@@ -711,8 +707,8 @@ export async function getCachedWithType<T>(
 }
 
 export async function setCachedWithType<T>(
-  key: string, 
-  data: T, 
+  key: string,
+  data: T,
   cacheType: CacheType
 ): Promise<void> {
   const cache = Cache.getInstance();
@@ -723,7 +719,7 @@ export async function setCachedWithType<T>(
 // ==================== RESPONSE HELPERS ====================
 
 export function createErrorResponse(
-  message: string, 
+  message: string,
   status: number = 500,
   headers?: Record<string, string>
 ): NextResponse {
@@ -747,20 +743,20 @@ export function createCachedResponse<T>(
     'X-Cache-TTL': SECURITY_CONFIG.cache[cacheType].toString(),
     ...headers
   };
-  
+
   return NextResponse.json(data, { headers: cacheHeaders });
 }
 
 // ==================== VALIDATION HELPERS ====================
 
 export function validateRequiredFields(
-  data: Record<string, unknown>, 
+  data: Record<string, unknown>,
   requiredFields: string[]
 ): { valid: boolean; missingFields?: string[] } {
-  const missingFields = requiredFields.filter(field => 
+  const missingFields = requiredFields.filter(field =>
     data[field] === undefined || data[field] === null || data[field] === ''
   );
-  
+
   return {
     valid: missingFields.length === 0,
     missingFields: missingFields.length > 0 ? missingFields : undefined
@@ -771,15 +767,15 @@ export function validateFile(file: File): { valid: boolean; error?: string } {
   if (!file) {
     return { valid: false, error: 'No file provided' };
   }
-  
+
   if (file.size === 0) {
     return { valid: false, error: 'File is empty' };
   }
-  
-  if (file.size > 50 * 1024 * 1024) {
-    return { valid: false, error: 'File too large (max 50MB)' };
+
+  if (file.size > CONFIG.FILES.MAX_SIZE_VIDEO) {
+    return { valid: false, error: `File too large (max ${CONFIG.FILES.MAX_SIZE_VIDEO / 1024 / 1024}MB)` };
   }
-  
+
   return { valid: true };
 }
 
@@ -793,7 +789,7 @@ export function validateFile(file: File): { valid: boolean; error?: string } {
  * @returns Object with validation result and error message if invalid
  */
 export function validateTimestamp(
-  timestampHeader: string | null, 
+  timestampHeader: string | null,
   maxAgeMs: number = 5 * 60 * 1000,
   allowFutureMs: number = 1 * 60 * 1000
 ): { valid: boolean; error?: string } {
@@ -812,22 +808,22 @@ export function validateTimestamp(
   }
 
   const now = Date.now();
-  
+
   // Check if timestamp is too far in the future
   if (timestamp > now + allowFutureMs) {
     const allowFutureMinutes = Math.floor(allowFutureMs / 60000);
-    return { 
-      valid: false, 
-      error: `Request timestamp is too far in the future (max +${allowFutureMinutes} minute${allowFutureMinutes !== 1 ? 's' : ''})` 
+    return {
+      valid: false,
+      error: `Request timestamp is too far in the future (max +${allowFutureMinutes} minute${allowFutureMinutes !== 1 ? 's' : ''})`
     };
   }
-  
+
   // Check if timestamp is too old
   if (timestamp < now - maxAgeMs) {
     const maxAgeMinutes = Math.floor(maxAgeMs / 60000);
-    return { 
-      valid: false, 
-      error: `Request timestamp is too old (max ${maxAgeMinutes} minute${maxAgeMinutes !== 1 ? 's' : ''} ago)` 
+    return {
+      valid: false,
+      error: `Request timestamp is too old (max ${maxAgeMinutes} minute${maxAgeMinutes !== 1 ? 's' : ''} ago)`
     };
   }
 
