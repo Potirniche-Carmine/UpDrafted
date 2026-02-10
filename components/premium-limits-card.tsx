@@ -159,7 +159,7 @@ export function PremiumLimitsCard() {
     }
 
     loadUsageData()
-  }, [user, loading, subscription?.tier, subscription?.isPremium, subscription?.status])
+  }, [user, loading])
 
   if (loading || fetchingUsage) {
     return (
@@ -309,7 +309,7 @@ export function PremiumLimitsCard() {
         {/* Upgrade CTA */}
         {upgradeMessage && (
           <div className="mt-4 pt-4 border-t">
-            <div className="bg-gradient-to-r from-[#01ae79]/5 to-[#01ae79]/10 dark:from-[#01ae79]/10 dark:to-[#01ae79]/20 rounded-lg p-4 border border-[#01ae79]/20">
+            <div className="bg-linear-to-r from-[#01ae79]/5 to-[#01ae79]/10 dark:from-[#01ae79]/10 dark:to-[#01ae79]/20 rounded-lg p-4 border border-[#01ae79]/20">
               <div className="text-center space-y-2">
                 <h4 className="font-semibold text-sm text-foreground">{upgradeMessage.title}</h4>
                 <p className="text-xs text-muted-foreground">{upgradeMessage.subtitle}</p>

@@ -101,7 +101,7 @@ export default function RootLayout({
             <AuthProvider>
               <SubscriptionProvider>
                 <Header />
-                <main className="flex-grow container mx-auto max-w-screen-2xl px-4 sm:px-6 lg:px-8 py-8 pb-20 md:pb-8">
+                <main className="grow container mx-auto max-w-screen-2xl px-4 sm:px-6 lg:px-8 py-8 pb-20 md:pb-8">
                   {children}
                 </main>
                 <Footer />

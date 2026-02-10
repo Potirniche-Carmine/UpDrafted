@@ -11,10 +11,10 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Check, ChevronsUpDown } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { 
+import {
   DIVISIONS,
-  US_STATES, 
-  getPositionsForSport, 
+  US_STATES,
+  getPositionsForSport,
   getStudentClassificationOptions
 } from "@/lib/sports-data";
 import { UnifiedSportSelector } from "@/components/ui/unified-sport-selector";
@@ -23,6 +23,7 @@ import { OnboardingData } from "../lib/types";
 import { FileUpload } from '@/components/ui/file-upload';
 import { ConferenceSelector } from "@/components/ui/conference-selector";
 import { SchoolSelector } from "@/components/ui/school-selector";
+import { CONFIG } from "@/utils/config";
 
 interface CoachFormProps {
   data: OnboardingData;
@@ -118,7 +119,7 @@ function CountryCombobox({
 }
 
 export default function CoachForm({ data, onInputChange }: CoachFormProps) {
-  const [validationErrors, setValidationErrors] = useState<{[key: string]: string}>({});
+  const [validationErrors, setValidationErrors] = useState<{ [key: string]: string }>({});
 
 
 
@@ -139,7 +140,7 @@ export default function CoachForm({ data, onInputChange }: CoachFormProps) {
   // Validate field and update errors
   const validateAndUpdateField = (field: keyof OnboardingData, value: string | number | null) => {
     const newErrors = { ...validationErrors };
-    
+
     switch (field) {
       case 'title':
         const titleResult = FormValidator.validateText(value as string, 'Title', FIELD_LIMITS.TITLE, true);
@@ -254,14 +255,14 @@ export default function CoachForm({ data, onInputChange }: CoachFormProps) {
         }
         break;
     }
-    
+
     setValidationErrors(newErrors);
     onInputChange(field, value);
   };
 
   const handleOrganizationLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    
+
     if (file) {
       // Validate file type
       const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
@@ -270,15 +271,15 @@ export default function CoachForm({ data, onInputChange }: CoachFormProps) {
         return;
       }
 
-      // Validate file size (5MB limit)
-      const maxSize = 5 * 1024 * 1024; // 5MB in bytes
+      // Validate file size
+      const maxSize = CONFIG.FILES.MAX_SIZE_IMAGE;
       if (file.size > maxSize) {
-        alert('File size must be less than 5MB');
+        alert(`File size must be less than ${maxSize / 1024 / 1024}MB`);
         return;
       }
 
       onInputChange('organizationLogo', file);
-      
+
       // Create preview URL
       const reader = new FileReader();
       reader.onloadend = () => {
@@ -357,7 +358,7 @@ export default function CoachForm({ data, onInputChange }: CoachFormProps) {
           uploadText="Click to upload organization logo"
           chooseText="Choose organization logo"
           supportedFormats="PNG, JPG, or WebP"
-          maxSize="5MB"
+          maxSize={`${CONFIG.FILES.MAX_SIZE_IMAGE / 1024 / 1024}MB`}
           imageType="organization"
         />
         <p className="text-xs text-muted-foreground">Optional - Add your school or organization logo</p>
@@ -480,7 +481,7 @@ export default function CoachForm({ data, onInputChange }: CoachFormProps) {
             Add your personal social media handles to help athletes connect with you. <span className="text-[#01ae79] font-medium">(Highly encouraged)</span>
           </p>
         </div>
-        
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="space-y-3">
             <Label htmlFor="instagramHandle" className="text-sm font-medium">Personal Instagram</Label>
@@ -521,7 +522,7 @@ export default function CoachForm({ data, onInputChange }: CoachFormProps) {
             Provide at least one website link to help athletes learn more about your program.
           </p>
         </div>
-        
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="space-y-3">
             <Label htmlFor="programWebsite" className="text-sm font-medium">Program Website</Label>

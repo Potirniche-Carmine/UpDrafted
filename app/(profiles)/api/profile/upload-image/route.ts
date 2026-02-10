@@ -4,7 +4,7 @@ import { uploadProfilePicture, uploadOrganizationLogo } from '@/database/r2/uplo
 import { deleteFromR2, getR2KeyFromUrl } from '@/database/r2/config';
 import { coachOperations, athleteOperations, recruitingOperations, userOperations, adminOperations } from '@/database/db-utils';
 import { withRateLimit } from '@/utils/security';
-import { validateFile, scanContent, createErrorResponse, createSuccessResponse, invalidateCache } from '@/utils/security';
+import { validateFileSecure, scanContent, createErrorResponse, createSuccessResponse, invalidateCache } from '@/utils/security';
 
 export const runtime = 'nodejs';
 
@@ -59,7 +59,7 @@ export async function POST(request: NextRequest) {
           return createErrorResponse('User not found', 404);
         }
 
-        const updateData = imageType === 'profile' 
+        const updateData = imageType === 'profile'
           ? { profileImageR3Key: null }
           : { organizationLogoR3Key: null };
 
@@ -82,7 +82,7 @@ export async function POST(request: NextRequest) {
 
         // Invalidate profile cache
         await invalidateCache(`profile:${userId}`);
-        
+
         return createSuccessResponse({
           removed: true,
           message: 'Image removed successfully'
@@ -99,15 +99,15 @@ export async function POST(request: NextRequest) {
     }
 
     // File validation
-    const fileValidation = validateFile(file);
-    if (!fileValidation.valid) {
+    const fileValidation = await validateFileSecure(file, 'images');
+    if (!fileValidation.isValid) {
       return createErrorResponse(fileValidation.error || 'Invalid file', 400);
     }
 
     // Content scanning
     const buffer = await file.arrayBuffer();
     const scanResult = await scanContent(buffer);
-    
+
     if (!scanResult.safe) {
       return createErrorResponse(`File security check failed: ${scanResult.reason}`, 400);
     }
@@ -115,29 +115,29 @@ export async function POST(request: NextRequest) {
     try {
       // Get current image URL from database to ensure we have the most up-to-date information
       let currentImageKey: string | null = null;
-      
+
       if (userWithProfile?.role === 'admin' && demoProfileType) {
         // For admin demo profiles, get the current image from the demo profile
         const demoProfiles = await adminOperations.getDemoProfiles(userId);
         if (demoProfileType === 'athlete' && imageType === 'profile') {
           currentImageKey = demoProfiles.athlete?.profileImageR3Key || null;
         } else if (demoProfileType === 'coach') {
-          currentImageKey = imageType === 'profile' 
+          currentImageKey = imageType === 'profile'
             ? demoProfiles.coach?.profileImageR3Key || null
             : demoProfiles.coach?.organizationLogoR3Key || null;
         } else if (demoProfileType === 'recruiter') {
-          currentImageKey = imageType === 'profile' 
+          currentImageKey = imageType === 'profile'
             ? demoProfiles.recruiter?.profileImageR3Key || null
             : demoProfiles.recruiter?.organizationLogoR3Key || null;
         }
       } else if (userWithProfile?.role === 'athlete' && imageType === 'profile') {
         currentImageKey = userWithProfile.athleteProfile?.profileImageR3Key || null;
       } else if (userWithProfile?.role === 'coach') {
-        currentImageKey = imageType === 'profile' 
+        currentImageKey = imageType === 'profile'
           ? userWithProfile.coachProfile?.profileImageR3Key || null
           : userWithProfile.coachProfile?.organizationLogoR3Key || null;
       } else if (userWithProfile?.role === 'recruiter') {
-        currentImageKey = imageType === 'profile' 
+        currentImageKey = imageType === 'profile'
           ? userWithProfile.recruitingProfile?.profileImageR3Key || null
           : userWithProfile.recruitingProfile?.organizationLogoR3Key || null;
       }

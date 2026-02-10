@@ -1,4 +1,4 @@
-import { uploadToR2, generateFileKey, generatePresignedUrl, listR2Objects, deleteFromR2, R2_FOLDERS, R2_PUBLIC_URL, constructR2Url, R2_PROFILE_BUCKET_NAME } from './config';
+import { uploadToR2, generatePresignedUrl, listR2Objects, deleteFromR2, R2_PUBLIC_URL, constructR2Url } from './config';
 
 // Types
 interface UploadResult {
@@ -10,36 +10,8 @@ interface UploadResult {
   error?: string;
 }
 
-interface ValidationResult {
-  valid: boolean;
-  error?: string;
-}
+import { validateFileSecure } from '@/utils/security';
 
-// Utilities
-const validateFile = (file: File): ValidationResult => {
-  // Check file size (10MB limit)
-  if (file.size > 10 * 1024 * 1024) {
-    return { valid: false, error: 'File size must be less than 10MB' };
-  }
-
-  // Check file type
-  const allowedTypes = [
-    'application/pdf',
-    'image/jpeg',
-    'image/jpg', 
-    'image/png',
-    'image/webp'
-  ];
-
-  if (!allowedTypes.includes(file.type)) {
-    return { 
-      valid: false, 
-      error: 'Invalid file type. Only PDF and image files are allowed.' 
-    };
-  }
-
-  return { valid: true };
-};
 
 /**
  * Clean up existing files in a specific folder
@@ -71,14 +43,14 @@ export async function uploadProfilePicture(
     const buffer = await file.arrayBuffer();
     // Stable folder: users/{userId}/profile/
     const folder = `users/${userId}/profile`;
-    
+
     // Clean up existing profile pictures first
     await cleanFolder(folder, false); // false = Profile Bucket
-    
+
     // Generate simple key: timestamp.ext to avoid caching issues while keeping it clean
     const extension = file.name.split('.').pop() || 'jpg';
     const filename = `${Date.now()}.${extension}`;
-    
+
     const url = await uploadToR2(
       new Uint8Array(buffer),
       filename, // file name references
@@ -86,9 +58,9 @@ export async function uploadProfilePicture(
       folder,
       false // Profile Bucket (treated as private storage, public access via Worker)
     );
-    
+
     const fullKey = `${folder}/${filename}`;
-    
+
     return {
       key: fullKey,
       url,
@@ -111,14 +83,14 @@ export async function uploadOrganizationLogo(
     const buffer = await file.arrayBuffer();
     // Stable folder: users/{userId}/organization/
     const folder = `users/${userId}/organization`;
-    
+
     // Clean up existing logos first
     await cleanFolder(folder, false); // false = Profile Bucket
-    
+
     // Generate simple key
     const extension = file.name.split('.').pop() || 'jpg';
     const filename = `${Date.now()}.${extension}`;
-    
+
     const url = await uploadToR2(
       new Uint8Array(buffer),
       filename,
@@ -126,9 +98,9 @@ export async function uploadOrganizationLogo(
       folder,
       false // Profile Bucket
     );
-    
+
     const fullKey = `${folder}/${filename}`;
-    
+
     return {
       key: fullKey,
       url,
@@ -150,8 +122,8 @@ export async function uploadVerificationFile(
 ): Promise<UploadResult> {
   try {
     // Validate file
-    const validation = validateFile(file);
-    if (!validation.valid) {
+    const validation = await validateFileSecure(file, 'verification');
+    if (!validation.isValid) {
       throw new Error(validation.error);
     }
 
@@ -159,7 +131,7 @@ export async function uploadVerificationFile(
     const timestamp = Date.now();
     const randomString = Math.random().toString(36).substring(2, 15);
     const sanitizedFileName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
-    
+
     // Organize files by user ID: users/{userId}/verification/{requestId}/{timestamp}-{random}-{filename}
     // We don't auto-clean here because a user might submit multiple files for one request.
     const fileKey = `users/${userId}/verification/${verificationRequestId}/${timestamp}-${randomString}-${sanitizedFileName}`;
@@ -207,18 +179,15 @@ export async function uploadPublicFile(
 ): Promise<UploadResult> {
   try {
     // Validate file (stricter for public files)
-    if (!file.type.startsWith('image/')) {
-      throw new Error('Only image files are allowed for public uploads');
-    }
-
-    if (file.size > 5 * 1024 * 1024) { // 5MB limit for public files
-      throw new Error('File size must be less than 5MB');
+    const validation = await validateFileSecure(file, 'images');
+    if (!validation.isValid) {
+      throw new Error(validation.error);
     }
 
     // Map legacy fileTypes to new structure
     const folderType = fileType === 'profile-picture' ? 'profile' : 'organization';
     const folder = `users/${userId}/${folderType}`;
-    
+
     // Clean up first
     await cleanFolder(folder, false);
 
@@ -226,7 +195,7 @@ export async function uploadPublicFile(
     const fileKey = `${folder}/${Date.now()}.${extension}`;
 
     // Upload to profile bucket
-    const uploadUrl = await generatePresignedUrl(fileKey, 300, 'PUT', false); 
+    const uploadUrl = await generatePresignedUrl(fileKey, 300, 'PUT', false);
 
     const uploadResponse = await fetch(uploadUrl, {
       method: 'PUT',
@@ -277,24 +246,24 @@ export async function getVerificationFileUrl(
  */
 export async function deleteAllUserFiles(userId: string): Promise<void> {
   const prefix = `users/${userId}/`;
-  
+
   try {
     console.log(`Starting full R2 cleanup for user ${userId}...`);
-    
+
     // 1. Clean Profile Bucket
     const profileFiles = await listR2Objects(prefix, false); // false = Profile Bucket
     if (profileFiles.length > 0) {
       console.log(`Deleting ${profileFiles.length} files from Profile Bucket for user ${userId}`);
       await Promise.all(profileFiles.map(key => deleteFromR2(key, false)));
     }
-    
+
     // 2. Clean Private Bucket
     const privateFiles = await listR2Objects(prefix, true); // true = Private Bucket
     if (privateFiles.length > 0) {
       console.log(`Deleting ${privateFiles.length} files from Private Bucket for user ${userId}`);
       await Promise.all(privateFiles.map(key => deleteFromR2(key, true)));
     }
-    
+
     console.log(`Completed R2 cleanup for user ${userId}`);
   } catch (error) {
     console.error(`Error deleting user files for ${userId}:`, error);

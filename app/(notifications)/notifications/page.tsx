@@ -7,7 +7,6 @@ import { Bell, UserPlus, MessageCircle, Trash2, Circle, Check, User, Lock } from
 import { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { AuthWrapper } from '../../../components/auth-wrapper';
 import { useNotifications } from '@/hooks/use-notifications';
-import { useAuth } from '@/hooks/use-auth';
 import { useRouter } from 'next/navigation';
 
 interface Notification {
@@ -215,7 +214,7 @@ export default function NotificationsPage() {
               <div className="p-6 border-b border-border/50">
                 <h1 className="text-2xl md:text-3xl font-bold">Notifications</h1>
               </div>
-              <div className="flex-grow flex items-center justify-center">
+              <div className="grow flex items-center justify-center">
                 <div className="text-center">
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#01ae79] mx-auto"></div>
                   <p className="mt-2 text-muted-foreground">Loading notifications...</p>
@@ -237,7 +236,7 @@ export default function NotificationsPage() {
               <div className="p-6 border-b border-border/50">
                 <h1 className="text-2xl md:text-3xl font-bold">Notifications</h1>
               </div>
-              <div className="flex-grow flex items-center justify-center">
+              <div className="grow flex items-center justify-center">
                 <div className="text-center">
                   <p className="text-red-500 mb-4">{error}</p>
                   <Button onClick={() => fetchNotifications()} variant="outline">
@@ -260,10 +259,10 @@ export default function NotificationsPage() {
           <div className="h-full flex flex-col border border-border/50 rounded-xl shadow-lg bg-card overflow-hidden">
 
             {/* Integrated Header */}
-            <div className="p-4 md:p-6 border-b border-border/50 bg-gradient-to-r from-[#01ae79]/5 to-[#01ae79]/10 dark:from-[#01ae79]/2 dark:to-[#01ae79]/10">
+            <div className="p-4 md:p-6 border-b border-border/50 bg-linear-to-r from-[#01ae79]/5 to-[#01ae79]/10 dark:from-[#01ae79]/2 dark:to-[#01ae79]/10">
               <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-6">
                 <div>
-                  <h1 className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-[#01ae79] via-[#01ae79] to-[#01ae79] bg-clip-text text-transparent mb-2">
+                  <h1 className="text-2xl md:text-3xl font-bold bg-linear-to-r from-[#01ae79] via-[#01ae79] to-[#01ae79] bg-clip-text text-transparent mb-2">
                     Notifications
                   </h1>
                   <div className="flex items-center gap-2 mt-1">
@@ -323,7 +322,7 @@ export default function NotificationsPage() {
             </div>
 
             {/* Notifications Content */}
-            <div className="flex-grow overflow-y-auto bg-gradient-to-b from-transparent to-[#01ae79]/5 dark:to-[#01ae79]/5">
+            <div className="grow overflow-y-auto bg-linear-to-b from-transparent to-[#01ae79]/5 dark:to-[#01ae79]/5">
               {filteredNotifications.length > 0 ? (
                 <div className="p-4 space-y-2">
                   {filteredNotifications.map(notification => (
@@ -331,7 +330,7 @@ export default function NotificationsPage() {
                       key={notification.id}
                       onClick={() => handleNotificationClick(notification)}
                       className={`group p-4 rounded-lg border transition-all duration-200 cursor-pointer hover:shadow-sm ${notification.isLocked
-                          ? 'bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-950/20 dark:to-orange-950/20 border-amber-200 dark:border-amber-800/40 hover:border-amber-300 dark:hover:border-amber-700/60'
+                          ? 'bg-linear-to-r from-amber-50 to-orange-50 dark:from-amber-950/20 dark:to-orange-950/20 border-amber-200 dark:border-amber-800/40 hover:border-amber-300 dark:hover:border-amber-700/60'
                           : notification.isRead
                             ? 'bg-card/70 dark:bg-card/50 hover:bg-card border-border/40 hover:border-[#01ae79]/20 dark:hover:border-[#01ae79]/30'
                             : 'bg-[#01ae79]/5 dark:bg-[#01ae79]/10 hover:bg-[#01ae79]/10 dark:hover:bg-[#01ae79]/20 border-[#01ae79]/30 dark:border-[#01ae79]/40'
@@ -341,14 +340,14 @@ export default function NotificationsPage() {
                         {!notification.isRead && (
                           <Circle
                             fill="currentColor"
-                            className="h-2 w-2 text-[#01ae79] mt-2 flex-shrink-0"
+                            className="h-2 w-2 text-[#01ae79] mt-2 shrink-0"
                           />
                         )}
                         {notification.isRead && (
-                          <div className="w-2 h-2 mt-2 flex-shrink-0"></div>
+                          <div className="w-2 h-2 mt-2 shrink-0"></div>
                         )}
 
-                        <div className="flex-shrink-0 mt-0.5">
+                        <div className="shrink-0 mt-0.5">
                           {!notification.isLocked && notification.actorImageUrl &&
                             notification.actorImageUrl !== 'undefined' &&
                             !notification.actorImageUrl.startsWith('undefined/') &&
@@ -382,7 +381,7 @@ export default function NotificationsPage() {
                                 <span className="font-semibold text-amber-600 dark:text-amber-400">
                                   {notification.message}
                                 </span>
-                                <span className="ml-2 text-xs bg-gradient-to-r from-amber-500 to-orange-500 text-white px-2 py-1 rounded-full font-medium">
+                                <span className="ml-2 text-xs bg-linear-to-r from-amber-500 to-orange-500 text-white px-2 py-1 rounded-full font-medium">
                                   VIEW INSIGHTS
                                 </span>
                               </span>
@@ -410,7 +409,7 @@ export default function NotificationsPage() {
                   ))}
                 </div>
               ) : (
-                <div className="flex-grow flex items-center justify-center p-8">
+                <div className="grow flex items-center justify-center p-8">
                   <div className="text-center max-w-md mx-auto">
                     <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-[#01ae79]/10 dark:bg-[#01ae79]/20 flex items-center justify-center">
                       <Bell className="h-8 w-8 text-[#01ae79] dark:text-[#01ae79]" />

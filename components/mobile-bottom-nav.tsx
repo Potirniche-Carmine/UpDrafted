@@ -1,5 +1,6 @@
 "use client";
 
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Search, MessageSquare, LayoutDashboard, Compass, UserPlus } from "lucide-react";
@@ -20,7 +21,7 @@ function NotificationBadge({ count }: { count: number }) {
   return (
     <div className="absolute -top-1 -right-1 z-10">
       <div className="relative">
-        <div className="flex items-center justify-center min-w-[16px] h-[16px] bg-red-500 text-white text-[10px] font-bold rounded-full px-0.5 border-2 border-white dark:border-gray-950 shadow-sm">
+        <div className="flex items-center justify-center min-w-4 h-4 bg-red-500 text-white text-[10px] font-bold rounded-full px-0.5 border-2 border-white dark:border-gray-950 shadow-sm">
           {count > 99 ? '99+' : String(count)}
         </div>
       </div>
@@ -37,8 +38,14 @@ export function MobileBottomNav() {
   const userRole = user?.role as string;
   const hasCompletedOnboarding = userRole && ['athlete', 'coach', 'recruiter', 'admin'].includes(userRole);
 
-  // Don't show the nav if user is not signed in or hasn't completed onboarding
-  if (!isSignedIn || !hasCompletedOnboarding) {
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  // Don't show the nav if user is not signed in or hasn't completed onboarding or not mounted
+  if (!isMounted || !isSignedIn || !hasCompletedOnboarding) {
     return null;
   }
 
@@ -63,8 +70,8 @@ export function MobileBottomNav() {
               key={item.key}
               href={item.href}
               className={`flex flex-col items-center justify-center flex-1 h-full px-2 py-1 transition-colors relative ${isActive
-                  ? 'text-[#01ae79]'
-                  : 'text-gray-500 dark:text-gray-400 active:text-[#01ae79] active:bg-[#01ae79]/5'
+                ? 'text-[#01ae79]'
+                : 'text-gray-500 dark:text-gray-400 active:text-[#01ae79] active:bg-[#01ae79]/5'
                 }`}
             >
               <div className="relative mb-1">

@@ -143,14 +143,17 @@ export function useSubscription(): UseSubscriptionReturn {
   useEffect(() => {
     if (!isPending && userId) {
       const cached = getCachedData(userId)
-      if (!cached) {
-        fetchSubscription()
-      } else {
+      if (cached) {
         setSubscription(cached.subscription)
         setFeatures(cached.features)
+      } else {
+        fetchSubscription()
       }
+    } else if (!isPending && !userId) {
+      setSubscription(DEFAULT_SUBSCRIPTION)
+      setFeatures(DEFAULT_FEATURES)
     }
-  }, [userId, isPending, fetchSubscription])
+  }, [userId, isPending])
 
   return {
     subscription,

@@ -5,11 +5,10 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import Image from "next/image";
-import { 
-  MapPin, 
-  Instagram, 
-  Users, 
-  Building, 
+import {
+  MapPin,
+  Instagram,
+  Building,
   Edit,
   Shield,
   ShieldCheck,
@@ -17,6 +16,7 @@ import {
 } from "lucide-react";
 import { BaseProfileData } from "../../lib/base-profile-types";
 import { VerificationDialog } from "./verification-dialog";
+import { AvatarWithFallback } from "@/components/ui/avatar-with-fallback";
 
 interface ProfileCardProps {
   data: BaseProfileData;
@@ -25,11 +25,11 @@ interface ProfileCardProps {
   onEditSection?: (section: string) => void;
 }
 
-export function ProfileCard({ 
-  data, 
-  isOwnProfile = false, 
+export function ProfileCard({
+  data,
+  isOwnProfile = false,
   roleLabel,
-  onEditSection 
+  onEditSection
 }: ProfileCardProps) {
   const [showVerificationDialog, setShowVerificationDialog] = useState(false);
 
@@ -41,26 +41,16 @@ export function ProfileCard({
     <>
       <Card>
         <CardContent className="text-center space-y-4">
-          <div className="relative group">
-            {data.profileImage ? (
-              <div className="w-32 h-32 md:w-36 md:h-36 mx-auto rounded-full overflow-hidden bg-muted">
-                <Image
-                  src={data.profileImage}
-                  alt={data.fullName || "Profile picture"}
-                  width={144}
-                  height={144}
-                  className="w-full h-full object-cover"
-                  unoptimized
-                />
-              </div>
-            ) : (
-              <div className="w-32 h-32 md:w-36 md:h-36 mx-auto rounded-full bg-muted flex items-center justify-center">
-                <Users className="w-12 h-12 md:w-16 md:h-16 text-muted-foreground" />
-              </div>
-            )}
+          <div className="relative group mx-auto w-32 h-32 md:w-36 md:h-36">
+            <AvatarWithFallback
+              src={data.profileImage}
+              name={data.fullName}
+              size="xl"
+              className="w-full h-full"
+            />
             {isOwnProfile && (
-              <div 
-                className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50 rounded-full opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer" 
+              <div
+                className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50 rounded-full opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
                 onClick={() => onEditSection?.('profile-picture')}
               >
                 <Edit className="w-8 h-8 text-white" />
@@ -106,7 +96,7 @@ export function ProfileCard({
                   <ShieldX className="w-3 h-3 mr-1" />
                   Unverified {roleLabel}
                 </Badge>
-                
+
                 {/* Show "Get Verified" button only to profile owner */}
                 {isOwnProfile && (
                   <div className="pt-2">
@@ -155,7 +145,7 @@ export function ProfileCard({
                     rel="noopener noreferrer"
                     className="flex items-center gap-2 px-3 py-2 bg-black text-white rounded-lg hover:opacity-90 transition-opacity"
                   >
-                                          <Image src="/icons/x-white-logo.png" alt="X" width={16} height={16} />
+                    <Image src="/icons/x-white-logo.png" alt="X" width={16} height={16} />
                     <span className="text-sm font-medium">{data.twitterHandle}</span>
                   </a>
                 )}

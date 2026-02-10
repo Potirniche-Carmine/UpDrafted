@@ -36,24 +36,23 @@ export function SubscriptionManager({ className }: SubscriptionManagerProps) {
 
   // Periodic check for subscription changes (when user has premium)
   useEffect(() => {
-    // Clear any existing interval first to prevent memory leaks
-    let interval: NodeJS.Timeout | null = null
-
-    if (subscription?.isPremium) {
-      interval = setInterval(() => {
-        // Only refetch if user has been active recently (tab is visible)
-        if (document.visibilityState === 'visible') {
-          console.log('🔄 Periodic subscription check...')
-          refetch()
-        }
-      }, 2 * 60 * 1000) // Check every 2 minutes for premium users
+    // Don't set up polling if no subscription or not premium
+    if (!subscription?.isPremium) {
+      return
     }
+
+    // Set up interval for premium users
+    const interval = setInterval(() => {
+      // Only refetch if user has been active recently (tab is visible)
+      if (document.visibilityState === 'visible') {
+        console.log('🔄 Periodic subscription check...')
+        refetch()
+      }
+    }, 2 * 60 * 1000) // Check every 2 minutes for premium users
 
     // Cleanup function that always runs
     return () => {
-      if (interval) {
-        clearInterval(interval)
-      }
+      clearInterval(interval)
     }
   }, [subscription?.isPremium, refetch])
 

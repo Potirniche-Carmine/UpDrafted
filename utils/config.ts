@@ -7,13 +7,13 @@
 export const CONFIG = {
     // File upload limits (in bytes)
     FILES: {
-        MAX_SIZE_DEFAULT: 10 * 1024 * 1024, // 10MB
-        MAX_SIZE_IMAGE: 5 * 1024 * 1024,    // 5MB
+        MAX_SIZE_DEFAULT: 20 * 1024 * 1024, // 20MB
+        MAX_SIZE_IMAGE: 20 * 1024 * 1024,   // 20MB
         MAX_SIZE_VIDEO: 50 * 1024 * 1024,   // 50MB
-        MAX_SIZE_DOCUMENT: 10 * 1024 * 1024, // 10MB
+        MAX_SIZE_DOCUMENT: 20 * 1024 * 1024, // 20MB
 
-        ALLOWED_IMAGE_TYPES: ['image/jpeg', 'image/png', 'image/webp'],
-        ALLOWED_VIDEO_TYPES: ['video/mp4', 'video/quicktime'],
+        ALLOWED_IMAGE_TYPES: ['image/jpeg', 'image/png', 'image/webp', 'image/gif'],
+        // ALLOWED_VIDEO_TYPES: ['video/mp4', 'video/quicktime'],
         ALLOWED_DOC_TYPES: ['application/pdf'],
     },
 
@@ -41,7 +41,7 @@ export const CONFIG = {
     SECURITY: {
         // Request size limits
         MAX_BODY_SIZE_DEFAULT: 2 * 1024 * 1024, // 2MB for standard JSON requests
-        MAX_BODY_SIZE_UPLOAD: 55 * 1024 * 1024, // 55MB to account for multipart overhead on 50MB files
+        MAX_BODY_SIZE_UPLOAD: 25 * 1024 * 1024, // 25MB to account for multipart overhead on 20MB files
 
         // Rate limit defaults (requests per window)
         RATE_LIMITS: {

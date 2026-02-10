@@ -5,7 +5,7 @@ import { db } from '@/database/db';
 import { verificationFiles, verificationRequests } from '@/database/schema';
 import { eq } from 'drizzle-orm';
 import { withRateLimit } from '@/utils/security';
-import { createErrorResponse, createSuccessResponse, validateFile, scanContent } from '@/utils/security';
+import { createErrorResponse, createSuccessResponse, validateFileSecure, scanContent } from '@/utils/security';
 
 export async function handleVerificationUpload(request: NextRequest): Promise<NextResponse> {
   try {
@@ -31,15 +31,15 @@ export async function handleVerificationUpload(request: NextRequest): Promise<Ne
     }
 
     // File validation
-    const validation = validateFile(file);
-    if (!validation.valid) {
+    const validation = await validateFileSecure(file, 'verification');
+    if (!validation.isValid) {
       return createErrorResponse(validation.error || 'Invalid file', 400);
     }
 
     // Content scanning
     const buffer = await file.arrayBuffer();
     const scanResult = await scanContent(buffer);
-    
+
     if (!scanResult.safe) {
       return createErrorResponse(`File security check failed: ${scanResult.reason}`, 400);
     }

@@ -74,7 +74,7 @@ export default async function proxy(req: NextRequest) {
             const contentLength = req.headers.get('content-length');
             if (contentLength) {
                 const size = parseInt(contentLength);
-                const isFileUpload = pathname.includes('/upload') || pathname.includes('/verification');
+                const isFileUpload = pathname.includes('/upload') || pathname.includes('/verification') || pathname.includes('/onboarding');
                 const sizeLimit = isFileUpload ? CONFIG.SECURITY.MAX_BODY_SIZE_UPLOAD : CONFIG.SECURITY.MAX_BODY_SIZE_DEFAULT;
 
                 if (size > sizeLimit) {

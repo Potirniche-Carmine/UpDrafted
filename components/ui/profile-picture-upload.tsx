@@ -7,6 +7,7 @@ import { Slider } from './slider';
 import Image from 'next/image';
 import Cropper from 'react-easy-crop';
 import type { Area, Point } from 'react-easy-crop';
+import { CONFIG } from '@/utils/config';
 
 interface ProfilePictureUploadProps {
   id?: string;
@@ -112,10 +113,10 @@ export function ProfilePictureUpload({
         return;
       }
 
-      // Validate file size (5MB limit)
-      const maxSize = 5 * 1024 * 1024; // 5MB
+      // Validate file size
+      const maxSize = CONFIG.FILES.MAX_SIZE_IMAGE;
       if (file.size > maxSize) {
-        setError('File size must be less than 5MB');
+        setError(`File size must be less than ${maxSize / 1024 / 1024}MB`);
         return;
       }
 
@@ -138,7 +139,7 @@ export function ProfilePictureUpload({
       onChange(blob, url);
       setIsEditMode(false);
       setImageSrc(null);
-      
+
       // Reset file input
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
@@ -155,7 +156,7 @@ export function ProfilePictureUpload({
     setZoom(1);
     setCrop({ x: 0, y: 0 });
     setError(null);
-    
+
     // Reset file input
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
@@ -169,7 +170,7 @@ export function ProfilePictureUpload({
     setImageSrc(null);
     setIsEditMode(false);
     setError(null);
-    
+
     // Reset file input
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
@@ -318,7 +319,7 @@ export function ProfilePictureUpload({
   // Upload mode - no image selected
   return (
     <div className={`space-y-4 ${className}`}>
-      <div 
+      <div
         className="border-2 border-dashed border-border rounded-lg p-8 hover:border-primary/50 transition-colors cursor-pointer group"
         onClick={triggerFileInput}
       >
@@ -329,7 +330,7 @@ export function ProfilePictureUpload({
           <div className="text-center">
             <p className="text-sm font-medium">Click to upload profile picture</p>
             <p className="text-xs text-muted-foreground mt-1">
-              PNG, JPG or WebP (max. 5MB)
+              PNG, JPG or WebP (max. {CONFIG.FILES.MAX_SIZE_IMAGE / 1024 / 1024}MB)
             </p>
           </div>
         </div>
@@ -356,6 +357,6 @@ export function ProfilePictureUpload({
       />
 
       {error && <p className="text-sm text-red-500 text-center">{error}</p>}
-    </div>
+    </div >
   );
 }

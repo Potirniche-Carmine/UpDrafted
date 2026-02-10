@@ -45,7 +45,7 @@ function NotificationBadge({ count, className = "" }: { count: number; className
   return (
     <div className={`absolute -top-2 -right-2 z-10 ${className}`}>
       <div className="relative">
-        <div className="flex items-center justify-center min-w-[18px] h-[18px] bg-red-500 text-white text-xs font-medium rounded-full px-1 border-2 border-white dark:border-gray-950 shadow-sm">
+        <div className="flex items-center justify-center min-w-4.5 h-4.5 bg-red-500 text-white text-xs font-medium rounded-full px-1 border-2 border-white dark:border-gray-950 shadow-sm">
           {count > 99 ? '99+' : String(count)}
         </div>
         {/* Subtle pulse animation for new notifications */}
@@ -160,7 +160,7 @@ function UserButtonDropdown({
           )}
           {hasCompletedOnboarding && (
             <div
-              className="absolute -bottom-[2px] -right-[2px] w-[13px] h-[13px] 
+              className="absolute -bottom-0.5 -right-0.5 w-3.25 h-3.25 
                          bg-[#01ae79]/10 dark:bg-[#01ae79]/20 
                          rounded-full flex items-center justify-center 
                          pointer-events-none 
@@ -201,6 +201,7 @@ function UserButtonDropdown({
 export function Header() {
   const { user, isSignedIn, isLoaded } = useUser();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const { navigateToProfile, isNavigating: profileNavigating } = useProfileNavigation();
   const { unreadCount: notificationCount } = useNotifications();
   const router = useRouter();
@@ -210,6 +211,11 @@ export function Header() {
   const userRole = user?.role as string | undefined;
   const hasCompletedOnboarding = userRole && ['athlete', 'coach', 'recruiter', 'admin'].includes(userRole);
   const isAdmin = userRole === 'admin';
+
+  // Prevent hydration mismatch by ensuring component is mounted on client
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // Blur any focused inputs when mobile sheet opens to prevent auto-focus
   useEffect(() => {
@@ -257,11 +263,11 @@ export function Header() {
   };
 
   // Don't render anything until loaded to prevent flash
-  if (!isLoaded) {
+  if (!isLoaded || !mounted) {
     return (
-      <header className="sticky top-0 z-[51] w-full border-b border-[#01ae79]/20 dark:border-[#01ae79]/30 bg-white/95 dark:bg-gray-950/95 backdrop-blur supports-[backdrop-filter]:bg-white/80 dark:supports-[backdrop-filter]:bg-gray-950/80">
+      <header className="sticky top-0 z-51 w-full border-b border-[#01ae79]/20 dark:border-[#01ae79]/30 bg-white/95 dark:bg-gray-950/95 backdrop-blur supports-backdrop-filter:bg-white/80 dark:supports-backdrop-filter:bg-gray-950/80">
         <div className="w-full flex h-14 lg:h-16 items-center justify-between px-3 sm:px-4 lg:px-6 xl:px-8">
-          <a href="#" onClick={handleLogoClick} className="flex items-center space-x-2 flex-shrink-0 logo-no-flash min-w-0">
+          <a href="#" onClick={handleLogoClick} className="flex items-center space-x-2 shrink-0 logo-no-flash min-w-0">
             <Image
               src="/updrafted-logo.webp"
               alt="UpDrafted Logo"
@@ -285,10 +291,10 @@ export function Header() {
   }
 
   return (
-    <header className="sticky top-0 z-[51] w-full border-b border-[#01ae79]/20 dark:border-[#01ae79]/30 bg-white/95 dark:bg-gray-950/95 backdrop-blur supports-[backdrop-filter]:bg-white/80 dark:supports-[backdrop-filter]:bg-gray-950/80">
+    <header className="sticky top-0 z-51 w-full border-b border-[#01ae79]/20 dark:border-[#01ae79]/30 bg-white/95 dark:bg-gray-950/95 backdrop-blur supports-backdrop-filter:bg-white/80 dark:supports-backdrop-filter:bg-gray-950/80">
       <div className="w-full flex h-14 lg:h-16 items-center justify-between px-3 sm:px-4 lg:px-6 xl:px-8 overflow-x-auto min-w-0">
         {/* Logo */}
-        <a href="#" onClick={handleLogoClick} className="flex items-center space-x-2 flex-shrink-0 logo-no-flash min-w-0">
+        <a href="#" onClick={handleLogoClick} className="flex items-center space-x-2 shrink-0 logo-no-flash min-w-0">
           <Image
             src="/updrafted-logo.webp"
             alt="UpDrafted Logo"
@@ -427,7 +433,7 @@ export function Header() {
                 </Button>
               </SheetTrigger>
 
-              <SheetContent side="right" className="w-[300px] sm:w-[400px] z-[60]">
+              <SheetContent side="right" className="w-75 sm:w-100 z-60">
                 <SheetHeader>
                   <SheetTitle className="text-left">Menu</SheetTitle>
                   <SheetDescription className="text-left">

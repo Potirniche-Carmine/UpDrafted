@@ -1,10 +1,11 @@
 import { S3Client, PutObjectCommand, DeleteObjectCommand, GetObjectCommand, ListObjectsV2Command } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
+import { CONFIG } from '@/utils/config';
 
 // Validate R2 credentials
 // We relax this check to allow build-time execution without secrets
 // The application will fail at runtime if credentials are missing and R2 is accessed
-const isTestOrBuild = process.env.NODE_ENV === 'test' || process.env.SKIP_ENV_VALIDATION === 'true' || !process.env.R2_ACCOUNT_ID;
+const isTestOrBuild = process.env.NODE_ENV === 'test';
 
 // Configure R2 client
 const r2Client = new S3Client({
@@ -17,10 +18,10 @@ const r2Client = new S3Client({
 });
 
 // Profile/Public-facing bucket (Images, Logos) - Treated as private storage, served via Worker
-export const R2_PROFILE_BUCKET_NAME = process.env.R2_PROFILE_BUCKET_NAME || 'updrafted-profile-assets';
+export const R2_PROFILE_BUCKET_NAME = process.env.R2_PROFILE_BUCKET_NAME || 'updrafted-assets-bucket';
 
 // Private bucket (Verification files, sensitive data) - Strictly private
-export const R2_PRIVATE_BUCKET_NAME = process.env.R2_PRIVATE_BUCKET_NAME || 'updrafted-private-assets';
+export const R2_PRIVATE_BUCKET_NAME = process.env.R2_PRIVATE_BUCKET_NAME || 'updrafted-private-bucket';
 
 export const R2_PUBLIC_URL = process.env.R2_PUBLIC_URL || 'https://images.updrafted.us';
 
@@ -35,22 +36,22 @@ export function constructR2Url(baseUrl: string, path: string): string {
   const cleanBaseUrl = baseUrl.replace(/\/$/, '');
   // Remove leading slash from path if present
   const cleanPath = path.replace(/^\//, '');
-  
+
   return `${cleanBaseUrl}/${cleanPath}`;
 }
 
 // Folders for different file types
 export const R2_FOLDERS = {
   PROFILE_PICTURES: 'profile-pictures',
-  ORGANIZATION_LOGOS: 'organization-logos', 
+  ORGANIZATION_LOGOS: 'organization-logos',
   VERIFICATION_FILES: 'verification-files',
 } as const;
 
 // File validation constants
-const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+const MAX_FILE_SIZE = CONFIG.FILES.MAX_SIZE_DOCUMENT; // 10MB Max (for docs), images are lower (5MB) checked in security.ts
 const ALLOWED_MIME_TYPES = [
-  'image/jpeg', 'image/png', 'image/gif', 'image/webp',
-  'application/pdf', 'text/plain'
+  ...CONFIG.FILES.ALLOWED_IMAGE_TYPES,
+  ...CONFIG.FILES.ALLOWED_DOC_TYPES
 ];
 
 // File magic number signatures for content validation
@@ -68,15 +69,15 @@ const FILE_SIGNATURES = {
 function validateFileContent(file: Buffer | Uint8Array, mimeType: string): void {
   const signature = FILE_SIGNATURES[mimeType as keyof typeof FILE_SIGNATURES];
   if (!signature) return; // Skip validation for unsupported types
-  
+
   const fileBytes = new Uint8Array(file);
-  
+
   // Check if file is too small to contain the signature
   if (fileBytes.length < signature.length) {
     console.warn(`File too small to validate signature for type ${mimeType}`);
     return; // Don't reject, just warn for small files
   }
-  
+
   // Check signature with tolerance for some file variations
   let matches = 0;
   for (let i = 0; i < signature.length; i++) {
@@ -84,23 +85,23 @@ function validateFileContent(file: Buffer | Uint8Array, mimeType: string): void 
       matches++;
     }
   }
-  
+
   // Require at least 80% of signature bytes to match (allows for some variation)
   const matchPercentage = matches / signature.length;
   if (matchPercentage < 0.8) {
     console.warn(`File signature mismatch for ${mimeType}. Match rate: ${(matchPercentage * 100).toFixed(1)}%`);
-    
+
     // For critical file types, still reject if signature is completely wrong
     if (mimeType === 'application/pdf' && fileBytes[0] !== 0x25) {
       throw new Error(`File content does not match declared PDF type`);
     }
-    
+
     // For images, allow more flexibility but warn
     if (mimeType.startsWith('image/')) {
       console.warn(`Allowing image upload despite signature mismatch for ${mimeType}`);
       return;
     }
-    
+
     // For other types, warn but allow
     console.warn(`Allowing file upload despite signature mismatch for ${mimeType}`);
   }
@@ -116,13 +117,13 @@ function validateFile(file: Buffer | Uint8Array, contentType: string): void {
   if (file.length > MAX_FILE_SIZE) {
     throw new Error(`File size exceeds ${MAX_FILE_SIZE / 1024 / 1024}MB limit`);
   }
-  if (!ALLOWED_MIME_TYPES.includes(contentType)) {
+  if (!(ALLOWED_MIME_TYPES as string[]).includes(contentType)) {
     throw new Error(`File type ${contentType} not allowed`);
   }
-  
+
   // Validate file content matches MIME type
-  validateFileContent(file, contentType);
-  
+  validateFileContent(file, contentType as keyof typeof FILE_SIGNATURES);
+
   // Check for malicious content patterns
   const content = Buffer.from(file).toString('binary');
   const maliciousPatterns = [
@@ -133,7 +134,7 @@ function validateFile(file: Buffer | Uint8Array, contentType: string): void {
     /onerror\s*=/i,
     /%3Cscript/i, // URL encoded <script
   ];
-  
+
   for (const pattern of maliciousPatterns) {
     if (pattern.test(content)) {
       throw new Error('File contains potentially malicious content');
@@ -158,14 +159,14 @@ export async function uploadToR2(
 ): Promise<string> {
   // Validate file before upload
   validateFile(file, contentType);
-  
+
   const fullKey = folder ? `${folder}/${key}` : key;
-  
+
   // Choose bucket based on privacy requirement
   // isPrivate = true -> Private Bucket (Verification files)
   // isPrivate = false -> Profile Bucket (Images, Logos)
   const bucketName = isPrivate ? R2_PRIVATE_BUCKET_NAME : R2_PROFILE_BUCKET_NAME;
-  
+
   const command = new PutObjectCommand({
     Bucket: bucketName,
     Key: fullKey,
@@ -175,7 +176,7 @@ export async function uploadToR2(
 
   try {
     await r2Client.send(command);
-    
+
     // Always return key as source of truth. 
     // Public URL construction is handled by the caller or specialized functions if needed.
     if (isPrivate) {
@@ -205,18 +206,18 @@ export async function generatePresignedUrl(
 ): Promise<string> {
   // Choose bucket based on file type
   const bucketName = isPrivateFile ? R2_PRIVATE_BUCKET_NAME : R2_PROFILE_BUCKET_NAME;
-  
+
   // Prevent DELETE operations on profile files for security via presigned URLs? 
   // Probably fine to keep the check but adjust message.
   if (operation === 'DELETE' && !isPrivateFile) {
-     // Allow for now if needed, or keep restricted.
-     // keeping restriction to force server-side deletion for profile assets?
-     // construct is "isPrivateFile" maps to "isPrivateBucket". 
-     // The user profile bucket is technically private now too, but let's keep the distinction.
+    // Allow for now if needed, or keep restricted.
+    // keeping restriction to force server-side deletion for profile assets?
+    // construct is "isPrivateFile" maps to "isPrivateBucket". 
+    // The user profile bucket is technically private now too, but let's keep the distinction.
   }
-  
+
   let command;
-  
+
   switch (operation) {
     case 'GET':
       command = new GetObjectCommand({
@@ -256,7 +257,7 @@ export async function generatePresignedUrl(
  */
 export async function deleteFromR2(key: string, isPrivateFile: boolean = false): Promise<void> {
   const bucketName = isPrivateFile ? R2_PRIVATE_BUCKET_NAME : R2_PROFILE_BUCKET_NAME;
-  
+
   const command = new DeleteObjectCommand({
     Bucket: bucketName,
     Key: key,
@@ -273,12 +274,12 @@ export function generateFileKey(originalName: string, prefix?: string): string {
   const randomString = Math.random().toString(36).substring(2, 15);
   const fileExtension = originalName.split('.').pop()?.toLowerCase();
   const baseName = originalName.split('.').slice(0, -1).join('.');
-  
+
   const cleanBaseName = baseName
     .replace(/[^a-zA-Z0-9\-_]/g, '-')
     .replace(/-+/g, '-')
     .substring(0, 50);
-  
+
   const keyPrefix = prefix ? `${prefix}-` : '';
   return `${keyPrefix}${timestamp}-${randomString}-${cleanBaseName}.${fileExtension}`;
 }
@@ -302,30 +303,29 @@ export async function listR2Objects(
 ): Promise<string[]> {
   const bucketName = isPrivateBucket ? R2_PRIVATE_BUCKET_NAME : R2_PROFILE_BUCKET_NAME;
   const objects: string[] = [];
-  
+
   let continuationToken: string | undefined;
-  
+
   do {
     const command = new ListObjectsV2Command({
       Bucket: bucketName,
       Prefix: prefix,
       ContinuationToken: continuationToken,
     });
-    
+
     try {
       const response = await r2Client.send(command);
-      
+
       if (response.Contents) {
         objects.push(...response.Contents.map(obj => obj.Key!).filter(Boolean));
       }
-      
+
       continuationToken = response.NextContinuationToken;
     } catch (error) {
       console.error('Error listing R2 objects:', process.env.NODE_ENV === 'production' ? 'List operation failed' : error);
       throw error;
     }
   } while (continuationToken);
-  
+
   return objects;
 }
- 

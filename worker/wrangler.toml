@@ -1,0 +1,20 @@
+name = "updrafted-assets-worker"
+main = "src/index.ts"
+compatibility_date = "2026-02-10"
+
+[[r2_buckets]]
+binding = "PROFILE_BUCKET"
+bucket_name = "updrafted-assets-bucket"
+preview_bucket_name = "dev-updrafted-assets"
+
+[env.production]
+name = "updrafted-assets-worker"
+[[env.production.r2_buckets]]
+binding = "PROFILE_BUCKET"
+bucket_name = "updrafted-assets-bucket"
+
+[env.dev]
+name = "dev-updrafted-assets-worker"
+[[env.dev.r2_buckets]]
+binding = "PROFILE_BUCKET"
+bucket_name = "dev-updrafted-assets"

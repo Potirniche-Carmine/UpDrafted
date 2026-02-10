@@ -406,15 +406,25 @@ const ALLOWED_FILE_TYPES = {
   images: {
     'image/jpeg': { maxSize: CONFIG.FILES.MAX_SIZE_IMAGE, extensions: ['.jpg', '.jpeg'] },
     'image/png': { maxSize: CONFIG.FILES.MAX_SIZE_IMAGE, extensions: ['.png'] },
-    'image/webp': { maxSize: CONFIG.FILES.MAX_SIZE_IMAGE, extensions: ['.webp'] }
+    'image/webp': { maxSize: CONFIG.FILES.MAX_SIZE_IMAGE, extensions: ['.webp'] },
+    'image/gif': { maxSize: CONFIG.FILES.MAX_SIZE_IMAGE, extensions: ['.gif'] }
   },
   documents: {
     'application/pdf': { maxSize: CONFIG.FILES.MAX_SIZE_DOCUMENT, extensions: ['.pdf'] }
   },
+  verification: {
+    'image/jpeg': { maxSize: CONFIG.FILES.MAX_SIZE_IMAGE, extensions: ['.jpg', '.jpeg'] },
+    'image/png': { maxSize: CONFIG.FILES.MAX_SIZE_IMAGE, extensions: ['.png'] },
+    'image/webp': { maxSize: CONFIG.FILES.MAX_SIZE_IMAGE, extensions: ['.webp'] },
+    'application/pdf': { maxSize: CONFIG.FILES.MAX_SIZE_DOCUMENT, extensions: ['.pdf'] }
+  },
+  // Videos are currently disabled by security policy
+  /*
   videos: {
     'video/mp4': { maxSize: CONFIG.FILES.MAX_SIZE_VIDEO, extensions: ['.mp4'] },
     'video/quicktime': { maxSize: CONFIG.FILES.MAX_SIZE_VIDEO, extensions: ['.mov'] }
   }
+  */
 } as const;
 
 export async function validateFileSecure(

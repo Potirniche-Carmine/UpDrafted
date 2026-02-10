@@ -38,6 +38,7 @@ const useNotificationsStore = create(
           const now = Date.now();
           const timeSinceLastFetch = currentState.lastFetched ? now - currentState.lastFetched : Infinity;
           if (timeSinceLastFetch < 30000) { // Less than 30 seconds ago
+            console.log('[Notifications] Skipping fetch - already in progress');
             return;
           }
         }
@@ -164,14 +165,19 @@ export const useNotifications = () => {
 
   // Check once on app startup/login
   useEffect(() => {
-    // Only fetch if Clerk is loaded, user is signed in, and we haven't checked on this session
+    // Only fetch if auth is loaded, user is signed in, and we haven't checked on this session
     if (
       isLoaded &&
       isSignedIn &&
       !hasCheckedOnStartup
     ) {
-      fetchWithToken(true); // Force initial fetch
-      setHasCheckedOnStartup(true);
+      // Check isFetching inside the effect, but don't include in dependencies
+      // to avoid changing the dependency array size
+      const store = useNotificationsStore.getState();
+      if (!store.isFetching) {
+        fetchWithToken(true); // Force initial fetch
+        setHasCheckedOnStartup(true);
+      }
     }
   }, [isLoaded, isSignedIn, hasCheckedOnStartup, fetchWithToken, setHasCheckedOnStartup]);
 

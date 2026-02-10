@@ -10,10 +10,10 @@ import { Button } from "@/components/ui/button";
 import { X, Check, ChevronsUpDown } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { 
+import {
   DIVISIONS,
-  US_STATES, 
-  getPositionsForSport, 
+  US_STATES,
+  getPositionsForSport,
   getStudentClassificationOptions
 } from "@/lib/sports-data";
 import { UnifiedSportSelector } from "@/components/ui/unified-sport-selector";
@@ -26,6 +26,7 @@ import { cn } from "@/lib/utils";
 import { FileUpload } from '@/components/ui/file-upload';
 import { ConferenceSelector } from "@/components/ui/conference-selector";
 import { SchoolSelector } from "@/components/ui/school-selector";
+import { CONFIG } from "@/utils/config";
 
 interface RecruiterFormProps {
   data: OnboardingData;
@@ -121,14 +122,14 @@ function CountryCombobox({
 }
 
 export default function RecruiterForm({ data, onInputChange }: RecruiterFormProps) {
-  const [validationErrors, setValidationErrors] = useState<{[key: string]: string}>({});
+  const [validationErrors, setValidationErrors] = useState<{ [key: string]: string }>({});
   const [activeSportForNeeds, setActiveSportForNeeds] = useState<string>("");
 
   // Initialize sport-specific needs when main sport or secondary sports change
   useEffect(() => {
     const allSports = [data.sportCoaching, ...data.secondarySportsRecruiting].filter(Boolean);
     const newSportSpecificNeeds = { ...data.sportSpecificNeeds };
-    
+
     // Add missing sports
     allSports.forEach(sport => {
       if (!newSportSpecificNeeds[sport]) {
@@ -140,17 +141,17 @@ export default function RecruiterForm({ data, onInputChange }: RecruiterFormProp
         };
       }
     });
-    
+
     // Remove sports that are no longer selected
     Object.keys(newSportSpecificNeeds).forEach(sport => {
       if (!allSports.includes(sport)) {
         delete newSportSpecificNeeds[sport];
       }
     });
-    
+
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (onInputChange as any)('sportSpecificNeeds', newSportSpecificNeeds);
-    
+
     // Set active sport for needs if not set or if current active sport is no longer in the list
     if (allSports.length > 0) {
       if (!activeSportForNeeds || !allSports.includes(activeSportForNeeds)) {
@@ -203,7 +204,7 @@ export default function RecruiterForm({ data, onInputChange }: RecruiterFormProp
   // Validate field and update errors
   const validateAndUpdateField = (field: keyof OnboardingData, value: string | number | null) => {
     const newErrors = { ...validationErrors };
-    
+
     switch (field) {
       case 'title':
         const titleResult = FormValidator.validateText(value as string, 'Title', FIELD_LIMITS.TITLE, true);
@@ -298,14 +299,14 @@ export default function RecruiterForm({ data, onInputChange }: RecruiterFormProp
         }
         break;
     }
-    
+
     setValidationErrors(newErrors);
     onInputChange(field, value);
   };
 
   const handleOrganizationLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    
+
     if (file) {
       // Validate file type
       const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
@@ -314,15 +315,15 @@ export default function RecruiterForm({ data, onInputChange }: RecruiterFormProp
         return;
       }
 
-      // Validate file size (5MB limit)
-      const maxSize = 5 * 1024 * 1024; // 5MB in bytes
+      // Validate file size
+      const maxSize = CONFIG.FILES.MAX_SIZE_IMAGE;
       if (file.size > maxSize) {
-        alert('File size must be less than 5MB');
+        alert(`File size must be less than ${maxSize / 1024 / 1024}MB`);
         return;
       }
 
       onInputChange('organizationLogo', file);
-      
+
       // Create preview URL
       const reader = new FileReader();
       reader.onloadend = () => {
@@ -403,7 +404,7 @@ export default function RecruiterForm({ data, onInputChange }: RecruiterFormProp
           uploadText="Click to upload organization logo"
           chooseText="Choose organization logo"
           supportedFormats="PNG, JPG, or WebP"
-          maxSize="5MB"
+          maxSize={`${CONFIG.FILES.MAX_SIZE_IMAGE / 1024 / 1024}MB`}
           imageType="organization"
         />
         <p className="text-xs text-muted-foreground">Optional - Add your school or organization logo</p>
@@ -432,7 +433,7 @@ export default function RecruiterForm({ data, onInputChange }: RecruiterFormProp
             Select additional sports you actively recruit for. You can add more sports and set specific recruiting needs later in your profile.
           </p>
         </div>
-        
+
         <UnifiedSportSelector
           mode="multi"
           selectedSports={data.secondarySportsRecruiting}
@@ -442,7 +443,7 @@ export default function RecruiterForm({ data, onInputChange }: RecruiterFormProp
           userCurrentSport={data.sportCoaching}
           maxSelection={10}
         />
-        
+
         {data.secondarySportsRecruiting.length > 0 && (
           <div className="flex flex-wrap gap-2 mt-3">
             {data.secondarySportsRecruiting.map(sport => (
@@ -559,7 +560,7 @@ export default function RecruiterForm({ data, onInputChange }: RecruiterFormProp
             Add your personal social media handles to help athletes connect with you. <span className="text-[#01ae79] font-medium">(Highly encouraged)</span>
           </p>
         </div>
-        
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="space-y-3">
             <Label htmlFor="instagramHandle" className="text-sm font-medium">Personal Instagram</Label>
@@ -600,7 +601,7 @@ export default function RecruiterForm({ data, onInputChange }: RecruiterFormProp
             Provide at least one website link to help athletes learn more about your program.
           </p>
         </div>
-        
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="space-y-3">
             <Label htmlFor="programWebsite" className="text-sm font-medium">Program Website</Label>
@@ -641,7 +642,7 @@ export default function RecruiterForm({ data, onInputChange }: RecruiterFormProp
             <p className="text-sm text-muted-foreground">
               Set specific recruiting criteria for each sport you coach. This helps athletes understand what you&apos;re looking for in each sport.
             </p>
-            
+
             {/* Sport Tabs */}
             <div className="flex flex-wrap gap-2">
               {allSelectedSports.map(sport => (

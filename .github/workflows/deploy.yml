@@ -42,6 +42,13 @@ jobs:
           curl -X POST "${{ secrets.COOLIFY_WEBHOOK_URL }}" \
             -H "Authorization: Bearer ${{ secrets.COOLIFY_TOKEN }}"
 
+      - name: Deploy Worker to Production
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          workingDirectory: 'worker'
+
   deploy-development:
     name: Build and Deploy to Development
     runs-on: self-hosted
@@ -77,3 +84,11 @@ jobs:
         run: |
           curl -X POST "${{ secrets.COOLIFY_DEV_WEBHOOK_URL }}" \
             -H "Authorization: Bearer ${{ secrets.COOLIFY_DEV_TOKEN }}"
+
+      - name: Deploy Worker to Development
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          workingDirectory: 'worker'
+          command: deploy --env dev
