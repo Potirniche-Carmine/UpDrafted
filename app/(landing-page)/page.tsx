@@ -20,15 +20,16 @@ function HomePageContent() {
           <div className="text-center space-y-8">
             {/* Brand Logo and Slogan */}
             <div className="space-y-4 sm:space-y-6 px-4 sm:px-0">
-              <div className="flex flex-col items-center justify-center gap-3 sm:gap-4">
+              <div className="flex flex-col items-center justify-center gap-3 sm:gap-4 logo-no-flash">
                 <Image
                   src="/updrafted-logo.webp"
                   alt="UpDrafted Logo"
                   width={1400}
                   height={467}
                   priority
+                  fetchPriority="high"
                   placeholder="empty"
-                  className="w-auto h-auto max-w-[380px] sm:max-w-[900px] md:max-w-[1100px] lg:max-w-[1300px] xl:max-w-[1400px]"
+                  className="w-auto h-auto max-w-95 sm:max-w-225 md:max-w-275 lg:max-w-325 xl:max-w-350"
                   style={{
                     maxHeight: "clamp(120px, 28vw, 420px)"
                   }}
