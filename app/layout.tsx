@@ -48,6 +48,7 @@ export default function RootLayout({
         <meta name="theme-color" content="#01ae79" />
 
         <link rel="manifest" href="/site.webmanifest" />
+        <link rel="preload" href="/updrafted-logo.webp" as="image" type="image/webp" fetchPriority="high" />
         <Script
           id="structured-data"
           type="application/ld+json"
