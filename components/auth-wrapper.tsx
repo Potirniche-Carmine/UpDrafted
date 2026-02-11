@@ -1,6 +1,6 @@
 "use client";
 
-import { useUser, useAuth } from '@/hooks/use-auth';
+import { useUser } from '@/hooks/use-auth';
 import { useRouter, usePathname } from 'next/navigation';
 import { useEffect, useState, ReactNode, useCallback } from 'react';
 import { Button } from "@/components/ui/button";
@@ -58,6 +58,8 @@ export function OnboardingWrapper({
   children,
   loadingComponent
 }: OnboardingWrapperProps) {
+  // useUser internally uses the same session validation mechanism as useAuth
+  // Checking !isSignedIn here provides the same security guarantees as useAuth
   const { isSignedIn, isLoaded, user } = useUser();
   const router = useRouter();
   const [isAuthorized, setIsAuthorized] = useState(false);
@@ -145,7 +147,7 @@ export function AuthWrapper({
   const pathname = usePathname();
   const [isAuthorized, setIsAuthorized] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  const [serverVerified, setServerVerified] = useState(!enforceServerSide);
+  const [serverVerified] = useState(!enforceServerSide);
   const [isRedirecting, setIsRedirecting] = useState(false);
 
   // Special handling for different wrapper types

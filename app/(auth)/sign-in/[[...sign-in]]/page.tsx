@@ -61,8 +61,9 @@ export default function SignInPage() {
         return;
       }
 
-      // Redirect to dashboard or onboarding
-      router.push("/dashboard");
+      // Force a full page reload to ensure session cookies are processed correctly
+      // This prevents the auth wrapper on the dashboard from redirecting back to sign-in
+      window.location.href = "/dashboard";
     } catch (err) {
       setError("An unexpected error occurred. Please try again.");
       setLoading(false);

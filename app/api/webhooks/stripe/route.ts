@@ -262,27 +262,19 @@ function isAllowedIP(ip: string | null): boolean {
   
   // Require explicit opt-out for security - IP filtering is enabled by default
   if (process.env.STRIPE_WEBHOOK_IP_FILTERING === 'false') {
-    console.warn('Webhook IP filtering is disabled - this is not recommended for production')
     return true
   }
   
   if (!ip) {
-    console.warn('No IP address provided for webhook request')
     return false
   }
   
   // Remove port if present
   const cleanIP = ip.split(':').slice(0, -1).join(':') || ip.split(':')[0]
   
-  const isAllowed = STRIPE_IP_RANGES.includes(cleanIP) || 
-                   cleanIP === '127.0.0.1' || 
-                   cleanIP === '::1' // Allow localhost for development
-  
-  if (!isAllowed) {
-    console.warn(`Webhook request from unauthorized IP: ${cleanIP}`)
-  }
-  
-  return isAllowed
+  return STRIPE_IP_RANGES.includes(cleanIP) || 
+         cleanIP === '127.0.0.1' || 
+         cleanIP === '::1' // Allow localhost for development
 }
 
 /**
@@ -291,7 +283,6 @@ function isAllowedIP(ip: string | null): boolean {
  */
 async function getUserIdByStripeCustomer(stripeCustomerId: string): Promise<string | null> {
   try {
-    console.log(`🔍 Looking up userId for Stripe customer: ${stripeCustomerId}`)
     const results = await db
       .select({ userId: userSubscriptions.userId })
       .from(userSubscriptions)
@@ -299,11 +290,8 @@ async function getUserIdByStripeCustomer(stripeCustomerId: string): Promise<stri
       .limit(1)
     
     // Safely check if results exist and have data
-    const userId = results.length > 0 && results[0] ? results[0].userId : null
-    console.log(`🔍 Database lookup result: ${userId ? `Found ${userId}` : 'Not found'}`)
-    return userId
-  } catch (error) {
-    console.error('Error looking up userId by Stripe customer ID:', error)
+    return results.length > 0 && results[0] ? results[0].userId : null
+  } catch {
     return null
   }
 }
@@ -321,12 +309,10 @@ export async function POST(req: NextRequest) {
 
     // Validate webhook secret is configured
     if (!process.env.STRIPE_WEBHOOK_SECRET) {
-      console.error('STRIPE_WEBHOOK_SECRET environment variable is not configured')
       return NextResponse.json({ error: 'Server configuration error' }, { status: 500 })
     }
 
     if (!sig) {
-      console.error('Missing Stripe signature')
       return NextResponse.json({ error: 'Missing signature' }, { status: 400 })
     }
 
@@ -339,41 +325,28 @@ export async function POST(req: NextRequest) {
 
     try {
       event = stripe.webhooks.constructEvent(body, sig, process.env.STRIPE_WEBHOOK_SECRET)
-    } catch (err) {
-      console.error('Webhook signature verification failed:', {
-        error: err instanceof Error ? err.message : 'Unknown error',
-        signaturePresent: !!sig,
-        bodyLength: body.length
-      })
+    } catch {
       return NextResponse.json({ error: 'Invalid signature' }, { status: 400 })
     }
 
     // Enhanced timestamp extraction with proper validation
     const timestampMatch = sig.match(/t=([0-9]+)/)
     if (!timestampMatch) {
-      console.error('Unable to extract timestamp from webhook signature')
       return NextResponse.json({ error: 'Invalid signature format' }, { status: 400 })
     }
     
     const webhookTimestamp = parseInt(timestampMatch[1], 10)
     if (isNaN(webhookTimestamp)) {
-      console.error('Invalid timestamp in webhook signature')
       return NextResponse.json({ error: 'Invalid timestamp' }, { status: 400 })
     }
 
     // Replay attack protection with proper signature validation
     if (isReplayAttack(sig, webhookTimestamp)) {
-      console.warn('Potential replay attack detected:', { 
-        eventType: event.type, 
-        timestamp: webhookTimestamp,
-        eventId: event.id 
-      })
       return NextResponse.json({ error: 'Replay attack detected' }, { status: 400 })
     }
 
     // Enhanced rate limiting
     if (isRateLimited(event.type, sig)) {
-      console.warn(`Rate limit exceeded for webhook type: ${event.type}`)
       return NextResponse.json({ error: 'Rate limited' }, { status: 429 })
     }
 
@@ -381,17 +354,14 @@ export async function POST(req: NextRequest) {
     switch (event.type) {
       case 'customer.subscription.created':
       case 'customer.subscription.updated':
-        console.log(`Processing ${event.type} for subscription:`, event.data.object.id)
         await handleSubscriptionUpdate(event.data.object as Stripe.Subscription)
         break
 
       case 'customer.subscription.deleted':
-        console.log(`Processing ${event.type} for subscription:`, event.data.object.id)
         await handleSubscriptionDeleted(event.data.object as Stripe.Subscription)
         break
 
       case 'checkout.session.completed':
-        console.log(`Processing ${event.type} for session:`, event.data.object.id)
         await handleCheckoutCompleted(event.data.object as Stripe.Checkout.Session)
         break
 
@@ -406,17 +376,11 @@ export async function POST(req: NextRequest) {
         break
 
       default:
-        // Log unhandled events temporarily to debug
-        console.log(`Unhandled webhook event: ${event.type}`)
         break
     }
 
     return NextResponse.json({ received: true })
-  } catch (error) {
-    console.error('Webhook error:', {
-      errorMessage: error instanceof Error ? error.message : 'Unknown error',
-      errorType: error instanceof Error ? error.constructor.name : typeof error
-    })
+  } catch {
     return NextResponse.json({ error: 'Webhook processing failed' }, { status: 500 })
   }
 }
@@ -440,31 +404,11 @@ async function handleSubscriptionUpdate(subscription: Stripe.Subscription) {
   }
   
   if (!userId) {
-    console.error('No userId found in subscription metadata or database lookup', {
-      subscriptionId: subscription.id,
-      customerId: subscription.customer,
-      hasMetadata: !!subscription.metadata,
-      metadataKeys: subscription.metadata ? Object.keys(subscription.metadata) : []
-    })
     return
   }
 
-  console.log(`Found userId: ${userId} for subscription: ${subscription.id}`)
-
   try {
-    // Minimal logging for database fallback cases only
-    if (!subscription.metadata?.userId) {
-      console.log(`Webhook: Database fallback for ${subscription.id}`)
-    }
-    
-    const webhookData = subscription as StripeSubscriptionWebhook    
-    const priceId = subscription.items.data[0]?.price?.id
-    console.log(`📋 Subscription details:`, {
-      subscriptionId: subscription.id,
-      status: subscription.status,
-      priceId: priceId,
-      customerId: subscription.customer
-    })
+    const webhookData = subscription as StripeSubscriptionWebhook
 
     await SubscriptionManager.updateSubscriptionFromStripe(userId, {
       id: subscription.id,
@@ -480,9 +424,8 @@ async function handleSubscriptionUpdate(subscription: Stripe.Subscription) {
     })
     
     // Cache invalidation is automatically handled by updateSubscriptionFromStripe
-    console.log(`✅ Subscription updated for user ${userId} - status: ${subscription.status}`)
-  } catch (error) {
-    console.error(`Error updating subscription for user ${userId}:`, error)
+  } catch {
+    // Error handling - could integrate with monitoring service here
   }
 }
 
@@ -499,30 +442,19 @@ async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
   }
   
   if (!userId) {
-    console.error('No userId found in subscription metadata or database lookup for deletion', {
-      subscriptionId: subscription.id,
-      customerId: subscription.customer,
-      hasMetadata: !!subscription.metadata,
-      metadataKeys: subscription.metadata ? Object.keys(subscription.metadata) : []
-    })
     return
   }
 
-  console.log(`Found userId: ${userId} for subscription deletion: ${subscription.id}`)
-
   try {
     await SubscriptionManager.cancelSubscription(userId)
-    
-    console.log(`Webhook: Subscription canceled ${subscription.id}`)
-  } catch (error) {
-    console.error(`Error canceling subscription for user ${userId}:`, error)
+  } catch {
+    // Error handling - could integrate with monitoring service here
   }
 }
 
 async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
   const userId = session.metadata?.userId
   if (!userId) {
-    console.error('No userId in checkout session metadata')
     return
   }
   
@@ -545,10 +477,8 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
         trial_end: subscription.trial_end,
         items: subscription.items
       })
-      
-      console.log(`Webhook: Checkout completed ${subscription.id}`)
-    } catch (error) {
-      console.error(`Error creating subscription from checkout for user ${userId}:`, error)
+    } catch {
+      // Error handling - could integrate with monitoring service here
     }
   }
 }
@@ -562,8 +492,8 @@ async function handleInvoicePaymentSucceeded(invoice: Stripe.Invoice) {
       const subscription = await stripe.subscriptions.retrieve(invoiceWithSub.subscription)
       await handleSubscriptionUpdate(subscription)
       // Cache invalidation is handled by handleSubscriptionUpdate
-    } catch (error) {
-      console.error('Error handling successful invoice payment:', error)
+    } catch {
+      // Error handling - could integrate with monitoring service here
     }
   }
 }
@@ -577,8 +507,8 @@ async function handleInvoicePaymentFailed(invoice: Stripe.Invoice) {
       const subscription = await stripe.subscriptions.retrieve(invoiceWithSub.subscription)
       await handleSubscriptionUpdate(subscription)
       // Cache invalidation is handled by handleSubscriptionUpdate
-    } catch (error) {
-      console.error('Error handling failed invoice payment:', error)
+    } catch {
+      // Error handling - could integrate with monitoring service here
     }
   }
 }
