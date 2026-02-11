@@ -9,7 +9,7 @@ import { Resend } from "resend";
 // Initialize Stripe client
 // Relaxes validation to always allow build even if keys are missing
 const stripeClient = new Stripe(process.env.STRIPE_SECRET_KEY || 'sk_test_placeholder', {
-    apiVersion: "2025-05-28.basil" as Stripe.LatestApiVersion,
+    apiVersion: "2026-01-28.clover" as Stripe.LatestApiVersion,
 });
 
 // Initialize Resend client

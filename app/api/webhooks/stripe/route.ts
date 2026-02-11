@@ -23,22 +23,6 @@ const RATE_LIMIT_CONFIG = {
   replayProtectionWindow: 300000 // 5 minutes
 }
 
-// Stripe's documented webhook IP ranges (update as needed)
-const STRIPE_IP_RANGES = [
-  "3.18.12.63",
-  "3.130.192.231",
-  "13.235.14.237",
-  "13.235.122.149",
-  "18.211.135.69",
-  "35.154.171.200",
-  "52.15.183.38",
-  "54.88.130.119",
-  "54.88.130.237",
-  "54.187.174.169",
-  "54.187.205.235",
-  "54.187.216.72"
-]
-
 /**
  * Enhanced rate limiting with per-second and per-minute limits
  */
@@ -102,57 +86,6 @@ function isReplayAttack(signature: string, timestamp: number): boolean {
 }
 
 /**
- * Basic IP allowlist check with proper security defaults
- */
-function normalizeIp(raw: string): string {
-  let ip = raw.trim()
-
-  if (!ip) {
-    return ''
-  }
-
-  if (ip.startsWith('[') && ip.includes(']')) {
-    ip = ip.slice(1, ip.indexOf(']'))
-  }
-
-  if (ip.includes('%')) {
-    ip = ip.split('%')[0] || ip
-  }
-
-  if (ip.includes('.') && ip.includes(':')) {
-    ip = ip.split(':')[0] || ip
-  }
-
-  return ip
-}
-
-function isAllowedIP(candidates: string[]): boolean {
-  // Disable IP filtering in development environment
-  if (process.env.NODE_ENV === 'development') {
-    return true
-  }
-  
-  // Require explicit opt-out for security - IP filtering is enabled by default
-  if (process.env.STRIPE_WEBHOOK_IP_FILTERING === 'false') {
-    return true
-  }
-  
-  if (!candidates.length) {
-    return false
-  }
-
-  const cleanedIps = Array.from(new Set(candidates
-    .map(normalizeIp)
-    .filter(Boolean)))
-
-  return cleanedIps.some(cleanIp =>
-    STRIPE_IP_RANGES.includes(cleanIp) ||
-    cleanIp === '127.0.0.1' ||
-    cleanIp === '::1'
-  )
-}
-
-/**
  * Lookup userId by Stripe customer ID when metadata is missing
  * This handles cases where Customer Portal updates don't preserve metadata
  */
@@ -176,13 +109,6 @@ export async function POST(req: NextRequest) {
     const body = await req.text()
     const headersList = await headers()
     const sig = headersList.get('stripe-signature')
-    const forwardedFor = headersList.get('x-forwarded-for')
-    const forwardedIps = forwardedFor ? forwardedFor.split(',').map(ip => ip.trim()) : []
-    const clientIps = [
-      headersList.get('x-real-ip'),
-      headersList.get('x-client-ip'),
-      ...forwardedIps
-    ].filter((ip): ip is string => Boolean(ip))
 
     // Validate webhook secret is configured
     if (!process.env.STRIPE_WEBHOOK_SECRET) {
@@ -191,11 +117,6 @@ export async function POST(req: NextRequest) {
 
     if (!sig) {
       return NextResponse.json({ error: 'Missing signature' }, { status: 400 })
-    }
-
-    // IP filtering with proper security defaults
-    if (!isAllowedIP(clientIps)) {
-      return NextResponse.json({ error: 'Unauthorized IP' }, { status: 403 })
     }
 
     let event: Stripe.Event
