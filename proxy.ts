@@ -46,22 +46,6 @@ export default async function proxy(req: NextRequest) {
     // Public routes that don't require authentication
     const isPublicRoute = CONFIG.ROUTES.PUBLIC.some(route => pathname === route || pathname.startsWith(route + '/'));
 
-    // Auth pages - redirect to dashboard if has session cookie (except for forgot-password)
-    const isAuthPageWithoutSession = CONFIG.ROUTES.AUTH_PAGES_NO_SESSION.some(route => pathname.startsWith(route));
-
-    if ((pathname.startsWith('/sign-in') || pathname.startsWith('/sign-up')) && hasSession && !isAuthPageWithoutSession) {
-        return NextResponse.redirect(new URL('/dashboard', req.url));
-    }
-
-    // Onboarding routes - require session cookie
-    if (pathname.startsWith('/onboarding')) {
-        if (!hasSession) {
-            return NextResponse.redirect(new URL('/sign-in', req.url));
-        }
-        // Note: Role check happens in the onboarding page itself (server component)
-        return addSecurityHeaders(NextResponse.next());
-    }
-
     // API routes - require session cookie
     if (pathname.startsWith('/api/')) {
         if (!hasSession) {
@@ -105,11 +89,12 @@ export default async function proxy(req: NextRequest) {
     }
 
     // Protected app routes - require session cookie
+    // Note: We only check for session existence here. 
+    // Role-based access control and onboarding checks are handled by AuthWrapper and page components.
     if (!isPublicRoute) {
         if (!hasSession) {
             return NextResponse.redirect(new URL('/sign-in', req.url));
         }
-        // Note: Role and onboarding checks happen in page components (server components)
     }
 
     return addSecurityHeaders(NextResponse.next());
