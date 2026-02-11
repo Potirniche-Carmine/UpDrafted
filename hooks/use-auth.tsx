@@ -1,5 +1,8 @@
 "use client";
 
+import type { ReactNode } from "react";
+import Image from "next/image";
+import Link from "next/link";
 import { useSession as useBetterAuthSession, signIn as betterAuthSignIn, signUp as betterAuthSignUp, signOut as betterAuthSignOut } from "@/lib/auth-client";
 
 // Types matching what Clerk provided
@@ -85,16 +88,16 @@ export const signUp = betterAuthSignUp;
 export const signOut = betterAuthSignOut;
 
 // Legacy component placeholders - these should be replaced with custom components
-export function SignedIn({ children }: { children: React.ReactNode }) {
+export function SignedIn({ children }: { children: ReactNode }) {
     const { isSignedIn, isLoaded } = useAuth();
     if (!isLoaded) return null;
-    return isSignedIn ? <>{ children } </> : null;
+    return isSignedIn ? <>{children}</> : null;
 }
 
-export function SignedOut({ children }: { children: React.ReactNode }) {
+export function SignedOut({ children }: { children: ReactNode }) {
     const { isSignedIn, isLoaded } = useAuth();
     if (!isLoaded) return null;
-    return !isSignedIn ? <>{ children } </> : null;
+    return !isSignedIn ? <>{children}</> : null;
 }
 
 // Placeholder for UserButton - needs custom implementation
@@ -114,38 +117,37 @@ export function UserButton({
     if (!isLoaded || !user) return null;
 
     return (
-        <button 
-      onClick= { handleSignOut }
-    className = "flex items-center gap-2 text-sm hover:opacity-80"
-        >
-        {
-            user.image ? (
-                <img src= { user.image } alt={ user.name || 'User' } className="w-8 h-8 rounded-full" />
-      ) : (
-                    <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-medium" >
-                    { user.name?.[0] || user.email[0].toUpperCase() }
+        <button onClick={handleSignOut} className="flex items-center gap-2 text-sm hover:opacity-80">
+            {user.image ? (
+                <Image
+                    src={user.image}
+                    alt={user.name || "User"}
+                    width={32}
+                    height={32}
+                    className="w-8 h-8 rounded-full"
+                />
+            ) : (
+                <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-medium">
+                    {user.name?.[0] || user.email[0].toUpperCase()}
                 </div>
-                )
-}
-</button>
-  );
+            )}
+        </button>
+    );
 }
 
 // Sign in/up buttons
-export function SignInButton({ children }: { children?: React.ReactNode }) {
+export function SignInButton({ children }: { children?: ReactNode }) {
     return (
-        <a href= "/sign-in" className = "inline-flex" >
-            { children || <button>Sign In </button>
-}
-</a>
-  );
+        <Link href="/sign-in" className="inline-flex">
+            {children || <span>Sign In</span>}
+        </Link>
+    );
 }
 
-export function SignUpButton({ children }: { children?: React.ReactNode }) {
+export function SignUpButton({ children }: { children?: ReactNode }) {
     return (
-        <a href= "/sign-up" className = "inline-flex" >
-            { children || <button>Sign Up </button>
-}
-</a>
-  );
+        <Link href="/sign-up" className="inline-flex">
+            {children || <span>Sign Up</span>}
+        </Link>
+    );
 }

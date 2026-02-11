@@ -153,7 +153,7 @@ export function useSubscription(): UseSubscriptionReturn {
       setSubscription(DEFAULT_SUBSCRIPTION)
       setFeatures(DEFAULT_FEATURES)
     }
-  }, [userId, isPending])
+  }, [userId, isPending, fetchSubscription])
 
   return {
     subscription,
