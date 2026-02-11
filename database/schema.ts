@@ -51,7 +51,7 @@ export const schools = pgTable('schools', {
 export const user = pgTable('user', {
   id: text('id').primaryKey(),
   email: text('email').notNull().unique(),
-  name: text('name').notNull().unique(), // Serves as the username
+  name: text('name').notNull(),
   emailVerified: boolean('email_verified').default(false).notNull(),
   image: text('image'),
   role: userRoleEnum('role'), // Nullable - null means needs onboarding

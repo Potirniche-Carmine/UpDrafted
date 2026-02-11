@@ -43,7 +43,7 @@ export function UserAccountPage() {
                             <CardHeader>
                                 <CardTitle>Change Email</CardTitle>
                                 <CardDescription>
-                                    Update your email address. You'll need to verify your new email.
+                                    Update your email address. You&apos;ll need to verify your new email.
                                 </CardDescription>
                             </CardHeader>
                             <CardContent>
@@ -87,7 +87,6 @@ export function UserAccountPage() {
 
 function ChangeEmailForm() {
     const [newEmail, setNewEmail] = useState("");
-    const [password, setPassword] = useState(""); // Often required to change email
     const [loading, setLoading] = useState(false);
     const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
 
@@ -108,7 +107,7 @@ function ChangeEmailForm() {
                 setMessage({ type: 'success', text: "Verification email sent to new address." });
                 setNewEmail("");
             }
-        } catch (err) {
+        } catch {
             setMessage({ type: 'error', text: "An unexpected error occurred." });
         } finally {
             setLoading(false);
@@ -177,7 +176,7 @@ function ChangePasswordForm() {
                 setNewPassword("");
                 setConfirmPassword("");
             }
-        } catch (err) {
+        } catch {
             setMessage({ type: 'error', text: "An unexpected error occurred." });
         } finally {
             setLoading(false);
@@ -254,7 +253,7 @@ function DeleteAccountForm() {
                 // Success - redirect to home
                 router.push("/");
             }
-        } catch (err) {
+        } catch {
             setError("An unexpected error occurred.");
             setLoading(false);
         }
@@ -277,7 +276,7 @@ function DeleteAccountForm() {
             )}
 
             <div className="space-y-2">
-                <Label htmlFor="confirm-delete">Type "DELETE" to confirm</Label>
+                <Label htmlFor="confirm-delete">Type &quot;DELETE&quot; to confirm</Label>
                 <Input
                     id="confirm-delete"
                     type="text"

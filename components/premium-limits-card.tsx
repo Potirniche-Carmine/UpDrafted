@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -70,6 +70,7 @@ export function PremiumLimitsCard() {
   const [usageData, setUsageData] = useState<UsageLimits | null>(null)
   const [fetchingUsage, setFetchingUsage] = useState(false)
   const [isCreatingSession, setIsCreatingSession] = useState(false)
+  const lastFetchedUserId = useRef<string | null>(null)
 
   const userRole = (user?.role as string) || 'athlete'
 
@@ -142,10 +143,19 @@ export function PremiumLimitsCard() {
   // Fetch current usage data using the deduplicated fetch function
   useEffect(() => {
     const loadUsageData = async () => {
-      if (!user || loading) {
+      if (!user?.id || loading) {
         return
       }
 
+      if (lastFetchedUserId.current === user.id && usageData) {
+        return
+      }
+
+      if (lastFetchedUserId.current && lastFetchedUserId.current !== user.id) {
+        setUsageData(null)
+      }
+
+      lastFetchedUserId.current = user.id
       setFetchingUsage(true)
 
       try {
@@ -159,7 +169,7 @@ export function PremiumLimitsCard() {
     }
 
     loadUsageData()
-  }, [user, loading])
+  }, [user?.id, loading, usageData])
 
   if (loading || fetchingUsage) {
     return (
@@ -229,80 +239,98 @@ export function PremiumLimitsCard() {
           {isPremium ? (
             <>
               <Crown className="mr-2 h-5 w-5 text-[#01ae79]" />
-              Premium Features
+              Premium Overview
             </>
           ) : (
             <>
               <Users className="mr-2 h-5 w-5 text-muted-foreground" />
-              Current Limits
+              Usage & Limits
             </>
           )}
         </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-4">
-        {/* Connection Requests This Month */}
-        <div className="space-y-2">
-          <div className="flex items-center justify-between text-sm">
-            <span className="text-muted-foreground">Monthly Connections Requests</span>
-            <span className="font-medium">
-              {connectionUsage.monthlyUsed} / {connectionUsage.monthlyLimit === 999999 ? '∞' : connectionUsage.monthlyLimit}
-            </span>
-          </div>
-          {connectionUsage.monthlyLimit !== 999999 && (
-            <Progress value={monthlyConnectionPercent} className="h-2" />
-          )}
-          {!isPremium && connectionUsage.monthlyUsed >= connectionUsage.monthlyLimit * 0.8 && (
-            <p className="text-xs text-orange-600 dark:text-orange-400">
-              Running low on connections this month
+      <CardContent className="space-y-5">
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border/60 bg-linear-to-r from-muted/30 to-muted/10 px-4 py-3">
+          <div>
+            <p className="text-sm text-muted-foreground">Current plan</p>
+            <p className="text-base font-semibold text-foreground">
+              {isPremium ? getSubscriptionDisplayName(subscription.tier) : 'Free Plan'}
             </p>
-          )}
+          </div>
+          <Badge variant={isPremium ? 'default' : 'outline'} className="text-xs">
+            {isPremium ? 'Active' : 'Limited'}
+          </Badge>
         </div>
 
-        {/* Active Connections */}
-        <div className="space-y-2">
-          <div className="flex items-center justify-between text-sm">
-            <span className="text-muted-foreground">Active Connections</span>
-            <span className="font-medium">
-              {usageData?.activeConnections.current || 0} / {
-                usageData?.activeConnections.limit === null ? '∞' : usageData?.activeConnections.limit || 5
-              }
-            </span>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div className="rounded-lg border border-border/60 bg-card/70 p-4 shadow-sm">
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-muted-foreground">Monthly Connection Requests</span>
+              <span className="font-semibold text-foreground">
+                {connectionUsage.monthlyUsed} / {connectionUsage.monthlyLimit === 999999 ? '∞' : connectionUsage.monthlyLimit}
+              </span>
+            </div>
+            {connectionUsage.monthlyLimit !== 999999 && (
+              <div className="mt-3">
+                <Progress value={monthlyConnectionPercent} className="h-2" />
+              </div>
+            )}
+            {!isPremium && connectionUsage.monthlyUsed >= connectionUsage.monthlyLimit * 0.8 && (
+              <p className="mt-2 text-xs text-orange-600 dark:text-orange-400">
+                Running low on connections this month
+              </p>
+            )}
           </div>
-          {usageData?.activeConnections.limit && (
-            <Progress value={activeConnectionPercent} className="h-2" />
-          )}
+
+          <div className="rounded-lg border border-border/60 bg-card/70 p-4 shadow-sm">
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-muted-foreground">Active Connections</span>
+              <span className="font-semibold text-foreground">
+                {usageData?.activeConnections.current || 0} / {
+                  usageData?.activeConnections.limit === null ? '∞' : usageData?.activeConnections.limit || 5
+                }
+              </span>
+            </div>
+            {usageData?.activeConnections.limit && (
+              <div className="mt-3">
+                <Progress value={activeConnectionPercent} className="h-2" />
+              </div>
+            )}
+          </div>
         </div>
 
-        {/* Premium Features Status */}
-        <div className="space-y-2">
-          <div className="flex items-center justify-between text-sm">
-            <div className="flex items-center gap-2">
-              <Eye className="h-4 w-4 text-muted-foreground" />
-              <span className="text-muted-foreground">Read Receipts</span>
+        <div className="space-y-3">
+          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Feature access</p>
+          <div className="grid gap-2">
+            <div className="flex items-center justify-between rounded-md border border-border/60 bg-muted/20 px-3 py-2 text-sm">
+              <div className="flex items-center gap-2">
+                <Eye className="h-4 w-4 text-muted-foreground" />
+                <span className="text-muted-foreground">Read Receipts</span>
+              </div>
+              <Badge variant={features?.profileViewInsights ? 'default' : 'outline'} className="text-xs">
+                {features?.profileViewInsights ? 'Enabled' : 'Premium'}
+              </Badge>
             </div>
-            <Badge variant={features?.profileViewInsights ? "default" : "outline"} className="text-xs">
-              {features?.profileViewInsights ? 'Enabled' : 'Premium'}
-            </Badge>
-          </div>
 
-          <div className="flex items-center justify-between text-sm">
-            <div className="flex items-center gap-2">
-              <TrendingUp className="h-4 w-4 text-muted-foreground" />
-              <span className="text-muted-foreground">Profile Insights</span>
+            <div className="flex items-center justify-between rounded-md border border-border/60 bg-muted/20 px-3 py-2 text-sm">
+              <div className="flex items-center gap-2">
+                <TrendingUp className="h-4 w-4 text-muted-foreground" />
+                <span className="text-muted-foreground">Profile Insights</span>
+              </div>
+              <Badge variant={features?.profileViewInsights ? 'default' : 'outline'} className="text-xs">
+                {features?.profileViewInsights ? 'Enabled' : 'Premium'}
+              </Badge>
             </div>
-            <Badge variant={features?.profileViewInsights ? "default" : "outline"} className="text-xs">
-              {features?.profileViewInsights ? 'Enabled' : 'Premium'}
-            </Badge>
-          </div>
 
-          <div className="flex items-center justify-between text-sm">
-            <div className="flex items-center gap-2">
-              <MessageSquare className="h-4 w-4 text-muted-foreground" />
-              <span className="text-muted-foreground">Advanced Search</span>
+            <div className="flex items-center justify-between rounded-md border border-border/60 bg-muted/20 px-3 py-2 text-sm">
+              <div className="flex items-center gap-2">
+                <MessageSquare className="h-4 w-4 text-muted-foreground" />
+                <span className="text-muted-foreground">Advanced Search</span>
+              </div>
+              <Badge variant={features?.advancedSearch ? 'default' : 'outline'} className="text-xs">
+                {features?.advancedSearch ? 'Enabled' : 'Premium'}
+              </Badge>
             </div>
-            <Badge variant={features?.advancedSearch ? "default" : "outline"} className="text-xs">
-              {features?.advancedSearch ? 'Enabled' : 'Premium'}
-            </Badge>
           </div>
         </div>
 

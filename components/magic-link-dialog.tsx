@@ -46,7 +46,7 @@ export function MagicLinkDialog({
                 errorCallbackURL: "/sign-in?error=magic-link-failed",
             });
             setIsSuccess(true);
-        } catch (err) {
+        } catch {
             setError("Failed to send magic link. Please try again.");
         } finally {
             setIsSubmitting(false);
