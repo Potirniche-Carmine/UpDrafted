@@ -179,10 +179,12 @@ function UserButtonDropdown({
           </div>
         </div>
         <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={handleViewProfile} disabled={profileNavigating}>
-          <UserIcon className="mr-2 h-4 w-4" />
-          <span>{profileNavigating ? "Loading..." : "View Profile"}</span>
-        </DropdownMenuItem>
+        {hasCompletedOnboarding && (
+          <DropdownMenuItem onClick={handleViewProfile} disabled={profileNavigating}>
+            <UserIcon className="mr-2 h-4 w-4" />
+            <span>{profileNavigating ? "Loading..." : "View Profile"}</span>
+          </DropdownMenuItem>
+        )}
         <DropdownMenuSeparator />
         <DropdownMenuItem onClick={() => router.push('/account')}>
           <Settings className="mr-2 h-4 w-4" />

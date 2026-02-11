@@ -58,8 +58,6 @@ export function OnboardingWrapper({
   children,
   loadingComponent
 }: OnboardingWrapperProps) {
-  // useUser internally uses the same session validation mechanism as useAuth
-  // Checking !isSignedIn here provides the same security guarantees as useAuth
   const { isSignedIn, isLoaded, user } = useUser();
   const router = useRouter();
   const [isAuthorized, setIsAuthorized] = useState(false);
@@ -68,10 +66,8 @@ export function OnboardingWrapper({
 
   const handleRedirect = useCallback(async (path: string) => {
     setIsRedirecting(true);
-
-    // Add a small delay to show loading state and make transition smoother
-    await new Promise(resolve => setTimeout(resolve, 500));
-
+    // Add a small delay for smoother transition
+    await new Promise(resolve => setTimeout(resolve, 300));
     router.push(path);
   }, [router]);
 
@@ -81,19 +77,19 @@ export function OnboardingWrapper({
 
       // If not signed in, redirect to landing page
       if (!isSignedIn) {
-        await handleRedirect('/sign-in');
+        await handleRedirect('/');
         return;
       }
 
       // Check if user already has a role (completed onboarding)
       const userRole = user?.role as string;
-      if (userRole && ['athlete', 'coach', 'recruiter'].includes(userRole)) {
+      if (userRole && ['athlete', 'coach', 'recruiter', 'admin'].includes(userRole)) {
         // User already completed onboarding, redirect to dashboard
         await handleRedirect('/dashboard');
         return;
       }
 
-      // User is signed in but hasn't completed onboarding - allow access
+      // User is signed in, has no role -> Allow access to onboarding
       setIsAuthorized(true);
       setIsLoading(false);
     };
@@ -101,7 +97,6 @@ export function OnboardingWrapper({
     checkOnboardingAuth();
   }, [isLoaded, isSignedIn, user, handleRedirect]);
 
-  // Show loading state or redirecting state
   if (isLoading || !isLoaded || isRedirecting) {
     return loadingComponent || (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -112,24 +107,17 @@ export function OnboardingWrapper({
             <div className="w-2 h-2 bg-[#01ae79] rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
           </div>
           <p className="text-sm text-muted-foreground">
-            {isRedirecting
-              ? 'Redirecting...'
-              : !isLoaded
-                ? 'Loading...'
-                : 'Checking authentication...'
-            }
+            {isRedirecting ? 'Redirecting...' : 'Loading...'}
           </p>
         </div>
       </div>
     );
   }
 
-  // Show children if authorized (signed in but no role yet)
   if (isAuthorized) {
     return <>{children}</>;
   }
 
-  // Return null while processing
   return null;
 }
 
@@ -139,7 +127,6 @@ export function AuthWrapper({
   requireRole = [],
   fallbackPath = '/sign-in',
   loadingComponent,
-  enforceServerSide = false,
   type = 'default'
 }: AuthWrapperProps) {
   const { isSignedIn, isLoaded, user } = useUser();
@@ -147,113 +134,91 @@ export function AuthWrapper({
   const pathname = usePathname();
   const [isAuthorized, setIsAuthorized] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  const [serverVerified] = useState(!enforceServerSide);
   const [isRedirecting, setIsRedirecting] = useState(false);
 
-  // Special handling for different wrapper types
-  const getRedirectPath = useCallback(() => {
-    if (type === 'onboarding' && !isSignedIn) {
-      return '/';
-    }
-    if (type === 'landing' && isSignedIn) {
-      return '/dashboard';
-    }
-    if (pathname?.startsWith('/onboarding') && !isSignedIn) {
-      return '/';
-    }
-    return fallbackPath;
-  }, [type, pathname, isSignedIn, fallbackPath]);
-
   const handleRedirect = useCallback(async (path: string) => {
+    // Avoid infinite redirects to the same page
+    if (pathname === path) return;
+
     setIsRedirecting(true);
-
-    // Add a small delay to show loading state and make transition smoother
-    await new Promise(resolve => setTimeout(resolve, 500));
-
+    await new Promise(resolve => setTimeout(resolve, 300));
     router.push(path);
-  }, [router]);
+  }, [router, pathname]);
 
   useEffect(() => {
     const checkAuth = async () => {
       if (!isLoaded) return;
 
-      // Landing page logic - redirect authenticated users to dashboard
+      // 1. Landing Page Logic
       if (type === 'landing') {
         if (isSignedIn) {
-          // Check if user has completed onboarding (has a role)
           const userRole = user?.role as string;
-
-          if (userRole && ['athlete', 'coach', 'recruiter'].includes(userRole)) {
-            // User has completed onboarding, redirect to dashboard
+          if (userRole && ['athlete', 'coach', 'recruiter', 'admin'].includes(userRole)) {
             await handleRedirect('/dashboard');
           } else {
-            // User is signed in but hasn't completed onboarding, redirect to onboarding
             await handleRedirect('/onboarding');
           }
-          return;
         } else {
-          // Allow unauthenticated users to see landing page
           setIsAuthorized(true);
           setIsLoading(false);
-          return;
         }
+        return;
       }
 
-      // Onboarding logic (kept for backward compatibility, but OnboardingWrapper should be used instead)
+      // 2. Onboarding Logic (Legacy support, prefer OnboardingWrapper)
       if (type === 'onboarding') {
         if (!isSignedIn) {
-          // Redirect unauthenticated users away from onboarding
           await handleRedirect('/');
           return;
         }
-
-        // Check if user already has a role (completed onboarding)
         const userRole = user?.role as string;
-        if (userRole && ['athlete', 'coach', 'recruiter'].includes(userRole)) {
-          // User already completed onboarding, show completion message
-          setIsAuthorized(false); // This will trigger showing OnboardingCompleted
-          setIsLoading(false);
+        if (userRole && ['athlete', 'coach', 'recruiter', 'admin'].includes(userRole)) {
+          // Instead of showing component, redirect to dashboard for better UX
+          await handleRedirect('/dashboard');
           return;
         }
-
-        // User is signed in but hasn't completed onboarding - allow access
         setIsAuthorized(true);
         setIsLoading(false);
         return;
       }
 
-      // Default logic for other wrappers
+      // 3. Default Protected Routes Logic
       if (!requireAuth) {
         setIsAuthorized(true);
         setIsLoading(false);
         return;
       }
 
-      // Check if user is signed in - this is the critical check for dashboard
       if (!isSignedIn) {
-        await handleRedirect(getRedirectPath());
+        await handleRedirect(fallbackPath);
         return;
       }
 
-      // Get user role for role-based checks
       const userRole = user?.role as string;
+      const hasRole = userRole && ['athlete', 'coach', 'recruiter', 'admin'].includes(userRole);
 
-      // Check role requirements
-      if (requireRole.length > 0) {
-        if (!userRole || !requireRole.includes(userRole)) {
-          // Redirect based on user's role or to onboarding
-          if (!userRole) {
-            await handleRedirect('/onboarding');
-          } else {
-            await handleRedirect('/dashboard');
-          }
+      // STRICT CHECK: Users without a role can ONLY access /onboarding and /account
+      if (!hasRole) {
+        // Allow access to account/settings pages for no-role users
+        if (pathname?.startsWith('/account')) {
+          setIsAuthorized(true);
+          setIsLoading(false);
           return;
         }
-      } else {
-        // For all authenticated pages, ensure user has completed onboarding (has a role)
-        // Users without roles should only be able to access onboarding
-        if (!userRole || !['athlete', 'coach', 'recruiter', 'admin'].includes(userRole)) {
+
+        // Redirect all other attempts to onboarding
+        if (!pathname?.startsWith('/onboarding')) {
           await handleRedirect('/onboarding');
+          return;
+        }
+      }
+
+      // Role-specific requirements for users WITH roles
+      if (requireRole.length > 0) {
+        if (!userRole || !requireRole.includes(userRole)) {
+          // If they have a role but not the right one, usually redirect to dashboard
+          // If they have NO role, they are caught by the check above
+          await handleRedirect('/dashboard');
           return;
         }
       }
@@ -263,41 +228,28 @@ export function AuthWrapper({
     };
 
     checkAuth();
-  }, [isLoaded, isSignedIn, user, requireAuth, requireRole, enforceServerSide, serverVerified, getRedirectPath, handleRedirect, type, pathname]);
+  }, [isLoaded, isSignedIn, user, requireAuth, requireRole, type, pathname, fallbackPath, handleRedirect]);
 
-  // Show loading state or redirecting state
   if (isLoading || !isLoaded || isRedirecting) {
     return loadingComponent || (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="flex flex-col items-center space-y-4">
-          <div className="flex space-x-2">
-            <div className="w-2 h-2 bg-[#01ae79] rounded-full animate-bounce"></div>
-            <div className="w-2 h-2 bg-[#01ae79] rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
-            <div className="w-2 h-2 bg-[#01ae79] rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
-          </div>
-          <p className="text-sm text-muted-foreground">
-            {isRedirecting
-              ? 'Redirecting...'
-              : !isLoaded
-                ? 'Loading...'
-                : 'Checking authentication...'
-            }
-          </p>
+          {/* Simple loading spinner */}
+          <div className="w-6 h-6 border-2 border-[#01ae79] border-t-transparent rounded-full animate-spin"></div>
+          <p className="text-sm text-muted-foreground">{isRedirecting ? 'Redirecting...' : 'Loading...'}</p>
         </div>
       </div>
     );
   }
 
-  // Special case: onboarding wrapper with user who already completed onboarding
+  // Legacy support for OnboardingCompleted component if needed, but we redirect now
   if (type === 'onboarding' && !isAuthorized && !isLoading) {
-    return <OnboardingCompleted />;
+    return null;
   }
 
-  // Show children if authorized
   if (isAuthorized) {
     return <>{children}</>;
   }
 
-  // Return null while redirecting
   return null;
 } 
