@@ -32,6 +32,13 @@ export const CONFIG = {
             '/for-athletes',
             '/for-recruiters'
         ],
+        // Pages that are public but should redirect to dashboard if user has a session
+        AUTH_PAGES_SESSION_REDIRECT: [
+            '/sign-in',
+            '/sign-up',
+            '/reset-password',
+            '/forgot-password'
+        ],
         AUTH_PAGES_NO_SESSION: ['/forgot-password'],
         PROTECTED_PREFIXES: ['/dashboard', '/onboarding', '/settings', '/messages'],
         API_PREFIX: '/api/',

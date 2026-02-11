@@ -2,13 +2,12 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { signIn } from "@/lib/auth-client";
 import { ForgotPasswordDialog } from "@/components/forgot-password-dialog";
 import { MagicLinkDialog } from "@/components/magic-link-dialog";
 
 export default function SignInPage() {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const [emailOrUsername, setEmailOrUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -64,7 +63,7 @@ export default function SignInPage() {
       // Force a full page reload to ensure session cookies are processed correctly
       // This prevents the auth wrapper on the dashboard from redirecting back to sign-in
       window.location.href = "/dashboard";
-    } catch (err) {
+    } catch {
       setError("An unexpected error occurred. Please try again.");
       setLoading(false);
     }

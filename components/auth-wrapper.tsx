@@ -3,9 +3,6 @@
 import { useUser } from '@/hooks/use-auth';
 import { useRouter, usePathname } from 'next/navigation';
 import { useEffect, useState, ReactNode, useCallback } from 'react';
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft, CheckCircle } from 'lucide-react';
 
 interface AuthWrapperProps {
   children: ReactNode;
@@ -21,36 +18,6 @@ interface AuthWrapperProps {
 interface OnboardingWrapperProps {
   children: ReactNode;
   loadingComponent?: ReactNode;
-}
-
-// Component for when user already completed onboarding
-function OnboardingCompleted() {
-  const router = useRouter();
-
-  return (
-    <div className="min-h-screen bg-background flex items-center justify-center p-4">
-      <Card className="max-w-md w-full">
-        <CardHeader className="text-center">
-          <div className="w-16 h-16 bg-[#01ae79]/10 dark:bg-[#01ae79]/20 rounded-full flex items-center justify-center mx-auto mb-4">
-            <CheckCircle className="h-8 w-8 text-[#01ae79]" />
-          </div>
-          <CardTitle className="text-xl font-semibold">You already completed onboarding!</CardTitle>
-        </CardHeader>
-        <CardContent className="text-center space-y-4">
-          <p className="text-muted-foreground">
-            It looks like you&apos;ve already set up your profile. Head back to your dashboard to continue.
-          </p>
-          <Button
-            onClick={() => router.push('/dashboard')}
-            className="w-full bg-[#01ae79] hover:bg-[#01ae79]/90 text-white"
-          >
-            <ArrowLeft size={16} className="mr-2" />
-            Go to Dashboard
-          </Button>
-        </CardContent>
-      </Card>
-    </div>
-  );
 }
 
 // Dedicated OnboardingWrapper - more restrictive for onboarding flow

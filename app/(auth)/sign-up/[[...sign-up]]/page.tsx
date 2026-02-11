@@ -2,12 +2,10 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { signUp } from "@/lib/auth-client";
 
 export default function SignUpPage() {
-  const router = useRouter();
-  const [username, setUsername] = useState("");
+  const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -19,14 +17,9 @@ export default function SignUpPage() {
     e.preventDefault();
     setError("");
 
-    // Username validation
-    if (username.length > 10) {
-      setError("Username must be 10 characters or less");
-      return;
-    }
-
-    if (!/^[a-zA-Z0-9]*$/.test(username)) {
-      setError("Username can only contain letters and numbers");
+    // Name validation
+    if (!name.trim()) {
+      setError("Please enter your name");
       return;
     }
 
@@ -62,7 +55,7 @@ export default function SignUpPage() {
       const result = await signUp.email({
         email,
         password,
-        name: username, // Use username as display name
+        name: name.trim(),
         callbackURL: "/sign-in", // Redirect to sign-in after email verification
       });
 
@@ -74,7 +67,7 @@ export default function SignUpPage() {
 
       // Show success message - verification email has been sent
       setSuccess(true);
-    } catch (err) {
+    } catch  {
       setError("An unexpected error occurred. Please try again.");
       setLoading(false);
     }
@@ -93,13 +86,13 @@ export default function SignUpPage() {
             </div>
             <h1 className="text-3xl font-bold tracking-tight">Check your email</h1>
             <p className="mt-2 text-muted-foreground">
-              We've sent a verification link to <strong>{email}</strong>
+              We&apos;ve sent a verification link to <strong>{email}</strong>
             </p>
           </div>
 
           <div className="rounded-lg bg-muted p-4">
             <p className="text-sm text-muted-foreground">
-              <strong>Didn't receive the email?</strong><br />
+              <strong>Didn&apos;t receive the email?</strong><br />
               Check your spam folder. The email should arrive within a few minutes.
             </p>
           </div>
@@ -139,25 +132,20 @@ export default function SignUpPage() {
 
           <div className="space-y-4">
             <div>
-              <label htmlFor="username" className="block text-sm font-medium">
-                Username
+              <label htmlFor="name" className="block text-sm font-medium">
+                Name
               </label>
               <input
-                id="username"
-                name="username"
+                id="name"
+                name="name"
                 type="text"
-                autoComplete="username"
+                autoComplete="name"
                 required
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                maxLength={10}
-                pattern="[a-zA-Z0-9]*"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
                 className="mt-1 block w-full rounded-lg border border-input bg-background px-4 py-3 text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
-                placeholder="johndoe123"
+                placeholder="John Doe"
               />
-              <p className="mt-1 text-xs text-muted-foreground">
-                Max 10 letters/numbers only
-              </p>
             </div>
 
             <div>

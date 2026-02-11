@@ -22,8 +22,11 @@ function addSecurityHeaders(response: NextResponse) {
 
 // Check if user has a session cookie (basic auth check for proxy)
 function hasSessionCookie(request: NextRequest): boolean {
-    // better-auth uses a session cookie (default name: better-auth.session_token)
-    const sessionCookie = request.cookies.get('better-auth.session_token');
+    // better-auth uses 'better-auth.session_token' over HTTP,
+    // but '__Secure-better-auth.session_token' over HTTPS (production).
+    // We must check both to work across all environments.
+    const sessionCookie = request.cookies.get('better-auth.session_token') 
+        || request.cookies.get('__Secure-better-auth.session_token');
     return !!sessionCookie?.value;
 }
 
@@ -95,6 +98,11 @@ export default async function proxy(req: NextRequest) {
         if (!hasSession) {
             return NextResponse.redirect(new URL('/sign-in', req.url));
         }
+    }
+
+    // Redirect authenticated users away from auth pages (sign-in, sign-up, etc.)
+    if (hasSession && CONFIG.ROUTES.AUTH_PAGES_SESSION_REDIRECT.some(route => pathname === route || pathname.startsWith(route + '/'))) {
+        return NextResponse.redirect(new URL('/dashboard', req.url));
     }
 
     return addSecurityHeaders(NextResponse.next());
