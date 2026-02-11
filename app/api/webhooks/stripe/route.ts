@@ -104,7 +104,29 @@ function isReplayAttack(signature: string, timestamp: number): boolean {
 /**
  * Basic IP allowlist check with proper security defaults
  */
-function isAllowedIP(ip: string | null): boolean {
+function normalizeIp(raw: string): string {
+  let ip = raw.trim()
+
+  if (!ip) {
+    return ''
+  }
+
+  if (ip.startsWith('[') && ip.includes(']')) {
+    ip = ip.slice(1, ip.indexOf(']'))
+  }
+
+  if (ip.includes('%')) {
+    ip = ip.split('%')[0] || ip
+  }
+
+  if (ip.includes('.') && ip.includes(':')) {
+    ip = ip.split(':')[0] || ip
+  }
+
+  return ip
+}
+
+function isAllowedIP(candidates: string[]): boolean {
   // Disable IP filtering in development environment
   if (process.env.NODE_ENV === 'development') {
     return true
@@ -115,16 +137,19 @@ function isAllowedIP(ip: string | null): boolean {
     return true
   }
   
-  if (!ip) {
+  if (!candidates.length) {
     return false
   }
-  
-  // Remove port if present
-  const cleanIP = ip.split(':').slice(0, -1).join(':') || ip.split(':')[0]
-  
-  return STRIPE_IP_RANGES.includes(cleanIP) || 
-         cleanIP === '127.0.0.1' || 
-         cleanIP === '::1' // Allow localhost for development
+
+  const cleanedIps = Array.from(new Set(candidates
+    .map(normalizeIp)
+    .filter(Boolean)))
+
+  return cleanedIps.some(cleanIp =>
+    STRIPE_IP_RANGES.includes(cleanIp) ||
+    cleanIp === '127.0.0.1' ||
+    cleanIp === '::1'
+  )
 }
 
 /**
@@ -152,10 +177,12 @@ export async function POST(req: NextRequest) {
     const headersList = await headers()
     const sig = headersList.get('stripe-signature')
     const forwardedFor = headersList.get('x-forwarded-for')
-    const clientIP = headersList.get('x-real-ip') || 
-                     forwardedFor?.split(',')[0]?.trim() || 
-                     headersList.get('x-client-ip') ||
-                     null
+    const forwardedIps = forwardedFor ? forwardedFor.split(',').map(ip => ip.trim()) : []
+    const clientIps = [
+      headersList.get('x-real-ip'),
+      headersList.get('x-client-ip'),
+      ...forwardedIps
+    ].filter((ip): ip is string => Boolean(ip))
 
     // Validate webhook secret is configured
     if (!process.env.STRIPE_WEBHOOK_SECRET) {
@@ -167,7 +194,7 @@ export async function POST(req: NextRequest) {
     }
 
     // IP filtering with proper security defaults
-    if (!isAllowedIP(clientIP)) {
+    if (!isAllowedIP(clientIps)) {
       return NextResponse.json({ error: 'Unauthorized IP' }, { status: 403 })
     }
 
