@@ -282,6 +282,11 @@ export default function OnboardingForm({ role, onBack }: OnboardingFormProps) {
         missing.push("Division");
       }
 
+      // Conference is required for college students
+      if ((data.educationLevel === 'undergraduate' || data.educationLevel === 'graduate') && !data.conference) {
+        missing.push("Conference");
+      }
+
       // Academic requirements for high school
       if (data.educationLevel === 'high_school' && !data.gpa && !data.satScore && !data.actScore) {
         missing.push("At least one academic score (GPA, SAT, or ACT)");
@@ -300,6 +305,7 @@ export default function OnboardingForm({ role, onBack }: OnboardingFormProps) {
 
       // Recruiting requirements for non-high school
       if (data.division !== 'High School') {
+        if (!data.conference) missing.push("Conference");
         if (!data.recruitingStudentClassifications.length) missing.push("Student classifications you recruit");
         if (!data.recruitingPositions.length) missing.push("Positions you recruit");
         if (!data.recruitingPhilosophy) missing.push("Recruiting philosophy");
@@ -318,6 +324,7 @@ export default function OnboardingForm({ role, onBack }: OnboardingFormProps) {
 
       // Recruiting requirements for non-high school
       if (data.division !== 'High School') {
+        if (!data.conference) missing.push("Conference");
         const mainSportNeeds = data.sportSpecificNeeds[data.sportCoaching];
         if (!mainSportNeeds || !mainSportNeeds.studentClassifications.length) {
           missing.push("Student classifications for your primary sport");
