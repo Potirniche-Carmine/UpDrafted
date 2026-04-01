@@ -2,16 +2,17 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { signUp } from "@/lib/auth-client";
 
 export default function SignUpPage() {
+  const router = useRouter();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const [success, setSuccess] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -56,7 +57,7 @@ export default function SignUpPage() {
         email,
         password,
         name: name.trim(),
-        callbackURL: "/sign-in", // Redirect to sign-in after email verification
+        callbackURL: "/sign-in?verified=true",
       });
 
       if (result.error) {
@@ -65,53 +66,12 @@ export default function SignUpPage() {
         return;
       }
 
-      // Show success message - verification email has been sent
-      setSuccess(true);
+      router.push(`/verify-email?email=${encodeURIComponent(email)}`);
     } catch  {
       setError("An unexpected error occurred. Please try again.");
       setLoading(false);
     }
   };
-
-  // Show success state after signup
-  if (success) {
-    return (
-      <div className="flex min-h-[80vh] items-center justify-center">
-        <div className="w-full max-w-md space-y-8 px-4">
-          <div className="text-center">
-            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-[#01ae79]/10">
-              <svg className="h-8 w-8 text-[#01ae79]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-              </svg>
-            </div>
-            <h1 className="text-3xl font-bold tracking-tight">Check your email</h1>
-            <p className="mt-2 text-muted-foreground">
-              We&apos;ve sent a verification link to <strong>{email}</strong>
-            </p>
-          </div>
-
-          <div className="rounded-lg bg-muted p-4">
-            <p className="text-sm text-muted-foreground">
-              <strong>Didn&apos;t receive the email?</strong><br />
-              Check your spam folder. The email should arrive within a few minutes.
-            </p>
-          </div>
-
-          <div className="space-y-3">
-            <p className="text-sm text-center text-muted-foreground">
-              After verifying your email, you can sign in to your account.
-            </p>
-            <Link
-              href="/sign-in"
-              className="block w-full rounded-lg bg-primary px-4 py-3 text-center font-medium text-primary-foreground transition-colors hover:bg-primary/90"
-            >
-              Go to Sign In
-            </Link>
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="flex min-h-[80vh] items-center justify-center">

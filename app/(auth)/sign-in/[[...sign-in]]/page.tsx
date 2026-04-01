@@ -2,12 +2,13 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { signIn } from "@/lib/auth-client";
 import { ForgotPasswordDialog } from "@/components/forgot-password-dialog";
 import { MagicLinkDialog } from "@/components/magic-link-dialog";
 
 export default function SignInPage() {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const [emailOrUsername, setEmailOrUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -30,7 +31,7 @@ export default function SignInPage() {
 
     // Show error if email verification failed
     const verificationError = searchParams.get("error");
-    if (verificationError === "verification-failed") {
+    if (verificationError === "verification-failed" || verificationError === "invalid_token") {
       setError("Email verification failed. The link may have expired. Please try signing up again.");
     } else if (verificationError === "magic-link-failed") {
       setError("Magic link verification failed. The link may have expired. Please request a new one.");
@@ -52,7 +53,8 @@ export default function SignInPage() {
       if (result.error) {
         // Check if error is due to unverified email
         if (result.error.status === 403) {
-          setError("Please verify your email address before signing in. Check your inbox for the verification link.");
+          router.push(`/verify-email?email=${encodeURIComponent(emailOrUsername)}`);
+          return;
         } else {
           setError(result.error.message || "Invalid credentials");
         }

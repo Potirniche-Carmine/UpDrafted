@@ -23,6 +23,7 @@ export const CONFIG = {
             '/',
             '/sign-in',
             '/sign-up',
+            '/verify-email',
             '/reset-password',
             '/about',
             '/contact',

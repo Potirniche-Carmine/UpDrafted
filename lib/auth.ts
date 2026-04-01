@@ -17,14 +17,15 @@ const resend = new Resend(process.env.RESEND_API_KEY || 're_placeholder');
 
 // Email configuration - hardcoded since it's not sensitive
 const EMAIL_FROM = "UpDrafted <noreply@updrafted.us>";
+const APP_URL = (process.env.BETTER_AUTH_BASE_URL && process.env.BETTER_AUTH_BASE_URL !== "NEXT_PUBLIC_APP_URL_PLACEHOLDER")
+    ? process.env.BETTER_AUTH_BASE_URL
+    : (process.env.NEXT_PUBLIC_APP_URL && !process.env.NEXT_PUBLIC_APP_URL.includes("PLACEHOLDER") && process.env.NEXT_PUBLIC_APP_URL.startsWith("http")
+        ? process.env.NEXT_PUBLIC_APP_URL
+        : "http://localhost:3000");
 
 export const auth = betterAuth({
     database: drizzleAdapter(db, { provider: "pg" }),
-    baseURL: (process.env.BETTER_AUTH_BASE_URL && process.env.BETTER_AUTH_BASE_URL !== 'NEXT_PUBLIC_APP_URL_PLACEHOLDER') 
-        ? process.env.BETTER_AUTH_BASE_URL 
-        : (process.env.NEXT_PUBLIC_APP_URL && !process.env.NEXT_PUBLIC_APP_URL.includes('PLACEHOLDER') && process.env.NEXT_PUBLIC_APP_URL.startsWith('http')
-            ? process.env.NEXT_PUBLIC_APP_URL 
-            : "http://localhost:3000"),
+    baseURL: APP_URL,
     
     // Explicitly pass secret for build time validation
     secret: process.env.BETTER_AUTH_SECRET || "better_auth_secret_placeholder_for_build",
@@ -60,6 +61,11 @@ export const auth = betterAuth({
     // Email verification configuration
     emailVerification: {
         sendVerificationEmail: async ({ user, url }) => {
+            const verificationUrl = new URL(url);
+            if (!verificationUrl.searchParams.get("callbackURL")) {
+                verificationUrl.searchParams.set("callbackURL", `${APP_URL}/sign-in?verified=true`);
+            }
+
             await resend.emails.send({
                 from: EMAIL_FROM,
                 to: user.email,
@@ -70,10 +76,10 @@ export const auth = betterAuth({
                         <p>Hi there,</p>
                         <p>Thanks for signing up! Please verify your email address by clicking the button below:</p>
                         <div style="text-align: center; margin: 30px 0;">
-                            <a href="${url}" style="background-color: #01ae79; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; display: inline-block;">Verify Email</a>
+                            <a href="${verificationUrl.toString()}" style="background-color: #01ae79; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; display: inline-block;">Verify Email</a>
                         </div>
                         <p>Or copy and paste this link into your browser:</p>
-                        <p style="color: #666; word-break: break-all;">${url}</p>
+                        <p style="color: #666; word-break: break-all;">${verificationUrl.toString()}</p>
                         <p>If you didn't create this account, you can safely ignore this email.</p>
                         <p>Best regards,<br>The UpDrafted Team</p>
                     </div>
@@ -230,9 +236,7 @@ export const auth = betterAuth({
 
     // Trust proxy for production environments
     trustedOrigins: [
-        (process.env.NEXT_PUBLIC_APP_URL && !process.env.NEXT_PUBLIC_APP_URL.includes('PLACEHOLDER') && process.env.NEXT_PUBLIC_APP_URL.startsWith('http'))
-            ? process.env.NEXT_PUBLIC_APP_URL 
-            : 'http://localhost:3000',
+        APP_URL,
         "https://updrafted.us",
     ].filter(Boolean),
 });
