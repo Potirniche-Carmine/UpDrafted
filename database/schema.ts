@@ -26,7 +26,7 @@ export const initiatedByEnum = pgEnum('initiated_by', ['athlete', 'coach', 'recr
 export const genderEnum = pgEnum('gender', ['male', 'female', 'coed']);
 export const reportStatusEnum = pgEnum('report_status', ['pending', 'under_review', 'resolved', 'dismissed']);
 export const verificationRequestStatusEnum = pgEnum('verification_request_status', ['pending', 'approved', 'rejected', 'under_review']);
-export const verificationTypeEnum = pgEnum('verification_type', ['general', 'transfer_portal']);
+export const verificationTypeEnum = pgEnum('verification_type', ['general']);
 export const educationLevelEnum = pgEnum('education_level', ['high_school', 'undergraduate', 'graduate', 'associate']);
 export const notificationTypeEnum = pgEnum('notification_type', ['profileView', 'newConnection', 'newMessage', 'systemUpdate', 'premiumFeature', 'connectionAccepted']);
 export const studentClassificationEnum = pgEnum('student_classification', ['high_school', 'university_transfers', 'juco_students', 'graduate_transfers', 'international_students']);
@@ -165,8 +165,6 @@ export const athleteProfiles = pgTable('athlete_profiles', {
   sports247Url: text('sports247_url'),
   espnUrl: text('espn_url'),
   isVerified: boolean('is_verified').default(false),
-  transferPortalVerifiedAt: timestamp('transfer_portal_verified_at', { withTimezone: true }),
-  isOnTransferPortal: boolean('is_on_transfer_portal').default(false),
   hudlUrl: text('hudl_url'),
   hudlEmbedUrl: text('hudl_embed_url'),
   instagramHandle: text('instagram_handle'),

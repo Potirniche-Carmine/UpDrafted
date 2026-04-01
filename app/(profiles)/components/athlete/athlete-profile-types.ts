@@ -46,8 +46,6 @@ export interface AthleteProfileData {
   // Verification
   maxPrepsUrl?: string;
   isVerified: boolean;
-  transferPortalVerifiedAt?: string;
-  isOnTransferPortal?: boolean;
 
   // Media
   hudlUrl?: string;
@@ -96,12 +94,6 @@ export interface AthleteProfileProps {
   hasRejectedVerification?: boolean;
   rejectionReason?: string;
   rejectedAt?: string;
-  // Transfer Portal Verification Status
-  hasPendingTransferPortalVerification?: boolean;
-  transferPortalPendingSubmittedAt?: string;
-  hasRejectedTransferPortalVerification?: boolean;
-  transferPortalRejectionReason?: string;
-  transferPortalRejectedAt?: string;
   connectionStatus?: "none" | "pending" | "connected";
   connectionDirection?: "incoming" | "outgoing" | null;
   connectionId?: number | null;

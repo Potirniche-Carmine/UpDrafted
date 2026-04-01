@@ -19,7 +19,6 @@ import {
   Target,
   Timer,
   X,
-  AlertTriangle,
   Crown
 } from "lucide-react";
 import { ProfileHeader } from "../shared/profile-header";
@@ -432,11 +431,6 @@ export function AthleteProfile({
   hasRejectedVerification,
   rejectionReason,
   rejectedAt,
-  hasPendingTransferPortalVerification,
-  transferPortalPendingSubmittedAt,
-  hasRejectedTransferPortalVerification,
-  transferPortalRejectionReason,
-  transferPortalRejectedAt,
   connectionStatus = "none",
   connectionDirection,
   connectionId
@@ -1063,7 +1057,6 @@ export function AthleteProfile({
         open={verificationDialogOpen}
         onOpenChange={setVerificationDialogOpen}
         role="athlete"
-        educationLevel={safeProfileData.educationLevel}
         onVerificationSubmitted={() => {
           // Refresh the page or update verification status
           window.location.reload();
@@ -1107,7 +1100,6 @@ export function AthleteProfile({
         }}
         selectedSport={selectedSport}
         hasPendingVerification={hasPendingVerification}
-        hasPendingTransferPortalVerification={hasPendingTransferPortalVerification}
       />
 
       {/* Confirmation Dialog */}
@@ -1203,27 +1195,9 @@ export function AthleteProfile({
                     {/* Verified Badge - Below name on mobile, cleaner layout */}
                     {safeProfileData.isVerified && (
                       <div className="flex justify-center">
-                        <Badge className={`text-white text-xs ${
-                          safeProfileData.isOnTransferPortal === true
-                            ? 'bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700' 
-                            : 'bg-emerald-600 hover:bg-emerald-700'
-                        }`}>
+                        <Badge className="text-white text-xs bg-emerald-600 hover:bg-emerald-700">
                           <Shield className="w-3 h-3 mr-1" />
-                          {safeProfileData.isOnTransferPortal === true ? 'Verified Transfer' : 'Verified'}
-                        </Badge>
-                      </div>
-                    )}
-
-                    {/* Unverified Transfer Badge - For D1/D2/D3 athletes who need transfer portal verification */}
-                    {!safeProfileData.isVerified && 
-                     (safeProfileData.educationLevel === 'undergraduate' || safeProfileData.educationLevel === 'graduate') &&
-                     safeProfileData.division &&
-                     ['NCAA Division I', 'NCAA Division II', 'NCAA Division III'].includes(safeProfileData.division) &&
-                     !safeProfileData.transferPortalVerifiedAt && (
-                      <div className="flex justify-center">
-                        <Badge variant="outline" className="border-orange-300 text-orange-600 text-xs">
-                          <AlertTriangle className="w-3 h-3 mr-1" />
-                          Unverified Transfer
+                          Verified
                         </Badge>
                       </div>
                     )}
@@ -1506,11 +1480,6 @@ export function AthleteProfile({
                 hasRejectedVerification={hasRejectedVerification}
                 rejectionReason={rejectionReason}
                 rejectedAt={rejectedAt}
-                hasPendingTransferPortalVerification={hasPendingTransferPortalVerification}
-                transferPortalPendingSubmittedAt={transferPortalPendingSubmittedAt}
-                hasRejectedTransferPortalVerification={hasRejectedTransferPortalVerification}
-                transferPortalRejectionReason={transferPortalRejectionReason}
-                transferPortalRejectedAt={transferPortalRejectedAt}
               />
             )}
             

@@ -1,11 +1,11 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { authClient, useSession } from "@/lib/auth-client";
 
-export default function VerifyEmailPage() {
+function VerifyEmailContent() {
   const searchParams = useSearchParams();
   const { data: session } = useSession();
   const [emailInput, setEmailInput] = useState(searchParams.get("email") || "");
@@ -129,5 +129,13 @@ export default function VerifyEmailPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function VerifyEmailPage() {
+  return (
+    <Suspense fallback={<div className="flex min-h-[80vh] items-center justify-center" />}>
+      <VerifyEmailContent />
+    </Suspense>
   );
 }

@@ -534,26 +534,6 @@ async function handleSendMessage(userId: string, body: SendMessageRequestBody) {
       }
     }
 
-    // TRANSFER PORTAL VERIFICATION: Check if partner athlete requires transfer portal verification
-    const partnerUser = await profileOperations.getUserWithProfile(partnerId);
-    if (partnerUser && partnerUser.role === 'athlete' && partnerUser.athleteProfile) {
-      const educationLevel = partnerUser.athleteProfile.educationLevel;
-      const division = partnerUser.athleteProfile.division;
-      
-      // Only D1, D2, and D3 college athletes need transfer portal verification
-      if ((educationLevel === 'undergraduate' || educationLevel === 'graduate') && 
-          division && 
-          ['division_1', 'division_2', 'division_3'].includes(division)) {
-        if (!partnerUser.athleteProfile.isOnTransferPortal) {
-          return NextResponse.json({
-            success: false,
-            error: 'Cannot send message: This athlete must be verified for NCAA Transfer Portal before messages can be sent.',
-            transferPortalRequired: true
-          }, { status: 403 });
-        }
-      }
-    }
-    
     // Proceed with sending the message
     await messageOperations.sendMessage(
       conversationIdNum,
@@ -688,26 +668,6 @@ async function handleGetOrCreateConversation(userId: string, body: GetOrCreateCo
     const connection = await connectionOperations.getConnectionBetweenUsers(userId, partnerId);
     if (!connection || connection.status !== 'connected') {
       return NextResponse.json({ success: false, error: 'A connection is required to start a conversation.' }, { status: 403 });
-    }
-
-    // TRANSFER PORTAL VERIFICATION: Check if partner athlete requires transfer portal verification
-    const partnerUser = await profileOperations.getUserWithProfile(partnerId);
-    if (partnerUser && partnerUser.role === 'athlete' && partnerUser.athleteProfile) {
-      const educationLevel = partnerUser.athleteProfile.educationLevel;
-      const division = partnerUser.athleteProfile.division;
-      
-      // Only D1, D2, and D3 college athletes need transfer portal verification
-      if ((educationLevel === 'undergraduate' || educationLevel === 'graduate') && 
-          division && 
-          ['division_1', 'division_2', 'division_3'].includes(division)) {
-        if (!partnerUser.athleteProfile.isOnTransferPortal) {
-          return NextResponse.json({
-            success: false,
-            error: 'Cannot start conversation: This athlete must be verified for NCAA Transfer Portal before conversations can be created.',
-            transferPortalRequired: true
-          }, { status: 403 });
-        }
-      }
     }
 
     // Check for an existing conversation

@@ -154,24 +154,6 @@ export async function POST(request: NextRequest) {
       return createErrorResponse('Athletes cannot connect to other athletes', 400);
     }
 
-    // TRANSFER PORTAL VERIFICATION: Check if target athlete requires transfer portal verification
-    if (targetUser.role === 'athlete' && targetUser.athleteProfile) {
-      const educationLevel = targetUser.athleteProfile.educationLevel;
-      const division = targetUser.athleteProfile.division;
-
-      // Only D1, D2, and D3 college athletes need transfer portal verification
-      if ((educationLevel === 'undergraduate' || educationLevel === 'graduate') &&
-        division &&
-        ['division_1', 'division_2', 'division_3'].includes(division)) {
-        if (!targetUser.athleteProfile.isOnTransferPortal) {
-          return createErrorResponse(
-            'This athlete must be verified for NCAA Transfer Portal before connections can be made. They need to complete transfer portal verification first.',
-            403
-          );
-        }
-      }
-    }
-
     // Check if user can send connection request (7-day cooldown after withdrawal)
     const cooldownCheck = await connectionOperations.canSendConnectionRequest(currentUserId, targetUserId);
     if (!cooldownCheck.canSend) {

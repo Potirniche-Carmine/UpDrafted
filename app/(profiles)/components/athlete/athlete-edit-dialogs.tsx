@@ -279,7 +279,6 @@ interface AthleteEditDialogsProps {
   selectedSport: string;
   // Add verification status props
   hasPendingVerification?: boolean;
-  hasPendingTransferPortalVerification?: boolean;
 }
 
 // Add mockCampExperience at the top of the file for use in the dialog - COMMENTED OUT FOR TESTING EMPTY STATE
@@ -333,8 +332,7 @@ export function AthleteEditDialogs({
   onClose,
   onSave,
   selectedSport,
-  hasPendingVerification = false,
-  hasPendingTransferPortalVerification = false
+  hasPendingVerification = false
 }: AthleteEditDialogsProps) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [editData, setEditData] = useState<Record<string, any>>({});
@@ -1008,7 +1006,7 @@ export function AthleteEditDialogs({
 
   // Check if fields should be locked due to pending verification
   const shouldLockFields = () => {
-    return hasPendingVerification || hasPendingTransferPortalVerification;
+    return hasPendingVerification;
   };
 
   // Check if the current dialog can be saved

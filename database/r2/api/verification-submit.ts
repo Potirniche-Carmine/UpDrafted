@@ -19,26 +19,21 @@ export async function handleVerificationSubmit(request: NextRequest): Promise<Ne
     if (!rateLimitCheck.success && rateLimitCheck.response) return rateLimitCheck.response;
 
     // Parse request body
-    const { role, verificationType = 'general', additionalInfo, links } = await request.json();
+    const { role, additionalInfo, links } = await request.json();
 
     // Validate role
     if (!role || !['athlete', 'coach', 'recruiter'].includes(role)) {
       return createErrorResponse('Invalid role', 400);
     }
 
-    // Validate verification type
-    if (!verificationType || !['general', 'transfer_portal'].includes(verificationType)) {
-      return createErrorResponse('Invalid verification type', 400);
-    }
-
     try {
-      // Check if user already has a verification request of this type
+      // Check if user already has a verification request
       const existingRequest = await db
         .select()
         .from(verificationRequests)
         .where(and(
           eq(verificationRequests.userId, userId),
-          eq(verificationRequests.verificationType, verificationType)
+          eq(verificationRequests.verificationType, 'general')
         ))
         .limit(1);
 
@@ -52,7 +47,7 @@ export async function handleVerificationSubmit(request: NextRequest): Promise<Ne
             .update(verificationRequests)
             .set({
               status: 'pending',
-              verificationType: verificationType,
+              verificationType: 'general',
               submittedAt: new Date(),
               reviewedAt: null,
               reviewedBy: null,
@@ -99,7 +94,7 @@ export async function handleVerificationSubmit(request: NextRequest): Promise<Ne
       const verificationRequest = await db.insert(verificationRequests).values({
         userId: userId,
         role: role,
-        verificationType: verificationType,
+        verificationType: 'general',
         status: 'pending',
         additionalInfo: additionalInfo || null,
       }).returning();

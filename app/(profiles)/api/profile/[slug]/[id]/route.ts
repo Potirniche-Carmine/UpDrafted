@@ -451,21 +451,6 @@ export async function GET(
                   ))
                   .limit(1);
 
-                // Fetch transfer portal verification request for the current admin user
-                const transferPortalVerificationRequest = await tx
-                  .select({
-                    status: verificationRequests.status,
-                    submittedAt: verificationRequests.submittedAt,
-                    reviewedAt: verificationRequests.reviewedAt,
-                    rejectionReason: verificationRequests.rejectionReason
-                  })
-                  .from(verificationRequests)
-                  .where(and(
-                    eq(verificationRequests.userId, currentUserId), // Use current user's ID, not demo profile
-                    eq(verificationRequests.verificationType, 'transfer_portal')
-                  ))
-                  .limit(1);
-
                 // Handle general verification status
                 if (generalVerificationRequest.length > 0) {
                   const verification = generalVerificationRequest[0];
@@ -485,26 +470,6 @@ export async function GET(
                   }
                 }
 
-                // Handle transfer portal verification status
-                if (transferPortalVerificationRequest.length > 0) {
-                  const verification = transferPortalVerificationRequest[0];
-
-                  if (verification.status === 'pending' || verification.status === 'under_review') {
-                    realVerificationStatus = {
-                      ...realVerificationStatus,
-                      hasPendingTransferPortalVerification: true,
-                      transferPortalPendingSubmittedAt: verification.submittedAt.toISOString()
-                    };
-                  } else if (verification.status === 'rejected') {
-                    realVerificationStatus = {
-                      ...realVerificationStatus,
-                      hasRejectedTransferPortalVerification: true,
-                      transferPortalRejectionReason: verification.rejectionReason,
-                      transferPortalRejectedAt: verification.reviewedAt?.toISOString(),
-                      transferPortalSubmittedAt: verification.submittedAt.toISOString()
-                    };
-                  }
-                }
               } catch {
                 // Continue without verification status if there's an error
               }
@@ -630,23 +595,6 @@ export async function GET(
               ))
               .limit(1);
 
-            // Fetch transfer portal verification request
-            const transferPortalVerificationRequest = await db
-              .select({
-                status: verificationRequests.status,
-                submittedAt: verificationRequests.submittedAt,
-                reviewedAt: verificationRequests.reviewedAt,
-                rejectionReason: verificationRequests.rejectionReason
-              })
-              .from(verificationRequests)
-              .where(and(
-                eq(verificationRequests.userId, profileUserId),
-                eq(verificationRequests.verificationType, 'transfer_portal')
-              ))
-              .limit(1);
-
-
-
             // Handle general verification status
             if (generalVerificationRequest.length > 0) {
               const verification = generalVerificationRequest[0];
@@ -668,28 +616,6 @@ export async function GET(
               }
             }
 
-            // Handle transfer portal verification status
-            if (transferPortalVerificationRequest.length > 0) {
-              const verification = transferPortalVerificationRequest[0];
-
-              if (verification.status === 'pending' || verification.status === 'under_review') {
-                verificationStatus = {
-                  ...verificationStatus,
-                  hasPendingTransferPortalVerification: true,
-                  transferPortalPendingSubmittedAt: verification.submittedAt.toISOString()
-                };
-              } else if (verification.status === 'rejected') {
-                verificationStatus = {
-                  ...verificationStatus,
-                  hasRejectedTransferPortalVerification: true,
-                  transferPortalRejectionReason: verification.rejectionReason,
-                  transferPortalRejectedAt: verification.reviewedAt?.toISOString(),
-                  transferPortalSubmittedAt: verification.submittedAt.toISOString()
-                };
-              } else if (verification.status === 'approved') {
-                // This should already be reflected in the transferPortalVerifiedAt field on the profile
-              }
-            }
           }
         } else if (userWithProfile.role === 'coach' && userWithProfile.coachProfile) {
           profileType = 'coach';

@@ -57,6 +57,20 @@
       "when": 1770788345613,
       "tag": "0007_secret_nekra",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1775030400000,
+      "tag": "0008_remove_transfer_portal_verification",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1775081953344,
+      "tag": "0009_red_zemo",
+      "breakpoints": true
     }
   ]
 }

@@ -11,6 +11,25 @@ const compat = new FlatCompat({
 
 const eslintConfig = [
   ...compat.extends("next/core-web-vitals", "next/typescript"),
+  {
+    ignores: [
+      ".next/**",
+      "out/**",
+      "public/sw.js",
+      "public/workbox-*.js",
+      "public/generate-icons.js",
+    ],
+  },
+  {
+    rules: {
+      "@typescript-eslint/no-explicit-any": "off",
+    },
+  },
+  {
+    linterOptions: {
+      reportUnusedDisableDirectives: "off",
+    },
+  },
 ];
 
 export default eslintConfig;
