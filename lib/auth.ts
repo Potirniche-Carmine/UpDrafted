@@ -6,13 +6,17 @@ import { db } from "@/database/db";
 import Stripe from "stripe";
 import { Resend } from "resend";
 
+function isNextBuildPhase(): boolean {
+    return process.env.NEXT_PHASE === "phase-production-build";
+}
+
 function getEnvValue(name: string, fallback?: string): string {
     const value = process.env[name];
     if (value && !value.includes("PLACEHOLDER")) {
         return value;
     }
 
-    if (process.env.NODE_ENV === "production") {
+    if (process.env.NODE_ENV === "production" && !isNextBuildPhase()) {
         throw new Error(`Missing required environment variable: ${name}`);
     }
 

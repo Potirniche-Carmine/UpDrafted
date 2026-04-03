@@ -2,11 +2,15 @@ import 'server-only'
 
 import Stripe from 'stripe'
 
+function isNextBuildPhase(): boolean {
+  return process.env.NEXT_PHASE === 'phase-production-build'
+}
+
 function getStripeSecretKey(): string {
   const key = process.env.STRIPE_SECRET_KEY
   if (key) return key
 
-  if (process.env.NODE_ENV === 'production') {
+  if (process.env.NODE_ENV === 'production' && !isNextBuildPhase()) {
     throw new Error('Missing STRIPE_SECRET_KEY in production environment')
   }
 
