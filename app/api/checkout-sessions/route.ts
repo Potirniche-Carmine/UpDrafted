@@ -4,6 +4,50 @@ import { getSession } from '@/utils/roles'
 import { stripe } from '@/lib/stripe'
 import { SubscriptionManager } from '@/lib/subscription'
 
+type CheckoutMode = 'subscription' | 'payment'
+
+const ALLOWED_MODES: CheckoutMode[] = ['subscription']
+
+function getAllowedPriceIdsForRole(role: string | null | undefined): Set<string> {
+  const basePriceIds = [
+    process.env.NEXT_PUBLIC_STRIPE_PRICE_ATHLETE_MONTHLY,
+    process.env.NEXT_PUBLIC_STRIPE_PRICE_ATHLETE_YEARLY,
+    process.env.NEXT_PUBLIC_STRIPE_PRICE_COACH_MONTHLY,
+    process.env.NEXT_PUBLIC_STRIPE_PRICE_COACH_YEARLY,
+    process.env.NEXT_PUBLIC_STRIPE_PRICE_RECRUITER_MONTHLY,
+    process.env.NEXT_PUBLIC_STRIPE_PRICE_RECRUITER_YEARLY,
+  ].filter((value): value is string => Boolean(value))
+
+  if (!role || role === 'admin') {
+    return new Set<string>()
+  }
+
+  const rolePriceMap: Record<string, string[]> = {
+    athlete: [
+      process.env.NEXT_PUBLIC_STRIPE_PRICE_ATHLETE_MONTHLY || '',
+      process.env.NEXT_PUBLIC_STRIPE_PRICE_ATHLETE_YEARLY || '',
+    ],
+    coach: [
+      process.env.NEXT_PUBLIC_STRIPE_PRICE_COACH_MONTHLY || '',
+      process.env.NEXT_PUBLIC_STRIPE_PRICE_COACH_YEARLY || '',
+    ],
+    recruiter: [
+      process.env.NEXT_PUBLIC_STRIPE_PRICE_RECRUITER_MONTHLY || '',
+      process.env.NEXT_PUBLIC_STRIPE_PRICE_RECRUITER_YEARLY || '',
+    ],
+  }
+
+  const rolePrices = rolePriceMap[role] || basePriceIds
+  const resolved = new Set(rolePrices.filter(Boolean))
+
+  // Keep local/dev environments usable when Stripe env vars are not present.
+  if (resolved.size === 0 && process.env.NODE_ENV !== 'production') {
+    return new Set(basePriceIds)
+  }
+
+  return resolved
+}
+
 export async function POST(req: NextRequest) {
   try {
     const session = await getSession();
@@ -16,6 +60,7 @@ export async function POST(req: NextRequest) {
 
     const userId = session.user.id;
     const userEmail = session.user.email;
+    const userRole = session.user.role;
 
     if (!userEmail) {
       return NextResponse.json(
@@ -42,10 +87,12 @@ export async function POST(req: NextRequest) {
     }
 
     const headersList = await headers()
-    const origin = headersList.get('origin') || headersList.get('referer')?.split('/').slice(0, 3).join('/')
+    const configuredOrigin = process.env.NEXT_PUBLIC_APP_URL || new URL(req.url).origin
+    const requestOrigin = headersList.get('origin')
+    const origin = requestOrigin && requestOrigin === configuredOrigin ? requestOrigin : configuredOrigin
 
     const body = await req.json()
-    const { priceId, mode = 'subscription' } = body
+    const { priceId, mode = 'subscription' } = body as { priceId?: string; mode?: string }
 
     if (!priceId) {
       return NextResponse.json(
@@ -54,7 +101,22 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    // Create Checkout Sessions from body params
+    if (!ALLOWED_MODES.includes(mode as CheckoutMode)) {
+      return NextResponse.json(
+        { error: 'Invalid checkout mode' },
+        { status: 400 }
+      )
+    }
+
+    const allowedPrices = getAllowedPriceIdsForRole(userRole)
+    if (!allowedPrices.has(priceId)) {
+      return NextResponse.json(
+        { error: 'Invalid price for this account' },
+        { status: 403 }
+      )
+    }
+
+    // Create Checkout Session from validated params
     const checkoutSession = await stripe.checkout.sessions.create({
       line_items: [
         {
@@ -62,7 +124,7 @@ export async function POST(req: NextRequest) {
           quantity: 1,
         },
       ],
-      mode: mode as 'subscription' | 'payment',
+      mode: mode as CheckoutMode,
       success_url: `${origin}/success?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${origin}/pricing?canceled=true`,
       automatic_tax: { enabled: true },
@@ -90,12 +152,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ url: checkoutSession.url })
   } catch (error) {
     console.error('Checkout session creation error:', error)
-    const errorMessage = error instanceof Error ? error.message : 'Internal server error'
-    const statusCode = error && typeof error === 'object' && 'statusCode' in error ?
-      (error.statusCode as number) : 500
     return NextResponse.json(
-      { error: errorMessage },
-      { status: statusCode }
+      { error: 'Unable to create checkout session' },
+      { status: 500 }
     )
   }
 }

@@ -2,6 +2,17 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getSession } from "@/utils/roles"
 import { SubscriptionManager } from '@/lib/subscription'
 
+function toClientSubscriptionPayload(subscription: Awaited<ReturnType<typeof SubscriptionManager.getUserSubscription>>) {
+  return {
+    tier: subscription.tier,
+    status: subscription.status,
+    isActive: subscription.isActive,
+    isPremium: subscription.isPremium,
+    currentPeriodEnd: subscription.currentPeriodEnd,
+    cancelAtPeriodEnd: subscription.cancelAtPeriodEnd,
+  }
+}
+
 export async function GET(req: NextRequest) {
   try {
     const session = await getSession();
@@ -29,7 +40,7 @@ export async function GET(req: NextRequest) {
     ])
 
     return NextResponse.json({
-      subscription,
+      subscription: toClientSubscriptionPayload(subscription),
       features
     })
   } catch (error) {

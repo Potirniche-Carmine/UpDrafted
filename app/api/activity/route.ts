@@ -3,6 +3,7 @@ import { requireAnyRole } from '@/utils/roles';
 import { activityOperations, profileOperations } from '@/database/db-utils';
 import { withRateLimit } from '@/utils/security';
 import { SubscriptionManager } from '@/lib/subscription';
+import { flushBufferedProfileViews } from '@/lib/activity-buffer';
 
 export async function GET(request: NextRequest) {
   try {
@@ -22,6 +23,9 @@ export async function GET(request: NextRequest) {
 
     // Check if user has premium access to profile view insights
     const hasProfileViewInsights = await SubscriptionManager.hasPremiumAccess(userId);
+
+    // Keep activity feed relatively fresh without waiting for scheduled flush.
+    await flushBufferedProfileViews(100);
     
     // Get activity data
     const activities = await activityOperations.getUserActivity(userId, 50);

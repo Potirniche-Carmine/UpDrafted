@@ -4,6 +4,31 @@ import { SubscriptionManager } from '@/lib/subscription'
 import { createPortalSession } from '@/lib/stripe-portal-configs'
 import { Roles } from '@/types/globals'
 
+function buildSafeReturnUrl(request: NextRequest, requestedUrl: unknown): string {
+  const requestOrigin = new URL(request.url).origin
+  const appOrigin = process.env.NEXT_PUBLIC_APP_URL || requestOrigin
+  const defaultUrl = `${appOrigin}/dashboard`
+
+  if (typeof requestedUrl !== 'string' || !requestedUrl.trim()) {
+    return defaultUrl
+  }
+
+  if (requestedUrl.startsWith('/')) {
+    return `${appOrigin}${requestedUrl}`
+  }
+
+  try {
+    const parsed = new URL(requestedUrl)
+    if (parsed.origin === appOrigin || parsed.origin === requestOrigin) {
+      return parsed.toString()
+    }
+  } catch {
+    return defaultUrl
+  }
+
+  return defaultUrl
+}
+
 export async function POST(request: NextRequest) {
   try {
     // Check authentication and get user role
@@ -26,7 +51,7 @@ export async function POST(request: NextRequest) {
 
     // Parse request body for optional return URL
     const body = await request.json().catch(() => ({}))
-    const returnUrl = body.returnUrl || `${process.env.NEXT_PUBLIC_APP_URL}/dashboard`
+    const returnUrl = buildSafeReturnUrl(request, body.returnUrl)
 
     // Create portal session with role-specific configuration
     const session = await createPortalSession(

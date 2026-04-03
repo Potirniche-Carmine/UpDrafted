@@ -71,6 +71,13 @@
       "when": 1775081953344,
       "tag": "0009_red_zemo",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1775238660828,
+      "tag": "0010_chunky_blacklash",
+      "breakpoints": true
     }
   ]
 }

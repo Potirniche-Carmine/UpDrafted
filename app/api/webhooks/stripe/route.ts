@@ -11,9 +11,9 @@ import Stripe from 'stripe'
 const webhookRequests = new Map<string, { 
   count: number
   resetTime: number
-  lastSignature?: string
   lastTimestamp?: number
 }>()
+const processedEvents = new Map<string, number>()
 
 const RATE_LIMIT_CONFIG = {
   maxRequestsPerMinute: 100,
@@ -26,7 +26,7 @@ const RATE_LIMIT_CONFIG = {
 /**
  * Enhanced rate limiting with per-second and per-minute limits
  */
-function isRateLimited(eventType: string, signature: string): boolean {
+function isRateLimited(eventType: string): boolean {
   const now = Date.now()
   const current = webhookRequests.get(eventType)
 
@@ -34,7 +34,6 @@ function isRateLimited(eventType: string, signature: string): boolean {
     webhookRequests.set(eventType, { 
       count: 1, 
       resetTime: now + RATE_LIMIT_CONFIG.windowMs,
-      lastSignature: signature,
       lastTimestamp: now
     })
     return false
@@ -56,33 +55,26 @@ function isRateLimited(eventType: string, signature: string): boolean {
   }
 
   current.count++
-  current.lastSignature = signature
   current.lastTimestamp = now
   return false
 }
 
 /**
- * Check for replay attacks using webhook signature and timestamp
+ * Reject stale webhook signatures by timestamp.
  */
-function isReplayAttack(signature: string, timestamp: number): boolean {
+function isStaleWebhook(timestamp: number): boolean {
   const now = Date.now()
   const webhookTime = timestamp * 1000 // Convert to milliseconds
   
-  // Reject webhooks older than 5 minutes
-  if (now - webhookTime > RATE_LIMIT_CONFIG.replayProtectionWindow) {
-    return true
-  }
-  
-  // Check if we've seen this exact signature recently
-  for (const [, data] of webhookRequests) {
-    if (data.lastSignature === signature && 
-        data.lastTimestamp && 
-        Math.abs(now - data.lastTimestamp) < RATE_LIMIT_CONFIG.replayProtectionWindow) {
-      return true
+  return now - webhookTime > RATE_LIMIT_CONFIG.replayProtectionWindow
+}
+
+function clearExpiredProcessedEvents(now: number): void {
+  for (const [eventId, processedAt] of processedEvents.entries()) {
+    if (now - processedAt > RATE_LIMIT_CONFIG.replayProtectionWindow) {
+      processedEvents.delete(eventId)
     }
   }
-  
-  return false
 }
 
 /**
@@ -138,13 +130,19 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Invalid timestamp' }, { status: 400 })
     }
 
-    // Replay attack protection with proper signature validation
-    if (isReplayAttack(sig, webhookTimestamp)) {
-      return NextResponse.json({ error: 'Replay attack detected' }, { status: 400 })
+    // Reject stale signatures. Duplicate events are handled idempotently by event ID.
+    if (isStaleWebhook(webhookTimestamp)) {
+      return NextResponse.json({ error: 'Stale webhook timestamp' }, { status: 400 })
+    }
+
+    const now = Date.now()
+    clearExpiredProcessedEvents(now)
+    if (processedEvents.has(event.id)) {
+      return NextResponse.json({ received: true, duplicate: true })
     }
 
     // Enhanced rate limiting
-    if (isRateLimited(event.type, sig)) {
+    if (isRateLimited(event.type)) {
       return NextResponse.json({ error: 'Rate limited' }, { status: 429 })
     }
 
@@ -177,6 +175,7 @@ export async function POST(req: NextRequest) {
         break
     }
 
+    processedEvents.set(event.id, now)
     return NextResponse.json({ received: true })
   } catch {
     return NextResponse.json({ error: 'Webhook processing failed' }, { status: 500 })

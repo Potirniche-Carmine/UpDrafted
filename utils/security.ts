@@ -368,7 +368,7 @@ class Cache {
 
     if (redis) {
       try {
-        const keys = await redis.keys(pattern);
+        const keys = await this.scanKeys(redis, pattern, 200);
         if (keys.length > 0) {
           await redis.del(...keys);
         }
@@ -383,6 +383,39 @@ class Cache {
         this.memoryCache.delete(key);
       }
     }
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  private async scanKeys(redis: any, pattern: string, count = 100): Promise<string[]> {
+    if (typeof redis.scan !== 'function') {
+      return [];
+    }
+
+    let cursor = '0';
+    const matchedKeys: string[] = [];
+    const maxIterations = 1000;
+    let iterations = 0;
+
+    do {
+      const result = await redis.scan(cursor, { match: pattern, count });
+      if (Array.isArray(result)) {
+        cursor = String(result[0] ?? '0');
+        const keys = Array.isArray(result[1]) ? result[1] : [];
+        matchedKeys.push(...keys);
+      } else if (result && typeof result === 'object') {
+        const nextCursor = (result.cursor ?? result[0] ?? '0') as string | number;
+        const keys = (result.keys ?? result[1] ?? []) as string[];
+        cursor = String(nextCursor);
+        if (Array.isArray(keys)) {
+          matchedKeys.push(...keys);
+        }
+      } else {
+        break;
+      }
+      iterations += 1;
+    } while (cursor !== '0' && iterations < maxIterations);
+
+    return matchedKeys;
   }
 
   private cleanup(): void {

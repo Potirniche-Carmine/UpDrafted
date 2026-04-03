@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAnyRole, requireOwnershipOrAdmin } from '@/utils/roles';
-import { userOperations, athleteOperations, coachOperations, recruitingOperations, recruitingNeedsOperations, connectionOperations, activityOperations, notificationOperations, adminOperations } from '@/database/db-utils';
+import { userOperations, athleteOperations, coachOperations, recruitingOperations, recruitingNeedsOperations, connectionOperations, notificationOperations, adminOperations } from '@/database/db-utils';
 import { R2_PUBLIC_URL, constructR2Url } from '@/database/r2';
-import { NewAthleteProfile, NewAthleteMeasurable, NewAthleteVideo, NewAthleteExperience, NewCoachProfile, NewRecruitingProfile, verificationRequests, AthleteProfile, CoachProfile, RecruitingProfile, athleteExperience } from '@/database/schema';
+import { NewAthleteProfile, NewAthleteMeasurable, NewAthleteVideo, NewAthleteExperience, NewCoachProfile, NewRecruitingProfile, verificationRequests, AthleteProfile, CoachProfile, RecruitingProfile, athleteExperience, activityLog } from '@/database/schema';
 import { db } from '@/database/db';
 import { executeWithUser } from '@/lib/db-access';
 import { eq, and } from 'drizzle-orm';
@@ -11,6 +11,7 @@ import { EducationLevel } from '@/app/(onboarding)/lib/onboarding';
 import { withRateLimit, invalidateCache } from '@/utils/security';
 import { PRESENT_DATE, parseDateWithErrorHandling, dateToStringWithErrorHandling, validateDateDataset } from '@/lib/date-utils';
 import { createClientErrorResponse, logErrorWithContext } from '@/utils/error-sanitization';
+import { hasBufferedProfileView, queueProfileView } from '@/lib/activity-buffer';
 
 // Force Node.js runtime to avoid expensive edge function costs
 export const runtime = 'nodejs';
@@ -543,13 +544,25 @@ export async function GET(
 
           // Only log activity if profile owner is NOT an admin
           if (profileOwnerRole !== 'admin') {
-            await activityOperations.logActivity(currentUserId, profileUserId, 'profile_view', {
+            const existingActivity = await tx.query.activityLog.findFirst({
+              where: and(
+                eq(activityLog.viewerId, currentUserId),
+                eq(activityLog.viewedUserId, profileUserId),
+                eq(activityLog.action, 'profile_view')
+              )
+            });
+            const existingBufferedActivity = await hasBufferedProfileView(currentUserId, profileUserId);
+            const isFirstProfileView = !existingActivity && !existingBufferedActivity;
+
+            await queueProfileView(currentUserId, profileUserId, {
               viewerRole: currentUserRole,
               timestamp: new Date().toISOString()
-            }, tx);
+            });
 
-            // Create notification for profile view
-            await notificationOperations.createProfileViewNotification(profileUserId, currentUserId, tx);
+            // Create a notification only for the first profile view by this viewer.
+            if (isFirstProfileView) {
+              await notificationOperations.createProfileViewNotification(profileUserId, currentUserId, tx, true);
+            }
           }
         } catch {
           // Log error but don't fail the request

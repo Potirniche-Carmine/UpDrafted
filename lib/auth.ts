@@ -6,14 +6,30 @@ import { db } from "@/database/db";
 import Stripe from "stripe";
 import { Resend } from "resend";
 
+function getEnvValue(name: string, fallback?: string): string {
+    const value = process.env[name];
+    if (value && !value.includes("PLACEHOLDER")) {
+        return value;
+    }
+
+    if (process.env.NODE_ENV === "production") {
+        throw new Error(`Missing required environment variable: ${name}`);
+    }
+
+    if (!fallback) {
+        throw new Error(`Missing required environment variable in development: ${name}`);
+    }
+
+    return fallback;
+}
+
 // Initialize Stripe client
-// Relaxes validation to always allow build even if keys are missing
-const stripeClient = new Stripe(process.env.STRIPE_SECRET_KEY || 'sk_test_placeholder', {
+const stripeClient = new Stripe(getEnvValue("STRIPE_SECRET_KEY", "sk_test_placeholder"), {
     apiVersion: "2026-01-28.clover" as Stripe.LatestApiVersion,
 });
 
 // Initialize Resend client
-const resend = new Resend(process.env.RESEND_API_KEY || 're_placeholder');
+const resend = new Resend(getEnvValue("RESEND_API_KEY", "re_placeholder"));
 
 // Email configuration - hardcoded since it's not sensitive
 const EMAIL_FROM = "UpDrafted <noreply@updrafted.us>";
@@ -28,7 +44,7 @@ export const auth = betterAuth({
     baseURL: APP_URL,
     
     // Explicitly pass secret for build time validation
-    secret: process.env.BETTER_AUTH_SECRET || "better_auth_secret_placeholder_for_build",
+    secret: getEnvValue("BETTER_AUTH_SECRET", "better_auth_secret_placeholder_for_build"),
 
     // Enable email/password authentication
     emailAndPassword: {
@@ -158,7 +174,7 @@ export const auth = betterAuth({
     plugins: [
         stripe({
             stripeClient,
-            stripeWebhookSecret: process.env.STRIPE_WEBHOOK_SECRET || 'whsec_placeholder',
+            stripeWebhookSecret: getEnvValue("STRIPE_WEBHOOK_SECRET", "whsec_placeholder"),
             createCustomerOnSignUp: true,
             subscription: {
                 enabled: true,

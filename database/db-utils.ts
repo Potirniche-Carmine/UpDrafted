@@ -1054,28 +1054,48 @@ export const activityOperations = {
       return { action: 'skipped', reason: 'admin-immunity' };
     }
 
-    // Check if a record already exists for this combination
-    const existingRecord = await tx.query.activityLog.findFirst({
-      where: and(
-        eq(activityLog.viewerId, viewerId),
-        eq(activityLog.viewedUserId, viewedUserId),
-        eq(activityLog.action, action)
-      )
-    });
-
-    if (existingRecord) {
-      // Update the existing record with new timestamp and metadata
-      await tx
-        .update(activityLog)
-        .set({
-          createdAt: new Date(),
+    try {
+      // Atomic upsert avoids races from read-then-write on hot paths.
+      const [record] = await tx
+        .insert(activityLog)
+        .values({
+          viewerId,
+          viewedUserId,
+          action,
           metadata
         })
-        .where(eq(activityLog.id, existingRecord.id));
+        .onConflictDoUpdate({
+          target: [activityLog.viewerId, activityLog.viewedUserId, activityLog.action],
+          set: {
+            metadata,
+            createdAt: new Date(),
+          },
+        })
+        .returning({ id: activityLog.id });
 
-      return { action: 'updated', recordId: existingRecord.id };
-    } else {
-      // Create a new record
+      return { action: 'upserted', recordId: record.id };
+    } catch {
+      // Fallback path before unique constraint migration is applied.
+      const existingRecord = await tx.query.activityLog.findFirst({
+        where: and(
+          eq(activityLog.viewerId, viewerId),
+          eq(activityLog.viewedUserId, viewedUserId),
+          eq(activityLog.action, action)
+        )
+      });
+
+      if (existingRecord) {
+        await tx
+          .update(activityLog)
+          .set({
+            createdAt: new Date(),
+            metadata
+          })
+          .where(eq(activityLog.id, existingRecord.id));
+
+        return { action: 'updated', recordId: existingRecord.id };
+      }
+
       const [newRecord] = await tx.insert(activityLog).values({
         viewerId,
         viewedUserId,
@@ -1880,7 +1900,12 @@ export const notificationOperations = {
   // Helper function to create profile view notification (first time only)
   // Note: This creates notifications only for genuinely first-time profile views
   // Users can clear notifications without affecting the activity log persistence
-  async createProfileViewNotification(viewedUserId: string, viewerUserId: string, tx: DbOrTx = db) {
+  async createProfileViewNotification(
+    viewedUserId: string,
+    viewerUserId: string,
+    tx: DbOrTx = db,
+    skipFirstViewCheck = false
+  ) {
     try {
       // Check if viewer or viewed user is an admin - skip notifications for admin immunity
       const [viewer, viewedUser] = await Promise.all([
@@ -1895,26 +1920,26 @@ export const notificationOperations = {
       const viewerInfo = await profileOperations.getUserProfileInfo(viewerUserId, tx);
       if (!viewerInfo) return null;
 
-      // Check if this viewer has viewed this profile before (check activityLog, not notifications)
-      // This ensures we only create notifications for truly first-time views
-      try {
-        // Check the activityLog to see if this is a genuine first-time view
-        const existingActivity = await tx.query.activityLog.findFirst({
-          where: and(
-            eq(activityLog.viewerId, viewerUserId),
-            eq(activityLog.viewedUserId, viewedUserId),
-            eq(activityLog.action, 'profile_view')
-          )
-        });
+      if (!skipFirstViewCheck) {
+        // Check if this viewer has viewed this profile before (check activityLog, not notifications)
+        // This ensures we only create notifications for truly first-time views
+        try {
+          const existingActivity = await tx.query.activityLog.findFirst({
+            where: and(
+              eq(activityLog.viewerId, viewerUserId),
+              eq(activityLog.viewedUserId, viewedUserId),
+              eq(activityLog.action, 'profile_view')
+            )
+          });
 
-        // If this person has viewed the profile before, don't create a notification
-        // The activity log tracks all views, but notifications are only for first impressions
-        if (existingActivity) {
-          return null; // No notification needed - not first time view
+          // If this person has viewed the profile before, don't create a notification
+          // The activity log tracks all views, but notifications are only for first impressions
+          if (existingActivity) {
+            return null;
+          }
+        } catch (error) {
+          console.warn('Error checking activity log for existing profile view, proceeding with creation:', error);
         }
-      } catch (error) {
-        console.warn('Error checking activity log for existing profile view, proceeding with creation:', error);
-        // Continue with creation if check fails
       }
 
       // Only create notification for first-time profile views

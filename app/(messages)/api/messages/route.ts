@@ -171,6 +171,12 @@ export async function POST(request: NextRequest) {
         return await handleGetOrCreateConversation(userId, validatedBody as GetOrCreateConversationRequestBody);
       
       case 'fixMissingConversations':
+        if (role !== 'admin') {
+          return NextResponse.json({
+            success: false,
+            error: 'Forbidden - admin access required'
+          }, { status: 403 });
+        }
         return await handleFixMissingConversations();
       
       default:

@@ -367,6 +367,9 @@ export const activityLog = pgTable('activity_log', {
   index('idx_activity_log_viewer_id').on(table.viewerId),
   index('idx_activity_log_viewed_user_id').on(table.viewedUserId),
   index('idx_activity_log_created_at').on(table.createdAt),
+  index('idx_activity_log_viewed_created').on(table.viewedUserId, table.createdAt),
+  index('idx_activity_log_lookup').on(table.viewerId, table.viewedUserId, table.action),
+  unique('activity_log_unique_viewer_viewed_action').on(table.viewerId, table.viewedUserId, table.action),
 ]);
 
 export const conversations = pgTable('conversations', {

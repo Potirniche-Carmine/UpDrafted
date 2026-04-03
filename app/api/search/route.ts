@@ -51,9 +51,16 @@ export async function GET(request: NextRequest) {
     return await executeWithUser(async (tx) => {
       const searchParams = url.searchParams;
       const query = searchParams.get('q')?.trim();
-      const page = parseInt(searchParams.get('page') || '1');
-      const pageSize = Math.min(parseInt(searchParams.get('pageSize') || '12'), 50); // Cap at 50 per page
+      const rawPage = parseInt(searchParams.get('page') || '1');
+      const rawPageSize = parseInt(searchParams.get('pageSize') || '12');
+      const page = Number.isFinite(rawPage) && rawPage > 0 ? rawPage : 1;
+      const pageSize = Number.isFinite(rawPageSize) && rawPageSize > 0 ? Math.min(rawPageSize, 50) : 12; // Cap at 50 per page
       const roleFilter = searchParams.get('role'); // Optional role filter
+      const allowedRoleFilters = new Set(['athlete', 'coach', 'recruiter']);
+
+      if (roleFilter && !allowedRoleFilters.has(roleFilter)) {
+        return createErrorResponse('Invalid role filter', 400);
+      }
 
       // Validate minimum search length
       if (!query || query.length < 3) {
