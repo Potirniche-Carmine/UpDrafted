@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { X, Download, Smartphone } from 'lucide-react';
+import { Download, Share, Smartphone, X } from 'lucide-react';
 import { useUser } from '@/hooks/use-auth';
 
 interface BeforeInstallPromptEvent extends Event {
@@ -11,272 +11,215 @@ interface BeforeInstallPromptEvent extends Event {
   userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>;
 }
 
-// Detect browser type for tailored instructions
-const getBrowserType = () => {
-  const userAgent = navigator.userAgent.toLowerCase();
-  if (userAgent.includes('chrome') && !userAgent.includes('edg')) return 'chrome';
-  if (userAgent.includes('safari') && !userAgent.includes('chrome')) return 'safari';
-  if (userAgent.includes('firefox')) return 'firefox';
-  if (userAgent.includes('edg')) return 'edge';
-  return 'unknown';
+const DISMISS_KEY = 'pwa-install-dismissed';
+const VISITS_KEY = 'pwa-dashboard-visits';
+const TEMP_DISMISS_MS = 7 * 24 * 60 * 60 * 1000;
+
+const isMobileDevice = () =>
+  /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
+  window.innerWidth <= 768;
+
+const isStandaloneMode = () =>
+  window.matchMedia('(display-mode: standalone)').matches ||
+  window.matchMedia('(display-mode: fullscreen)').matches ||
+  window.matchMedia('(display-mode: minimal-ui)').matches ||
+  (window.navigator as Navigator & { standalone?: boolean }).standalone === true;
+
+const isIOSSafari = () => {
+  const ua = navigator.userAgent;
+  const isIOS = /iPad|iPhone|iPod/.test(ua);
+  const isSafari = /Safari/.test(ua) && !/CriOS|FxiOS|EdgiOS|OPiOS/.test(ua);
+
+  return isIOS && isSafari;
 };
 
-// Check if app is installable (meets PWA criteria)
-const checkInstallability = async (): Promise<boolean> => {
-  try {
-    // Check if we're in a secure context
-    if (!window.isSecureContext) return false;
+const wasDismissedRecently = () => {
+  const dismissedValue = localStorage.getItem(DISMISS_KEY);
 
-    // Check if service worker is available
-    if (!('serviceWorker' in navigator)) return false;
-
-    // Check if we have a manifest
-    const manifestLink = document.querySelector('link[rel="manifest"]');
-    if (!manifestLink) return false;
-
-    // Try to fetch the manifest to ensure it's valid
-    const manifestHref = (manifestLink as HTMLLinkElement).href;
-    const response = await fetch(manifestHref);
-    const manifest = await response.json();
-
-    // Basic manifest validation
-    return !!(manifest.name && manifest.icons && manifest.start_url);
-  } catch (error) {
-    console.warn('PWA installability check failed:', error);
+  if (!dismissedValue || dismissedValue === 'false') {
     return false;
   }
+
+  if (dismissedValue === 'true') {
+    return true;
+  }
+
+  const dismissTime = Number.parseInt(dismissedValue, 10);
+
+  if (Number.isNaN(dismissTime)) {
+    return false;
+  }
+
+  return Date.now() - dismissTime < TEMP_DISMISS_MS;
 };
+
+const hasEnoughVisits = () => {
+  const visitCount = Number.parseInt(localStorage.getItem(VISITS_KEY) ?? '0', 10) || 0;
+  localStorage.setItem(VISITS_KEY, String(visitCount + 1));
+
+  return visitCount >= 1;
+};
+
+type PromptVariant = 'native' | 'ios-manual';
 
 export function PWAInstallPrompt() {
   const { isSignedIn } = useUser();
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
-  const [showPrompt, setShowPrompt] = useState(false);
+  const [eligibleToShow, setEligibleToShow] = useState(false);
   const [isStandalone, setIsStandalone] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
-  const [isInstallable, setIsInstallable] = useState(false);
-  const [browserType, setBrowserType] = useState<string>('unknown');
+  const [showIOSInstructions, setShowIOSInstructions] = useState(false);
 
   useEffect(() => {
-    // Check if app is already installed (standalone mode)
-    const checkStandalone = () => {
-      return window.matchMedia('(display-mode: standalone)').matches ||
-        window.matchMedia('(display-mode: fullscreen)').matches ||
-        window.matchMedia('(display-mode: minimal-ui)').matches ||
-        (window.navigator as unknown as { standalone?: boolean }).standalone === true;
-    };
+    const standalone = isStandaloneMode();
+    const mobile = isMobileDevice();
+    const dismissed = wasDismissedRecently();
+    const enoughVisits = hasEnoughVisits();
 
-    // Check if device is mobile
-    const checkMobile = () => {
-      return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
-        window.innerWidth <= 768;
-    };
-
-    // Check if user has previously dismissed the prompt
-    const checkDismissed = () => {
-      const dismissedValue = localStorage.getItem('pwa-install-dismissed');
-      if (!dismissedValue || dismissedValue === 'false') return false;
-
-      if (dismissedValue === 'true') return true;
-
-      const dismissTime = parseInt(dismissedValue);
-      const threeDaysInMs = 3 * 24 * 60 * 60 * 1000; // 3 days
-      const now = Date.now();
-
-      return (now - dismissTime) < threeDaysInMs;
-    };
-
-    // Track dashboard visits to avoid showing on first visit
-    const checkShouldShowBasedOnVisits = () => {
-      const visitCountStr = localStorage.getItem('pwa-dashboard-visits');
-      const visitCount = visitCountStr ? parseInt(visitCountStr) : 0;
-
-      // Increment visit count
-      localStorage.setItem('pwa-dashboard-visits', String(visitCount + 1));
-
-      // Show after 2nd visit (user has used the app at least once before)
-      return visitCount >= 1;
-    };
-
-    const initializePrompt = async () => {
-      const standalone = checkStandalone();
-      const mobile = checkMobile();
-      const dismissed = checkDismissed();
-      const hasEnoughVisits = checkShouldShowBasedOnVisits();
-      const installable = await checkInstallability();
-      const browser = getBrowserType();
-
-      setIsStandalone(standalone);
-      setIsMobile(mobile);
-      setIsInstallable(installable);
-      setBrowserType(browser);
-
-      // Enhanced conditions for showing prompt
-      const shouldShow = isSignedIn &&
-        mobile &&
-        !standalone &&
-        !dismissed &&
-        hasEnoughVisits &&
-        installable &&
-        window.location.pathname === '/dashboard';
-
-      // Show prompt if we have conditions met AND either have deferred prompt OR are on supported browser
-      if (shouldShow && (deferredPrompt || ['chrome', 'edge', 'safari'].includes(browser))) {
-        setShowPrompt(true);
-      } else {
-        setShowPrompt(false);
-      }
-    };
-
-    initializePrompt();
-  }, [isSignedIn, deferredPrompt, isMobile, isStandalone, isInstallable, browserType]);
+    setIsStandalone(standalone);
+    setIsMobile(mobile);
+    setShowIOSInstructions(isIOSSafari());
+    setEligibleToShow(
+      isSignedIn &&
+      mobile &&
+      !standalone &&
+      !dismissed &&
+      enoughVisits &&
+      window.location.pathname === '/dashboard'
+    );
+  }, [isSignedIn]);
 
   useEffect(() => {
-    // Listen for the beforeinstallprompt event
-    const handleBeforeInstallPrompt = (e: Event) => {
-      e.preventDefault();
-      const promptEvent = e as BeforeInstallPromptEvent;
-      setDeferredPrompt(promptEvent);
+    const mediaQuery = window.matchMedia('(display-mode: standalone)');
 
-      // Store the event globally for debugging
-      (window as Window & { deferredPrompt?: BeforeInstallPromptEvent }).deferredPrompt = promptEvent;
+    const handleBeforeInstallPrompt = (event: Event) => {
+      event.preventDefault();
+      setDeferredPrompt(event as BeforeInstallPromptEvent);
     };
 
-    // Listen for app installation
     const handleAppInstalled = () => {
       setDeferredPrompt(null);
-      setShowPrompt(false);
-      localStorage.setItem('pwa-install-dismissed', 'true');
+      setEligibleToShow(false);
+      localStorage.setItem(DISMISS_KEY, 'true');
     };
 
-    // Listen for when the app is launched from home screen
     const handleDisplayModeChange = () => {
-      const isStandaloneNow = window.matchMedia('(display-mode: standalone)').matches;
-      if (isStandaloneNow && showPrompt) {
-        setShowPrompt(false);
-        localStorage.setItem('pwa-install-dismissed', 'true');
+      const standalone = isStandaloneMode();
+      setIsStandalone(standalone);
+
+      if (standalone) {
+        setEligibleToShow(false);
+        localStorage.setItem(DISMISS_KEY, 'true');
       }
     };
 
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
     window.addEventListener('appinstalled', handleAppInstalled);
-    window.matchMedia('(display-mode: standalone)').addEventListener('change', handleDisplayModeChange);
+    mediaQuery.addEventListener('change', handleDisplayModeChange);
 
     return () => {
       window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
       window.removeEventListener('appinstalled', handleAppInstalled);
-      window.matchMedia('(display-mode: standalone)').removeEventListener('change', handleDisplayModeChange);
+      mediaQuery.removeEventListener('change', handleDisplayModeChange);
     };
-  }, [showPrompt]);
+  }, []);
+
+  const promptVariant = useMemo<PromptVariant | null>(() => {
+    if (!eligibleToShow || !isMobile || isStandalone || !isSignedIn) {
+      return null;
+    }
+
+    if (deferredPrompt) {
+      return 'native';
+    }
+
+    if (showIOSInstructions) {
+      return 'ios-manual';
+    }
+
+    return null;
+  }, [deferredPrompt, eligibleToShow, isMobile, isSignedIn, isStandalone, showIOSInstructions]);
+
+  const dismissPrompt = (permanent = false) => {
+    setEligibleToShow(false);
+    localStorage.setItem(DISMISS_KEY, permanent ? 'true' : Date.now().toString());
+  };
 
   const handleInstallClick = async () => {
-    if (deferredPrompt) {
-      try {
-        // Trigger the native browser install prompt
-        await deferredPrompt.prompt();
-        const { outcome } = await deferredPrompt.userChoice;
+    if (!deferredPrompt) {
+      return;
+    }
 
-        if (outcome === 'accepted') {
-          // User installed the app
-          localStorage.setItem('pwa-install-dismissed', 'true');
-          setShowPrompt(false);
-        } else {
-          // User dismissed the install dialog
-          localStorage.setItem('pwa-install-dismissed', Date.now().toString());
-          setShowPrompt(false);
-        }
+    try {
+      await deferredPrompt.prompt();
+      const { outcome } = await deferredPrompt.userChoice;
 
-        setDeferredPrompt(null);
-      } catch (error) {
-        console.error('Error during install prompt:', error);
-        // Still hide the prompt if there's an error
-        setShowPrompt(false);
-        localStorage.setItem('pwa-install-dismissed', Date.now().toString());
-      }
-    } else {
-      // For browsers like Safari that don't support beforeinstallprompt
-      // Try to trigger the native share sheet if possible
-      if (browserType === 'safari') {
-        // On iOS Safari, we can't programmatically trigger the install
-        // But we can at least dismiss the prompt and let the user know
-        // they can use the Share button
-        const shouldShowTip = confirm(
-          'To add UpDrafted to your home screen:\n\n' +
-          '1. Tap the Share button (□↗) at the bottom\n' +
-          '2. Scroll down and tap "Add to Home Screen"\n' +
-          '3. Tap "Add" to confirm\n\n' +
-          'Would you like to see this tip again later?'
-        );
-
-        if (!shouldShowTip) {
-          localStorage.setItem('pwa-install-dismissed', 'true');
-        } else {
-          localStorage.setItem('pwa-install-dismissed', Date.now().toString());
-        }
-        setShowPrompt(false);
-      } else {
-        // For other browsers, just dismiss
-        setShowPrompt(false);
-        localStorage.setItem('pwa-install-dismissed', Date.now().toString());
-      }
+      dismissPrompt(outcome === 'accepted');
+      setDeferredPrompt(null);
+    } catch (error) {
+      console.error('Error during install prompt:', error);
+      dismissPrompt();
     }
   };
 
-  const handleDismiss = () => {
-    setShowPrompt(false);
-    const dismissTime = Date.now();
-    localStorage.setItem('pwa-install-dismissed', dismissTime.toString());
-  };
-
-  // Debug information (only in development)
-  useEffect(() => {
-    if (process.env.NODE_ENV === 'development') {
-      // Debug logging removed for production
-    }
-  }, [isSignedIn, isMobile, isStandalone, isInstallable, browserType, deferredPrompt, showPrompt]);
-
-  // Don't render if conditions aren't met
-  if (!showPrompt || !isMobile || isStandalone || !isSignedIn || !isInstallable) {
+  if (!promptVariant) {
     return null;
   }
 
   return (
     <div className="fixed bottom-20 left-4 right-4 z-60 md:hidden">
-      <Card className="bg-linear-to-r from-green-500 to-green-600 text-white shadow-lg border-0">
+      <Card className="border-border/60 bg-background/95 shadow-lg backdrop-blur supports-[backdrop-filter]:bg-background/85">
         <CardContent className="p-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-3 flex-1">
-              <div className="bg-white/20 p-2 rounded-full">
-                <Smartphone className="h-5 w-5" />
-              </div>
-              <div className="flex-1">
-                <h3 className="font-semibold text-sm">Add UpDrafted to Home Screen</h3>
-                <p className="text-xs text-green-100 mt-1">
-                  Get push notifications, offline access, and faster loading!
+          <div className="flex items-start gap-3">
+            <div className="rounded-full bg-[#01ae79]/10 p-2 text-[#01ae79]">
+              {promptVariant === 'native' ? (
+                <Download className="h-4 w-4" />
+              ) : (
+                <Share className="h-4 w-4" />
+              )}
+            </div>
+
+            <div className="min-w-0 flex-1">
+              <h3 className="text-sm font-semibold text-foreground">
+                {promptVariant === 'native' ? 'Install UpDrafted' : 'Add UpDrafted to Home Screen'}
+              </h3>
+
+              {promptVariant === 'native' ? (
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Install with your browser&apos;s native prompt for quicker access.
                 </p>
-              </div>
+              ) : (
+                <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+                  On iPhone, Safari has to handle this manually. Tap <span className="font-medium text-foreground">Share</span>, then <span className="font-medium text-foreground">Add to Home Screen</span>.
+                </p>
+              )}
             </div>
-            <div className="flex items-center space-x-2 ml-2">
-              <Button
-                size="sm"
-                variant="secondary"
-                onClick={handleInstallClick}
-                className="bg-white text-green-600 hover:bg-green-50 px-3 py-1 h-8 text-xs font-medium"
-              >
-                <Download className="h-3 w-3 mr-1" />
-                Add
-              </Button>
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={handleDismiss}
-                className="text-white hover:bg-white/20 p-1 h-8 w-8"
-              >
-                <X className="h-4 w-4" />
-              </Button>
-            </div>
+
+            <Button
+              size="icon"
+              variant="ghost"
+              onClick={() => dismissPrompt()}
+              className="h-8 w-8 shrink-0 text-muted-foreground"
+              aria-label="Dismiss install prompt"
+            >
+              <X className="h-4 w-4" />
+            </Button>
           </div>
+
+          {promptVariant === 'native' ? (
+            <div className="mt-3 flex justify-end">
+              <Button
+                size="sm"
+                onClick={handleInstallClick}
+                className="bg-[#01ae79] text-white hover:bg-[#019a6b]"
+              >
+                <Smartphone className="mr-2 h-4 w-4" />
+                Install
+              </Button>
+            </div>
+          ) : null}
         </CardContent>
       </Card>
     </div>
   );
-} 
+}
