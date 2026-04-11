@@ -33,7 +33,6 @@ export interface OnboardingFormData {
   instagramHandle: string;
   twitterHandle: string;
   personalStatement: string;
-  hudlVerified?: boolean;
   
   // Coach/Recruiter fields
   title: string;
@@ -91,7 +90,6 @@ export interface OnboardingProfileData {
   instagramHandle?: string;
   twitterHandle?: string;
   personalStatement?: string;
-  hudlVerified?: boolean;
   
   // Coach/Recruiter specific
   title?: string;
@@ -144,7 +142,6 @@ export function convertFormDataToProfileData(formData: OnboardingFormData): Onbo
     instagramHandle: formData.instagramHandle.trim(),
     twitterHandle: formData.twitterHandle.trim(),
     personalStatement: formData.personalStatement.trim(),
-    hudlVerified: formData.hudlVerified,
     title: formData.title.trim(),
     sportCoaching: formData.sportCoaching,
     secondarySportsRecruiting: formData.secondarySportsRecruiting,

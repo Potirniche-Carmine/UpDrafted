@@ -129,23 +129,3 @@ export const getPartnerUserId = (currentUserId: string | number, connection: Con
   return currentId === connection.toUserId ? connection.fromUserId : connection.toUserId;
 };
 
-/**
- * Safely determines the original requester ID from a connection
- * The original requester is the one who is NOT the current user
- */
-export const getOriginalRequesterId = (currentUserId: string | number, connection: Connection): string => {
-  // Check for null or undefined values
-  if (currentUserId == null || connection.fromUserId == null || connection.toUserId == null) {
-    throw new Error("UserId's are Null.");
-  }
-
-  if (typeof currentUserId === 'undefined' || typeof connection.fromUserId === 'undefined' || typeof connection.toUserId === 'undefined') {
-    throw new Error("UserId's are Undefined.");
-  }
-
-  // Convert currentUserId to string for comparison - connection properties are already strings
-  const currentId = String(currentUserId);
-
-  // The original requester is the one who is NOT the current user
-  return currentId === connection.fromUserId ? connection.toUserId : connection.fromUserId;
-};

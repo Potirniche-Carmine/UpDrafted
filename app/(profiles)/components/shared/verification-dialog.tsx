@@ -29,6 +29,7 @@ interface VerificationDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   role: "coach" | "recruiter" | "athlete";
+  athleteEducationLevel?: string;
   onVerificationSubmitted?: () => void;
 }
 
@@ -43,10 +44,24 @@ interface VerificationFile {
   uploading?: boolean;
 }
 
+function getNormalizedHostname(url: string): string | null {
+  try {
+    return new URL(url).hostname.toLowerCase();
+  } catch {
+    return null;
+  }
+}
+
+function isAthleteVerificationLink(url: string): boolean {
+  const hostname = getNormalizedHostname(url);
+  return hostname === 'hudl.com' || hostname === 'www.hudl.com' || hostname === 'maxpreps.com' || hostname === 'www.maxpreps.com';
+}
+
 export function VerificationDialog({ 
   open, 
   onOpenChange, 
   role, 
+  athleteEducationLevel,
   onVerificationSubmitted 
 }: VerificationDialogProps) {
   const { userId } = useAuth();
@@ -57,6 +72,7 @@ export function VerificationDialog({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitSuccess, setSubmitSuccess] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const isHighSchoolAthlete = role === "athlete" && athleteEducationLevel === "high_school";
 
   // Reset form when dialog opens/closes
   React.useEffect(() => {
@@ -183,6 +199,10 @@ export function VerificationDialog({
           description: f.description,
         }));
 
+      if (isHighSchoolAthlete && !links.some((link) => isAthleteVerificationLink(link.url))) {
+        throw new Error('High school athlete verification requires at least one Hudl or MaxPreps profile link.');
+      }
+
       const submitResponse = await fetch('/api/verification/submit', {
         method: 'POST',
         headers: {
@@ -250,8 +270,16 @@ export function VerificationDialog({
     if (role === "athlete") {
       return {
         title: "Get Verified as an Athlete",
-        description: "Submit documentation to verify your athletic participation and build trust with coaches and recruiters.",
+        description: isHighSchoolAthlete
+          ? "Submit your Hudl profile, MaxPreps profile, or both for manual review. You can also add supporting documentation."
+          : "Submit documentation for manual review to verify your athletic participation and build trust with coaches and recruiters.",
         proofList: [
+          ...(isHighSchoolAthlete
+            ? [
+                "• Hudl profile link",
+                "• MaxPreps athlete profile link",
+              ]
+            : []),
           "• College/club team roster listing you as a player",
           "• Team website page showing you as a member",
           "• Official team ID or membership card",
@@ -261,7 +289,9 @@ export function VerificationDialog({
           "• Intramural league registration or standings",
           "• Club sports registration documents"
         ],
-        helpText: "This verification is for athletes playing club sports, intramurals, or college teams without MaxPreps profiles.",
+        helpText: isHighSchoolAthlete
+          ? "Include at least one Hudl or MaxPreps link. Reviews usually take 1-2 hours, but can take up to 48 hours."
+          : "JUCO, college, university, club, and international athletes can submit supporting documents even without Hudl or MaxPreps.",
       };
     } else if (role === "coach") {
       return {
@@ -354,7 +384,11 @@ export function VerificationDialog({
                 </span>
               </Button>
               <p className="text-xs text-muted-foreground mt-1">
-                Take photos or upload existing files (Max 10MB per file)
+                {role === "athlete"
+                  ? (isHighSchoolAthlete
+                    ? 'High school athletes must include at least one Hudl or MaxPreps link. Files are optional supporting evidence. Max 10MB per file.'
+                    : 'Upload supporting evidence here. Max 10MB per file.')
+                  : 'Take photos or upload existing files (Max 10MB per file)'}
               </p>
             </div>
           </div>
@@ -365,7 +399,11 @@ export function VerificationDialog({
             <div className="mt-2 space-y-3">
               <div>
                 <Input
-                  placeholder={role === "athlete" ? "https://example.com/team-roster" : "https://example.com/staff-directory"}
+                  placeholder={role === "athlete"
+                    ? (isHighSchoolAthlete
+                      ? "https://www.hudl.com/profile/... or https://www.maxpreps.com/..."
+                      : "https://example.com/team-roster")
+                    : "https://example.com/staff-directory"}
                   value={linkUrl}
                   onChange={(e) => setLinkUrl(e.target.value)}
                   className="w-full min-w-0 text-sm sm:text-base"
@@ -374,7 +412,11 @@ export function VerificationDialog({
               </div>
               <div>
                 <Input
-                  placeholder={role === "athlete" ? "Description (e.g., 'College basketball roster page')" : "Description (e.g., 'School staff directory page')"}
+                  placeholder={role === "athlete"
+                    ? (isHighSchoolAthlete
+                      ? "Description (e.g., 'Hudl profile' or 'MaxPreps athlete page')"
+                      : "Description (e.g., 'College basketball roster page')")
+                    : "Description (e.g., 'School staff directory page')"}
                   value={linkDescription}
                   onChange={(e) => setLinkDescription(e.target.value)}
                   className="w-full min-w-0 text-sm sm:text-base"
@@ -473,7 +515,7 @@ export function VerificationDialog({
                   Review Process
                 </p>
                 <p className="text-green-800 dark:text-green-200 mt-1">
-                  Our team will review your submission within 1-3 business days. 
+                  Our team will review your submission as quickly as possible. Most reviews are completed within 1-2 hours, but please allow up to 48 hours.
                   You&apos;ll receive an email notification once your verification is complete.
                 </p>
               </div>
@@ -519,7 +561,8 @@ export function VerificationDialog({
                         ⏰ What happens next?
                       </p>
                       <ul className="text-green-800 dark:text-green-200 space-y-1">
-                        <li>• We&apos;ll review your submission within 1-3 business days</li>
+                        <li>• We&apos;ll usually review your submission within 1-2 hours</li>
+                        <li>• In busy periods, review can take up to 48 hours</li>
                         <li>• Once approved, a verified badge will appear on your profile</li>
                         <li>• This badge shows other users that you&apos;re a legitimate {role}</li>
                       </ul>

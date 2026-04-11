@@ -75,7 +75,7 @@ export default function ForAthletesPage() {
                     <div>
                       <h3 className="text-xl font-semibold mb-3">Get Verified</h3>
                       <p className="text-muted-foreground">
-                        Hudl verification for high school athletes, manual verification for college transfers, JUCO, and international athletes. Everyone gets their verification badge.
+                        Athlete verification is completed manually by our team. Submit your Hudl profile, MaxPreps profile, or both, and most reviews finish in 1-2 hours, though they can take up to 48 hours.
                       </p>
                     </div>
                   </div>

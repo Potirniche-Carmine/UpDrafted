@@ -1,10 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireRole } from '@/utils/roles';
 import { db } from '@/database/db';
-import { verificationRequests, verificationFiles } from '@/database/schema';
+import { verificationRequests, verificationFiles, athleteProfiles } from '@/database/schema';
 import { eq, and } from 'drizzle-orm';
 import { withRateLimit } from '@/utils/security';
 import { createErrorResponse, createSuccessResponse, invalidateCache } from '@/utils/security';
+
+function isAllowedAthleteVerificationLink(url: string): boolean {
+  try {
+    const hostname = new URL(url).hostname.toLowerCase();
+    return hostname === 'hudl.com' || hostname === 'www.hudl.com' || hostname === 'maxpreps.com' || hostname === 'www.maxpreps.com';
+  } catch {
+    return false;
+  }
+}
 
 export async function handleVerificationSubmit(request: NextRequest): Promise<NextResponse> {
   try {
@@ -24,6 +33,28 @@ export async function handleVerificationSubmit(request: NextRequest): Promise<Ne
     // Validate role
     if (!role || !['athlete', 'coach', 'recruiter'].includes(role)) {
       return createErrorResponse('Invalid role', 400);
+    }
+
+    if (role === 'athlete') {
+      const athleteProfile = await db.query.athleteProfiles.findFirst({
+        where: eq(athleteProfiles.userId, userId),
+        columns: {
+          educationLevel: true,
+        },
+      });
+
+      const isHighSchoolAthlete = athleteProfile?.educationLevel === 'high_school';
+      const submittedLinks = Array.isArray(links) ? links : [];
+
+      if (isHighSchoolAthlete) {
+        const hasRequiredProfileLink = submittedLinks.some((link: { url?: string }) =>
+          typeof link?.url === 'string' && isAllowedAthleteVerificationLink(link.url)
+        );
+
+        if (!hasRequiredProfileLink) {
+          return createErrorResponse('High school athlete verification requires at least one Hudl or MaxPreps profile link.', 400);
+        }
+      }
     }
 
     try {

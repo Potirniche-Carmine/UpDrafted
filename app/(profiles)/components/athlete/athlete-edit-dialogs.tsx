@@ -1098,18 +1098,10 @@ export function AthleteEditDialogs({
 
       case 'maxpreps-verification':
         updates.maxPrepsUrl = editData.maxPrepsUrl;
-        // If MaxPreps URL is valid and passes validation, mark user as verified
-        if (editData.maxPrepsUrl && !validateField('maxPrepsUrl', editData.maxPrepsUrl)) {
-          updates.isVerified = true;
-        }
         break;
 
       case 'hudl-highlights':
         updates.hudlUrl = editData.hudlUrl || undefined;
-        // For high school athletes, adding Hudl verifies their profile
-        if (profileData.educationLevel === 'high_school' && editData.hudlUrl) {
-          updates.isVerified = true;
-        }
         break;
 
       case 'sports247-verification':
@@ -2080,7 +2072,7 @@ export function AthleteEditDialogs({
           <>
             <DialogHeader>
               <DialogTitle>Add MaxPreps Profile</DialogTitle>
-              <DialogDescription>Connect your MaxPreps profile to showcase official stats and verification.</DialogDescription>
+              <DialogDescription>Connect your MaxPreps profile so our team can review it during manual athlete verification.</DialogDescription>
             </DialogHeader>
             <div className="space-y-6">
               {/* SECURITY: Show warning for verified users */}
@@ -2113,7 +2105,7 @@ export function AthleteEditDialogs({
                     <p className="text-sm text-red-500">{validationErrors.maxPrepsUrl}</p>
                   )}
                   <p className="text-sm text-muted-foreground">
-                    Add your MaxPreps athlete profile URL. Example: maxpreps.com/ca/los-angeles/school-name/athletes/{profileData.fullName.toLowerCase().replace(/\s+/g, '-')}/football/
+                    Add your MaxPreps athlete profile URL. This helps support manual review and should match your athlete profile. Example: maxpreps.com/ca/los-angeles/school-name/athletes/{profileData.fullName.toLowerCase().replace(/\s+/g, '-')}/football/
                   </p>
                 </div>
               )}
@@ -2190,7 +2182,7 @@ export function AthleteEditDialogs({
           <>
             <DialogHeader>
               <DialogTitle>Edit Hudl Profile</DialogTitle>
-              <DialogDescription>Add your Hudl profile link to showcase game film and highlight reels.</DialogDescription>
+              <DialogDescription>Add your Hudl profile link to showcase game film and support manual athlete verification.</DialogDescription>
             </DialogHeader>
             <div className="space-y-6">
               <div className="space-y-2">
@@ -2210,7 +2202,7 @@ export function AthleteEditDialogs({
                   <p className="text-sm text-red-500">{validationErrors.hudlUrl}</p>
                 )}
                 <p className="text-sm text-muted-foreground">
-                  Add your Hudl profile URL. Example: hudl.com/profile/12345/{profileData.fullName.toLowerCase().replace(/\s+/g, '-')}
+                  Add your Hudl profile URL. This helps our team confirm your athlete identity during review. Example: hudl.com/profile/12345/{profileData.fullName.toLowerCase().replace(/\s+/g, '-')}
                 </p>
               </div>
             </div>

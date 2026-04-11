@@ -1,9 +1,7 @@
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
-import { stripe } from "@better-auth/stripe";
 import { emailOTP, magicLink } from "better-auth/plugins";
 import { db } from "@/database/db";
-import Stripe from "stripe";
 import { Resend } from "resend";
 
 function isNextBuildPhase(): boolean {
@@ -26,11 +24,6 @@ function getEnvValue(name: string, fallback?: string): string {
 
     return fallback;
 }
-
-// Initialize Stripe client
-const stripeClient = new Stripe(getEnvValue("STRIPE_SECRET_KEY", "sk_test_placeholder"), {
-    apiVersion: "2026-01-28.clover" as Stripe.LatestApiVersion,
-});
 
 // Initialize Resend client
 const resend = new Resend(getEnvValue("RESEND_API_KEY", "re_placeholder"));
@@ -174,25 +167,7 @@ export const auth = betterAuth({
         },
     },
 
-    // Stripe plugin for subscriptions
     plugins: [
-        stripe({
-            stripeClient,
-            stripeWebhookSecret: getEnvValue("STRIPE_WEBHOOK_SECRET", "whsec_placeholder"),
-            createCustomerOnSignUp: true,
-            subscription: {
-                enabled: true,
-                plans: [
-                    { name: "free", priceId: "price_free" },
-                    { name: "pro_athlete_monthly", priceId: process.env.STRIPE_ATHLETE_MONTHLY_PRICE_ID || 'price_placeholder_1' },
-                    { name: "pro_athlete_yearly", priceId: process.env.STRIPE_ATHLETE_YEARLY_PRICE_ID || 'price_placeholder_2' },
-                    { name: "pro_coach_monthly", priceId: process.env.STRIPE_COACH_MONTHLY_PRICE_ID || 'price_placeholder_3' },
-                    { name: "pro_coach_yearly", priceId: process.env.STRIPE_COACH_YEARLY_PRICE_ID || 'price_placeholder_4' },
-                    { name: "pro_recruiter_monthly", priceId: process.env.STRIPE_RECRUITER_MONTHLY_PRICE_ID || 'price_placeholder_5' },
-                    { name: "pro_recruiter_yearly", priceId: process.env.STRIPE_RECRUITER_YEARLY_PRICE_ID || 'price_placeholder_6' },
-                ],
-            },
-        }),
         magicLink({
             sendMagicLink: async ({ email, url }: { email: string; url: string }) => {
                 await resend.emails.send({

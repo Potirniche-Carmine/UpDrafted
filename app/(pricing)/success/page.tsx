@@ -14,8 +14,10 @@ interface SuccessPageProps {
 
 export default async function SuccessPage({ searchParams }: SuccessPageProps) {
   const { session_id } = await searchParams
+  const userSession = await getSession();
+  const userId = userSession?.user?.id;
 
-  if (!session_id) {
+  if (!session_id || !userId) {
     redirect('/pricing')
   }
 
@@ -39,14 +41,13 @@ export default async function SuccessPage({ searchParams }: SuccessPageProps) {
     redirect('/pricing')
   }
 
-  // Force invalidate subscription cache for immediate updates
-  const userSession = await getSession();
-  const userId = userSession?.user?.id;
-  if (userId) {
-    SubscriptionManager.invalidateUserCache(userId)
-    console.log(`Cache invalidated for user ${userId} on success page`)
+  const sessionUserId = session.metadata?.userId;
+  if (!sessionUserId || sessionUserId !== userId) {
+    redirect('/pricing')
   }
 
+  // Force invalidate subscription cache for immediate updates
+  SubscriptionManager.invalidateUserCache(userId)
   const customerEmail = session.customer_details?.email
 
   return (
