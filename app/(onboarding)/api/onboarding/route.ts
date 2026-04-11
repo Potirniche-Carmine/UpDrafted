@@ -76,13 +76,6 @@ export async function POST(request: NextRequest) {
     let validationErrors
     if (role === 'athlete') {
       validationErrors = FormValidator.validateAthleteForm(rawProfileData)
-      // Hudl verification logic
-      const hudlResult = FormValidator.validateHudlURL(rawProfileData.hudlUrl, rawProfileData.fullName)
-      if (hudlResult.isValid && rawProfileData.hudlUrl) {
-        rawProfileData.hudlVerified = true;
-      } else {
-        rawProfileData.hudlVerified = false;
-      }
     } else {
       validationErrors = FormValidator.validateCoachRecruiterForm(rawProfileData)
     }

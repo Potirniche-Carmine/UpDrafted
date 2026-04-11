@@ -1057,6 +1057,7 @@ export function AthleteProfile({
         open={verificationDialogOpen}
         onOpenChange={setVerificationDialogOpen}
         role="athlete"
+        athleteEducationLevel={safeProfileData.educationLevel}
         onVerificationSubmitted={() => {
           // Refresh the page or update verification status
           window.location.reload();

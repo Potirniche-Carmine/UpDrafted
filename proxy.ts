@@ -68,8 +68,7 @@ async function getSessionState(req: NextRequest): Promise<SessionState> {
             emailVerified: typeof sessionData.user.emailVerified === 'boolean' ? sessionData.user.emailVerified : null,
         };
     } catch {
-        // Fall back to cookie-based auth checks if session introspection fails.
-        return { isAuthenticated: true, emailVerified: null };
+        return { isAuthenticated: false, emailVerified: null };
     }
 }
 

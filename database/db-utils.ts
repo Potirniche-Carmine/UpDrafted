@@ -556,11 +556,8 @@ export const connectionOperations = {
       .where(
         and(
           eq(connections.id, connectionId),
-          // Ensure the current user is the recipient (toUserId) for accepting requests
-          or(
-            eq(connections.toUserId, currentUserId),
-            eq(connections.fromUserId, currentUserId)
-          )
+          eq(connections.toUserId, currentUserId),
+          eq(connections.status, 'pending')
         )
       )
       .returning();
@@ -1164,20 +1161,6 @@ export const onboardingOperations = {
       schoolClassification
     );
 
-    // Check if this is a high school athlete with a valid Hudl URL
-    const isHighSchool = educationLevel === 'high_school';
-    const hasValidHudlUrl = profileData.hudlUrl && profileData.hudlUrl.trim();
-
-    // Auto-verify high school athletes with valid Hudl URLs
-    // Additional server-side validation to ensure URL matches profile name
-    let shouldAutoVerify = false;
-    if (isHighSchool && hasValidHudlUrl) {
-      // Import validation here to avoid circular imports
-      const { FormValidator } = await import('@/app/(onboarding)/lib/form-validation');
-      const hudlValidation = FormValidator.validateHudlURL(profileData.hudlUrl!, profileData.fullName);
-      shouldAutoVerify = hudlValidation.isValid;
-    }
-
     // Create athlete profile
     const newProfile: NewAthleteProfile = {
       userId,
@@ -1207,7 +1190,8 @@ export const onboardingOperations = {
       instagramHandle: profileData.instagramHandle || undefined,
       twitterHandle: profileData.twitterHandle || undefined,
       personalStatement: profileData.personalStatement || undefined,
-      isVerified: shouldAutoVerify, // Auto-verify if high school athlete with valid Hudl URL
+      // Athlete verification is only granted after manual review.
+      isVerified: false,
     };
 
     const athleteProfile = await athleteOperations.createAthleteProfile(newProfile);

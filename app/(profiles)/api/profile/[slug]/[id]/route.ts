@@ -256,8 +256,9 @@ const validateBasicFields = (data: Record<string, unknown>) => {
   // URL validation
   if (data.maxPrepsUrl && typeof data.maxPrepsUrl === 'string' && data.maxPrepsUrl.length > 0) {
     try {
-      new URL(data.maxPrepsUrl);
-      if (!data.maxPrepsUrl.includes('maxpreps.com')) {
+      const parsedUrl = new URL(data.maxPrepsUrl);
+      const hostname = parsedUrl.hostname.toLowerCase();
+      if (hostname !== 'maxpreps.com' && hostname !== 'www.maxpreps.com') {
         errors.push('MaxPreps URL must be from maxpreps.com');
       }
     } catch {
@@ -873,27 +874,8 @@ export async function PUT(
     delete sanitizedData.createdAt; // Creation date should never be changeable
     delete sanitizedData.updatedAt; // Update date is managed by database
 
-    // Special handling for verification: Only allow setting isVerified to true if MaxPreps URL is provided and valid
-    if (sanitizedData.isVerified === true && sanitizedData.maxPrepsUrl) {
-      // Validate the MaxPreps URL before allowing verification
-      const maxPrepsUrl = sanitizedData.maxPrepsUrl as string;
-      if (typeof maxPrepsUrl === 'string' && maxPrepsUrl.trim()) {
-        const url = maxPrepsUrl.trim();
-        // Check if it's a valid MaxPreps URL
-        if (url.includes('maxpreps.com')) {
-          // Allow verification to be set (auto verified due to valid MaxPreps URL)
-        } else {
-          // Invalid MaxPreps URL, don't allow verification
-          delete sanitizedData.isVerified;
-        }
-      } else {
-        // No MaxPreps URL provided, don't allow verification
-        delete sanitizedData.isVerified;
-      }
-    } else {
-      // Don't allow isVerified to be set without MaxPreps URL or if setting to false
-      delete sanitizedData.isVerified;
-    }
+    // Verification status is controlled by the manual review flow only.
+    delete sanitizedData.isVerified;
 
     // SECURITY: Prevent changing MaxPreps URL for verified users to prevent impersonation
     // Only check if maxPrepsUrl was explicitly provided in the original update data
@@ -1018,9 +1000,6 @@ export async function PUT(
       if (sanitizedData.espnUrl !== undefined) profileUpdateData.espnUrl = sanitizedData.espnUrl as string;
       if (sanitizedData.hudlUrl !== undefined) profileUpdateData.hudlUrl = sanitizedData.hudlUrl as string;
       if (sanitizedData.hudlEmbedUrl !== undefined) profileUpdateData.hudlEmbedUrl = sanitizedData.hudlEmbedUrl as string;
-
-      // Handle verification status
-      if (sanitizedData.isVerified !== undefined) profileUpdateData.isVerified = sanitizedData.isVerified as boolean;
 
       // Handle social media - extract from socialMedia object
       if (sanitizedData.socialMedia !== undefined) {

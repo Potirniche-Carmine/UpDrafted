@@ -113,7 +113,7 @@ function HomePageContent() {
               </div>
               <h3 className="text-lg sm:text-xl lg:text-2xl font-semibold text-gray-900 dark:text-white mb-3">Complete Onboarding</h3>
               <p className="text-sm sm:text-base text-gray-600 dark:text-gray-300 leading-relaxed">
-                Get verified through Hudl (high school athletes) or our manual verification process (college transfers, JUCO, international athletes).
+                Complete your profile, then submit your Hudl profile, MaxPreps profile, or both for manual athlete verification. Most reviews take 1-2 hours, but can take up to 48 hours.
               </p>
             </div>
             <div className="text-center px-4 sm:px-0">

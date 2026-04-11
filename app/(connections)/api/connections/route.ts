@@ -4,7 +4,7 @@ import { connectionOperations, userOperations, messageOperations, notificationOp
 import { sanitizeText } from '@/utils/sanitization';
 import { withRateLimit } from '@/utils/security';
 import { getCachedWithType, setCachedWithType, invalidateCachePattern, createErrorResponse, createSuccessResponse } from '@/utils/security';
-import { getPartnerUserId, getOriginalRequesterId } from '@/utils/connection-utils';
+import { getPartnerUserId } from '@/utils/connection-utils';
 
 export const runtime = 'nodejs';
 
@@ -484,7 +484,7 @@ export async function PUT(request: NextRequest) {
     }
 
     // Create notification for the original requester that their connection was accepted
-    const originalRequesterId = getOriginalRequesterId(currentUserId, connection);
+    const originalRequesterId = connection.fromUserId;
     try {
       await notificationOperations.createConnectionNotification(
         originalRequesterId,
@@ -500,7 +500,7 @@ export async function PUT(request: NextRequest) {
     // Invalidate connections cache for both users
     await Promise.all([
       invalidateCachePattern(`connections:${currentUserId}*`),
-      invalidateCachePattern(`connections:*`)
+      invalidateCachePattern(`connections:${originalRequesterId}*`)
     ]);
 
     // Create a conversation when the status is updated to 'connected'

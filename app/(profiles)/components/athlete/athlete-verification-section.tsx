@@ -39,7 +39,7 @@ export function VerificationSection({
   const isHighSchoolAthlete = currentData.educationLevel === 'high_school';
 
   // General Verification Logic (following coach/recruiter pattern)  
-  const shouldShowGeneralManual = !currentData.isVerified && !hasPendingVerification && !hasRejectedVerification && !(isHighSchoolAthlete && currentData.hudlUrl);
+  const shouldShowGeneralManual = !currentData.isVerified && !hasPendingVerification && !hasRejectedVerification;
   const shouldShowGeneralPending = hasPendingVerification;
   const shouldShowGeneralRejected = hasRejectedVerification;
 
@@ -79,13 +79,15 @@ export function VerificationSection({
               
               <div className="space-y-3">
                 <h3 className="font-semibold text-base sm:text-lg text-slate-900 dark:text-slate-100">
-                  {isHighSchoolAthlete ? "Club & College Athletes" : "Athlete Verification"}
+                  Athlete Verification
                 </h3>
                 <p className="text-sm text-slate-600 dark:text-slate-400 px-2 sm:px-4">
-                  {isHighSchoolAthlete 
-                    ? "Playing club sports, intramurals, or college teams? Get verified with team rosters, photos, or other documentation."
-                    : "Get verified as a legitimate athlete with team rosters, photos, or other documentation."
-                  }
+                  {isHighSchoolAthlete
+                    ? 'Submit your Hudl profile, MaxPreps profile, or both for manual review. You can also include supporting documentation if needed.'
+                    : 'Submit your roster, team page, club documentation, or other supporting evidence for manual review.'}
+                </p>
+                <p className="text-xs text-slate-500 dark:text-slate-400 px-2 sm:px-4">
+                  Reviews usually take 1-2 hours, but can take up to 48 hours.
                 </p>
               </div>
               {isOwnProfile && (
@@ -145,7 +147,7 @@ export function VerificationSection({
               <div className="space-y-3">
                 <h3 className="font-semibold text-base sm:text-lg text-yellow-900 dark:text-yellow-100">General Verification Pending</h3>
                 <p className="text-sm text-yellow-700 dark:text-yellow-200 px-2 sm:px-4">
-                  Your general verification request is being reviewed by our team. This usually takes 1-3 business days.
+                  Your athlete verification request is being reviewed by our team. It usually takes 1-2 hours, but can take up to 48 hours.
                 </p>
                 <div className="inline-block px-3 py-2 bg-yellow-100 dark:bg-yellow-900/50 rounded-lg text-xs font-medium text-yellow-800 dark:text-yellow-200">
                   Submitted: {pendingSubmittedAt ? new Date(pendingSubmittedAt).toLocaleDateString() : 'Recently'}
@@ -199,16 +201,22 @@ export function VerificationSection({
         {shouldShowGeneralManual && (
           <div className="bg-slate-50 dark:bg-slate-900/50 rounded-lg p-4 border border-slate-200 dark:border-slate-800">
             <h4 className="font-medium text-slate-900 dark:text-slate-100 mb-2 text-sm">
-              Which verification is right for me?
+              What should I submit?
             </h4>
             <ul className="text-xs text-slate-600 dark:text-slate-400 space-y-1">
-              {isHighSchoolAthlete && (
-                <li>• <strong>Hudl:</strong> High school athletes with game film and highlight videos</li>
+              {isHighSchoolAthlete ? (
+                <>
+                  <li>• <strong>Hudl:</strong> Add your Hudl profile link if you have one.</li>
+                  <li>• <strong>MaxPreps:</strong> Add your MaxPreps athlete profile if it exists.</li>
+                  <li>• <strong>Manual review:</strong> High school athletes should submit one of those links, plus any extra supporting evidence.</li>
+                </>
+              ) : (
+                <>
+                  <li>• <strong>Roster or team page:</strong> Official roster, staff page, or team website.</li>
+                  <li>• <strong>Supporting proof:</strong> Club registration, stats sheets, photos, or coach letters.</li>
+                  <li>• <strong>Optional links:</strong> Add Hudl or MaxPreps too if you have them, but they are not required.</li>
+                </>
               )}
-              <li>• <strong>Manual:</strong> {isHighSchoolAthlete 
-                ? "Club sports, intramurals, college teams, or athletes without Hudl"
-                : "Club sports, intramurals, or general athletic participation verification"
-              }</li>
             </ul>
           </div>
         )}

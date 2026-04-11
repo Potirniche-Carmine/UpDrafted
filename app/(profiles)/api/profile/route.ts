@@ -18,7 +18,12 @@ export async function GET(request: NextRequest) {
     if (auth instanceof NextResponse) return auth;
 
     const url = new URL(request.url);
-    const targetUserId = url.searchParams.get('userId') || auth.userId;
+    const requestedUserId = url.searchParams.get('userId');
+    if (requestedUserId && requestedUserId !== auth.userId) {
+      return createErrorResponse('Forbidden', 403);
+    }
+
+    const targetUserId = auth.userId;
 
     // Try cache first
     const cacheKey = `profile:${targetUserId}`;
