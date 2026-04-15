@@ -1,0 +1,16 @@
+{
+  "name": "@updrafted/db",
+  "private": true,
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "dependencies": {
+    "dotenv": "^16.5.0",
+    "drizzle-orm": "^0.45.1",
+    "pg": "^8.16.3"
+  },
+  "exports": {
+    ".": "./src/index.ts",
+    "./db": "./src/db.ts",
+    "./schema": "./src/schema.ts"
+  }
+}

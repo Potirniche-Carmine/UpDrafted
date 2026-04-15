@@ -1,0 +1,14 @@
+{
+  "name": "@updrafted/web",
+  "private": true,
+  "dependencies": {
+    "@updrafted/db": "*",
+    "@updrafted/storage": "*"
+  },
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint ."
+  }
+}
