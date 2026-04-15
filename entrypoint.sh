@@ -4,14 +4,26 @@ set -e
 # This script replaces references to environment variables in the built files
 # with the actual values from the runtime environment.
 
+NEXT_DIR=""
+if [ -d /app/apps/web/.next ]; then
+  NEXT_DIR="/app/apps/web/.next"
+elif [ -d /app/.next ]; then
+  NEXT_DIR="/app/.next"
+fi
+
 # Function to replace a placeholder with an environment variable value
 replace_env() {
   local name=$1
   local value=$2
   local placeholder="${name}_PLACEHOLDER"
 
+  if [ -z "$NEXT_DIR" ]; then
+    echo "Warning: Could not find a .next directory to patch."
+    return
+  fi
+
   if [ -n "$value" ]; then
-    echo "Replacing $placeholder with actual value in .next directory..."
+    echo "Replacing $placeholder with actual value in $NEXT_DIR..."
     
     # We use a delimiter that is unlikely to be in the value, e.g., |
     # But URLs contain /, so | is better. Using ~ is also an option.
@@ -20,7 +32,7 @@ replace_env() {
     # Escape standard sed delimiters if present in value (basic safety)
     # This is a simple implementation. For complex values, more robust escaping is needed.
     
-    find /app/.next -type f \( -name "*.js" -o -name "*.json" -o -name "*.html" \) -exec sed -i "s|${placeholder}|${value}|g" {} +
+    find "$NEXT_DIR" -type f \( -name "*.js" -o -name "*.json" -o -name "*.html" \) -exec sed -i "s|${placeholder}|${value}|g" {} +
   else
     echo "Warning: Environment variable $name is not set. Placeholder $placeholder will remain."
   fi

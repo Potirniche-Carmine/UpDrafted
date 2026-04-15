@@ -14,15 +14,26 @@ const eslintConfig = [
   {
     ignores: [
       ".next/**",
+      "apps/*/.next/**",
       "out/**",
       "public/sw.js",
       "public/workbox-*.js",
       "public/generate-icons.js",
+      "apps/web/public/sw.js",
+      "apps/web/public/workbox-*.js",
+      "apps/web/public/generate-icons.js",
+      "packages/db/drizzle/**",
     ],
   },
   {
     rules: {
+      "@next/next/no-html-link-for-pages": "off",
       "@typescript-eslint/no-explicit-any": "off",
+    },
+    settings: {
+      next: {
+        rootDir: ["apps/web/", "apps/admin/"],
+      },
     },
   },
   {

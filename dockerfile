@@ -5,6 +5,10 @@ WORKDIR /app
 
 COPY package.json ./
 COPY package-lock.json ./
+COPY apps/web/package.json ./apps/web/package.json
+COPY apps/admin/package.json ./apps/admin/package.json
+COPY packages/db/package.json ./packages/db/package.json
+COPY packages/storage/package.json ./packages/storage/package.json
 
 RUN npm ci
 
@@ -41,10 +45,13 @@ WORKDIR /app
 # Install runtime dependencies (curl for healthchecks if needed, purely optional here)
 RUN apk add --no-cache curl
 
-COPY --from=builder /app/public ./public
-COPY --from=builder /app/.next ./.next
+COPY --from=builder /app/apps/web/public ./apps/web/public
+COPY --from=builder /app/apps/web/.next ./apps/web/.next
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/package.json ./package.json
+COPY --from=builder /app/apps/web/package.json ./apps/web/package.json
+COPY --from=builder /app/packages/db ./packages/db
+COPY --from=builder /app/packages/storage ./packages/storage
 COPY entrypoint.sh ./entrypoint.sh
 
 # Make entrypoint executable
