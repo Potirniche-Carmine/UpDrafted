@@ -172,7 +172,7 @@ export function validateSchema<T>(schema: z.ZodSchema<T>, data: unknown): T {
     return schema.parse(data);
   } catch (error: unknown) {
     if (error instanceof z.ZodError) {
-      const firstError = error.errors[0];
+      const firstError = error.issues[0];
       throw new ValidationError(
         firstError.message,
         firstError.path.join('.'),
