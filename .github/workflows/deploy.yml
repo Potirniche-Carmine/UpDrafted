@@ -18,6 +18,25 @@ jobs:
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
+        with:
+          # Need history so dorny/paths-filter can diff against the previous commit.
+          fetch-depth: 2
+
+      # Detect whether this push contains anything that affects the admin app.
+      # The admin app depends on apps/admin itself, the shared packages it
+      # imports, its Dockerfile, and the workspace lockfile.
+      - name: Detect Admin Changes
+        id: changes
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            admin:
+              - 'apps/admin/**'
+              - 'packages/db/**'
+              - 'packages/storage/**'
+              - 'dockerfile.admin'
+              - 'package.json'
+              - 'package-lock.json'
 
       - name: Log in to GHCR
         uses: docker/login-action@v3
@@ -26,7 +45,7 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build and Push
+      - name: Build and Push Web Image
         run: |
           IMAGE_ID=ghcr.io/${{ github.repository_owner }}/updraftedprod
           IMAGE_ID=$(echo $IMAGE_ID | tr '[:upper:]' '[:lower:]')
@@ -36,11 +55,29 @@ jobs:
             -t $IMAGE_ID:latest .
           
           docker push $IMAGE_ID:latest
-          
+
+      - name: Build and Push Admin Image
+        if: steps.changes.outputs.admin == 'true'
+        run: |
+          IMAGE_ID=ghcr.io/${{ github.repository_owner }}/updraftedadminprod
+          IMAGE_ID=$(echo $IMAGE_ID | tr '[:upper:]' '[:lower:]')
+
+          docker build \
+            -f dockerfile.admin \
+            -t $IMAGE_ID:latest .
+
+          docker push $IMAGE_ID:latest
+
       - name: Trigger Coolify Production Deployment
         run: |
           curl -X POST "${{ secrets.COOLIFY_WEBHOOK_URL }}" \
             -H "Authorization: Bearer ${{ secrets.COOLIFY_TOKEN }}"
+
+      - name: Trigger Coolify Admin Production Deployment
+        if: steps.changes.outputs.admin == 'true'
+        run: |
+          curl -X POST "${{ secrets.COOLIFY_ADMIN_WEBHOOK_URL }}" \
+            -H "Authorization: Bearer ${{ secrets.COOLIFY_ADMIN_TOKEN }}"
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -65,8 +102,29 @@ jobs:
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
+        with:
+          # Need history so dorny/paths-filter can diff against the previous commit.
+          fetch-depth: 2
+
+      # If a dev push only touches admin files, there's nothing to deploy on the
+      # dev environment (the admin dashboard is prod-only) — skip the whole
+      # web/worker build+deploy to save CI minutes.
+      - name: Detect Web Changes
+        id: changes
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            web:
+              - 'apps/web/**'
+              - 'packages/db/**'
+              - 'packages/storage/**'
+              - 'dockerfile.dev'
+              - 'package.json'
+              - 'package-lock.json'
+              - 'worker/**'
 
       - name: Log in to GHCR
+        if: steps.changes.outputs.web == 'true'
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
@@ -74,6 +132,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build and Push
+        if: steps.changes.outputs.web == 'true'
         run: |
           IMAGE_ID=ghcr.io/${{ github.repository_owner }}/updrafteddev
           IMAGE_ID=$(echo $IMAGE_ID | tr '[:upper:]' '[:lower:]')
@@ -86,19 +145,26 @@ jobs:
           docker push $IMAGE_ID:latest
           
       - name: Trigger Coolify Development Deployment
+        if: steps.changes.outputs.web == 'true'
         run: |
           curl -X POST "${{ secrets.COOLIFY_DEV_WEBHOOK_URL }}" \
             -H "Authorization: Bearer ${{ secrets.COOLIFY_DEV_TOKEN }}"
 
       - name: Setup Node.js
+        if: steps.changes.outputs.web == 'true'
         uses: actions/setup-node@v4
         with:
           node-version: '20'
 
       - name: Deploy Worker to Development
+        if: steps.changes.outputs.web == 'true'
         uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           workingDirectory: 'worker'
           command: deploy --env dev
+
+      - name: Skipped — Admin-only Change
+        if: steps.changes.outputs.web != 'true'
+        run: echo "Push only touched admin files; nothing to deploy on the dev environment."

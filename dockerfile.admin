@@ -1,0 +1,61 @@
+# Stage 1: Build the admin dashboard
+FROM node:20-alpine AS builder
+
+WORKDIR /app
+
+# Install workspace manifests first so npm ci is cacheable.
+COPY package.json ./
+COPY package-lock.json ./
+COPY apps/web/package.json ./apps/web/package.json
+COPY apps/admin/package.json ./apps/admin/package.json
+COPY packages/db/package.json ./packages/db/package.json
+COPY packages/storage/package.json ./packages/storage/package.json
+
+RUN npm ci
+
+COPY . .
+
+ENV NODE_ENV=production
+ENV SKIP_ENV_VALIDATION=true
+# Next 16 tracing lives at the monorepo root.
+ENV NEXT_TELEMETRY_DISABLED=1
+
+# Build-time placeholders. There aren't any NEXT_PUBLIC_* vars baked into the
+# admin app today, but we keep DATABASE_URL set so any Drizzle module that
+# gets statically imported during build doesn't throw.
+ENV DATABASE_URL=postgresql://placeholder:placeholder@localhost:5432/placeholder
+ENV BETTER_AUTH_SECRET=build_time_placeholder_secret_replace_at_runtime
+ENV ADMIN_APP_URL=http://localhost:3100
+ENV RESEND_API_KEY=re_placeholder
+
+RUN npm run build:admin
+
+# Stage 2: Minimal production image
+FROM node:20-alpine AS runner
+
+WORKDIR /app
+
+RUN apk add --no-cache curl
+
+COPY --from=builder /app/apps/admin/.next ./apps/admin/.next
+COPY --from=builder /app/apps/admin/public ./apps/admin/public
+COPY --from=builder /app/apps/admin/package.json ./apps/admin/package.json
+COPY --from=builder /app/apps/admin/next.config.ts ./apps/admin/next.config.ts
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/package.json ./package.json
+COPY --from=builder /app/package-lock.json ./package-lock.json
+COPY --from=builder /app/packages/db ./packages/db
+COPY --from=builder /app/packages/storage ./packages/storage
+
+ENV NODE_ENV=production
+ENV PORT=3100
+ENV HOSTNAME=0.0.0.0
+ENV NEXT_TELEMETRY_DISABLED=1
+
+EXPOSE 3100
+
+# Healthcheck hits better-auth's ok endpoint (always 200 when server is up).
+HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
+  CMD curl -fsS http://localhost:3100/api/auth/ok || exit 1
+
+CMD ["npm", "run", "start:admin"]
