@@ -63,8 +63,8 @@ export function Footer() {
                   />
                 </Link>
                 <p className="text-sm text-muted-foreground max-w-sm leading-relaxed">
-                  Connecting athletes and college programs.<br className="sm:hidden" />
-                  <span className="hidden sm:inline"> </span>Your talent. Their radar. Our platform.
+                  Where athletes run their own recruiting.<br className="sm:hidden" />
+                  <span className="hidden sm:inline"> </span>No agents. No middlemen. Just you and the coach.
                 </p>
               </div>
 
@@ -114,7 +114,7 @@ export function Footer() {
                 />
               </Link>
               <p className="text-sm text-muted-foreground max-w-sm">
-                Connecting athletes and college programs. Your talent. Their radar. Our platform.
+                Where athletes run their own recruiting. No agents. No middlemen. Just you and the coach.
               </p>
             </div>
 

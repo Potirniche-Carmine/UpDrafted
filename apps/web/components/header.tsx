@@ -324,6 +324,33 @@ export function Header() {
           </div>
         )}
 
+        {/* Public Marketing Nav - Shown to signed-out visitors on desktop */}
+        {!isSignedIn && (
+          <nav className="hidden md:flex flex-1 justify-center items-center gap-1 lg:gap-2">
+            {[
+              { href: "/for-athletes", label: "For Athletes" },
+              { href: "/for-coaches", label: "For Coaches" },
+              { href: "/for-recruiters", label: "For Recruiters" },
+              { href: "/about", label: "About" },
+            ].map((link) => {
+              const isActive = pathname === link.href;
+              return (
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    isActive
+                      ? "text-[#01ae79] bg-[#01ae79]/10"
+                      : "text-muted-foreground hover:text-[#01ae79] hover:bg-[#01ae79]/5"
+                  }`}
+                >
+                  {link.label}
+                </Link>
+              );
+            })}
+          </nav>
+        )}
+
         {/* Desktop/Tablet Navigation - Show on medium screens and up, with labels only on xl+ */}
         <nav className="hidden md:flex items-center space-x-0.5 lg:space-x-1 xl:space-x-2">
           {navItemsToDisplay.map((item) => {
@@ -444,16 +471,36 @@ export function Header() {
                 </SheetHeader>
 
                 <div className="mt-6 space-y-4">
+                  {/* Public marketing nav */}
+                  <div className="px-3 space-y-1">
+                    {[
+                      { href: "/for-athletes", label: "For Athletes" },
+                      { href: "/for-coaches", label: "For Coaches" },
+                      { href: "/for-recruiters", label: "For Recruiters" },
+                      { href: "/about", label: "About" },
+                      { href: "/contact", label: "Contact" },
+                    ].map((link) => (
+                      <Link
+                        key={link.href}
+                        href={link.href}
+                        onClick={() => setMobileMenuOpen(false)}
+                        className="block px-3 py-3 rounded-lg text-base font-medium text-foreground hover:text-[#01ae79] hover:bg-[#01ae79]/5 transition-colors"
+                      >
+                        {link.label}
+                      </Link>
+                    ))}
+                  </div>
+
                   {/* Sign in/Sign up for non-authenticated users */}
                   <div className="border-t border-gray-200 dark:border-gray-700 pt-4 mt-4 px-3">
-                    <Link href="/sign-in" onClick={() => setMobileMenuOpen(false)}>
+                    <Link href="/sign-up" onClick={() => setMobileMenuOpen(false)}>
                       <Button variant="default" className="w-full bg-[#01ae79] hover:bg-[#01ae79]/90 text-white mb-3 py-3 text-base font-medium">
-                        Sign In
+                        Create your profile
                       </Button>
                     </Link>
-                    <Link href="/sign-up" onClick={() => setMobileMenuOpen(false)}>
+                    <Link href="/sign-in" onClick={() => setMobileMenuOpen(false)}>
                       <Button variant="outline" className="w-full border-[#01ae79]/30 hover:bg-[#01ae79]/5 text-[#01ae79] py-3 text-base font-medium">
-                        Sign Up
+                        Sign In
                       </Button>
                     </Link>
                   </div>

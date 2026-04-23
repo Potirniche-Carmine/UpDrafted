@@ -1,8 +1,18 @@
-import Link from 'next/link';
-import { Button } from '@/components/ui/button';
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent } from "@/components/ui/card";
-import { ArrowRight, Navigation, Shield, Eye, Gift, Users, ExternalLink, Target, CheckCircle } from 'lucide-react';
+import {
+  ArrowRight,
+  Check,
+  MessageSquare,
+  Shield,
+  Filter,
+  DollarSign,
+  Gift,
+  FileVideo,
+  Users,
+  ExternalLink,
+} from "lucide-react";
 import { pageMetadata } from "@/lib/seo";
 
 export const metadata = pageMetadata.forCoaches();
@@ -10,166 +20,301 @@ export const metadata = pageMetadata.forCoaches();
 export default function ForCoachesPage() {
   return (
     <div className="flex flex-col">
-      {/* Hero Section */}
-      <section className="relative w-full py-20 md:py-32 bg-gradient-to-br from-background via-background to-[#01ae79]/5 dark:to-[#01ae79]/10 overflow-hidden">
-        <div className="absolute inset-0 bg-grid-pattern opacity-5"></div>
-        <div className="container px-4 md:px-6 relative">
-          <div className="text-center max-w-4xl mx-auto space-y-8">
-            <Badge variant="outline" className="w-fit bg-[#01ae79]/5 dark:bg-[#01ae79]/10 text-[#01ae79] border-[#01ae79]/30 mx-auto">
-              <Users className="w-4 h-4 mr-2" />
-              For Coaches
+      {/* ============== HERO ============== */}
+      <section className="relative w-full overflow-hidden border-b border-gray-200/60 dark:border-gray-800/60">
+        <div className="absolute inset-0 bg-grid-pattern opacity-[0.04]" />
+        <div className="absolute inset-0 bg-gradient-to-b from-[#01ae79]/5 via-transparent to-transparent dark:from-[#01ae79]/10" />
+        <div className="absolute top-32 -left-40 w-[30rem] h-[30rem] bg-[#01ae79]/10 rounded-full blur-3xl" />
+
+        <div className="relative container mx-auto max-w-6xl px-4 md:px-6 pt-16 pb-20 md:pt-24 md:pb-28">
+          <div className="max-w-3xl space-y-7">
+            <Badge
+              variant="outline"
+              className="bg-[#01ae79]/5 text-[#01ae79] border-[#01ae79]/30"
+            >
+              For College Coaches
             </Badge>
-            <h1 className="text-4xl font-bold tracking-tight sm:text-5xl xl:text-6xl/none">
-              Find Talent in{" "}
-              <span className="bg-clip-text text-transparent bg-gradient-to-r from-[#01ae79] to-[#01ae79]/80">
-                One Place
+            <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold tracking-tight leading-[0.95]">
+              Every prospect.
+              <br />
+              <span className="bg-clip-text text-transparent bg-gradient-to-br from-[#01ae79] to-[#018a60]">
+                One inbox.
               </span>
             </h1>
-            <p className="max-w-3xl mx-auto text-lg text-muted-foreground md:text-xl">
-              Stop searching multiple platforms for athlete information. UpDrafted centralizes everything - Hudl highlights, stats, rankings, social media, and contact info - in one unified profile. Your one-stop shop for recruiting.
+            <p className="text-xl md:text-2xl text-muted-foreground leading-relaxed">
+              Skip the spreadsheets, the Hudl tabs, the unread DMs. UpDrafted
+              is the hub where verified athletes link out to everything —
+              film, stats, academics, socials, contact info — and where you
+              reach them without a single agent in between.
             </p>
-          </div>
-        </div>
-      </section>
+            <div className="flex flex-col sm:flex-row gap-3 pt-2">
+              <Link href="/sign-up">
+                <Button
+                  size="lg"
+                  className="bg-[#01ae79] hover:bg-[#018a60] text-white px-8 py-6 text-lg font-semibold rounded-lg shadow-lg shadow-[#01ae79]/20 w-full sm:w-auto group"
+                >
+                  Claim your coach profile
+                  <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-0.5 transition-transform" />
+                </Button>
+              </Link>
+              <Link href="/for-recruiters">
+                <Button
+                  variant="outline"
+                  size="lg"
+                  className="px-8 py-6 text-lg font-semibold rounded-lg border-2 w-full sm:w-auto"
+                >
+                  Recruiting multi-sport?
+                  <ExternalLink className="ml-2 h-4 w-4" />
+                </Button>
+              </Link>
+            </div>
 
-      {/* Recruiter Notice Section */}
-      <section className="w-full py-8 md:py-12 bg-gradient-to-br from-slate-50/50 to-emerald-50/30 dark:from-slate-950/50 dark:to-emerald-950/20">
-        <div className="container px-4 md:px-6">
-          <div className="max-w-4xl mx-auto">
-            <Card className="border border-emerald-200 dark:border-emerald-800 bg-emerald-50/50 dark:bg-emerald-950/30">
-              <CardContent className="p-8 text-center">
-                <div className="space-y-4">
-                  <h3 className="text-xl font-semibold text-emerald-700 dark:text-emerald-300">
-                    Are you a College Coach focused on Recruiting?
-                  </h3>
-                  <p className="text-muted-foreground text-sm max-w-2xl mx-auto">
-                    While creating your verified coach profile here is a great step, our dedicated Recruiter Platform offers the best tools for discovering, evaluating, and connecting with prospective student-athletes.
-                  </p>
-                  <Link href="/for-recruiters">
-                    <Button variant="outline" size="sm" className="border-emerald-300 dark:border-emerald-700 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100/50 dark:hover:bg-emerald-900/50">
-                      Explore Recruiter Tools <ExternalLink className="ml-2 h-4 w-4" />
-                    </Button>
-                  </Link>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-      </section>
-
-      {/* Features Section */}
-      <section className="w-full py-16 md:py-24">
-        <div className="container px-4 md:px-6">
-          <div className="max-w-6xl mx-auto">
-            <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-2">
-              <Card className="border-0 shadow-lg hover:shadow-xl transition-shadow">
-                <CardContent className="p-8">
-                  <div className="space-y-6">
-                    <div className="w-16 h-16 bg-emerald-100 dark:bg-emerald-900/30 rounded-full flex items-center justify-center">
-                      <Shield className="h-8 w-8 text-emerald-600 dark:text-emerald-400" />
-                    </div>
-                    <div>
-                      <h3 className="text-xl font-semibold mb-3">All Athlete Info in One View</h3>
-                      <p className="text-muted-foreground">
-                        See everything about a prospect in one place - Hudl highlights, ESPN rankings, 247 Sports profiles, social media, stats, and contact information. No more hunting across multiple platforms.
-                      </p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className="border-0 shadow-lg hover:shadow-xl transition-shadow">
-                <CardContent className="p-8">
-                  <div className="space-y-6">
-                    <div className="w-16 h-16 bg-emerald-100 dark:bg-emerald-900/30 rounded-full flex items-center justify-center">
-                      <Navigation className="h-8 w-8 text-emerald-600 dark:text-emerald-400" />
-                    </div>
-                    <div>
-                      <h3 className="text-xl font-semibold mb-3">Streamlined Communication</h3>
-                      <p className="text-muted-foreground">
-                        Direct messaging with verified athletes. Keep all recruiting conversations organized in one platform instead of scattered across emails and social media.
-                      </p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className="border-0 shadow-lg hover:shadow-xl transition-shadow">
-                <CardContent className="p-8">
-                  <div className="space-y-6">
-                    <div className="w-16 h-16 bg-emerald-100 dark:bg-emerald-900/30 rounded-full flex items-center justify-center">
-                      <Eye className="h-8 w-8 text-emerald-600 dark:text-emerald-400" />
-                    </div>
-                    <div>
-                      <h3 className="text-xl font-semibold mb-3">Get Your Verified Profile</h3>
-                      <p className="text-muted-foreground">
-                        Build trust with athletes and families through verification. Athletes can easily find and connect with verified coaches for their sport.
-                      </p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className="border-0 shadow-lg hover:shadow-xl transition-shadow">
-                <CardContent className="p-8">
-                  <div className="space-y-6">
-                    <div className="w-16 h-16 bg-emerald-100 dark:bg-emerald-900/30 rounded-full flex items-center justify-center">
-                      <Gift className="h-8 w-8 text-emerald-600 dark:text-emerald-400" />
-                    </div>
-                    <div>
-                      <h3 className="text-xl font-semibold mb-3">Free to Start</h3>
-                      <p className="text-muted-foreground">
-                        Try the platform free and see how much easier recruiting becomes when everything is centralized. Upgrade for more connections when you&apos;re ready.
-                      </p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+            <div className="flex flex-wrap gap-x-6 gap-y-2 pt-3 text-sm text-muted-foreground">
+              <span className="flex items-center gap-2">
+                <Check className="h-4 w-4 text-[#01ae79]" /> Free to evaluate
+              </span>
+              <span className="flex items-center gap-2">
+                <Check className="h-4 w-4 text-[#01ae79]" /> Verified athletes
+                only
+              </span>
+              <span className="flex items-center gap-2">
+                <Check className="h-4 w-4 text-[#01ae79]" /> Direct-to-athlete
+                messaging
+              </span>
             </div>
           </div>
         </div>
       </section>
 
-      {/* CTA Section */}
-      <section className="w-full py-20 md:py-32 bg-gray-50 dark:bg-gray-900/50">
-        <div className="container px-4 md:px-6 mx-auto max-w-4xl">
-          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 p-8 md:p-12 text-center">
-            <div className="space-y-6">
-              <div className="w-16 h-16 bg-[#01ae79]/10 dark:bg-[#01ae79]/20 rounded-2xl flex items-center justify-center mx-auto mb-6">
-                <Target className="h-8 w-8 text-[#01ae79]" />
+      {/* ============== STAT STRIP ============== */}
+      <section className="w-full py-10 md:py-14 bg-gray-50/70 dark:bg-gray-950/40 border-b border-gray-200/60 dark:border-gray-800/60">
+        <div className="container mx-auto max-w-5xl px-4 md:px-6">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
+            <Stat label="Tabs per prospect" from="9+" to="1 hub" />
+            <Stat label="Finding film" from="Hunt across sites" to="One click out" />
+            <Stat label="Who owns the pitch" from="A third-party rep" to="The athlete" />
+            <Stat label="Cost to evaluate" from="Subscription" to="$0" />
+          </div>
+        </div>
+      </section>
+
+      {/* ============== FEATURES ============== */}
+      <section className="w-full py-20 md:py-28">
+        <div className="container mx-auto max-w-6xl px-4 md:px-6">
+          <div className="text-center max-w-2xl mx-auto mb-14">
+            <Badge
+              variant="outline"
+              className="mb-4 bg-[#01ae79]/5 text-[#01ae79] border-[#01ae79]/30"
+            >
+              Recruiting, consolidated
+            </Badge>
+            <h2 className="text-4xl md:text-5xl font-bold tracking-tight">
+              Built for staffs that are tired of
+              <br />
+              <span className="text-[#01ae79]">tab-switching.</span>
+            </h2>
+          </div>
+
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
+            <FeatureCard
+              icon={<Filter className="h-6 w-6" />}
+              title="Search the way you recruit"
+              body="Filter by position, class year, region, height/weight, GPA, and ACT/SAT. Find fits in minutes instead of sifting through a service&apos;s weekly list."
+            />
+            <FeatureCard
+              icon={<FileVideo className="h-6 w-6" />}
+              title="Every link, one profile"
+              body="Every athlete links Hudl, MaxPreps, 247, ESPN, and socials right from their UpDrafted page. One profile opens every source — no scavenger hunt, no nine-tab chaos."
+              accent
+            />
+            <FeatureCard
+              icon={<MessageSquare className="h-6 w-6" />}
+              title="Direct-to-athlete DMs"
+              body="Message prospects inside the platform with read receipts. No third-party rep, no forwarded-email chain — just you and the athlete."
+            />
+            <FeatureCard
+              icon={<Shield className="h-6 w-6" />}
+              title="Verified on both sides"
+              body="Every athlete is manually verified by our team. Your verified badge signals to families that you&apos;re the real deal, too."
+            />
+            <FeatureCard
+              icon={<DollarSign className="h-6 w-6" />}
+              title="Built for the NIL era"
+              body="Your budget is already thin. UpDrafted helps you surface talent that fits your program and your wallet — no recruiting-service subscription required."
+            />
+            <FeatureCard
+              icon={<Gift className="h-6 w-6" />}
+              title="Free to evaluate"
+              body="Search, shortlist mentally, and open conversations at $0. Premium only exists if you want higher monthly connection limits."
+            />
+          </div>
+        </div>
+      </section>
+
+      {/* ============== WORKFLOW ============== */}
+      <section className="w-full py-20 md:py-28 bg-gray-50/70 dark:bg-gray-950/40 border-y border-gray-200/60 dark:border-gray-800/60">
+        <div className="container mx-auto max-w-5xl px-4 md:px-6">
+          <div className="text-center max-w-2xl mx-auto mb-14">
+            <h2 className="text-4xl md:text-5xl font-bold tracking-tight mb-4">
+              From discovery to DM in three clicks.
+            </h2>
+          </div>
+
+          <div className="space-y-4">
+            {[
+              {
+                n: "01",
+                title: "Build your coach profile",
+                body: "Program, role, sport, recruiting priorities. Get verified and athletes can find (and trust) you.",
+              },
+              {
+                n: "02",
+                title: "Search and discover",
+                body: "Use filters to surface prospects who fit your program. Open their profile — film, stats, academics, socials — all in one place.",
+              },
+              {
+                n: "03",
+                title: "Connect and message",
+                body: "Hit connect, open a DM, and talk directly. No agents, no relayed messages, no cold-email spam folder.",
+              },
+            ].map((step) => (
+              <div
+                key={step.n}
+                className="flex gap-6 items-start p-6 rounded-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 hover:border-[#01ae79]/30 transition-colors"
+              >
+                <div className="shrink-0 text-4xl font-bold text-[#01ae79]/30 w-16">
+                  {step.n}
+                </div>
+                <div>
+                  <h3 className="text-xl font-semibold mb-2">{step.title}</h3>
+                  <p className="text-muted-foreground leading-relaxed">
+                    {step.body}
+                  </p>
+                </div>
               </div>
-              <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-gray-900 dark:text-white">
-                Stop Searching. Start Recruiting.
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ============== RECRUITER CROSS-SELL ============== */}
+      <section className="w-full py-16 md:py-20">
+        <div className="container mx-auto max-w-4xl px-4 md:px-6">
+          <div className="rounded-2xl border border-[#01ae79]/20 bg-gradient-to-br from-[#01ae79]/5 to-transparent p-8 md:p-10 text-center">
+            <Users className="h-8 w-8 text-[#01ae79] mx-auto mb-4" />
+            <h3 className="text-2xl font-semibold mb-3">
+              Recruiting across multiple sports?
+            </h3>
+            <p className="text-muted-foreground max-w-xl mx-auto mb-6">
+              If your job is filling rosters for every program on campus —
+              football Monday, track Tuesday — the Recruiter platform gives
+              you cross-sport search and institutional verification, built for
+              NIL-era budgets.
+            </p>
+            <Link href="/for-recruiters">
+              <Button variant="outline" className="border-[#01ae79]/30 text-[#01ae79] hover:bg-[#01ae79]/5">
+                See the Recruiter tools
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Button>
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      {/* ============== FINAL CTA ============== */}
+      <section className="w-full pb-20 md:pb-28">
+        <div className="container mx-auto max-w-5xl px-4 md:px-6">
+          <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#01ae79] to-[#016e4c] p-10 md:p-14 text-center shadow-2xl shadow-[#01ae79]/20">
+            <div className="absolute inset-0 opacity-10">
+              <div className="absolute inset-0 bg-[radial-gradient(circle_at_1px_1px,rgba(255,255,255,0.5)_1px,transparent_0)] [background-size:24px_24px]" />
+            </div>
+
+            <div className="relative space-y-5">
+              <h2 className="text-4xl md:text-5xl font-bold tracking-tight text-white">
+                Your next commit is in the search bar.
               </h2>
-              <p className="text-lg md:text-xl text-gray-600 dark:text-gray-300 font-light max-w-2xl mx-auto">
-                Join coaches who&apos;ve streamlined their recruiting with UpDrafted&apos;s centralized athlete profiles. Everything you need in one place.
+              <p className="text-lg md:text-xl text-white/90 max-w-xl mx-auto">
+                Spin up a coach profile, run your first search, message your
+                first prospect — all before your next staff meeting.
               </p>
-              <div className="pt-4">
+              <div className="pt-3">
                 <Link href="/sign-up">
-                  <Button size="lg" className="px-12 py-4 text-lg font-semibold bg-[#01ae79] hover:bg-[#01ae79]/90 text-white rounded-lg shadow-lg hover:shadow-xl transition-all duration-200">
-                    Get Started Free
+                  <Button
+                    size="lg"
+                    className="bg-white text-[#01ae79] hover:bg-white/95 px-10 py-6 text-lg font-semibold rounded-lg shadow-xl"
+                  >
+                    Get verified — free
                     <ArrowRight className="ml-2 h-5 w-5" />
                   </Button>
                 </Link>
               </div>
-              <div className="flex flex-wrap justify-center items-center gap-6 pt-6 text-sm text-gray-500 dark:text-gray-400">
-                <div className="flex items-center gap-2">
-                  <CheckCircle className="h-4 w-4 text-[#01ae79]" />
-                  <span>Free to start</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <CheckCircle className="h-4 w-4 text-[#01ae79]" />
-                  <span>All verified athletes</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <CheckCircle className="h-4 w-4 text-[#01ae79]" />
-                  <span>Premium features when ready</span>
-                </div>
-              </div>
+              <p className="text-sm text-white/70">
+                Free to evaluate. No contracts. No per-seat fees.
+              </p>
             </div>
           </div>
         </div>
       </section>
+    </div>
+  );
+}
+
+function Stat({
+  label,
+  from,
+  to,
+}: {
+  label: string;
+  from: string;
+  to: string;
+}) {
+  return (
+    <div className="space-y-2">
+      <p className="text-xs uppercase tracking-wider text-muted-foreground font-medium">
+        {label}
+      </p>
+      <div className="flex items-center justify-center gap-2 text-base md:text-lg">
+        <span className="text-muted-foreground line-through decoration-red-400/60">
+          {from}
+        </span>
+        <ArrowRight className="h-4 w-4 text-[#01ae79]" />
+        <span className="font-semibold text-[#01ae79]">{to}</span>
+      </div>
+    </div>
+  );
+}
+
+function FeatureCard({
+  icon,
+  title,
+  body,
+  accent = false,
+}: {
+  icon: React.ReactNode;
+  title: string;
+  body: string;
+  accent?: boolean;
+}) {
+  return (
+    <div
+      className={`rounded-2xl p-7 border transition-all ${
+        accent
+          ? "bg-gradient-to-br from-[#01ae79]/10 to-transparent border-[#01ae79]/30 shadow-lg shadow-[#01ae79]/5"
+          : "bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-800 hover:border-[#01ae79]/30 hover:shadow-md"
+      }`}
+    >
+      <div
+        className={`w-11 h-11 rounded-xl flex items-center justify-center mb-5 ${
+          accent ? "bg-[#01ae79] text-white" : "bg-[#01ae79]/10 text-[#01ae79]"
+        }`}
+      >
+        {icon}
+      </div>
+      <h3 className="text-lg font-semibold mb-2">{title}</h3>
+      <p
+        className="text-sm text-muted-foreground leading-relaxed"
+        dangerouslySetInnerHTML={{ __html: body }}
+      />
     </div>
   );
 }
