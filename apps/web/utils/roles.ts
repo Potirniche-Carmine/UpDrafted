@@ -5,11 +5,30 @@ import { NextResponse } from 'next/server';
 export type Roles = 'admin' | 'athlete' | 'coach' | 'recruiter';
 
 /**
- * Get the current session from better-auth.
- * Use this in server components and API routes.
+ * Treat a session as banned if the user has `banned=true` and either
+ * the ban is permanent (`bannedUntil` null) or the ban has not yet expired.
+ */
+const isSessionBanned = (
+  user: { banned?: unknown; bannedUntil?: unknown } | null | undefined,
+): boolean => {
+  if (!user || !user.banned) return false;
+  const until = user.bannedUntil;
+  if (until == null) return true; // permanent ban
+  const expiresAt = until instanceof Date ? until : new Date(String(until));
+  if (Number.isNaN(expiresAt.getTime())) return true;
+  return expiresAt.getTime() > Date.now();
+};
+
+/**
+ * Get the current session from better-auth. Banned users are filtered out,
+ * so callers that pass the null check are guaranteed to be unbanned.
  */
 export const getSession = async () => {
-  return auth.api.getSession({ headers: await headers() });
+  const session = await auth.api.getSession({ headers: await headers() });
+  if (session?.user && isSessionBanned(session.user as never)) {
+    return null;
+  }
+  return session;
 };
 
 /**

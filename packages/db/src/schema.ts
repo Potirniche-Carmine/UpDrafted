@@ -56,6 +56,12 @@ export const user = pgTable('user', {
   image: text('image'),
   role: userRoleEnum('role'), // Nullable - null means needs onboarding
   stripeCustomerId: text('stripe_customer_id'), // Added by Stripe plugin
+  // Ban state (managed exclusively by admin dashboard).
+  banned: boolean('banned').default(false).notNull(),
+  bannedUntil: timestamp('banned_until', { withTimezone: true }), // null + banned=true => permanent
+  bannedAt: timestamp('banned_at', { withTimezone: true }),
+  bannedBy: text('banned_by'), // admin user id, not FK to avoid cyclic cascade
+  banReason: text('ban_reason'),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
 }, (table) => [
@@ -63,6 +69,7 @@ export const user = pgTable('user', {
   index('idx_user_email').on(table.email),
   index('idx_user_name').on(table.name),
   index('idx_user_stripe_customer').on(table.stripeCustomerId),
+  index('idx_user_banned').on(table.banned),
 ]);
 
 // Alias for backward compatibility
@@ -505,6 +512,55 @@ export const reports = pgTable('reports', {
   }),
 ]).enableRLS();
 
+// Moderator discussion threads attached to a verification request.
+// Every comment is written by an admin (enforced in application code).
+export const verificationModeratorComments = pgTable('verification_moderator_comments', {
+  id: serial('id').primaryKey(),
+  verificationRequestId: integer('verification_request_id')
+    .notNull()
+    .references(() => verificationRequests.id, { onDelete: 'cascade' }),
+  moderatorId: text('moderator_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  body: text('body').notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+}, (table) => [
+  index('idx_vmc_verification_request_id').on(table.verificationRequestId),
+  index('idx_vmc_moderator_id').on(table.moderatorId),
+  index('idx_vmc_created_at').on(table.createdAt),
+  pgPolicy('vmc_read_policy', {
+    for: 'select',
+    to: 'public',
+    using: sql`${authRole} = 'admin'`,
+  }),
+  pgPolicy('vmc_insert_policy', {
+    for: 'insert',
+    to: 'public',
+    withCheck: sql`${authRole} = 'admin' AND ${table.moderatorId} = ${authUid}`,
+  }),
+]).enableRLS();
+
+// Moderator discussion threads attached to a report.
+export const reportModeratorComments = pgTable('report_moderator_comments', {
+  id: serial('id').primaryKey(),
+  reportId: integer('report_id').notNull().references(() => reports.id, { onDelete: 'cascade' }),
+  moderatorId: text('moderator_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  body: text('body').notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+}, (table) => [
+  index('idx_rmc_report_id').on(table.reportId),
+  index('idx_rmc_moderator_id').on(table.moderatorId),
+  index('idx_rmc_created_at').on(table.createdAt),
+  pgPolicy('rmc_read_policy', {
+    for: 'select',
+    to: 'public',
+    using: sql`${authRole} = 'admin'`,
+  }),
+  pgPolicy('rmc_insert_policy', {
+    for: 'insert',
+    to: 'public',
+    withCheck: sql`${authRole} = 'admin' AND ${table.moderatorId} = ${authUid}`,
+  }),
+]).enableRLS();
+
 export const notifications = pgTable('notifications', {
   id: serial('id').primaryKey(),
   userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
@@ -692,6 +748,7 @@ export const verificationRequestsRelations = relations(verificationRequests, ({ 
     references: [users.id],
   }),
   files: many(verificationFiles),
+  moderatorComments: many(verificationModeratorComments),
 }));
 
 export const verificationFilesRelations = relations(verificationFiles, ({ one }) => ({
@@ -701,7 +758,7 @@ export const verificationFilesRelations = relations(verificationFiles, ({ one })
   }),
 }));
 
-export const reportsRelations = relations(reports, ({ one }) => ({
+export const reportsRelations = relations(reports, ({ one, many }) => ({
   reporter: one(users, {
     fields: [reports.reporterId],
     references: [users.id],
@@ -714,7 +771,36 @@ export const reportsRelations = relations(reports, ({ one }) => ({
     fields: [reports.reviewedBy],
     references: [users.id],
   }),
+  moderatorComments: many(reportModeratorComments),
 }));
+
+export const verificationModeratorCommentsRelations = relations(
+  verificationModeratorComments,
+  ({ one }) => ({
+    verificationRequest: one(verificationRequests, {
+      fields: [verificationModeratorComments.verificationRequestId],
+      references: [verificationRequests.id],
+    }),
+    moderator: one(users, {
+      fields: [verificationModeratorComments.moderatorId],
+      references: [users.id],
+    }),
+  }),
+);
+
+export const reportModeratorCommentsRelations = relations(
+  reportModeratorComments,
+  ({ one }) => ({
+    report: one(reports, {
+      fields: [reportModeratorComments.reportId],
+      references: [reports.id],
+    }),
+    moderator: one(users, {
+      fields: [reportModeratorComments.moderatorId],
+      references: [users.id],
+    }),
+  }),
+);
 
 export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
@@ -929,6 +1015,10 @@ export type VerificationFile = typeof verificationFiles.$inferSelect;
 export type NewVerificationFile = typeof verificationFiles.$inferInsert;
 export type Report = typeof reports.$inferSelect;
 export type NewReport = typeof reports.$inferInsert;
+export type VerificationModeratorComment = typeof verificationModeratorComments.$inferSelect;
+export type NewVerificationModeratorComment = typeof verificationModeratorComments.$inferInsert;
+export type ReportModeratorComment = typeof reportModeratorComments.$inferSelect;
+export type NewReportModeratorComment = typeof reportModeratorComments.$inferInsert;
 export type Notification = typeof notifications.$inferSelect;
 export type NewNotification = typeof notifications.$inferInsert;
 export type AdminRolePreferences = typeof adminRolePreferences.$inferSelect;

@@ -129,6 +129,13 @@ export const auth = betterAuth({
                 defaultValue: null,
                 input: false, // Don't allow setting via signup
             },
+            // Ban state is read-only through auth; writes are admin-dashboard only.
+            banned: {
+                type: "boolean",
+                required: false,
+                defaultValue: false,
+                input: false,
+            },
         },
         changeEmail: {
             enabled: true,
