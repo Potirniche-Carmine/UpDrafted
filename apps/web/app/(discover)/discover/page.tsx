@@ -333,9 +333,8 @@ function SearchPageContent() {
   const subtitle = getSubtitle();
 
   return (
-    <div className="bg-background p-4 md:p-6">
-      <div className="max-w-7xl mx-auto">
-        <div className="flex flex-col xl:flex-row gap-6">
+    <div className="container mx-auto max-w-7xl px-0 md:px-2 space-y-6 md:space-y-8">
+      <div className="flex flex-col xl:flex-row gap-6">
           {/* Search Filters Component - Only show when filters are ready to prevent flash */}
           {filtersReady ? (
             <SearchFilters
@@ -427,7 +426,6 @@ function SearchPageContent() {
             />
           </div>
         </div>
-      </div>
     </div>
   );
 }

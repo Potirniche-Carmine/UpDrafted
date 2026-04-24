@@ -176,12 +176,12 @@ export const SearchTabs: React.FC<SearchTabsProps> = ({
         const validTab = getValidTab(effectiveRole, value);
         setActiveTab(validTab);
       }}>
-        <TabsList className="grid w-full mb-6 bg-card border border-border" style={{ gridTemplateColumns: `repeat(${availableTabs.length}, minmax(0, 1fr))` }}>
+        <TabsList className="grid w-full mb-5 bg-white dark:bg-black border border-[#01ae79]/20 dark:border-[#01ae79]/25 rounded-xl p-1 h-auto" style={{ gridTemplateColumns: `repeat(${availableTabs.length}, minmax(0, 1fr))` }}>
           {availableTabs.map((tab) => (
             <TabsTrigger
               key={tab.value}
               value={tab.value}
-              className="flex items-center justify-center gap-1 sm:gap-2 data-[state=active]:bg-[#01ae79] data-[state=active]:text-white text-xs sm:text-sm px-1 sm:px-4 min-w-0"
+              className="flex items-center justify-center gap-1.5 sm:gap-2 data-[state=active]:bg-[#01ae79] data-[state=active]:text-white data-[state=active]:shadow-sm text-xs sm:text-sm px-2 sm:px-4 py-2 min-w-0 rounded-lg transition-colors"
             >
               {tab.icon}
               <span className="text-xs sm:text-sm truncate">{tab.label}</span>
@@ -191,16 +191,16 @@ export const SearchTabs: React.FC<SearchTabsProps> = ({
 
         {/* Badge Disclaimer */}
         <div className="mb-4">
-          <div className="flex items-center gap-4 text-sm text-muted-foreground" role="list">
+          <div className="flex items-center gap-4 text-xs text-muted-foreground" role="list">
             <div className="flex items-center gap-1.5" role="listitem">
-              <div className="w-4 h-4 bg-[#01ae79] rounded-full p-0.5">
-                <Shield className="h-3 w-3 text-white" />
+              <div className="w-3.5 h-3.5 bg-[#01ae79] rounded-full flex items-center justify-center">
+                <Shield className="h-2.5 w-2.5 text-white" />
               </div>
               <span>Verified</span>
             </div>
             <div className="flex items-center gap-1.5" role="listitem">
-              <div className="w-4 h-4 bg-orange-500 rounded-full p-0.5">
-                <Shield className="h-3 w-3 text-white opacity-95" />
+              <div className="w-3.5 h-3.5 bg-muted-foreground/40 rounded-full flex items-center justify-center">
+                <Shield className="h-2.5 w-2.5 text-white" />
               </div>
               <span>Unverified</span>
             </div>

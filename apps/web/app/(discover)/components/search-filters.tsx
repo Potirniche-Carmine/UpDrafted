@@ -2,8 +2,7 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Filter, Search, X } from "lucide-react";
+import { Search, X } from "lucide-react";
 import { AdvancedFilters } from './advanced-filters';
 import { MultiSelectFilter, type FilterOption } from './filter-components';
 import { SportFilter } from '@/components/ui/sport-filter';
@@ -221,45 +220,25 @@ export const SearchFilters: React.FC<SearchFiltersProps> = ({
     <>
       {/* Desktop Filters Sidebar */}
       <div className="hidden xl:block w-full xl:w-80 flex-shrink-0">
-        <div className="bg-card rounded-xl shadow-sm border border-border sticky top-6 h-[calc(95vh-3rem)] max-h-[734px] overflow-hidden flex flex-col">
+        <div className="bg-white dark:bg-black rounded-2xl border border-[#01ae79]/20 dark:border-[#01ae79]/25 sticky top-6 h-[calc(95vh-3rem)] max-h-[734px] overflow-hidden flex flex-col">
           {/* Header Section - Fixed */}
-          <div className="p-6 border-b border-border bg-card rounded-t-xl flex-shrink-0">
-            <div className="flex items-center justify-between">
-              <div>
-                <h1 className="text-3xl md:text-4xl font-bold text-foreground mb-2">
-                  {title}
-                </h1>
-                <p className="text-base md:text-lg text-muted-foreground">
-                  {subtitle}
-                </p>
-              </div>
-
-              {/* Mobile Filter Button */}
-              <Button
-                onClick={() => setShowMobileFilters(!showMobileFilters)}
-                variant="outline"
-                className="xl:hidden relative"
-              >
-                <Filter className="h-4 w-4 mr-2" />
+          <div className="px-6 py-5 border-b border-[#01ae79]/20 dark:border-[#01ae79]/25 flex-shrink-0">
+            <div className="flex items-center justify-between gap-3">
+              <h3 className="text-base font-semibold tracking-tight text-foreground">
                 Filters
-                {activeFiltersCount > 0 && (
-                  <Badge className="ml-2 bg-[#01ae79] text-white">
-                    {activeFiltersCount}
-                  </Badge>
-                )}
-              </Button>
+              </h3>
+              {activeFiltersCount > 0 && (
+                <span className="text-xs font-medium text-[#01ae79]">
+                  {activeFiltersCount} applied
+                </span>
+              )}
             </div>
-
-
           </div>
 
-          {/* Scrollable Filters Content with gradient indicators */}
+          {/* Scrollable Filters Content */}
           <div className="flex-1 relative overflow-hidden">
-            {/* Top gradient fade indicator */}
-            <div className="absolute top-0 left-0 right-0 h-4 bg-gradient-to-b from-card to-transparent z-10 pointer-events-none"></div>
-            
             {/* Scrollable content */}
-            <div 
+            <div
               ref={scrollContainerRef}
               className="h-full overflow-y-auto px-6 py-4 scrollbar-thin scrollbar-thumb-muted scrollbar-track-transparent"
             >
@@ -347,20 +326,17 @@ export const SearchFilters: React.FC<SearchFiltersProps> = ({
               </div>
             </div>
             
-            {/* Bottom gradient fade indicator */}
-            <div className="absolute bottom-0 left-0 right-0 h-4 bg-gradient-to-t from-card to-transparent z-10 pointer-events-none"></div>
-            
             {/* Scroll indicator hint - only show when not at bottom */}
             {showScrollHint && (
               <div className="absolute bottom-2 right-6 text-xs text-muted-foreground/60 pointer-events-none">
-                ⤓ Scroll for more
+                Scroll for more
               </div>
             )}
           </div>
 
           {/* Fixed Action Buttons */}
           {showDiscoverButton && (
-            <div className="flex gap-3 p-6 pt-4 border-t border-border bg-card rounded-b-xl flex-shrink-0">
+            <div className="flex gap-3 p-6 pt-4 border-t border-[#01ae79]/20 dark:border-[#01ae79]/25 flex-shrink-0">
               <Button
                 onClick={handleClearFilters}
                 variant="outline"
@@ -371,10 +347,10 @@ export const SearchFilters: React.FC<SearchFiltersProps> = ({
               </Button>
               <Button
                 onClick={handleDiscover}
-                className="flex-1 bg-[#01ae79] hover:bg-[#01ae79]/90 text-white"
+                className="flex-1 bg-[#01ae79] hover:bg-[#018a60] text-white"
               >
-                <Search className="h-4 w-4 mr-0.5" />
-                Apply Filters
+                <Search className="h-4 w-4 mr-1" />
+                Apply
               </Button>
             </div>
           )}
@@ -383,10 +359,10 @@ export const SearchFilters: React.FC<SearchFiltersProps> = ({
 
       {/* Mobile/Tablet Filters Overlay */}
       {showMobileFilters && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 xl:hidden flex items-center justify-center p-4">
-          <div className="w-full max-w-md bg-card rounded-xl border border-border max-h-[90vh] overflow-hidden flex flex-col shadow-xl">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[60] xl:hidden flex items-start sm:items-center justify-center p-4 pt-20 sm:pt-4 overflow-y-auto">
+          <div className="w-full max-w-md bg-white dark:bg-black rounded-2xl border border-[#01ae79]/20 dark:border-[#01ae79]/25 max-h-[calc(100dvh-6rem)] sm:max-h-[90vh] overflow-hidden flex flex-col shadow-2xl shadow-[#01ae79]/10">
             {/* Header */}
-            <div className="flex items-center justify-between p-6 border-b border-border bg-card rounded-t-xl">
+            <div className="flex items-center justify-between p-6 border-b border-[#01ae79]/20 dark:border-[#01ae79]/25">
               <h2 className="text-lg font-bold text-foreground">Filters</h2>
               <Button
                 onClick={() => setShowMobileFilters(false)}
@@ -404,22 +380,22 @@ export const SearchFilters: React.FC<SearchFiltersProps> = ({
             </div>
 
             {/* Action Buttons */}
-            <div className="flex gap-3 p-6 pt-4 border-t border-border bg-card rounded-b-xl">
+            <div className="flex gap-3 p-6 pt-4 border-t border-[#01ae79]/20 dark:border-[#01ae79]/25">
               <Button
                 onClick={handleClearFilters}
                 variant="outline"
                 className="flex-1"
                 disabled={activeFiltersCount === 0}
               >
-                Clear All
+                Clear all
               </Button>
               {showDiscoverButton && (
                 <Button
                   onClick={handleDiscover}
-                  className="flex-1 bg-[#01ae79] hover:bg-[#01ae79]/90 text-white"
+                  className="flex-1 bg-[#01ae79] hover:bg-[#018a60] text-white"
                 >
-                  <Search className="h-4 w-4 mr-0.5" />
-                  Apply Filters
+                  <Search className="h-4 w-4 mr-1" />
+                  Apply
                 </Button>
               )}
             </div>

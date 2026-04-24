@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import {
   ArrowRight,
   Heart,
@@ -24,12 +23,6 @@ export default function AboutPageContent() {
 
         <div className="relative container mx-auto max-w-5xl px-4 md:px-6 pt-16 pb-20 md:pt-24 md:pb-28">
           <div className="max-w-3xl space-y-7">
-            <Badge
-              variant="outline"
-              className="bg-[#01ae79]/5 text-[#01ae79] border-[#01ae79]/30"
-            >
-              About UpDrafted
-            </Badge>
             <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold tracking-tight leading-[0.95]">
               Athletes first.
               <br />

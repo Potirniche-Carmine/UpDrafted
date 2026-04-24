@@ -2,32 +2,28 @@
 
 import { useUser } from '@/hooks/use-auth';
 import { useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
+import { Button } from "@/components/ui/button";
 import {
   ArrowRight,
   Bell,
-  Calendar,
+  Compass,
   Eye,
-  FileText,
   Info,
   MessageSquare,
   Users,
   BarChart3,
-} from "lucide-react"
-import Link from "next/link"
-import { useProfileNavigation } from '@/hooks/use-profile-navigation'
-import { AuthWrapper } from '../../../components/auth-wrapper'
-import { PWAInstallPrompt } from '../../../components/pwa-install-prompt'
-import { PremiumLimitsCard } from '@/components/premium-limits-card'
+  Shield,
+} from "lucide-react";
+import Link from "next/link";
+import { useProfileNavigation } from '@/hooks/use-profile-navigation';
+import { AuthWrapper } from '../../../components/auth-wrapper';
+import { PWAInstallPrompt } from '../../../components/pwa-install-prompt';
+import { PremiumLimitsCard } from '@/components/premium-limits-card';
 
-// TypeScript interfaces for navigation items
 interface NavItemWithHref {
   label: string;
   href: string;
   icon: React.ComponentType<{ className?: string }>;
-  description: string;
-  color: string;
   onClick?: never;
 }
 
@@ -35,238 +31,81 @@ interface NavItemWithOnClick {
   label: string;
   onClick: () => void;
   icon: React.ComponentType<{ className?: string }>;
-  description: string;
-  color: string;
   href?: never;
 }
 
 type NavItem = NavItemWithHref | NavItemWithOnClick;
 
-// NCAA Rules information - static content
 const ncaaRules = [
   {
     title: "Contact Periods",
-    description: "During a contact period, a college coach may have face-to-face contact with college-bound student-athletes or their parents, watch student-athletes compete and visit their high schools, and write or telephone student-athletes or their parents."
+    description: "A college coach may have face-to-face contact with athletes or their parents, watch them compete, visit their high schools, and call or write them."
   },
   {
     title: "Dead Periods",
-    description: "During a dead period, a college coach may not have face-to-face contact with college-bound student-athletes or their parents, and may not watch student-athletes compete or visit their high schools."
+    description: "No face-to-face contact is allowed. Coaches may not watch athletes compete or visit their high schools during this window."
   },
   {
     title: "Evaluation Periods",
-    description: "During an evaluation period, a college coach may watch college-bound student-athletes compete, visit their high schools, and write or telephone student-athletes or their parents."
+    description: "A coach may watch athletes compete and visit their high schools. Calls and written contact with athletes or parents are allowed."
   },
   {
     title: "Quiet Periods",
-    description: "During a quiet period, a college coach may only have face-to-face contact with college-bound student-athletes or their parents on the college's campus. A coach may not watch student-athletes compete or visit their high schools during this time."
+    description: "A coach may only have face-to-face contact with athletes or parents on the college's own campus."
   }
 ];
 
 const getUserContent = (role: string, handleViewProfile: () => void, profileNavigating: boolean = false): {
   primaryNav: NavItem[];
 } => {
-  // Base navigation items that exist in the app
+  const baseAthleteNav: NavItem[] = [
+    {
+      label: profileNavigating ? "Loading..." : "View Profile",
+      onClick: handleViewProfile,
+      icon: Eye,
+    },
+    { label: "Discover", href: "/discover", icon: Compass },
+    { label: "Connections", href: "/connections", icon: Users },
+    { label: "Messages", href: "/messages", icon: MessageSquare },
+    { label: "Notifications", href: "/notifications", icon: Bell },
+    { label: "Activity", href: "/activity", icon: BarChart3 },
+  ];
+
+  const baseCoachNav: NavItem[] = [
+    {
+      label: profileNavigating ? "Loading..." : "View Profile",
+      onClick: handleViewProfile,
+      icon: Eye,
+    },
+    { label: "Discover", href: "/discover", icon: Compass },
+    { label: "Connections", href: "/connections", icon: Users },
+    { label: "Messages", href: "/messages", icon: MessageSquare },
+    { label: "Notifications", href: "/notifications", icon: Bell },
+    { label: "Activity", href: "/activity", icon: BarChart3 },
+  ];
+
   switch (role) {
     case 'athlete':
-      return {
-        primaryNav: [
-          {
-            label: profileNavigating ? "Loading..." : "View Profile",
-            onClick: handleViewProfile,
-            icon: Eye,
-            description: "Check and update your profile",
-            color: "#01ae79"
-          },
-          {
-            label: "Discover",
-            href: "/discover",
-            icon: Users,
-            description: "Find schools and coaches",
-            color: "#4f46e5"
-          },
-          {
-            label: "Connections",
-            href: "/connections",
-            icon: Users,
-            description: "Manage your network",
-            color: "#0ea5e9"
-          },
-          {
-            label: "Messages",
-            href: "/messages",
-            icon: MessageSquare,
-            description: "Check your conversations",
-            color: "#f59e0b"
-          },
-          {
-            label: "Notifications",
-            href: "/notifications",
-            icon: Bell,
-            description: "View your notifications",
-            color: "#ef4444"
-          },
-          {
-            label: "Activity",
-            href: "/activity",
-            icon: BarChart3,
-            description: "Track profile views and insights",
-            color: "#8b5cf6"
-          }
-        ]
-      };
+      return { primaryNav: baseAthleteNav };
     case 'coach':
-      return {
-        primaryNav: [
-          {
-            label: profileNavigating ? "Loading..." : "View Profile",
-            onClick: handleViewProfile,
-            icon: Eye,
-            description: "Check and update your profile",
-            color: "#01ae79"
-          },
-          {
-            label: "Discover",
-            href: "/discover",
-            icon: Users,
-            description: "Find talented athletes",
-            color: "#4f46e5"
-          },
-          {
-            label: "Connections",
-            href: "/connections",
-            icon: Users,
-            description: "Manage your network",
-            color: "#0ea5e9"
-          },
-          {
-            label: "Messages",
-            href: "/messages",
-            icon: MessageSquare,
-            description: "Check your conversations",
-            color: "#f59e0b"
-          },
-          {
-            label: "Notifications",
-            href: "/notifications",
-            icon: Bell,
-            description: "View your notifications",
-            color: "#ef4444"
-          },
-          {
-            label: "Activity",
-            href: "/activity",
-            icon: BarChart3,
-            description: "Track profile views and insights",
-            color: "#8b5cf6"
-          }
-        ]
-      };
     case 'recruiter':
-      return {
-        primaryNav: [
-          {
-            label: profileNavigating ? "Loading..." : "View Profile",
-            onClick: handleViewProfile,
-            icon: Eye,
-            description: "Check and update your profile",
-            color: "#01ae79"
-          },
-          {
-            label: "Discover",
-            href: "/discover",
-            icon: Users,
-            description: "Find talented athletes",
-            color: "#4f46e5"
-          },
-          {
-            label: "Connections",
-            href: "/connections",
-            icon: Users,
-            description: "Manage your network",
-            color: "#0ea5e9"
-          },
-          {
-            label: "Messages",
-            href: "/messages",
-            icon: MessageSquare,
-            description: "Check your conversations",
-            color: "#f59e0b"
-          },
-          {
-            label: "Notifications",
-            href: "/notifications",
-            icon: Bell,
-            description: "View your notifications",
-            color: "#ef4444"
-          },
-          {
-            label: "Activity",
-            href: "/activity",
-            icon: BarChart3,
-            description: "Track profile views and insights",
-            color: "#8b5cf6"
-          }
-        ]
-      };
+      return { primaryNav: baseCoachNav };
     case 'admin':
       return {
         primaryNav: [
-          {
-            label: "Admin Controls",
-            href: "/admin",
-            icon: Eye,
-            description: "Access admin management tools",
-            color: "#dc2626"
-          },
-          {
-            label: "Discover",
-            href: "/discover",
-            icon: Users,
-            description: "View all platform users",
-            color: "#4f46e5"
-          },
-          {
-            label: "Connections",
-            href: "/connections",
-            icon: Users,
-            description: "Monitor connections",
-            color: "#0ea5e9"
-          },
-          {
-            label: "Messages",
-            href: "/messages",
-            icon: MessageSquare,
-            description: "Monitor conversations",
-            color: "#f59e0b"
-          },
-          {
-            label: "Notifications",
-            href: "/notifications",
-            icon: Bell,
-            description: "View system notifications",
-            color: "#ef4444"
-          },
-          {
-            label: "Activity",
-            href: "/activity",
-            icon: BarChart3,
-            description: "Monitor platform activity",
-            color: "#8b5cf6"
-          }
-        ]
+          { label: "Admin Controls", href: "/admin", icon: Shield },
+          { label: "Discover", href: "/discover", icon: Compass },
+          { label: "Connections", href: "/connections", icon: Users },
+          { label: "Messages", href: "/messages", icon: MessageSquare },
+          { label: "Notifications", href: "/notifications", icon: Bell },
+          { label: "Activity", href: "/activity", icon: BarChart3 },
+        ],
       };
     default:
-      // Fallback for unknown roles
       return {
         primaryNav: [
-          {
-            label: "Discover",
-            href: "/discover",
-            icon: Users,
-            description: "Explore the platform",
-            color: "#4f46e5"
-          }
-        ]
+          { label: "Discover", href: "/discover", icon: Compass },
+        ],
       };
   }
 };
@@ -274,12 +113,10 @@ const getUserContent = (role: string, handleViewProfile: () => void, profileNavi
 export default function DashboardPage() {
   const { navigateToProfile, isNavigating: profileNavigating } = useProfileNavigation();
 
-  // Scroll to top when dashboard loads
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, []);
 
-  // Handle profile navigation
   const handleViewProfile = async () => {
     await navigateToProfile();
   };
@@ -295,32 +132,19 @@ export default function DashboardPage() {
   );
 }
 
-// Dashboard content component
 function DashboardContent({
   handleViewProfile,
-  profileNavigating
+  profileNavigating,
 }: {
   handleViewProfile: () => Promise<void>;
   profileNavigating: boolean;
 }) {
   const { user } = useUser();
+  const userRole = (user?.role as string) || 'athlete';
 
-  // Get user role directly from user metadata instead of useRoleView
-  const userRole = user?.role as string || 'athlete';
-
-  // Get current date for calendar display
-  const currentDate = new Date();
-  const formattedDate = currentDate.toLocaleDateString('en-US', {
-    weekday: 'long',
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric'
-  });
-
-  // Loading state
   if (!user) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
+      <div className="min-h-[60vh] flex items-center justify-center">
         <div className="flex flex-col items-center space-y-4">
           <div className="flex space-x-2">
             <div className="w-2 h-2 bg-[#01ae79] rounded-full animate-bounce"></div>
@@ -333,144 +157,122 @@ function DashboardContent({
     );
   }
 
-  // Get content based on user role
   const userContent = getUserContent(userRole, handleViewProfile, profileNavigating);
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="container mx-auto py-6 px-4 md:px-6 space-y-8">
-        {/* Main Grid Layout - Redesigned for better balance */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
-          {/* Quick Navigation - First on mobile, spans full width */}
-          <div className="lg:col-span-3 order-1">
-            <Card className="border shadow-sm bg-card/80 backdrop-blur-sm">
-              <CardHeader>
-                <CardTitle className="text-foreground text-lg">Quick Navigation</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
-                  {userContent.primaryNav.map((item, index) => (
-                    <NavCard key={index} item={item} profileNavigating={profileNavigating} />
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
+    <div className="container mx-auto max-w-7xl px-0 md:px-2 space-y-10">
+      {/* ============== QUICK NAV ============== */}
+      <section className="space-y-4">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 md:gap-4">
+          {userContent.primaryNav.map((item, index) => (
+            <NavCard key={index} item={item} profileNavigating={profileNavigating} />
+          ))}
+        </div>
+      </section>
+
+      {/* ============== GRID: LIMITS + NCAA ============== */}
+      <section className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2">
+          <PremiumLimitsCard />
+        </div>
+
+        <div className="bg-white dark:bg-black rounded-2xl border border-[#01ae79]/20 dark:border-[#01ae79]/25 p-6 md:p-7 space-y-5">
+          <div>
+            <h3 className="text-xl font-semibold tracking-tight">
+              NCAA recruiting periods
+            </h3>
+            <p className="text-sm text-muted-foreground mt-1">
+              Know the rules. Keep eligibility clean.
+            </p>
           </div>
 
-          {/* Premium Limits Card - Second on mobile, left side on desktop (2 cols) */}
-          <div className="lg:col-span-2 lg:row-start-2 order-2">
-            <PremiumLimitsCard />
-          </div>
-
-          {/* Right Column Stack - Third on mobile, right side on desktop */}
-          <div className="lg:col-start-3 lg:row-start-2 order-3 space-y-6">
-            {/* Calendar Date */}
-            <Card className="border shadow-sm bg-card/80 backdrop-blur-sm">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-foreground flex items-center text-lg">
-                  <Calendar className="mr-2 h-6 w-6 text-[#01ae79]" />
-                  Today
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-center p-4 bg-linear-to-br from-[#01ae79]/5 to-[#01ae79]/10 border border-[#01ae79]/10 rounded-md">
-                  <p className="text-xl font-semibold text-foreground">{formattedDate}</p>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* NCAA Rules */}
-            <Card className="border shadow-sm bg-card/80 backdrop-blur-sm">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-foreground flex items-center text-lg">
-                  <FileText className="mr-2 h-6 w-6 text-[#01ae79]" />
-                  NCAA Recruiting Periods
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {ncaaRules.map((rule, index) => (
-                    <div key={index} className="space-y-2 p-3 rounded-lg bg-linear-to-r from-muted/20 to-muted/30 border border-border/30">
-                      <h3 className="text-base font-semibold text-foreground flex items-center">
-                        <Info className="h-4 w-4 text-[#01ae79] mr-2 shrink-0" />
-                        {rule.title}
-                      </h3>
-                      <p className="text-sm text-muted-foreground leading-relaxed line-clamp-4">{rule.description}</p>
-                    </div>
-                  ))}
-                  <div className="pt-3">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="w-full border-[#01ae79] text-[#01ae79] hover:bg-[#01ae79] hover:text-white text-sm py-2.5 shadow-sm"
-                      onClick={() => window.open('https://www.ncsasports.org/ncaa-eligibility-center/recruiting-rules', '_blank')}
-                    >
-                      <span className="truncate">NCAA Rules & Periods</span>
-                      <ArrowRight className="h-4 w-4 ml-2 shrink-0" />
-                    </Button>
+          <ul className="space-y-3">
+            {ncaaRules.map((rule) => (
+              <li
+                key={rule.title}
+                className="rounded-xl border border-[#01ae79]/15 dark:border-[#01ae79]/20 bg-[#01ae79]/[0.03] dark:bg-[#01ae79]/[0.06] p-4"
+              >
+                <div className="flex items-start gap-2.5">
+                  <Info className="h-4 w-4 text-[#01ae79] shrink-0 mt-0.5" />
+                  <div className="space-y-1">
+                    <p className="text-sm font-semibold text-foreground">{rule.title}</p>
+                    <p className="text-xs text-muted-foreground leading-relaxed line-clamp-3">
+                      {rule.description}
+                    </p>
                   </div>
                 </div>
-              </CardContent>
-            </Card>
-          </div>
+              </li>
+            ))}
+          </ul>
+
+          <Button
+            variant="outline"
+            className="w-full border-[#01ae79]/30 text-[#01ae79] hover:bg-[#01ae79]/5 hover:text-[#01ae79] hover:border-[#01ae79]/40"
+            onClick={() =>
+              window.open(
+                'https://www.ncsasports.org/ncaa-eligibility-center/recruiting-rules',
+                '_blank',
+                'noopener,noreferrer'
+              )
+            }
+          >
+            Full NCAA rules
+            <ArrowRight className="h-4 w-4 ml-2" />
+          </Button>
         </div>
-      </div>
+      </section>
     </div>
   );
 }
 
-// Navigation card component
 function NavCard({
   item,
-  profileNavigating
+  profileNavigating,
 }: {
-  item: NavItem,
-  profileNavigating: boolean
+  item: NavItem;
+  profileNavigating: boolean;
 }) {
   const IconComponent = item.icon;
   const isViewProfileAction = 'onClick' in item && (item.label.includes("Profile") || item.label.includes("Loading"));
   const shouldDisable = isViewProfileAction && profileNavigating;
 
+  const classes = `group h-full bg-white dark:bg-black rounded-xl border border-[#01ae79]/20 dark:border-[#01ae79]/25 p-4 transition-all ${
+    shouldDisable
+      ? 'opacity-50 cursor-not-allowed'
+      : 'hover:border-[#01ae79]/50 hover:shadow-md hover:shadow-[#01ae79]/10 hover:bg-[#01ae79]/[0.02] cursor-pointer'
+  }`;
+
+  const inner = (
+    <div className="flex flex-col items-center justify-center text-center h-full gap-3">
+      <div
+        className={`w-10 h-10 rounded-lg bg-[#01ae79]/10 text-[#01ae79] flex items-center justify-center ${
+          profileNavigating && isViewProfileAction ? 'animate-pulse' : ''
+        }`}
+      >
+        <IconComponent className="h-5 w-5" />
+      </div>
+      <h3 className="font-semibold text-sm md:text-base text-foreground group-hover:text-[#01ae79] transition-colors">
+        {item.label}
+      </h3>
+    </div>
+  );
+
   if ('onClick' in item) {
     return (
-      <Card
-        className={`group transition-all duration-300 border shadow-sm bg-linear-to-br from-card to-card/60 h-full ${shouldDisable
-          ? 'opacity-50 cursor-not-allowed'
-          : 'hover:shadow-lg hover:shadow-[#01ae79]/10 hover:border-[#01ae79]/30 hover:from-card hover:to-[#01ae79]/5 cursor-pointer'
-          }`}
+      <button
+        type="button"
+        className={`${classes} text-left`}
         onClick={shouldDisable ? undefined : item.onClick}
+        disabled={shouldDisable}
       >
-        <CardContent className="flex flex-col items-center text-center p-4 h-full min-h-40 justify-between">
-          <div className={`h-12 w-12 rounded-full bg-linear-to-br from-[${item.color}]/10 to-[${item.color}]/20 border border-[${item.color}]/20 flex items-center justify-center shadow-sm shrink-0 ${profileNavigating && isViewProfileAction ? 'animate-pulse' : ''
-            }`}>
-            <IconComponent
-              className={`h-6 w-6 text-[${item.color}]`}
-            />
-          </div>
-          <div className="flex-1 flex flex-col justify-center mt-3 mb-2">
-            <h3 className="font-semibold text-foreground mb-1 text-base">{item.label}</h3>
-            <p className="text-sm text-muted-foreground line-clamp-2">{item.description}</p>
-          </div>
-        </CardContent>
-      </Card>
+        {inner}
+      </button>
     );
   }
 
   return (
-    <Link href={item.href} className="h-full block">
-      <Card className="group transition-all duration-300 hover:shadow-lg hover:shadow-[#01ae79]/10 border shadow-sm bg-linear-to-br from-card to-card/60 hover:border-[#01ae79]/30 hover:from-card hover:to-[#01ae79]/5 h-full">
-        <CardContent className="flex flex-col items-center text-center p-4 h-full min-h-40 justify-between">
-          <div className={`h-12 w-12 rounded-full bg-linear-to-br from-[${item.color}]/10 to-[${item.color}]/20 border border-[${item.color}]/20 flex items-center justify-center shadow-sm shrink-0`}>
-            <IconComponent
-              className={`h-6 w-6 text-[${item.color}]`}
-            />
-          </div>
-          <div className="flex-1 flex flex-col justify-center mt-3 mb-2">
-            <h3 className="font-semibold text-foreground mb-1 text-base">{item.label}</h3>
-            <p className="text-sm text-muted-foreground line-clamp-2">{item.description}</p>
-          </div>
-        </CardContent>
-      </Card>
+    <Link href={item.href} className={classes}>
+      {inner}
     </Link>
   );
 }

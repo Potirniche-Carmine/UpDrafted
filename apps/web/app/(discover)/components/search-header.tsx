@@ -13,36 +13,24 @@ interface SearchHeaderProps {
 }
 
 export const SearchHeader: React.FC<SearchHeaderProps> = ({
-  title,
-  subtitle,
   showMobileFilters,
   setShowMobileFilters,
-  activeFiltersCount
+  activeFiltersCount,
 }) => {
   return (
-    <div className="xl:hidden mb-4">
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex-1">
-          <h1 className="text-3xl md:text-4xl font-bold text-foreground mb-1">
-            {title}
-          </h1>
-          <p className="text-base md:text-lg text-muted-foreground">
-            {subtitle}
-          </p>
-        </div>
-
-        {/* Mobile Filter Button */}
-        <Button
-          onClick={() => setShowMobileFilters(!showMobileFilters)}
-          variant="outline"
-          className="relative flex-shrink-0 w-[120px] justify-center"
-        >
-          <Filter className="h-4 w-4 mr-2" />
-          <span className="truncate">
-            {activeFiltersCount > 0 ? `${activeFiltersCount} Filter${activeFiltersCount !== 1 ? 's' : ''}` : 'Filters'}
-          </span>
-        </Button>
-      </div>
+    <div className="xl:hidden">
+      <Button
+        onClick={() => setShowMobileFilters(!showMobileFilters)}
+        variant="outline"
+        className="w-full justify-center border-[#01ae79]/20 dark:border-[#01ae79]/25 hover:border-[#01ae79]/40 hover:bg-[#01ae79]/5 hover:text-[#01ae79] h-11"
+      >
+        <Filter className="h-4 w-4 mr-2" />
+        <span>
+          {activeFiltersCount > 0
+            ? `${activeFiltersCount} filter${activeFiltersCount !== 1 ? 's' : ''} applied`
+            : 'Filters'}
+        </span>
+      </Button>
     </div>
   );
 };

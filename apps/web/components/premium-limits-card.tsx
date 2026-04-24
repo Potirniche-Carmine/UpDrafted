@@ -233,24 +233,24 @@ export function PremiumLimitsCard() {
   const upgradeMessage = getUpgradeMessage()
 
   return (
-    <Card className="border shadow-sm bg-card/80 backdrop-blur-sm">
+    <Card className="border border-[#01ae79]/15 dark:border-[#01ae79]/20 shadow-none bg-white dark:bg-black rounded-2xl">
       <CardHeader className="pb-3">
         <CardTitle className="text-foreground flex items-center text-lg">
           {isPremium ? (
             <>
               <Crown className="mr-2 h-5 w-5 text-[#01ae79]" />
-              Premium Overview
+              Premium overview
             </>
           ) : (
             <>
               <Users className="mr-2 h-5 w-5 text-muted-foreground" />
-              Usage & Limits
+              Usage & limits
             </>
           )}
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-5">
-        <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border/60 bg-linear-to-r from-muted/30 to-muted/10 px-4 py-3">
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[#01ae79]/15 dark:border-[#01ae79]/20 bg-[#01ae79]/[0.04] dark:bg-[#01ae79]/[0.08] px-4 py-3">
           <div>
             <p className="text-sm text-muted-foreground">Current plan</p>
             <p className="text-base font-semibold text-foreground">
@@ -263,7 +263,7 @@ export function PremiumLimitsCard() {
         </div>
 
         <div className="grid gap-4 sm:grid-cols-2">
-          <div className="rounded-lg border border-border/60 bg-card/70 p-4 shadow-sm">
+          <div className="rounded-xl border border-[#01ae79]/15 dark:border-[#01ae79]/20 p-4">
             <div className="flex items-center justify-between text-sm">
               <span className="text-muted-foreground">Monthly Connection Requests</span>
               <span className="font-semibold text-foreground">
@@ -282,9 +282,9 @@ export function PremiumLimitsCard() {
             )}
           </div>
 
-          <div className="rounded-lg border border-border/60 bg-card/70 p-4 shadow-sm">
+          <div className="rounded-xl border border-[#01ae79]/15 dark:border-[#01ae79]/20 p-4">
             <div className="flex items-center justify-between text-sm">
-              <span className="text-muted-foreground">Active Connections</span>
+              <span className="text-muted-foreground">Active connections</span>
               <span className="font-semibold text-foreground">
                 {usageData?.activeConnections.current || 0} / {
                   usageData?.activeConnections.limit === null ? '∞' : usageData?.activeConnections.limit || 5
@@ -302,7 +302,7 @@ export function PremiumLimitsCard() {
         <div className="space-y-3">
           <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Feature access</p>
           <div className="grid gap-2">
-            <div className="flex items-center justify-between rounded-md border border-border/60 bg-muted/20 px-3 py-2 text-sm">
+            <div className="flex items-center justify-between rounded-lg border border-[#01ae79]/15 dark:border-[#01ae79]/20 px-3 py-2 text-sm">
               <div className="flex items-center gap-2">
                 <Eye className="h-4 w-4 text-muted-foreground" />
                 <span className="text-muted-foreground">Read Receipts</span>
@@ -312,7 +312,7 @@ export function PremiumLimitsCard() {
               </Badge>
             </div>
 
-            <div className="flex items-center justify-between rounded-md border border-border/60 bg-muted/20 px-3 py-2 text-sm">
+            <div className="flex items-center justify-between rounded-lg border border-[#01ae79]/15 dark:border-[#01ae79]/20 px-3 py-2 text-sm">
               <div className="flex items-center gap-2">
                 <TrendingUp className="h-4 w-4 text-muted-foreground" />
                 <span className="text-muted-foreground">Profile Insights</span>
@@ -322,7 +322,7 @@ export function PremiumLimitsCard() {
               </Badge>
             </div>
 
-            <div className="flex items-center justify-between rounded-md border border-border/60 bg-muted/20 px-3 py-2 text-sm">
+            <div className="flex items-center justify-between rounded-lg border border-[#01ae79]/15 dark:border-[#01ae79]/20 px-3 py-2 text-sm">
               <div className="flex items-center gap-2">
                 <MessageSquare className="h-4 w-4 text-muted-foreground" />
                 <span className="text-muted-foreground">Advanced Search</span>
@@ -336,16 +336,16 @@ export function PremiumLimitsCard() {
 
         {/* Upgrade CTA */}
         {upgradeMessage && (
-          <div className="mt-4 pt-4 border-t">
-            <div className="bg-linear-to-r from-[#01ae79]/5 to-[#01ae79]/10 dark:from-[#01ae79]/10 dark:to-[#01ae79]/20 rounded-lg p-4 border border-[#01ae79]/20">
+          <div className="pt-4 border-t border-[#01ae79]/15 dark:border-[#01ae79]/20">
+            <div className="rounded-xl border border-[#01ae79]/30 bg-[#01ae79]/5 p-4">
               <div className="text-center space-y-2">
                 <h4 className="font-semibold text-sm text-foreground">{upgradeMessage.title}</h4>
                 <p className="text-xs text-muted-foreground">{upgradeMessage.subtitle}</p>
-                <p className="text-xs font-medium text-[#01ae79]">{upgradeMessage.price}</p>
-                <Button asChild size="sm" className="w-full bg-[#01ae79] hover:bg-[#01ae79]/90">
+                <p className="text-xs font-semibold text-[#01ae79]">{upgradeMessage.price}</p>
+                <Button asChild size="sm" className="w-full bg-[#01ae79] hover:bg-[#018a60] text-white">
                   <Link href="/pricing">
                     <Crown className="h-4 w-4 mr-2" />
-                    Upgrade Now
+                    Upgrade now
                     <ArrowRight className="h-4 w-4 ml-2" />
                   </Link>
                 </Button>
@@ -356,7 +356,7 @@ export function PremiumLimitsCard() {
 
         {/* Premium users get enhanced subscription management */}
         {isPremium && (
-          <div className="mt-4 pt-4 border-t space-y-3">
+          <div className="pt-4 border-t border-[#01ae79]/15 dark:border-[#01ae79]/20 space-y-3">
             {/* Subscription status */}
             <div className="flex items-center justify-between">
               <div>
@@ -369,7 +369,7 @@ export function PremiumLimitsCard() {
 
             {/* Renewal info */}
             {subscription.currentPeriodEnd && (
-              <div className="text-sm text-muted-foreground bg-muted/30 rounded-md p-3 border-l-2 border-muted-foreground/20">
+              <div className="text-sm text-muted-foreground rounded-lg p-3 border border-[#01ae79]/15 dark:border-[#01ae79]/20">
                 {subscription.cancelAtPeriodEnd
                   ? (
                     <div className="flex items-center gap-2">
@@ -378,7 +378,7 @@ export function PremiumLimitsCard() {
                     </div>
                   ) : (
                     <div className="flex items-center gap-2">
-                      <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                      <div className="w-2 h-2 bg-[#01ae79] rounded-full"></div>
                       <span>Renews on <span className="font-medium text-foreground">{formatDate(subscription.currentPeriodEnd)}</span></span>
                     </div>
                   )

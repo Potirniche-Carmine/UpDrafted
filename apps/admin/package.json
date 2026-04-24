@@ -23,14 +23,10 @@
     "tailwind-merge": "^3.3.0",
     "zod": "^4.3.6"
   },
-  "devDependencies": {
-    "vitest": "^2.1.5"
-  },
   "scripts": {
     "dev": "next dev -p 3100",
     "build": "next build",
     "start": "next start -p 3100",
-    "lint": "eslint .",
-    "test": "vitest run"
+    "lint": "eslint ."
   }
 }

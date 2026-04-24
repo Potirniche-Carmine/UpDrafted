@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -100,10 +99,6 @@ Timestamp: ${new Date().toISOString()}
         <div className="absolute inset-0 bg-grid-pattern opacity-5"></div>
         <div className="container px-4 md:px-6 relative">
           <div className="text-center max-w-4xl mx-auto space-y-8">
-            <Badge variant="outline" className="w-fit bg-[#01ae79]/5 dark:bg-[#01ae79]/10 text-[#01ae79] border-[#01ae79]/30 mx-auto">
-              <Mail className="w-4 h-4 mr-2" />
-              Contact & Support
-            </Badge>
             <h1 className="text-4xl font-bold tracking-tight sm:text-5xl xl:text-6xl/none">
               Get in{" "}
               <span className="bg-clip-text text-transparent bg-gradient-to-r from-[#01ae79] to-[#01ae79]/80">

@@ -1,11 +1,9 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import {
   ArrowRight,
   Check,
   Layers,
-  Search,
   Shield,
   DollarSign,
   Building2,
@@ -27,12 +25,6 @@ export default function ForRecruitersPage() {
 
         <div className="relative container mx-auto max-w-6xl px-4 md:px-6 pt-16 pb-20 md:pt-24 md:pb-28">
           <div className="max-w-3xl space-y-7">
-            <Badge
-              variant="outline"
-              className="bg-[#01ae79]/5 text-[#01ae79] border-[#01ae79]/30"
-            >
-              For Recruiting Coordinators
-            </Badge>
             <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold tracking-tight leading-[0.95]">
               Every program.
               <br />
@@ -87,12 +79,6 @@ export default function ForRecruitersPage() {
       <section className="w-full py-20 md:py-28">
         <div className="container mx-auto max-w-6xl px-4 md:px-6">
           <div className="text-center max-w-2xl mx-auto mb-14">
-            <Badge
-              variant="outline"
-              className="mb-4 bg-[#01ae79]/5 text-[#01ae79] border-[#01ae79]/30"
-            >
-              Built for the whole department
-            </Badge>
             <h2 className="text-4xl md:text-5xl font-bold tracking-tight">
               One login. Every board on campus.
             </h2>
@@ -139,12 +125,6 @@ export default function ForRecruitersPage() {
         <div className="container mx-auto max-w-5xl px-4 md:px-6">
           <div className="grid lg:grid-cols-2 gap-12 items-center">
             <div className="space-y-6">
-              <Badge
-                variant="outline"
-                className="bg-[#01ae79]/5 text-[#01ae79] border-[#01ae79]/30"
-              >
-                Why we&apos;re different
-              </Badge>
               <h2 className="text-4xl md:text-5xl font-bold tracking-tight leading-tight">
                 No agents pitching you their clients.
                 <br />
@@ -215,40 +195,45 @@ export default function ForRecruitersPage() {
       {/* ============== FINAL CTA ============== */}
       <section className="w-full py-20 md:py-28">
         <div className="container mx-auto max-w-5xl px-4 md:px-6">
-          <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#01ae79] to-[#016e4c] p-10 md:p-14 text-center shadow-2xl shadow-[#01ae79]/20">
+          <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#01ae79] to-[#016e4c] p-10 md:p-16 text-center shadow-2xl shadow-[#01ae79]/25">
             <div className="absolute inset-0 opacity-10">
               <div className="absolute inset-0 bg-[radial-gradient(circle_at_1px_1px,rgba(255,255,255,0.5)_1px,transparent_0)] [background-size:24px_24px]" />
             </div>
+            <div className="absolute -top-24 -right-24 w-96 h-96 bg-white/15 rounded-full blur-3xl" />
+            <div className="absolute -bottom-24 -left-24 w-96 h-96 bg-black/15 rounded-full blur-3xl" />
 
-            <div className="relative space-y-5">
-              <Search className="h-10 w-10 text-white mx-auto" />
-              <h2 className="text-4xl md:text-5xl font-bold tracking-tight text-white">
-                Run the whole department from one tab.
+            <div className="relative space-y-7">
+              <h2 className="text-4xl sm:text-5xl md:text-6xl font-bold tracking-tight text-white leading-[1]">
+                One platform.
+                <br />
+                <span className="text-white/70">Your whole program.</span>
               </h2>
-              <p className="text-lg md:text-xl text-white/90 max-w-xl mx-auto">
-                Set up your institutional profile, onboard your staff, and
-                run your first cross-sport search the same day.
+              <p className="text-lg md:text-xl text-white/90 max-w-xl mx-auto leading-relaxed">
+                Institutional profile, full staff roster, cross-sport search &mdash; operational the same day.
               </p>
-              <div className="pt-3 flex flex-col sm:flex-row gap-3 justify-center">
-                <Link href="/sign-up">
+              <div className="pt-3 flex flex-col sm:flex-row gap-3 justify-center items-center">
+                <Link href="/sign-up" className="w-full sm:w-auto">
                   <Button
                     size="lg"
-                    className="bg-white text-[#01ae79] hover:bg-white/95 px-10 py-6 text-lg font-semibold rounded-lg shadow-xl"
+                    className="bg-white text-[#01ae79] hover:bg-white/95 px-10 py-7 text-lg font-bold rounded-xl shadow-2xl shadow-black/20 w-full sm:w-auto group"
                   >
                     Start free
-                    <ArrowRight className="ml-2 h-5 w-5" />
+                    <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-0.5 transition-transform" />
                   </Button>
                 </Link>
-                <Link href="/contact">
+                <Link href="/contact" className="w-full sm:w-auto">
                   <Button
                     size="lg"
                     variant="outline"
-                    className="px-8 py-6 text-lg font-semibold rounded-lg border-2 border-white/40 bg-transparent text-white hover:bg-white/10 hover:text-white"
+                    className="px-8 py-7 text-lg font-semibold rounded-xl border-2 border-white/40 bg-transparent text-white hover:bg-white/10 hover:text-white w-full sm:w-auto"
                   >
                     Book a walk-through
                   </Button>
                 </Link>
               </div>
+              <p className="text-sm text-white/80 pt-2">
+                Free to evaluate &middot; No contracts &middot; Built for athletic departments
+              </p>
             </div>
           </div>
         </div>

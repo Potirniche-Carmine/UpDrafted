@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import {
   ArrowRight,
   Check,
@@ -31,12 +30,6 @@ export default function ForAthletesPage() {
 
         <div className="relative container mx-auto max-w-6xl px-4 md:px-6 pt-16 pb-20 md:pt-24 md:pb-28">
           <div className="max-w-3xl space-y-7">
-            <Badge
-              variant="outline"
-              className="bg-[#01ae79]/5 text-[#01ae79] border-[#01ae79]/30"
-            >
-              For Athletes
-            </Badge>
             <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold tracking-tight leading-[0.95]">
               You don&apos;t need an agent.
               <br />
@@ -157,12 +150,6 @@ export default function ForAthletesPage() {
       <section className="w-full py-20 md:py-28 bg-gray-50/70 dark:bg-gray-950/40 border-y border-gray-200/60 dark:border-gray-800/60">
         <div className="container mx-auto max-w-6xl px-4 md:px-6">
           <div className="text-center max-w-2xl mx-auto mb-14">
-            <Badge
-              variant="outline"
-              className="mb-4 bg-[#01ae79]/5 text-[#01ae79] border-[#01ae79]/30"
-            >
-              What you get
-            </Badge>
             <h2 className="text-4xl md:text-5xl font-bold tracking-tight">
               Everything a paid service gave you.
               <br />
@@ -251,32 +238,35 @@ export default function ForAthletesPage() {
       {/* ============== FINAL CTA ============== */}
       <section className="w-full pb-20 md:pb-28">
         <div className="container mx-auto max-w-5xl px-4 md:px-6">
-          <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#01ae79] to-[#016e4c] p-10 md:p-14 text-center shadow-2xl shadow-[#01ae79]/20">
+          <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#01ae79] to-[#016e4c] p-10 md:p-16 text-center shadow-2xl shadow-[#01ae79]/25">
             <div className="absolute inset-0 opacity-10">
               <div className="absolute inset-0 bg-[radial-gradient(circle_at_1px_1px,rgba(255,255,255,0.5)_1px,transparent_0)] [background-size:24px_24px]" />
             </div>
+            <div className="absolute -top-24 -right-24 w-96 h-96 bg-white/15 rounded-full blur-3xl" />
+            <div className="absolute -bottom-24 -left-24 w-96 h-96 bg-black/15 rounded-full blur-3xl" />
 
-            <div className="relative space-y-5">
-              <h2 className="text-4xl md:text-5xl font-bold tracking-tight text-white">
-                Your next program is already looking.
+            <div className="relative space-y-7">
+              <h2 className="text-4xl sm:text-5xl md:text-6xl font-bold tracking-tight text-white leading-[1]">
+                Get on their board.
+                <br />
+                <span className="text-white/70">Tonight.</span>
               </h2>
-              <p className="text-lg md:text-xl text-white/90 max-w-xl mx-auto">
-                Build your profile in ten minutes. The first coach view lands
-                a whole lot sooner than you think.
+              <p className="text-lg md:text-xl text-white/90 max-w-xl mx-auto leading-relaxed">
+                Ten minutes of setup. A profile built the way coaches actually recruit.
               </p>
               <div className="pt-3">
                 <Link href="/sign-up">
                   <Button
                     size="lg"
-                    className="bg-white text-[#01ae79] hover:bg-white/95 px-10 py-6 text-lg font-semibold rounded-lg shadow-xl"
+                    className="bg-white text-[#01ae79] hover:bg-white/95 px-10 py-7 text-lg font-bold rounded-xl shadow-2xl shadow-black/20 group"
                   >
                     Create my profile
-                    <ArrowRight className="ml-2 h-5 w-5" />
+                    <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-0.5 transition-transform" />
                   </Button>
                 </Link>
               </div>
-              <p className="text-sm text-white/70">
-                Free to start. No credit card. No agent.
+              <p className="text-sm text-white/80">
+                Free to start &middot; No credit card &middot; No agent
               </p>
             </div>
           </div>
@@ -323,12 +313,11 @@ function FeatureCard({
 
 function PathwayCard({
   icon,
-  tag,
   title,
   body,
 }: {
   icon: React.ReactNode;
-  tag: string;
+  tag?: string;
   title: string;
   body: string;
 }) {
@@ -338,9 +327,6 @@ function PathwayCard({
         <div className="w-10 h-10 rounded-lg bg-[#01ae79]/10 text-[#01ae79] flex items-center justify-center">
           {icon}
         </div>
-        <Badge className="bg-[#01ae79]/10 text-[#01ae79] border-0 hover:bg-[#01ae79]/10 text-xs">
-          {tag}
-        </Badge>
       </div>
       <h3 className="font-semibold mb-2">{title}</h3>
       <p className="text-sm text-muted-foreground leading-relaxed">{body}</p>

@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import {
   ArrowRight,
   Check,
@@ -12,7 +11,6 @@ import {
   Send,
   Lock,
   Zap,
-  CircleDot,
 } from "lucide-react";
 import { AuthWrapper } from "../../components/auth-wrapper";
 import { pageMetadata } from "@/lib/seo";
@@ -35,14 +33,6 @@ function HomePageContent() {
           <div className="grid lg:grid-cols-12 gap-12 lg:gap-8 items-center">
             {/* Left: copy */}
             <div className="lg:col-span-7 space-y-8">
-              <Badge
-                variant="outline"
-                className="bg-[#01ae79]/5 dark:bg-[#01ae79]/10 text-[#01ae79] border-[#01ae79]/30 font-medium"
-              >
-                <CircleDot className="w-3 h-3 mr-2 fill-[#01ae79]" />
-                Athlete-led recruiting. No middlemen.
-              </Badge>
-
               <h1 className="text-5xl sm:text-6xl md:text-7xl lg:text-[5.5rem] font-bold tracking-tight leading-[0.95]">
                 Recruit{" "}
                 <span className="relative inline-block">
@@ -143,9 +133,6 @@ function HomePageContent() {
                     <div className="flex-1">
                       <div className="flex items-center gap-1.5">
                         <p className="font-semibold text-sm">Coach Martinez</p>
-                        <Badge className="h-4 px-1.5 text-[10px] bg-[#01ae79]/10 text-[#01ae79] border-0 hover:bg-[#01ae79]/10">
-                          Verified
-                        </Badge>
                       </div>
                       <p className="text-xs text-muted-foreground">
                         Stanford Lacrosse · Head Coach
@@ -229,12 +216,6 @@ function HomePageContent() {
       <section className="w-full py-20 md:py-28">
         <div className="container mx-auto max-w-6xl px-4 md:px-6">
           <div className="text-center mb-14 max-w-3xl mx-auto">
-            <Badge
-              variant="outline"
-              className="mb-4 bg-[#01ae79]/5 text-[#01ae79] border-[#01ae79]/30"
-            >
-              The shift
-            </Badge>
             <h2 className="text-4xl md:text-5xl font-bold tracking-tight mb-5">
               The recruiting game changed.
               <br />
@@ -282,12 +263,6 @@ function HomePageContent() {
 
             {/* UpDrafted way */}
             <div className="relative rounded-2xl border-2 border-[#01ae79]/30 bg-gradient-to-br from-[#01ae79]/[0.04] to-transparent dark:from-[#01ae79]/10 p-8 shadow-lg shadow-[#01ae79]/5">
-              <div className="absolute -top-3 right-6">
-                <Badge className="bg-[#01ae79] text-white hover:bg-[#01ae79] border-0">
-                  Own your recruiting
-                </Badge>
-              </div>
-
               <div className="flex items-center gap-3 mb-6">
                 <div className="w-10 h-10 rounded-full bg-[#01ae79]/15 flex items-center justify-center">
                   <Check className="h-5 w-5 text-[#01ae79]" />
@@ -321,12 +296,6 @@ function HomePageContent() {
       >
         <div className="container mx-auto max-w-6xl px-4 md:px-6">
           <div className="text-center mb-14 max-w-3xl mx-auto">
-            <Badge
-              variant="outline"
-              className="mb-4 bg-[#01ae79]/5 text-[#01ae79] border-[#01ae79]/30"
-            >
-              How it works
-            </Badge>
             <h2 className="text-4xl md:text-5xl font-bold tracking-tight mb-5">
               Three steps. Zero gatekeepers.
             </h2>
@@ -365,12 +334,6 @@ function HomePageContent() {
         <div className="container mx-auto max-w-6xl px-4 md:px-6">
           <div className="grid lg:grid-cols-2 gap-12 lg:gap-20 items-center">
             <div className="space-y-6">
-              <Badge
-                variant="outline"
-                className="bg-[#01ae79]/5 text-[#01ae79] border-[#01ae79]/30"
-              >
-                Why we&apos;re different
-              </Badge>
               <h2 className="text-4xl md:text-5xl font-bold tracking-tight leading-tight">
                 We&apos;re not another recruiting service.
                 <br />
@@ -427,12 +390,6 @@ function HomePageContent() {
       <section className="w-full py-20 md:py-28 bg-gray-50/70 dark:bg-gray-950/40 border-y border-gray-200/60 dark:border-gray-800/60">
         <div className="container mx-auto max-w-6xl px-4 md:px-6">
           <div className="text-center mb-14 max-w-3xl mx-auto">
-            <Badge
-              variant="outline"
-              className="mb-4 bg-[#01ae79]/5 text-[#01ae79] border-[#01ae79]/30"
-            >
-              Built for every path
-            </Badge>
             <h2 className="text-4xl md:text-5xl font-bold tracking-tight mb-5">
               Whatever your starting line looks like.
             </h2>
@@ -469,9 +426,6 @@ function HomePageContent() {
                 key={p.tag}
                 className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-6 hover:border-[#01ae79]/40 hover:shadow-lg hover:shadow-[#01ae79]/5 transition-all"
               >
-                <Badge className="mb-4 bg-[#01ae79]/10 text-[#01ae79] border-0 hover:bg-[#01ae79]/10 font-medium">
-                  {p.tag}
-                </Badge>
                 <h3 className="font-semibold text-lg mb-2">{p.title}</h3>
                 <p className="text-sm text-muted-foreground leading-relaxed">
                   {p.body}
@@ -548,47 +502,56 @@ function HomePageContent() {
       {/* ============== FINAL CTA ============== */}
       <section className="w-full pb-20 md:pb-28">
         <div className="container mx-auto max-w-5xl px-4 md:px-6">
-          <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#01ae79] to-[#016e4c] p-10 md:p-16 text-center shadow-2xl shadow-[#01ae79]/20">
+          <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#01ae79] to-[#016e4c] p-10 md:p-20 text-center shadow-2xl shadow-[#01ae79]/25">
             {/* Decorative grid */}
             <div className="absolute inset-0 opacity-10">
               <div className="absolute inset-0 bg-[radial-gradient(circle_at_1px_1px,rgba(255,255,255,0.5)_1px,transparent_0)] [background-size:24px_24px]" />
             </div>
-            <div className="absolute -top-20 -right-20 w-72 h-72 bg-white/10 rounded-full blur-3xl" />
-            <div className="absolute -bottom-20 -left-20 w-72 h-72 bg-black/10 rounded-full blur-3xl" />
+            <div className="absolute -top-24 -right-24 w-96 h-96 bg-white/15 rounded-full blur-3xl" />
+            <div className="absolute -bottom-24 -left-24 w-96 h-96 bg-black/15 rounded-full blur-3xl" />
 
-            <div className="relative space-y-6">
-              <h2 className="text-4xl md:text-6xl font-bold tracking-tight text-white leading-tight">
-                Stop waiting to be found.
+            <div className="relative space-y-8">
+              <h2 className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-bold tracking-tight text-white leading-[0.95]">
+                Own it.
                 <br />
-                Go find them.
+                <span className="text-white/70">Starting today.</span>
               </h2>
-              <p className="text-lg md:text-xl text-white/90 max-w-2xl mx-auto">
-                Your profile goes live in ten minutes. Your first coach
-                conversation could be tomorrow.
+              <p className="text-lg md:text-2xl text-white/90 max-w-2xl mx-auto leading-relaxed">
+                Ten minutes to a profile. One click to a coach.
+                <br className="hidden sm:block" />
+                No agent in the middle.
               </p>
-              <div className="pt-4 flex flex-col sm:flex-row gap-3 justify-center">
-                <Link href="/sign-up">
+              <div className="pt-4 flex flex-col sm:flex-row gap-3 justify-center items-center">
+                <Link href="/sign-up" className="w-full sm:w-auto">
                   <Button
                     size="lg"
-                    className="bg-white text-[#01ae79] hover:bg-white/95 px-8 py-6 text-lg font-semibold rounded-lg shadow-xl w-full sm:w-auto group"
+                    className="bg-white text-[#01ae79] hover:bg-white/95 px-10 py-7 text-lg font-bold rounded-xl shadow-2xl shadow-black/20 w-full sm:w-auto group"
                   >
-                    Start your profile — free
+                    Create my profile — free
                     <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-0.5 transition-transform" />
                   </Button>
                 </Link>
-                <Link href="/for-coaches">
+                <Link href="/for-coaches" className="w-full sm:w-auto">
                   <Button
                     size="lg"
                     variant="outline"
-                    className="px-8 py-6 text-lg font-semibold rounded-lg border-2 border-white/40 bg-transparent text-white hover:bg-white/10 hover:text-white w-full sm:w-auto"
+                    className="px-8 py-7 text-lg font-semibold rounded-xl border-2 border-white/40 bg-transparent text-white hover:bg-white/10 hover:text-white w-full sm:w-auto"
                   >
-                    I&apos;m a coach
+                    I coach teams
                   </Button>
                 </Link>
               </div>
-              <p className="text-sm text-white/70 pt-2">
-                No credit card. No agent. No middleman.
-              </p>
+              <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 pt-4 text-sm text-white/80">
+                <span className="inline-flex items-center gap-1.5">
+                  <Check className="h-4 w-4" /> No credit card
+                </span>
+                <span className="inline-flex items-center gap-1.5">
+                  <Check className="h-4 w-4" /> No agent
+                </span>
+                <span className="inline-flex items-center gap-1.5">
+                  <Check className="h-4 w-4" /> No middleman
+                </span>
+              </div>
             </div>
           </div>
         </div>
