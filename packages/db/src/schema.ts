@@ -25,7 +25,7 @@ export const connectionStatusEnum = pgEnum('connection_status', ['connected', 'p
 export const initiatedByEnum = pgEnum('initiated_by', ['athlete', 'coach', 'recruiter']);
 export const genderEnum = pgEnum('gender', ['male', 'female', 'coed']);
 export const reportStatusEnum = pgEnum('report_status', ['pending', 'under_review', 'resolved', 'dismissed']);
-export const verificationRequestStatusEnum = pgEnum('verification_request_status', ['pending', 'approved', 'rejected', 'under_review']);
+export const verificationRequestStatusEnum = pgEnum('verification_request_status', ['pending', 'approved', 'rejected']);
 export const verificationTypeEnum = pgEnum('verification_type', ['general']);
 export const educationLevelEnum = pgEnum('education_level', ['high_school', 'undergraduate', 'graduate', 'associate']);
 export const notificationTypeEnum = pgEnum('notification_type', ['profileView', 'newConnection', 'newMessage', 'systemUpdate', 'premiumFeature', 'connectionAccepted']);
@@ -453,6 +453,7 @@ export const verificationRequests = pgTable('verification_requests', {
   index('idx_verification_requests_user_id').on(table.userId),
   index('idx_verification_requests_status').on(table.status),
   index('idx_verification_requests_submitted_at').on(table.submittedAt),
+  index('idx_verification_requests_status_submitted_at').on(table.status, table.submittedAt),
   index('idx_verification_requests_verification_type').on(table.verificationType),
   unique('verification_requests_user_id_verification_type_unique').on(table.userId, table.verificationType),
   pgPolicy('verification_requests_read_policy', {
@@ -500,6 +501,7 @@ export const reports = pgTable('reports', {
   index('idx_reports_reported_user_id').on(table.reportedUserId),
   index('idx_reports_status').on(table.status),
   index('idx_reports_submitted_at').on(table.submittedAt),
+  index('idx_reports_status_submitted_at').on(table.status, table.submittedAt),
   pgPolicy('reports_read_policy', {
     for: 'select',
     to: 'public',

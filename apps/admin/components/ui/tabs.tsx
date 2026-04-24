@@ -13,7 +13,7 @@ export const TabsList = React.forwardRef<
   <TabsPrimitive.List
     ref={ref}
     className={cn(
-      "inline-flex h-9 items-center justify-center rounded-md bg-[color:var(--secondary)] p-1 text-[color:var(--muted-foreground)]",
+      "flex h-10 w-full items-center justify-center gap-1 rounded-lg border border-[color:var(--border)] bg-[color:var(--card)]/60 p-1 text-[color:var(--muted-foreground)] shadow-inner sm:inline-flex sm:w-auto",
       className,
     )}
     {...props}
@@ -28,7 +28,7 @@ export const TabsTrigger = React.forwardRef<
   <TabsPrimitive.Trigger
     ref={ref}
     className={cn(
-      "inline-flex items-center justify-center whitespace-nowrap rounded px-3 py-1 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--ring)] disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-[color:var(--background)] data-[state=active]:text-[color:var(--foreground)] data-[state=active]:shadow",
+      "inline-flex h-8 flex-1 items-center justify-center whitespace-nowrap rounded-md px-2 text-sm font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--ring)] disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-[color:var(--primary)] data-[state=active]:text-[color:var(--primary-foreground)] data-[state=active]:shadow-sm hover:text-[color:var(--foreground)] sm:flex-none sm:px-3.5",
       className,
     )}
     {...props}

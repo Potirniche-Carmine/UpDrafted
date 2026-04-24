@@ -12,26 +12,31 @@ import type { AdminSession } from "./admin-guard";
 import {
   sendVerificationApprovedEmail,
   sendVerificationDeniedEmail,
-  sendVerificationNeedsInfoEmail,
 } from "./email";
 
 export type VerificationStatusFilter =
-  | "all"
   | "pending"
-  | "under_review"
   | "approved"
   | "rejected";
+
+const VERIFICATION_STATUS_FILTERS: readonly VerificationStatusFilter[] = [
+  "pending",
+  "approved",
+  "rejected",
+];
 
 export type VerificationListItem = {
   id: number;
   userId: string;
   role: "athlete" | "coach" | "recruiter" | "admin";
-  status: "pending" | "under_review" | "approved" | "rejected";
+  status: "pending" | "approved" | "rejected";
   verificationType: string;
   submittedAt: string;
   reviewedAt: string | null;
   user: { id: string; name: string; email: string } | null;
 };
+
+export type VerificationQueueMap = Record<VerificationStatusFilter, VerificationListItem[]>;
 
 export async function listVerifications(
   admin: AdminSession,
@@ -52,9 +57,7 @@ export async function listVerifications(
       })
       .from(verificationRequests)
       .leftJoin(users, eq(users.id, verificationRequests.userId))
-      .where(
-        statusFilter === "all" ? undefined : eq(verificationRequests.status, statusFilter),
-      )
+      .where(eq(verificationRequests.status, statusFilter))
       .orderBy(desc(verificationRequests.submittedAt))
       .limit(200);
 
@@ -68,6 +71,51 @@ export async function listVerifications(
       reviewedAt: r.reviewedAt ? r.reviewedAt.toISOString() : null,
       user: r.userName ? { id: r.userId, name: r.userName, email: r.userEmail! } : null,
     }));
+  });
+}
+
+export async function listVerificationQueues(
+  admin: AdminSession,
+): Promise<VerificationQueueMap> {
+  return executeAsAdmin(admin, async (tx) => {
+    const queues: VerificationQueueMap = {
+      pending: [],
+      approved: [],
+      rejected: [],
+    };
+
+    for (const statusFilter of VERIFICATION_STATUS_FILTERS) {
+      const rows = await tx
+        .select({
+          id: verificationRequests.id,
+          userId: verificationRequests.userId,
+          role: verificationRequests.role,
+          status: verificationRequests.status,
+          verificationType: verificationRequests.verificationType,
+          submittedAt: verificationRequests.submittedAt,
+          reviewedAt: verificationRequests.reviewedAt,
+          userName: users.name,
+          userEmail: users.email,
+        })
+        .from(verificationRequests)
+        .leftJoin(users, eq(users.id, verificationRequests.userId))
+        .where(eq(verificationRequests.status, statusFilter))
+        .orderBy(desc(verificationRequests.submittedAt))
+        .limit(200);
+
+      queues[statusFilter] = rows.map((r) => ({
+        id: r.id,
+        userId: r.userId,
+        role: r.role,
+        status: r.status,
+        verificationType: r.verificationType,
+        submittedAt: r.submittedAt.toISOString(),
+        reviewedAt: r.reviewedAt ? r.reviewedAt.toISOString() : null,
+        user: r.userName ? { id: r.userId, name: r.userName, email: r.userEmail! } : null,
+      }));
+    }
+
+    return queues;
   });
 }
 
@@ -170,7 +218,7 @@ export async function addVerificationComment(
   });
 }
 
-export type VerificationActionType = "approve" | "needs_info" | "deny";
+export type VerificationActionType = "approve" | "deny";
 
 export type VerificationActionInput = {
   requestId: number;
@@ -190,7 +238,7 @@ export async function applyVerificationAction(
   const reason = (input.reason ?? "").trim();
   const notes = (input.moderatorNotes ?? "").trim();
 
-  if ((action === "needs_info" || action === "deny") && !reason) {
+  if (action === "deny" && !reason) {
     throw new Error("A reason is required for this action");
   }
 
@@ -236,15 +284,6 @@ export async function applyVerificationAction(
             and(eq(profileTable.userId, request.userId), eq(profileTable.isDemoProfile, false)),
           );
       }
-    } else if (action === "needs_info") {
-      await tx
-        .update(verificationRequests)
-        .set({
-          ...commonUpdate,
-          status: "under_review",
-          rejectionReason: reason,
-        })
-        .where(eq(verificationRequests.id, requestId));
     } else {
       await tx
         .update(verificationRequests)
@@ -264,8 +303,6 @@ export async function applyVerificationAction(
   const { user } = emailPayload;
   if (action === "approve") {
     await sendVerificationApprovedEmail({ to: user.email, name: user.name });
-  } else if (action === "needs_info") {
-    await sendVerificationNeedsInfoEmail({ to: user.email, name: user.name, reason });
   } else {
     await sendVerificationDeniedEmail({ to: user.email, name: user.name, reason });
   }

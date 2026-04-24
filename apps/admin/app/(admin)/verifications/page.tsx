@@ -1,5 +1,5 @@
 import { getAdminSession } from "@/lib/admin-guard";
-import { listVerifications } from "@/lib/verifications";
+import { listVerificationQueues } from "@/lib/verifications";
 import { redirect } from "next/navigation";
 import { VerificationsClient } from "./verifications-client";
 
@@ -16,12 +16,12 @@ export default async function VerificationsPage({
   const params = await searchParams;
   const statusParam = params.status ?? "pending";
   const status = (
-    ["all", "pending", "under_review", "approved", "rejected"].includes(statusParam)
+    ["pending", "approved", "rejected"].includes(statusParam)
       ? statusParam
       : "pending"
-  ) as "all" | "pending" | "under_review" | "approved" | "rejected";
+  ) as "pending" | "approved" | "rejected";
 
-  const items = await listVerifications(session, status);
+  const queues = await listVerificationQueues(session);
 
-  return <VerificationsClient initialStatus={status} initialItems={items} />;
+  return <VerificationsClient initialStatus={status} initialQueues={queues} />;
 }

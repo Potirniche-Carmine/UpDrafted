@@ -6,9 +6,7 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const ALLOWED_STATUSES: readonly VerificationStatusFilter[] = [
-  "all",
   "pending",
-  "under_review",
   "approved",
   "rejected",
 ];

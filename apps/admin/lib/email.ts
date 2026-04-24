@@ -54,29 +54,6 @@ export async function sendVerificationApprovedEmail(args: {
   });
 }
 
-export async function sendVerificationNeedsInfoEmail(args: {
-  to: string;
-  name: string;
-  reason: string;
-}): Promise<void> {
-  await send({
-    to: args.to,
-    subject: "We need a bit more info for your verification",
-    html: shell(`
-      <h2 style="color:#ca8a04;">Additional information requested</h2>
-      <p>Hi ${args.name || "there"},</p>
-      <p>A moderator reviewed your verification request and needs a little more information before we can approve it:</p>
-      <blockquote style="border-left: 4px solid #ca8a04; padding: 8px 16px; background:#fffbeb; margin: 16px 0;">
-        ${args.reason.replace(/\n/g, "<br/>")}
-      </blockquote>
-      <p>Please update your verification request in the app and we'll take another look.</p>
-      <div style="text-align:center; margin: 24px 0;">
-        <a href="${MAIN_APP_URL}/dashboard" style="background:#01ae79; color:white; text-decoration:none; padding:12px 24px; border-radius:8px; display:inline-block;">Open UpDrafted</a>
-      </div>
-    `),
-  });
-}
-
 export async function sendVerificationDeniedEmail(args: {
   to: string;
   name: string;

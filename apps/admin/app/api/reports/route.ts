@@ -6,7 +6,6 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const STATUSES: readonly ReportStatusFilter[] = [
-  "all",
   "pending",
   "under_review",
   "resolved",

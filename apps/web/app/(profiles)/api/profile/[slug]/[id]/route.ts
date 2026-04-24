@@ -457,7 +457,7 @@ export async function GET(
                 if (generalVerificationRequest.length > 0) {
                   const verification = generalVerificationRequest[0];
 
-                  if (verification.status === 'pending' || verification.status === 'under_review') {
+                  if (verification.status === 'pending') {
                     realVerificationStatus = {
                       hasPendingVerification: true,
                       pendingSubmittedAt: verification.submittedAt.toISOString()
@@ -495,7 +495,7 @@ export async function GET(
                 if (verificationRequest.length > 0) {
                   const verification = verificationRequest[0];
 
-                  if (verification.status === 'pending' || verification.status === 'under_review') {
+                  if (verification.status === 'pending') {
                     realVerificationStatus = {
                       hasPendingVerification: true,
                       pendingSubmittedAt: verification.submittedAt.toISOString()
@@ -613,7 +613,7 @@ export async function GET(
             if (generalVerificationRequest.length > 0) {
               const verification = generalVerificationRequest[0];
 
-              if (verification.status === 'pending' || verification.status === 'under_review') {
+              if (verification.status === 'pending') {
                 verificationStatus = {
                   hasPendingVerification: true,
                   pendingSubmittedAt: verification.submittedAt.toISOString()
@@ -653,7 +653,7 @@ export async function GET(
             if (verificationRequest.length > 0) {
               const verification = verificationRequest[0];
 
-              if (verification.status === 'pending' || verification.status === 'under_review') {
+              if (verification.status === 'pending') {
                 verificationStatus = {
                   hasPendingVerification: true,
                   pendingSubmittedAt: verification.submittedAt.toISOString()
@@ -692,7 +692,7 @@ export async function GET(
             if (verificationRequest.length > 0) {
               const verification = verificationRequest[0];
 
-              if (verification.status === 'pending' || verification.status === 'under_review') {
+              if (verification.status === 'pending') {
                 verificationStatus = {
                   hasPendingVerification: true,
                   pendingSubmittedAt: verification.submittedAt.toISOString()

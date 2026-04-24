@@ -2,7 +2,6 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 const mockExecuteAsAdmin = vi.fn();
 const mockSendApproved = vi.fn(async () => {});
-const mockSendNeedsInfo = vi.fn(async () => {});
 const mockSendDenied = vi.fn(async () => {});
 
 vi.mock("./db-access", () => ({
@@ -12,7 +11,6 @@ vi.mock("./db-access", () => ({
 
 vi.mock("./email", () => ({
   sendVerificationApprovedEmail: (...args: unknown[]) => mockSendApproved(...args),
-  sendVerificationNeedsInfoEmail: (...args: unknown[]) => mockSendNeedsInfo(...args),
   sendVerificationDeniedEmail: (...args: unknown[]) => mockSendDenied(...args),
 }));
 
@@ -38,7 +36,6 @@ describe("applyVerificationAction validation", () => {
   beforeEach(() => {
     mockExecuteAsAdmin.mockReset();
     mockSendApproved.mockClear();
-    mockSendNeedsInfo.mockClear();
     mockSendDenied.mockClear();
   });
 
@@ -48,13 +45,6 @@ describe("applyVerificationAction validation", () => {
       applyVerificationAction(admin, { requestId: 1, action: "deny" }),
     ).rejects.toThrow(/reason is required/i);
     expect(mockExecuteAsAdmin).not.toHaveBeenCalled();
-  });
-
-  it("rejects needs_info without a reason", async () => {
-    const { applyVerificationAction } = await import("./verifications");
-    await expect(
-      applyVerificationAction(admin, { requestId: 1, action: "needs_info", reason: "   " }),
-    ).rejects.toThrow(/reason is required/i);
   });
 
   it("allows approve without a reason and sends approval email", async () => {
@@ -84,7 +74,6 @@ describe("applyVerificationAction validation", () => {
     const { applyVerificationAction } = await import("./verifications");
     await applyVerificationAction(admin, { requestId: 1, action: "approve" });
     expect(mockSendApproved).toHaveBeenCalledWith({ to: txUser.email, name: txUser.name });
-    expect(mockSendNeedsInfo).not.toHaveBeenCalled();
     expect(mockSendDenied).not.toHaveBeenCalled();
   });
 });

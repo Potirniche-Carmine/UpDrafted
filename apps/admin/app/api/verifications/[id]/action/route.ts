@@ -6,7 +6,7 @@ import { applyVerificationAction } from "@/lib/verifications";
 export const runtime = "nodejs";
 
 const schema = z.object({
-  action: z.enum(["approve", "needs_info", "deny"]),
+  action: z.enum(["approve", "deny"]),
   reason: z.string().max(4000).optional(),
   moderatorNotes: z.string().max(4000).optional(),
 });

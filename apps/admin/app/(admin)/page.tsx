@@ -13,7 +13,6 @@ import {
   Users,
   Trophy,
   ClipboardList,
-  Flag,
   ShieldCheck,
   Ban,
   UserCheck,
@@ -22,41 +21,62 @@ import {
 
 export const dynamic = "force-dynamic";
 
+type Accent = "primary" | "warning" | "destructive" | "success";
+
+function accentClasses(accent: Accent = "primary"): { text: string; bg: string } {
+  switch (accent) {
+    case "warning":
+      return { text: "text-[color:var(--warning)]", bg: "bg-[color:var(--warning)]/15" };
+    case "destructive":
+      return {
+        text: "text-[color:var(--destructive)]",
+        bg: "bg-[color:var(--destructive)]/15",
+      };
+    case "success":
+      return {
+        text: "text-[color:var(--success)]",
+        bg: "bg-[color:var(--success)]/15",
+      };
+    default:
+      return {
+        text: "text-[color:var(--primary)]",
+        bg: "bg-[color:var(--primary)]/15",
+      };
+  }
+}
+
 function StatCard({
   label,
   value,
   sublabel,
   icon: Icon,
-  accent,
+  accent = "primary",
 }: {
   label: string;
   value: number | string;
   sublabel?: string;
   icon: React.ComponentType<{ className?: string }>;
-  accent?: "primary" | "warning" | "destructive" | "success";
+  accent?: Accent;
 }) {
-  const color =
-    accent === "warning"
-      ? "text-[color:var(--warning)]"
-      : accent === "destructive"
-        ? "text-[color:var(--destructive)]"
-        : accent === "success"
-          ? "text-[color:var(--success)]"
-          : "text-[color:var(--primary)]";
+  const { text, bg } = accentClasses(accent);
   return (
-    <Card>
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <CardTitle className="text-sm font-medium text-[color:var(--muted-foreground)]">
-          {label}
-        </CardTitle>
-        <Icon className={`size-4 ${color}`} />
-      </CardHeader>
-      <CardContent>
-        <div className="text-3xl font-semibold">{value}</div>
-        {sublabel ? (
-          <p className="mt-1 text-xs text-[color:var(--muted-foreground)]">{sublabel}</p>
-        ) : null}
-      </CardContent>
+    <Card className="p-4 sm:p-5">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="truncate text-xs font-medium uppercase tracking-wide text-[color:var(--muted-foreground)]">
+            {label}
+          </p>
+          <p className="mt-1.5 text-2xl font-semibold tracking-tight sm:text-3xl">
+            {value}
+          </p>
+          {sublabel ? (
+            <p className="mt-1 text-xs text-[color:var(--muted-foreground)]">{sublabel}</p>
+          ) : null}
+        </div>
+        <div className={`grid size-10 shrink-0 place-items-center rounded-xl ${bg}`}>
+          <Icon className={`size-5 ${text}`} />
+        </div>
+      </div>
     </Card>
   );
 }
@@ -74,27 +94,28 @@ export default async function DashboardPage() {
 
   const stats = await getAdminStats(session);
 
+  const paidSubscribers = Object.values(stats.subscriptions.byTier).reduce(
+    (a, b) => a + b,
+    0,
+  );
+
   return (
     <div className="space-y-8">
       <header>
-        <p className="text-xs uppercase tracking-[0.3em] text-[color:var(--primary)]">Overview</p>
-        <h1 className="mt-1 text-3xl font-semibold">Welcome back, {session.name.split(" ")[0]}</h1>
-        <p className="mt-2 text-[color:var(--muted-foreground)]">
-          A bird&apos;s-eye view of the UpDrafted community.
-        </p>
+        <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">
+          Welcome back, {session.name.split(" ")[0]}
+        </h1>
       </header>
 
-      <section>
-        <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-[color:var(--muted-foreground)]">
-          Users
-        </h2>
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <section className="space-y-3">
+        <div className="flex items-baseline justify-between">
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-[color:var(--muted-foreground)]">
+            Users
+          </h2>
+        </div>
+        <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
           <StatCard label="Total users" value={stats.totals.users.toLocaleString()} icon={Users} />
-          <StatCard
-            label="Athletes"
-            value={stats.totals.athletes.toLocaleString()}
-            icon={Trophy}
-          />
+          <StatCard label="Athletes" value={stats.totals.athletes.toLocaleString()} icon={Trophy} />
           <StatCard
             label="Coaches"
             value={stats.totals.coaches.toLocaleString()}
@@ -106,7 +127,7 @@ export default async function DashboardPage() {
             icon={UserCheck}
           />
         </div>
-        <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
           <StatCard
             label="Admins"
             value={stats.totals.admins.toLocaleString()}
@@ -126,16 +147,14 @@ export default async function DashboardPage() {
           />
           <StatCard
             label="Paid subscribers"
-            value={Object.values(stats.subscriptions.byTier)
-              .reduce((a, b) => a + b, 0)
-              .toLocaleString()}
+            value={paidSubscribers.toLocaleString()}
             icon={CreditCard}
             accent="success"
           />
         </div>
       </section>
 
-      <section className="grid gap-6 lg:grid-cols-3">
+      <section className="grid gap-4 lg:grid-cols-3">
         <Card className="lg:col-span-2">
           <CardHeader>
             <CardTitle>Subscriptions</CardTitle>
@@ -156,9 +175,9 @@ export default async function DashboardPage() {
                   .map(([tier, value]) => (
                     <li
                       key={tier}
-                      className="flex items-center justify-between rounded-md border border-[color:var(--border)] px-3 py-2 text-sm"
+                      className="flex items-center justify-between rounded-lg border border-[color:var(--border)] bg-[color:var(--muted)]/40 px-3 py-2.5 text-sm"
                     >
-                      <span>{formatTier(tier)}</span>
+                      <span className="font-medium">{formatTier(tier)}</span>
                       <Badge variant="secondary">{value.toLocaleString()}</Badge>
                     </li>
                   ))}
@@ -173,93 +192,19 @@ export default async function DashboardPage() {
             <CardDescription>Real (non-demo) profiles currently verified.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-2 text-sm">
-            <div className="flex items-center justify-between">
-              <span>Athletes</span>
+            <div className="flex items-center justify-between rounded-lg border border-[color:var(--border)] bg-[color:var(--muted)]/40 px-3 py-2.5">
+              <span className="font-medium">Athletes</span>
               <Badge variant="success">{stats.verifiedProfiles.athletes.toLocaleString()}</Badge>
             </div>
-            <div className="flex items-center justify-between">
-              <span>Coaches</span>
+            <div className="flex items-center justify-between rounded-lg border border-[color:var(--border)] bg-[color:var(--muted)]/40 px-3 py-2.5">
+              <span className="font-medium">Coaches</span>
               <Badge variant="success">{stats.verifiedProfiles.coaches.toLocaleString()}</Badge>
             </div>
-            <div className="flex items-center justify-between">
-              <span>Recruiters</span>
+            <div className="flex items-center justify-between rounded-lg border border-[color:var(--border)] bg-[color:var(--muted)]/40 px-3 py-2.5">
+              <span className="font-medium">Recruiters</span>
               <Badge variant="success">
                 {stats.verifiedProfiles.recruiters.toLocaleString()}
               </Badge>
-            </div>
-          </CardContent>
-        </Card>
-      </section>
-
-      <section className="grid gap-6 lg:grid-cols-2">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
-            <div>
-              <CardTitle>Verifications</CardTitle>
-              <CardDescription>Moderation queue health.</CardDescription>
-            </div>
-            <ShieldCheck className="size-5 text-[color:var(--primary)]" />
-          </CardHeader>
-          <CardContent className="grid grid-cols-2 gap-3 text-sm">
-            <div className="rounded-md border border-[color:var(--border)] p-3">
-              <p className="text-[color:var(--muted-foreground)]">Pending</p>
-              <p className="text-2xl font-semibold text-[color:var(--warning)]">
-                {stats.verifications.pending.toLocaleString()}
-              </p>
-            </div>
-            <div className="rounded-md border border-[color:var(--border)] p-3">
-              <p className="text-[color:var(--muted-foreground)]">Under review</p>
-              <p className="text-2xl font-semibold">
-                {stats.verifications.underReview.toLocaleString()}
-              </p>
-            </div>
-            <div className="rounded-md border border-[color:var(--border)] p-3">
-              <p className="text-[color:var(--muted-foreground)]">Approved</p>
-              <p className="text-2xl font-semibold text-[color:var(--success)]">
-                {stats.verifications.approved.toLocaleString()}
-              </p>
-            </div>
-            <div className="rounded-md border border-[color:var(--border)] p-3">
-              <p className="text-[color:var(--muted-foreground)]">Rejected</p>
-              <p className="text-2xl font-semibold text-[color:var(--destructive)]">
-                {stats.verifications.rejected.toLocaleString()}
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
-            <div>
-              <CardTitle>Reports</CardTitle>
-              <CardDescription>User-submitted reports.</CardDescription>
-            </div>
-            <Flag className="size-5 text-[color:var(--destructive)]" />
-          </CardHeader>
-          <CardContent className="grid grid-cols-2 gap-3 text-sm">
-            <div className="rounded-md border border-[color:var(--border)] p-3">
-              <p className="text-[color:var(--muted-foreground)]">Pending</p>
-              <p className="text-2xl font-semibold text-[color:var(--warning)]">
-                {stats.reports.pending.toLocaleString()}
-              </p>
-            </div>
-            <div className="rounded-md border border-[color:var(--border)] p-3">
-              <p className="text-[color:var(--muted-foreground)]">Under review</p>
-              <p className="text-2xl font-semibold">
-                {stats.reports.underReview.toLocaleString()}
-              </p>
-            </div>
-            <div className="rounded-md border border-[color:var(--border)] p-3">
-              <p className="text-[color:var(--muted-foreground)]">Resolved</p>
-              <p className="text-2xl font-semibold text-[color:var(--success)]">
-                {stats.reports.resolved.toLocaleString()}
-              </p>
-            </div>
-            <div className="rounded-md border border-[color:var(--border)] p-3">
-              <p className="text-[color:var(--muted-foreground)]">Dismissed</p>
-              <p className="text-2xl font-semibold text-[color:var(--muted-foreground)]">
-                {stats.reports.dismissed.toLocaleString()}
-              </p>
             </div>
           </CardContent>
         </Card>

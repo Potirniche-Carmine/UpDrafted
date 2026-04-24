@@ -6,11 +6,17 @@ import type { AdminSession } from "./admin-guard";
 import { sendReportBanEmail } from "./email";
 
 export type ReportStatusFilter =
-  | "all"
   | "pending"
   | "under_review"
   | "resolved"
   | "dismissed";
+
+const REPORT_STATUS_FILTERS: readonly ReportStatusFilter[] = [
+  "pending",
+  "under_review",
+  "resolved",
+  "dismissed",
+];
 
 export type ReportListItem = {
   id: number;
@@ -25,6 +31,8 @@ export type ReportListItem = {
     | { id: string; name: string; email: string; banned: boolean; bannedUntil: string | null }
     | null;
 };
+
+export type ReportQueueMap = Record<ReportStatusFilter, ReportListItem[]>;
 
 export async function listReports(
   admin: AdminSession,
@@ -53,7 +61,7 @@ export async function listReports(
       .from(reports)
       .leftJoin(reporter, eq(reporter.id, reports.reporterId))
       .leftJoin(reported, eq(reported.id, reports.reportedUserId))
-      .where(statusFilter === "all" ? undefined : eq(reports.status, statusFilter))
+      .where(eq(reports.status, statusFilter))
       .orderBy(desc(reports.submittedAt))
       .limit(200);
 
@@ -78,6 +86,68 @@ export async function listReports(
           }
         : null,
     }));
+  });
+}
+
+export async function listReportQueues(admin: AdminSession): Promise<ReportQueueMap> {
+  return executeAsAdmin(admin, async (tx) => {
+    const reporter = alias(users, "reporter");
+    const reported = alias(users, "reported_user");
+    const queues: ReportQueueMap = {
+      pending: [],
+      under_review: [],
+      resolved: [],
+      dismissed: [],
+    };
+
+    for (const statusFilter of REPORT_STATUS_FILTERS) {
+      const rows = await tx
+        .select({
+          id: reports.id,
+          reporterId: reports.reporterId,
+          reportedUserId: reports.reportedUserId,
+          reportReason: reports.reportReason,
+          status: reports.status,
+          submittedAt: reports.submittedAt,
+          actionTaken: reports.actionTaken,
+          reporterName: reporter.name,
+          reporterEmail: reporter.email,
+          reportedName: reported.name,
+          reportedEmail: reported.email,
+          reportedBanned: reported.banned,
+          reportedBannedUntil: reported.bannedUntil,
+        })
+        .from(reports)
+        .leftJoin(reporter, eq(reporter.id, reports.reporterId))
+        .leftJoin(reported, eq(reported.id, reports.reportedUserId))
+        .where(eq(reports.status, statusFilter))
+        .orderBy(desc(reports.submittedAt))
+        .limit(200);
+
+      queues[statusFilter] = rows.map((r) => ({
+        id: r.id,
+        reporterId: r.reporterId,
+        reportedUserId: r.reportedUserId,
+        reportReason: r.reportReason,
+        status: r.status,
+        submittedAt: r.submittedAt.toISOString(),
+        actionTaken: r.actionTaken,
+        reporter: r.reporterName
+          ? { id: r.reporterId, name: r.reporterName, email: r.reporterEmail! }
+          : null,
+        reportedUser: r.reportedName
+          ? {
+              id: r.reportedUserId,
+              name: r.reportedName,
+              email: r.reportedEmail!,
+              banned: !!r.reportedBanned,
+              bannedUntil: r.reportedBannedUntil ? r.reportedBannedUntil.toISOString() : null,
+            }
+          : null,
+      }));
+    }
+
+    return queues;
   });
 }
 

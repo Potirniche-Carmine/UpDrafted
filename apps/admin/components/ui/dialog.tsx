@@ -18,7 +18,7 @@ const DialogOverlay = React.forwardRef<
   <DialogPrimitive.Overlay
     ref={ref}
     className={cn(
-      "fixed inset-0 z-50 bg-black/70 data-[state=open]:animate-in data-[state=closed]:animate-out",
+      "fixed inset-0 z-50 bg-black/80 backdrop-blur-sm data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
       className,
     )}
     {...props}
@@ -35,13 +35,17 @@ export const DialogContent = React.forwardRef<
     <DialogPrimitive.Content
       ref={ref}
       className={cn(
-        "fixed left-1/2 top-1/2 z-50 grid w-full max-w-lg -translate-x-1/2 -translate-y-1/2 gap-4 rounded-xl border border-[color:var(--border)] bg-[color:var(--card)] p-6 shadow-2xl",
+        // Full-screen sheet on mobile, centered dialog on >= sm
+        "fixed inset-x-0 bottom-0 top-auto z-50 grid w-full max-w-none gap-4 overflow-hidden border-t border-[color:var(--border)] bg-[color:var(--card)] p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] shadow-2xl rounded-t-2xl max-h-[92dvh] anim-fade-in",
+        "sm:inset-auto sm:left-1/2 sm:top-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 sm:max-w-lg sm:rounded-2xl sm:border sm:p-6 sm:pb-6 sm:max-h-[90dvh]",
         className,
       )}
       {...props}
     >
+      {/* Mobile grab handle */}
+      <div className="sm:hidden mx-auto -mt-2 mb-1 h-1.5 w-12 rounded-full bg-[color:var(--border)]" />
       {children}
-      <DialogPrimitive.Close className="absolute right-4 top-4 rounded-sm opacity-70 transition-opacity hover:opacity-100 focus:outline-none">
+      <DialogPrimitive.Close className="absolute right-3 top-3 grid size-9 place-items-center rounded-full text-[color:var(--muted-foreground)] transition-colors hover:bg-[color:var(--accent)] hover:text-[color:var(--foreground)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--ring)] sm:right-4 sm:top-4">
         <X className="h-4 w-4" />
         <span className="sr-only">Close</span>
       </DialogPrimitive.Close>
@@ -52,7 +56,7 @@ DialogContent.displayName = DialogPrimitive.Content.displayName;
 
 export const DialogHeader = ({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) => (
   <div
-    className={cn("flex flex-col space-y-1.5 text-center sm:text-left", className)}
+    className={cn("flex flex-col space-y-1.5 pr-10 text-left", className)}
     {...props}
   />
 );
@@ -60,7 +64,10 @@ DialogHeader.displayName = "DialogHeader";
 
 export const DialogFooter = ({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) => (
   <div
-    className={cn("flex flex-col-reverse gap-2 sm:flex-row sm:justify-end", className)}
+    className={cn(
+      "flex flex-col-reverse gap-2 pt-2 sm:flex-row sm:justify-end",
+      className,
+    )}
     {...props}
   />
 );
@@ -72,7 +79,7 @@ export const DialogTitle = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <DialogPrimitive.Title
     ref={ref}
-    className={cn("text-lg font-semibold text-[color:var(--foreground)]", className)}
+    className={cn("text-lg font-semibold leading-tight text-[color:var(--foreground)]", className)}
     {...props}
   />
 ));
