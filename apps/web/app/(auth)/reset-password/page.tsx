@@ -4,6 +4,12 @@ import { Suspense, useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { authClient } from "@/lib/auth-client";
+import {
+    clearPersistedResetToken,
+    getPersistedResetToken,
+    persistResetToken,
+    replaceUrlWithoutReload,
+} from "@/lib/auth-flow";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -20,10 +26,19 @@ function ResetPasswordContent() {
 
     useEffect(() => {
         const tokenParam = searchParams.get("token");
-        if (!tokenParam) {
+        const nextToken = tokenParam || getPersistedResetToken();
+
+        if (tokenParam) {
+            persistResetToken(tokenParam);
+            replaceUrlWithoutReload("/reset-password");
+        }
+
+        if (!nextToken) {
+            clearPersistedResetToken();
             setError("Invalid or missing reset token. Please request a new password reset link.");
         } else {
-            setToken(tokenParam);
+            setError("");
+            setToken(nextToken);
         }
     }, [searchParams]);
 
@@ -57,6 +72,7 @@ function ResetPasswordContent() {
             if (error) {
                 setError(error.message || "Failed to reset password. The link may have expired.");
             } else {
+                clearPersistedResetToken();
                 // Redirect to sign-in with success message
                 router.push("/sign-in?reset=success");
             }

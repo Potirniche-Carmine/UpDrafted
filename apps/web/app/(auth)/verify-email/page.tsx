@@ -4,11 +4,19 @@ import { Suspense, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { authClient, useSession } from "@/lib/auth-client";
+import {
+  clearPersistedVerificationEmail,
+  getPersistedVerificationEmail,
+  persistVerificationEmail,
+  replaceUrlWithoutReload,
+} from "@/lib/auth-flow";
 
 function VerifyEmailContent() {
   const searchParams = useSearchParams();
   const { data: session } = useSession();
-  const [emailInput, setEmailInput] = useState(searchParams.get("email") || "");
+  const [emailInput, setEmailInput] = useState(
+    searchParams.get("email") || getPersistedVerificationEmail() || "",
+  );
   const [cooldownSeconds, setCooldownSeconds] = useState(60);
   const [isSending, setIsSending] = useState(false);
   const [error, setError] = useState("");
@@ -18,10 +26,25 @@ function VerifyEmailContent() {
   const targetEmail = useMemo(() => sessionEmail || emailInput.trim(), [emailInput, sessionEmail]);
 
   useEffect(() => {
+    const emailFromQuery = searchParams.get("email");
+
+    if (emailFromQuery) {
+      persistVerificationEmail(emailFromQuery);
+    }
+
+    replaceUrlWithoutReload("/verify-email");
+  }, [searchParams]);
+
+  useEffect(() => {
     if (sessionEmail) {
       setEmailInput(sessionEmail);
+      persistVerificationEmail(sessionEmail);
     }
   }, [sessionEmail]);
+
+  useEffect(() => {
+    persistVerificationEmail(emailInput);
+  }, [emailInput]);
 
   useEffect(() => {
     if (cooldownSeconds <= 0) return;
@@ -116,6 +139,7 @@ function VerifyEmailContent() {
         <div className="space-y-3">
           <Link
             href="/sign-in"
+            onClick={() => clearPersistedVerificationEmail()}
             className="block w-full rounded-lg bg-primary px-4 py-3 text-center font-medium text-primary-foreground transition-colors hover:bg-primary/90"
           >
             Go to Sign In

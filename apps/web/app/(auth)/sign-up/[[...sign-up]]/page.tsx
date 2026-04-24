@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { signUp } from "@/lib/auth-client";
+import { persistVerificationEmail } from "@/lib/auth-flow";
 
 export default function SignUpPage() {
   const router = useRouter();
@@ -66,7 +67,8 @@ export default function SignUpPage() {
         return;
       }
 
-      router.push(`/verify-email?email=${encodeURIComponent(email)}`);
+      persistVerificationEmail(email);
+      router.push("/verify-email");
     } catch  {
       setError("An unexpected error occurred. Please try again.");
       setLoading(false);

@@ -4,12 +4,26 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { signIn } from "@/lib/auth-client";
+import { useUser } from "@/hooks/use-auth";
+import {
+  persistVerificationEmail,
+  replaceUrlWithoutReload,
+  sanitizeAuthSearchParams,
+} from "@/lib/auth-flow";
 import { ForgotPasswordDialog } from "@/components/forgot-password-dialog";
 import { MagicLinkDialog } from "@/components/magic-link-dialog";
+
+const COMPLETED_ROLES = new Set(["athlete", "coach", "recruiter", "admin"]);
+const ALLOWED_SIGN_IN_PARAMS = ["verified", "reset", "error"] as const;
+
+function getPostAuthDestination(role?: string | null) {
+  return role && COMPLETED_ROLES.has(role) ? "/dashboard" : "/onboarding";
+}
 
 export default function SignInPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { user, isLoaded, isSignedIn } = useUser();
   const [emailOrUsername, setEmailOrUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -17,8 +31,12 @@ export default function SignInPage() {
   const [loading, setLoading] = useState(false);
   const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [showMagicLink, setShowMagicLink] = useState(false);
+  const destination = getPostAuthDestination(user?.role as string | null | undefined);
 
   useEffect(() => {
+    const sanitizedQuery = sanitizeAuthSearchParams(searchParams, ALLOWED_SIGN_IN_PARAMS);
+    replaceUrlWithoutReload("/sign-in", sanitizedQuery);
+
     // Show success message if redirected from email verification
     if (searchParams.get("verified") === "true") {
       setSuccessMessage("Email verified successfully! You can now sign in.");
@@ -38,6 +56,23 @@ export default function SignInPage() {
     }
   }, [searchParams]);
 
+  useEffect(() => {
+    if (!isLoaded || !isSignedIn) {
+      return;
+    }
+
+    router.replace(destination);
+    router.refresh();
+
+    const fallbackRedirect = window.setTimeout(() => {
+      if (window.location.pathname !== destination) {
+        window.location.replace(destination);
+      }
+    }, 250);
+
+    return () => window.clearTimeout(fallbackRedirect);
+  }, [destination, isLoaded, isSignedIn, router]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
@@ -53,7 +88,8 @@ export default function SignInPage() {
       if (result.error) {
         // Check if error is due to unverified email
         if (result.error.status === 403) {
-          router.push(`/verify-email?email=${encodeURIComponent(emailOrUsername)}`);
+          persistVerificationEmail(emailOrUsername);
+          router.push("/verify-email");
           return;
         } else {
           setError(result.error.message || "Invalid credentials");
@@ -62,16 +98,31 @@ export default function SignInPage() {
         return;
       }
 
-      // Force a full page reload to ensure session cookies are processed correctly
-      // This prevents the auth wrapper on the dashboard from redirecting back to sign-in
-      window.location.href = "/dashboard";
+      setSuccessMessage("Signed in successfully. Redirecting...");
+      router.refresh();
+
+      window.location.replace("/dashboard");
     } catch {
       setError("An unexpected error occurred. Please try again.");
       setLoading(false);
     }
   };
 
-
+  if (isLoaded && isSignedIn) {
+    return (
+      <div className="flex min-h-[80vh] items-center justify-center">
+        <div className="w-full max-w-md rounded-3xl border border-border/60 bg-card/90 p-8 text-center shadow-xl backdrop-blur">
+          <div className="mx-auto mb-5 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
+            <div className="h-5 w-5 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+          </div>
+          <h1 className="text-2xl font-semibold tracking-tight text-foreground">Redirecting you back in</h1>
+          <p className="mt-2 text-sm text-muted-foreground">
+            Your session is active, so we&apos;re sending you to the right place now.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-[80vh] items-center justify-center">

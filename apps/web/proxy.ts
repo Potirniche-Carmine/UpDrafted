@@ -29,6 +29,29 @@ interface SessionState {
     emailVerified: boolean | null;
 }
 
+function getSanitizedAuthUrl(req: NextRequest, allowedParams: readonly string[]) {
+    const sanitizedUrl = req.nextUrl.clone();
+    const sanitizedParams = new URLSearchParams();
+
+    allowedParams.forEach((param) => {
+        const values = req.nextUrl.searchParams.getAll(param);
+
+        values.forEach((value) => {
+            sanitizedParams.append(param, value);
+        });
+    });
+
+    const currentQuery = req.nextUrl.searchParams.toString();
+    const nextQuery = sanitizedParams.toString();
+
+    if (currentQuery === nextQuery) {
+        return null;
+    }
+
+    sanitizedUrl.search = nextQuery ? `?${nextQuery}` : '';
+    return sanitizedUrl;
+}
+
 // Check if user has a session cookie (basic auth check for proxy)
 function hasSessionCookie(request: NextRequest): boolean {
     // better-auth uses 'better-auth.session_token' over HTTP,
@@ -75,6 +98,20 @@ async function getSessionState(req: NextRequest): Promise<SessionState> {
 // Default export for Next.js 16 proxy convention
 export default async function proxy(req: NextRequest) {
     const { pathname } = req.nextUrl;
+
+    if (pathname === '/sign-in') {
+        const sanitizedUrl = getSanitizedAuthUrl(req, ['verified', 'reset', 'error']);
+        if (sanitizedUrl) {
+            return secureRedirect(sanitizedUrl);
+        }
+    }
+
+    if (pathname === '/sign-up') {
+        const sanitizedUrl = getSanitizedAuthUrl(req, []);
+        if (sanitizedUrl) {
+            return secureRedirect(sanitizedUrl);
+        }
+    }
 
     // Skip all processing for webhook routes, auth routes, static files, and public assets
     // These routes handle their own authentication/authorization

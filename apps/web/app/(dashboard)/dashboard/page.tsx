@@ -473,4 +473,4 @@ function NavCard({
       </Card>
     </Link>
   );
-} 
+}

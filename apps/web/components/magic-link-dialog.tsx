@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { signIn } from "@/lib/auth-client";
 import {
     Dialog,
@@ -30,9 +30,9 @@ export function MagicLinkDialog({
     const [error, setError] = useState("");
 
     // Update email when defaultEmail changes
-    useState(() => {
+    useEffect(() => {
         setEmail(defaultEmail);
-    });
+    }, [defaultEmail]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
