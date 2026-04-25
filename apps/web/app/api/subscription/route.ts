@@ -13,13 +13,19 @@ function toClientSubscriptionPayload(subscription: Awaited<ReturnType<typeof Sub
   }
 }
 
+function noStoreJson(body: unknown, init?: ConstructorParameters<typeof NextResponse.json>[1]) {
+  const response = NextResponse.json(body, init);
+  response.headers.set('Cache-Control', 'no-store, max-age=0');
+  return response;
+}
+
 export async function GET(req: NextRequest) {
   try {
-    const session = await getSession();
+    const session = await getSession(req.headers);
     const userId = session?.user?.id;
 
     if (!userId) {
-      return NextResponse.json(
+      return noStoreJson(
         { error: 'Authentication required' },
         { status: 401 }
       )
@@ -39,7 +45,7 @@ export async function GET(req: NextRequest) {
       SubscriptionManager.getSubscriptionFeatures(userId)
     ])
 
-    return NextResponse.json({
+    return noStoreJson({
       subscription: toClientSubscriptionPayload(subscription),
       features
     })
@@ -47,7 +53,7 @@ export async function GET(req: NextRequest) {
     console.error('Error fetching subscription:', error)
 
     // Return default free tier on error
-    return NextResponse.json({
+    return noStoreJson({
       subscription: {
         tier: 'free',
         status: 'active',

@@ -24,3 +24,11 @@ export function getAccessPathForUser(
 
   return getPostAuthPath(user);
 }
+
+export function canAccessWithoutAppRole(pathname: string | null | undefined): boolean {
+  if (!pathname) {
+    return false;
+  }
+
+  return pathname === "/account" || pathname.startsWith("/account/");
+}

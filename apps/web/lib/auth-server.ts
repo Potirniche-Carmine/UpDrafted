@@ -7,7 +7,12 @@ import { headers } from "next/headers";
  */
 
 export async function auth_server() {
-    const session = await auth.api.getSession({ headers: await headers() });
+    const session = await auth.api.getSession({
+        headers: await headers(),
+        query: {
+            disableCookieCache: true,
+        },
+    });
 
     return {
         userId: session?.user?.id ?? null,
@@ -24,5 +29,10 @@ export { auth_server as auth };
  * Get session with full user data
  */
 export async function getServerSession() {
-    return auth.api.getSession({ headers: await headers() });
+    return auth.api.getSession({
+        headers: await headers(),
+        query: {
+            disableCookieCache: true,
+        },
+    });
 }

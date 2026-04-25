@@ -14,6 +14,7 @@ import { useToast } from '@/components/ui/toast'
 // Global request cache to prevent duplicate API calls with longer cache time
 const requestCache = new Map<string, { promise: Promise<UsageLimits>, timestamp: number }>()
 const CACHE_DURATION = 15 * 60 * 1000 // 15 minutes
+const AUTH_RETRY_DELAY_MS = 250
 
 interface ConnectionUsage {
   current: number
@@ -32,8 +33,12 @@ interface UsageLimits {
   }
 }
 
-async function fetchUsageLimits(): Promise<UsageLimits> {
-  const cacheKey = 'usage-limits'
+async function delay(ms: number) {
+  await new Promise((resolve) => setTimeout(resolve, ms))
+}
+
+async function fetchUsageLimits(userId: string): Promise<UsageLimits> {
+  const cacheKey = `usage-limits:${userId}`
 
   // Check if there's already a recent request in cache
   const cached = requestCache.get(cacheKey)
@@ -42,12 +47,32 @@ async function fetchUsageLimits(): Promise<UsageLimits> {
   }
 
   // Create new request promise
-  const requestPromise = fetch('/api/usage-limits').then(response => {
+  const requestPromise = (async () => {
+    let response = await fetch('/api/usage-limits', {
+      credentials: 'include',
+      cache: 'no-store',
+      headers: {
+        'Cache-Control': 'no-store',
+      },
+    })
+
+    if (response.status === 401 || response.status === 403) {
+      await delay(AUTH_RETRY_DELAY_MS)
+      response = await fetch('/api/usage-limits', {
+        credentials: 'include',
+        cache: 'no-store',
+        headers: {
+          'Cache-Control': 'no-store',
+        },
+      })
+    }
+
     if (!response.ok) {
       throw new Error(`HTTP ${response.status}`)
     }
+
     return response.json()
-  })
+  })()
 
   // Cache the promise with timestamp
   requestCache.set(cacheKey, {
@@ -159,7 +184,7 @@ export function PremiumLimitsCard() {
       setFetchingUsage(true)
 
       try {
-        const data = await fetchUsageLimits()
+        const data = await fetchUsageLimits(user.id)
         setUsageData(data)
       } catch (error) {
         console.error('PremiumLimitsCard: Fetch error:', error)

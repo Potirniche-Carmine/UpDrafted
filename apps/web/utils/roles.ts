@@ -23,8 +23,13 @@ const isSessionBanned = (
  * Get the current session from better-auth. Banned users are filtered out,
  * so callers that pass the null check are guaranteed to be unbanned.
  */
-export const getSession = async () => {
-  const session = await auth.api.getSession({ headers: await headers() });
+export const getSession = async (requestHeaders?: Headers) => {
+  const session = await auth.api.getSession({
+    headers: requestHeaders ?? await headers(),
+    query: {
+      disableCookieCache: true,
+    },
+  });
   if (session?.user && isSessionBanned(session.user as never)) {
     return null;
   }

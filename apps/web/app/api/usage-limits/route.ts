@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { getSession } from "@/utils/roles"
 import { db } from '@/database/db'
 import { connections } from '@/database/schema'
@@ -22,13 +22,19 @@ interface UsageLimits {
   };
 }
 
-export async function GET() {
+function noStoreJson(body: unknown, init?: ConstructorParameters<typeof NextResponse.json>[1]) {
+  const response = NextResponse.json(body, init)
+  response.headers.set('Cache-Control', 'no-store, max-age=0')
+  return response
+}
+
+export async function GET(req: NextRequest) {
   try {
-    const session = await getSession();
+    const session = await getSession(req.headers);
     const userId = session?.user?.id;
 
     if (!userId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return noStoreJson({ error: 'Unauthorized' }, { status: 401 })
     }
 
     // Check Redis/memory cache first with longer TTL for this data
@@ -36,7 +42,7 @@ export async function GET() {
     const cachedData = await getCachedWithType<UsageLimits>(cacheKey)
 
     if (cachedData) {
-      return NextResponse.json(cachedData);
+      return noStoreJson(cachedData);
     }
 
     // Force fresh subscription data (in case user just returned from Stripe portal)
@@ -69,7 +75,7 @@ export async function GET() {
 
       // Cache with longer TTL for premium users (15 minutes)
       await setCachedWithType(cacheKey, optimizedUsageLimits, 'usageLimits')
-      return NextResponse.json(optimizedUsageLimits)
+      return noStoreJson(optimizedUsageLimits)
     }
 
     // For free users or limited premium users, get actual counts
@@ -135,11 +141,11 @@ export async function GET() {
     // Cache the result with longer TTL for regular users (15 minutes)
     await setCachedWithType(cacheKey, usageLimits, 'usageLimits')
 
-    return NextResponse.json(usageLimits)
+    return noStoreJson(usageLimits)
 
   } catch (error) {
     console.error('Error fetching usage limits:', error)
-    return NextResponse.json(
+    return noStoreJson(
       { error: 'Failed to fetch usage limits' },
       { status: 500 }
     )

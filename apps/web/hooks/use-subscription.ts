@@ -55,12 +55,28 @@ const DEFAULT_SUBSCRIPTION: SubscriptionData = {
   cancelAtPeriodEnd: false
 }
 
+const AUTH_RETRY_DELAY_MS = 250
+
 function getCachedData(userId: string) {
   const cached = subscriptionCache.get(userId)
   if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
     return cached
   }
   return null
+}
+
+async function delay(ms: number) {
+  await new Promise((resolve) => setTimeout(resolve, ms))
+}
+
+async function fetchSubscriptionResponse() {
+  return fetch('/api/subscription', {
+    credentials: 'include',
+    cache: 'no-store',
+    headers: {
+      'Cache-Control': 'no-store',
+    },
+  })
 }
 
 export function useSubscription(): UseSubscriptionReturn {
@@ -96,9 +112,12 @@ export function useSubscription(): UseSubscriptionReturn {
     setError(null)
 
     try {
-      const response = await fetch('/api/subscription', {
-        credentials: 'include'
-      })
+      let response = await fetchSubscriptionResponse()
+
+      if (response.status === 401 || response.status === 403) {
+        await delay(AUTH_RETRY_DELAY_MS)
+        response = await fetchSubscriptionResponse()
+      }
 
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`)

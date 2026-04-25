@@ -3,7 +3,7 @@
 import { useUser } from '@/hooks/use-auth';
 import { usePathname } from 'next/navigation';
 import { useEffect, useState, ReactNode, useCallback, useRef } from 'react';
-import { getAccessPathForUser, hasAppRole } from '@/lib/auth-routing';
+import { canAccessWithoutAppRole, getAccessPathForUser, hasAppRole } from '@/lib/auth-routing';
 
 interface AuthWrapperProps {
   children: ReactNode;
@@ -185,10 +185,11 @@ export function AuthWrapper({
 
       const userRole = user?.role as string;
       const hasRole = hasAppRole(userRole);
+      const canStayWithoutRole = canAccessWithoutAppRole(pathname);
 
       // Users without a completed onboarding role stay on onboarding until they finish.
       if (!hasRole) {
-        if (!pathname?.startsWith('/onboarding')) {
+        if (!pathname?.startsWith('/onboarding') && !canStayWithoutRole) {
           await handleRedirect('/onboarding');
           return;
         }
