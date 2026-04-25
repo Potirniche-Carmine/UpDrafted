@@ -53,10 +53,9 @@
     "@aws-sdk/xml-builder": {
       "fast-xml-parser": "5.7.0"
     },
-    "resend": {
-      "svix": "1.92.2"
-    },
     "esbuild": "^0.25.12",
+    "postcss": "^8.5.10",
+    "svix": "1.92.2",
     "vite": "^7.0.0",
     "vitest": "^3.2.4"
   }
