@@ -22,14 +22,3 @@ export const {
     signOut,
     magicLink,
 } = authClient;
-
-// Helper hook to get the current user with role
-export function useUser() {
-    const { data: session, isPending, error } = useSession();
-    return {
-        user: session?.user ?? null,
-        isLoaded: !isPending,
-        isSignedIn: !!session?.user,
-        error,
-    };
-}

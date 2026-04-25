@@ -32,3 +32,15 @@ export function canAccessWithoutAppRole(pathname: string | null | undefined): bo
 
   return pathname === "/account" || pathname.startsWith("/account/");
 }
+
+export function getRequiredRolesForPathname(pathname: string | null | undefined): AppRole[] | null {
+  if (!pathname) {
+    return null;
+  }
+
+  if (pathname === "/admin" || pathname.startsWith("/admin/")) {
+    return ["admin"];
+  }
+
+  return null;
+}

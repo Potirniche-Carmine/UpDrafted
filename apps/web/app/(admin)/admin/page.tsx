@@ -5,25 +5,16 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
 import { AdminRoleSwitcher } from "@/components/admin-role-switcher";
 
 export default function AdminPage() {
   const { user, isLoaded } = useUser();
-  const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [initialized, setInitialized] = useState(false);
   const [checkingStatus, setCheckingStatus] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const isAdmin = user?.role === 'admin';
-
-  // Redirect non-admin users
-  useEffect(() => {
-    if (isLoaded && !isAdmin) {
-      router.push('/dashboard');
-    }
-  }, [isLoaded, isAdmin, router]);
 
   // Check if admin is already initialized
   useEffect(() => {
@@ -102,7 +93,7 @@ export default function AdminPage() {
   };
 
   // Show loading while checking authentication
-  if (!isLoaded || (isLoaded && !isAdmin) || checkingStatus) {
+  if (!isLoaded || checkingStatus) {
     return (
       <div className="container mx-auto p-8">
         <Card className="max-w-md mx-auto">

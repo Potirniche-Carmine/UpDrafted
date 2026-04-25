@@ -22,7 +22,7 @@ interface UsageLimits {
   };
 }
 
-function noStoreJson(body: unknown, init?: ConstructorParameters<typeof NextResponse.json>[1]) {
+function noStoreJson(body: unknown, init?: ResponseInit) {
   const response = NextResponse.json(body, init)
   response.headers.set('Cache-Control', 'no-store, max-age=0')
   return response

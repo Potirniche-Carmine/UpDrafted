@@ -3,7 +3,9 @@
 import type { ReactNode } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { useSession as useBetterAuthSession, signIn as betterAuthSignIn, signUp as betterAuthSignUp, signOut as betterAuthSignOut } from "@/lib/auth-client";
+import { useSession, signIn, signUp, signOut } from "@/lib/auth-client";
+
+export { signIn, signUp, signOut };
 
 // Types matching what Clerk provided
 export type Roles = 'admin' | 'athlete' | 'coach' | 'recruiter';
@@ -33,37 +35,43 @@ interface UseAuthReturn {
     getToken: () => Promise<string | null>;
 }
 
-/**
- * Drop-in replacement for Clerk's useUser hook.
- * Returns the current user from better-auth session. The underlying client
- * short-circuits the network call when no session cookie is present.
- */
-export function useUser(): UseUserReturn {
-    const { data: session, isPending } = useBetterAuthSession();
-
-    if (isPending) {
-        return { user: null, isLoaded: false, isSignedIn: false };
-    }
-
+function mapSessionUser(session: { user?: {
+    id: string;
+    email: string;
+    role?: Roles | null;
+    name?: string | null;
+    image?: string | null;
+    emailVerified?: boolean;
+} } | null | undefined): User | null {
     if (!session?.user) {
-        return { user: null, isLoaded: true, isSignedIn: false };
+        return null;
     }
 
-    const user: User = {
+    return {
         id: session.user.id,
         email: session.user.email,
-        role: (session.user as { role?: Roles }).role,
+        role: session.user.role,
         name: session.user.name,
         image: session.user.image ?? null,
         emailVerified: session.user.emailVerified,
         primaryEmail: session.user.email,
         primaryEmailAddress: { emailAddress: session.user.email },
     };
+}
+
+/**
+ * Drop-in replacement for Clerk's useUser hook.
+ * Returns the current user from better-auth session. The underlying client
+ * short-circuits the network call when no session cookie is present.
+ */
+export function useUser(): UseUserReturn {
+    const { data: session, isPending } = useSession();
+    const user = mapSessionUser(session);
 
     return {
         user,
-        isLoaded: true,
-        isSignedIn: true,
+        isLoaded: !isPending,
+        isSignedIn: !!user,
     };
 }
 
@@ -71,20 +79,15 @@ export function useUser(): UseUserReturn {
  * Drop-in replacement for Clerk's useAuth hook.
  */
 export function useAuth(): UseAuthReturn {
-    const { data: session, isPending } = useBetterAuthSession();
+    const { user, isLoaded, isSignedIn } = useUser();
 
     return {
-        userId: session?.user?.id ?? null,
-        isLoaded: !isPending,
-        isSignedIn: !!session?.user,
+        userId: user?.id ?? null,
+        isLoaded,
+        isSignedIn,
         getToken: async () => null,
     };
 }
-
-// Re-export sign in/out functions for convenience
-export const signIn = betterAuthSignIn;
-export const signUp = betterAuthSignUp;
-export const signOut = betterAuthSignOut;
 
 // Legacy component placeholders - these should be replaced with custom components
 export function SignedIn({ children }: { children: ReactNode }) {

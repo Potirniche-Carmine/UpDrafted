@@ -1,18 +1,21 @@
-import { auth } from "@/lib/auth";
+import { auth as betterAuth } from "@/lib/auth";
 import { headers } from "next/headers";
 
-/**
- * Server-side auth utilities for API routes and server components.
- * Drop-in replacement for Clerk's auth() function.
- */
-
-export async function auth_server() {
-    const session = await auth.api.getSession({
-        headers: await headers(),
+async function fetchServerSession(requestHeaders?: Headers) {
+    return betterAuth.api.getSession({
+        headers: requestHeaders ?? await headers(),
         query: {
             disableCookieCache: true,
         },
     });
+}
+
+export async function getServerSession(requestHeaders?: Headers) {
+    return fetchServerSession(requestHeaders);
+}
+
+export async function auth() {
+    const session = await fetchServerSession();
 
     return {
         userId: session?.user?.id ?? null,
@@ -22,17 +25,4 @@ export async function auth_server() {
     };
 }
 
-// Re-export as 'auth' for compatibility with existing imports
-export { auth_server as auth };
-
-/**
- * Get session with full user data
- */
-export async function getServerSession() {
-    return auth.api.getSession({
-        headers: await headers(),
-        query: {
-            disableCookieCache: true,
-        },
-    });
-}
+export const auth_server = auth;

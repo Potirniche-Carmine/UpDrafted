@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { CONFIG } from './utils/config';
-import { canAccessWithoutAppRole, getPostAuthPath, hasAppRole } from './lib/auth-routing';
+import { canAccessWithoutAppRole, getPostAuthPath, getRequiredRolesForPathname, hasAppRole } from './lib/auth-routing';
 
 /**
  * Proxy (middleware) for route protection and security headers.
@@ -188,8 +188,7 @@ export default async function proxy(req: NextRequest) {
         return addSecurityHeaders(NextResponse.next());
     }
 
-    // Protected app routes - require session cookie
-    // Role-based access control and onboarding checks are handled by AuthWrapper and page components.
+    // Protected app routes - require session cookie.
     const isProtectedPage = !isPublicRoute;
     if (!hasSession && isProtectedPage) {
         return secureRedirect(new URL('/sign-in', req.url));
@@ -200,6 +199,7 @@ export default async function proxy(req: NextRequest) {
         const signedInDestination = getPostAuthPath({ role: sessionState.role });
         const hasCompletedOnboarding = hasAppRole(sessionState.role);
         const canStayWithoutRole = canAccessWithoutAppRole(pathname);
+        const requiredRoles = getRequiredRolesForPathname(pathname);
 
         if (!sessionState.isAuthenticated && isProtectedPage) {
             return secureRedirect(new URL('/sign-in', req.url));
@@ -222,6 +222,10 @@ export default async function proxy(req: NextRequest) {
             }
 
             if (hasCompletedOnboarding && pathname.startsWith('/onboarding')) {
+                return secureRedirect(new URL('/dashboard', req.url));
+            }
+
+            if (requiredRoles && (!sessionState.role || !requiredRoles.includes(sessionState.role as typeof requiredRoles[number]))) {
                 return secureRedirect(new URL('/dashboard', req.url));
             }
         }
