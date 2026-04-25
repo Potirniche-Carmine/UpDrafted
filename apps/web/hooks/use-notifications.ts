@@ -53,17 +53,17 @@ const useNotificationsStore = create(
             }
           });
 
+          if (response.status === 401 || response.status === 403) {
+            set({ unreadCount: 0, lastFetched: Date.now() });
+            return;
+          }
+
           if (!response.ok) {
-            // Handle different error types
-            if (response.status === 401) {
-              throw new Error('Authentication failed');
-            } else if (response.status === 403) {
-              throw new Error('Access forbidden');
-            } else if (response.status >= 500) {
+            if (response.status >= 500) {
               throw new Error('Server error');
-            } else {
-              throw new Error(`HTTP ${response.status}`);
             }
+
+            throw new Error(`HTTP ${response.status}`);
           }
 
           const data = await response.json();
@@ -80,10 +80,10 @@ const useNotificationsStore = create(
             console.warn('Failed to fetch unread count:', data.error);
           }
         } catch (error) {
-          console.error('Failed to fetch unread notifications count:', error);
-          // Don't reset count on network errors to prevent flickering
-          if (error instanceof Error && error.message === 'Authentication failed') {
-            set({ unreadCount: 0 }); // Reset count only on auth errors
+          if (error instanceof Error && error.message.startsWith('HTTP 4')) {
+            set({ unreadCount: 0 });
+          } else {
+            console.error('Failed to fetch unread notifications count:', error);
           }
         } finally {
           set({ isFetching: false });

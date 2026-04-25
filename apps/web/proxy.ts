@@ -71,12 +71,16 @@ async function getSessionState(req: NextRequest): Promise<SessionState> {
     }
 
     try {
-        const sessionResponse = await fetch(new URL('/api/auth/get-session', req.url), {
+        const sessionUrl = new URL('/api/auth/get-session', req.url);
+        sessionUrl.searchParams.set('disableCookieCache', 'true');
+
+        const sessionResponse = await fetch(sessionUrl, {
             method: 'GET',
             headers: {
                 cookie: cookieHeader,
                 accept: 'application/json',
             },
+            cache: 'no-store',
         });
 
         if (!sessionResponse.ok) {

@@ -26,6 +26,7 @@ import { useProfileNavigation } from '@/hooks/use-profile-navigation';
 import { useNotifications } from '@/hooks/use-notifications';
 import { SearchBar } from '@/app/(search)/components/search-bar';
 import { useUser, signOut } from "@/hooks/use-auth";
+import { getAccessPathForUser, hasAppRole } from "@/lib/auth-routing";
 
 interface NavItem {
   key: string;
@@ -166,17 +167,95 @@ function UserButtonDropdown({
   );
 }
 
+function SignedInUserMenu({
+  user,
+  hasCompletedOnboarding,
+  isAdmin,
+}: {
+  user: { name?: string | null; email: string; image?: string | null };
+  hasCompletedOnboarding: boolean;
+  isAdmin: boolean;
+}) {
+  const { navigateToProfile, isNavigating: profileNavigating } = useProfileNavigation();
+
+  const handleViewProfile = async () => {
+    await navigateToProfile();
+  };
+
+  return (
+    <UserButtonDropdown
+      user={user}
+      hasCompletedOnboarding={hasCompletedOnboarding}
+      profileNavigating={profileNavigating}
+      handleViewProfile={handleViewProfile}
+      isAdmin={isAdmin}
+    />
+  );
+}
+
+function OnboardedHeaderContent({
+  user,
+  userRole,
+  pathname,
+  navItems,
+  isAdmin,
+}: {
+  user: { name?: string | null; email: string; image?: string | null };
+  userRole: string;
+  pathname: string;
+  navItems: NavItem[];
+  isAdmin: boolean;
+}) {
+  const { unreadCount: notificationCount } = useNotifications();
+
+  return (
+    <>
+      <div className="hidden md:flex flex-1 justify-center max-w-lg min-w-0 mx-4">
+        <div className="w-full max-w-md min-w-0">
+          <SearchBar userRole={userRole} />
+        </div>
+      </div>
+
+      <nav className="hidden md:flex items-center gap-1">
+        {navItems.map((item) => {
+          const isActive = pathname === item.href || (item.href !== '/' && pathname.startsWith(item.href));
+          return (
+            <NavItemComponent
+              key={item.key}
+              item={item}
+              notificationCount={item.key === 'notifications' ? notificationCount : 0}
+              isActive={isActive}
+            />
+          );
+        })}
+        <div className="w-px h-6 bg-gray-200 dark:bg-gray-800 mx-1" />
+        <ThemeToggle />
+        <SignedInUserMenu
+          user={user}
+          hasCompletedOnboarding
+          isAdmin={isAdmin}
+        />
+      </nav>
+
+      <div className="md:hidden flex items-center">
+        <SignedInUserMenu
+          user={user}
+          hasCompletedOnboarding
+          isAdmin={isAdmin}
+        />
+      </div>
+    </>
+  );
+}
+
 export function Header() {
   const { user, isSignedIn, isLoaded } = useUser();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
-  const { navigateToProfile, isNavigating: profileNavigating } = useProfileNavigation();
-  const { unreadCount: notificationCount } = useNotifications();
-  const router = useRouter();
   const pathname = usePathname();
 
   const userRole = user?.role as string | undefined;
-  const hasCompletedOnboarding = userRole && ['athlete', 'coach', 'recruiter', 'admin'].includes(userRole);
+  const hasCompletedOnboarding = hasAppRole(userRole);
   const isAdmin = userRole === 'admin';
 
   useEffect(() => {
@@ -196,11 +275,9 @@ export function Header() {
 
   const handleLogoClick = (e: React.MouseEvent) => {
     e.preventDefault();
-    if (isSignedIn && hasCompletedOnboarding) {
-      router.push('/dashboard');
-    } else {
-      router.push('/');
-    }
+
+    const destination = isSignedIn ? getAccessPathForUser(user) : '/';
+    window.location.assign(destination);
   };
 
   const navItems: NavItem[] = [
@@ -209,10 +286,6 @@ export function Header() {
     { key: "messages", href: "/messages", label: "Messages", icon: <MessageSquare className="h-5 w-5" /> },
     { key: "notifications", href: "/notifications", label: "Notifications", icon: <Bell className="h-5 w-5" /> },
   ];
-
-  const handleViewProfile = async () => {
-    await navigateToProfile();
-  };
 
   const renderLogo = () => (
     <a
@@ -254,52 +327,15 @@ export function Header() {
       <header className="sticky top-0 z-51 w-full border-b border-gray-200/80 dark:border-gray-800/80 bg-white/90 dark:bg-gray-950/90 backdrop-blur supports-[backdrop-filter]:bg-white/70 dark:supports-[backdrop-filter]:bg-gray-950/70">
         <div className="mx-auto max-w-screen-2xl flex h-14 lg:h-16 items-center justify-between gap-3 px-4 sm:px-6 lg:px-8">
           {renderLogo()}
-
-          {/* Desktop & Tablet Search Bar */}
-          <div className="hidden md:flex flex-1 justify-center max-w-lg min-w-0 mx-4">
-            <div className="w-full max-w-md min-w-0">
-              {userRole && <SearchBar userRole={userRole} />}
-            </div>
-          </div>
-
-          {/* Desktop Nav */}
-          <nav className="hidden md:flex items-center gap-1">
-            {navItems.map((item) => {
-              const isActive = pathname === item.href || (item.href !== '/' && pathname.startsWith(item.href));
-              return (
-                <NavItemComponent
-                  key={item.key}
-                  item={item}
-                  notificationCount={item.key === 'notifications' ? notificationCount : 0}
-                  isActive={isActive}
-                />
-              );
-            })}
-            <div className="w-px h-6 bg-gray-200 dark:bg-gray-800 mx-1" />
-            <ThemeToggle />
-            {user && (
-              <UserButtonDropdown
-                user={user}
-                hasCompletedOnboarding
-                profileNavigating={profileNavigating}
-                handleViewProfile={handleViewProfile}
-                isAdmin={isAdmin}
-              />
-            )}
-          </nav>
-
-          {/* Mobile: just profile */}
-          <div className="md:hidden flex items-center">
-            {user && (
-              <UserButtonDropdown
-                user={user}
-                hasCompletedOnboarding
-                profileNavigating={profileNavigating}
-                handleViewProfile={handleViewProfile}
-                isAdmin={isAdmin}
-              />
-            )}
-          </div>
+          {userRole && user && (
+            <OnboardedHeaderContent
+              user={user}
+              userRole={userRole}
+              pathname={pathname}
+              navItems={navItems}
+              isAdmin={isAdmin}
+            />
+          )}
         </div>
       </header>
     );
@@ -356,11 +392,9 @@ export function Header() {
             </>
           )}
           {isSignedIn && user && !hasCompletedOnboarding && (
-            <UserButtonDropdown
+            <SignedInUserMenu
               user={user}
               hasCompletedOnboarding={false}
-              profileNavigating={profileNavigating}
-              handleViewProfile={handleViewProfile}
               isAdmin={isAdmin}
             />
           )}
@@ -370,11 +404,9 @@ export function Header() {
         <div className="md:hidden flex items-center gap-2">
           <ThemeToggle />
           {isSignedIn && user && !hasCompletedOnboarding && (
-            <UserButtonDropdown
+            <SignedInUserMenu
               user={user}
               hasCompletedOnboarding={false}
-              profileNavigating={profileNavigating}
-              handleViewProfile={handleViewProfile}
               isAdmin={isAdmin}
             />
           )}

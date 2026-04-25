@@ -1,6 +1,7 @@
 "use client"
 
 import React, { createContext, useContext } from 'react'
+import { useSession } from '@/lib/auth-client'
 import { useSubscription as useSubscriptionHook, type SubscriptionData, type SubscriptionFeatures } from '@/hooks/use-subscription'
 
 interface SubscriptionContextType {
@@ -16,7 +17,23 @@ interface SubscriptionContextType {
 
 const SubscriptionContext = createContext<SubscriptionContextType | undefined>(undefined)
 
-export function SubscriptionProvider({ children }: { children: React.ReactNode }) {
+const DEFAULT_SUBSCRIPTION: SubscriptionData = {
+  tier: 'free',
+  status: 'active',
+  isActive: true,
+  isPremium: false,
+  currentPeriodEnd: null,
+  cancelAtPeriodEnd: false,
+}
+
+const DEFAULT_FEATURES: SubscriptionFeatures = {
+  advancedSearch: false,
+  profileViewInsights: false,
+  analytics: false,
+  maxConnectionsPerMonth: 5,
+}
+
+function AuthenticatedSubscriptionProvider({ children }: { children: React.ReactNode }) {
   const { subscription, features, loading, error, refetch } = useSubscriptionHook()
 
   const contextValue: SubscriptionContextType = {
@@ -34,6 +51,48 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
       {children}
     </SubscriptionContext.Provider>
   )
+}
+
+export function SubscriptionProvider({ children }: { children: React.ReactNode }) {
+  const { data: session, isPending } = useSession()
+
+  if (isPending) {
+    const contextValue: SubscriptionContextType = {
+      subscription: DEFAULT_SUBSCRIPTION,
+      features: DEFAULT_FEATURES,
+      loading: true,
+      error: null,
+      refetch: async () => {},
+      isPremium: false,
+      isActive: true,
+    }
+
+    return (
+      <SubscriptionContext.Provider value={contextValue}>
+        {children}
+      </SubscriptionContext.Provider>
+    )
+  }
+
+  if (!session?.user) {
+    const contextValue: SubscriptionContextType = {
+      subscription: DEFAULT_SUBSCRIPTION,
+      features: DEFAULT_FEATURES,
+      loading: false,
+      error: null,
+      refetch: async () => {},
+      isPremium: false,
+      isActive: true,
+    }
+
+    return (
+      <SubscriptionContext.Provider value={contextValue}>
+        {children}
+      </SubscriptionContext.Provider>
+    )
+  }
+
+  return <AuthenticatedSubscriptionProvider>{children}</AuthenticatedSubscriptionProvider>
 }
 
 export function useSubscription() {

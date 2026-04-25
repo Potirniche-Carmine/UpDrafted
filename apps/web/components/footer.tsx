@@ -3,6 +3,8 @@
 import * as React from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
+import { useUser } from '@/hooks/use-auth';
+import { getAccessPathForUser } from '@/lib/auth-routing';
 
 // Social Media Icons as Components
 const InstagramIcon = () => (
@@ -25,6 +27,8 @@ const FacebookIcon = () => (
 
 export function Footer() {
   const currentYear = new Date().getFullYear();
+  const { user, isSignedIn } = useUser();
+  const homeHref = isSignedIn ? getAccessPathForUser(user) : "/";
 
   const footerLinks = [
     { href: "/about", label: "About" },
@@ -48,7 +52,7 @@ export function Footer() {
         {/* Top row: logo / nav / socials */}
         <div className="flex flex-col items-center gap-6 md:flex-row md:justify-between md:gap-8">
           {/* Logo */}
-          <Link href="/" className="flex items-center shrink-0">
+          <Link href={homeHref} className="flex items-center shrink-0">
             <Image
               src="/updrafted-logo.webp"
               alt="UpDrafted"

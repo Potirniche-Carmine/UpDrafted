@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { Search, MessageSquare, LayoutDashboard, Compass, UserPlus } from "lucide-react";
 import { useUser } from "@/hooks/use-auth";
 import { useNotifications } from '@/hooks/use-notifications';
+import { hasAppRole } from "@/lib/auth-routing";
 
 interface NavItem {
   key: string;
@@ -32,11 +33,10 @@ function NotificationBadge({ count }: { count: number }) {
 export function MobileBottomNav() {
   const pathname = usePathname();
   const { isSignedIn, user } = useUser();
-  const { unreadCount: messageCount } = useNotifications();
 
   // Check if user has completed onboarding
-  const userRole = user?.role as string;
-  const hasCompletedOnboarding = userRole && ['athlete', 'coach', 'recruiter', 'admin'].includes(userRole);
+  const userRole = user?.role;
+  const hasCompletedOnboarding = hasAppRole(userRole);
 
   const [isMounted, setIsMounted] = useState(false);
 
@@ -48,6 +48,12 @@ export function MobileBottomNav() {
   if (!isMounted || !isSignedIn || !hasCompletedOnboarding) {
     return null;
   }
+
+  return <AuthenticatedMobileBottomNav pathname={pathname} />;
+}
+
+function AuthenticatedMobileBottomNav({ pathname }: { pathname: string }) {
+  const { unreadCount: messageCount } = useNotifications();
 
   const navItems: NavItem[] = [
     { key: "dashboard", href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },

@@ -25,6 +25,49 @@ function getEnvValue(name: string, fallback?: string): string {
     return fallback;
 }
 
+function normalizeHttpOrigin(value?: string | null): string | null {
+    if (!value || value.includes("PLACEHOLDER")) {
+        return null;
+    }
+
+    try {
+        const url = new URL(value);
+        if (url.protocol !== "http:" && url.protocol !== "https:") {
+            return null;
+        }
+        return url.origin;
+    } catch {
+        return null;
+    }
+}
+
+function getTrustedOrigins(request?: Request): string[] {
+    const originHeader = normalizeHttpOrigin(request?.headers.get("origin"));
+    const forwardedProto = request?.headers.get("x-forwarded-proto") ?? "http";
+    const forwardedHost = request?.headers.get("x-forwarded-host");
+    const host = request?.headers.get("host");
+
+    const forwardedOrigin = forwardedHost
+        ? normalizeHttpOrigin(`${forwardedProto}://${forwardedHost}`)
+        : null;
+    const hostOrigin = host
+        ? normalizeHttpOrigin(`${forwardedProto}://${host}`)
+        : null;
+
+    return Array.from(new Set([
+        APP_URL,
+        process.env.NEXT_PUBLIC_APP_URL,
+        process.env.BETTER_AUTH_BASE_URL,
+        "https://updrafted.us",
+        ...(process.env.NODE_ENV === "production"
+            ? []
+            : ["http://localhost:3000", "http://127.0.0.1:3000"]),
+        originHeader,
+        forwardedOrigin,
+        hostOrigin,
+    ].map((value) => normalizeHttpOrigin(value)).filter((value): value is string => Boolean(value))));
+}
+
 // Initialize Resend client
 const resend = new Resend(getEnvValue("RESEND_API_KEY", "re_placeholder"));
 
@@ -169,8 +212,9 @@ export const auth = betterAuth({
         expiresIn: 60 * 60 * 24 * 7, // 7 days
         updateAge: 60 * 60 * 24, // Update session every 24 hours
         cookieCache: {
-            enabled: true,
-            maxAge: 5 * 60, // 5 minutes
+            // Role and email-verification gates need the freshest possible session
+            // data, especially right after sign-in, verification, and onboarding.
+            enabled: false,
         },
     },
 
@@ -237,10 +281,7 @@ export const auth = betterAuth({
     ],
 
     // Trust proxy for production environments
-    trustedOrigins: [
-        APP_URL,
-        "https://updrafted.us",
-    ].filter(Boolean),
+    trustedOrigins: (request) => getTrustedOrigins(request),
 });
 
 // Export types for use in other files
