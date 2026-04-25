@@ -42,9 +42,11 @@ export function OnboardingWrapper({
     const checkOnboardingAuth = async () => {
       if (!isLoaded) return;
 
-      // If not signed in, redirect to landing page
+      // If not signed in, send them to sign-in. Going to '/' would bounce off the
+      // proxy back to /dashboard (and then back here) when a stale session cookie
+      // is still present, producing a redirect loop.
       if (!isSignedIn) {
-        await handleRedirect('/');
+        await handleRedirect('/sign-in');
         return;
       }
 
@@ -135,7 +137,7 @@ export function AuthWrapper({
       // 2. Onboarding Logic (Legacy support, prefer OnboardingWrapper)
       if (type === 'onboarding') {
         if (!isSignedIn) {
-          await handleRedirect('/');
+          await handleRedirect('/sign-in');
           return;
         }
         const userRole = user?.role as string;

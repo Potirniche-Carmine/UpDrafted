@@ -12,13 +12,12 @@ import {
   Lock,
   Zap,
 } from "lucide-react";
-import { AuthWrapper } from "../../components/auth-wrapper";
 import { pageMetadata } from "@/lib/seo";
 import { SportsCarousel } from "@/components/sports-carousel";
 
 export const metadata = pageMetadata.home();
 
-function HomePageContent() {
+export default function HomePage() {
   return (
     <div className="flex flex-col">
       {/* ============== HERO ============== */}
@@ -618,13 +617,5 @@ function DiffCard({
       <h4 className="font-semibold mb-1.5">{title}</h4>
       <p className="text-sm text-muted-foreground leading-relaxed">{body}</p>
     </div>
-  );
-}
-
-export default function HomePage() {
-  return (
-    <AuthWrapper type="landing" requireAuth={false}>
-      <HomePageContent />
-    </AuthWrapper>
   );
 }

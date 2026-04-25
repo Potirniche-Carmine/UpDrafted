@@ -18,7 +18,6 @@ import {
 import {
   Sheet,
   SheetContent,
-  SheetDescription,
   SheetHeader,
   SheetTitle,
   SheetTrigger,
@@ -392,46 +391,49 @@ export function Header() {
                     <Menu className="h-5 w-5" />
                   </Button>
                 </SheetTrigger>
-                <SheetContent side="right" className="w-[300px] sm:w-[360px]">
-                  <SheetHeader>
-                    <SheetTitle className="text-left">UpDrafted</SheetTitle>
-                    <SheetDescription className="text-left">
-                      Recruit yourself.
-                    </SheetDescription>
+                <SheetContent side="right" className="w-[85vw] max-w-sm p-0 flex flex-col">
+                  <SheetHeader className="px-6 pt-6 pb-4 border-b border-border/60">
+                    <SheetTitle className="text-left text-lg">UpDrafted</SheetTitle>
                   </SheetHeader>
 
-                  <div className="mt-6 space-y-4">
-                    <div className="space-y-1">
-                      {[
-                        ...marketingLinks,
-                        { href: "/contact", label: "Contact" },
-                      ].map((link) => (
-                        <Link
-                          key={link.href}
-                          href={link.href}
-                          onClick={() => setMobileMenuOpen(false)}
-                          className="block px-3 py-3 rounded-lg text-base font-medium text-foreground hover:text-[#01ae79] hover:bg-[#01ae79]/5 transition-colors"
-                        >
-                          {link.label}
-                        </Link>
-                      ))}
-                    </div>
+                  <div className="flex-1 overflow-y-auto px-3 py-4 space-y-1">
+                    {[
+                      ...marketingLinks,
+                      { href: "/contact", label: "Contact" },
+                    ].map((link) => (
+                      <Link
+                        key={link.href}
+                        href={link.href}
+                        onClick={() => setMobileMenuOpen(false)}
+                        className="block px-3 py-3 rounded-lg text-base font-medium text-foreground hover:text-[#01ae79] hover:bg-[#01ae79]/5 transition-colors"
+                      >
+                        {link.label}
+                      </Link>
+                    ))}
+                  </div>
 
-                    <div className="border-t border-gray-200 dark:border-gray-800 pt-4 space-y-2">
-                      <Link href="/sign-up" onClick={() => setMobileMenuOpen(false)}>
-                        <Button className="w-full bg-[#01ae79] hover:bg-[#018a60] text-white py-3 text-base font-semibold">
-                          Create profile
-                        </Button>
-                      </Link>
-                      <Link href="/sign-in" onClick={() => setMobileMenuOpen(false)}>
-                        <Button
-                          variant="outline"
-                          className="w-full border-[#01ae79]/30 hover:bg-[#01ae79]/5 text-[#01ae79] py-3 text-base font-semibold"
-                        >
-                          Sign in
-                        </Button>
-                      </Link>
-                    </div>
+                  <div className="border-t border-border/60 p-4 space-y-2.5 bg-background">
+                    <Link
+                      href="/sign-up"
+                      onClick={() => setMobileMenuOpen(false)}
+                      className="block"
+                    >
+                      <Button className="w-full h-11 bg-[#01ae79] hover:bg-[#018a60] text-white text-base font-semibold rounded-lg shadow-sm">
+                        Create profile
+                      </Button>
+                    </Link>
+                    <Link
+                      href="/sign-in"
+                      onClick={() => setMobileMenuOpen(false)}
+                      className="block"
+                    >
+                      <Button
+                        variant="outline"
+                        className="w-full h-11 border-[#01ae79]/40 hover:bg-[#01ae79]/5 text-[#01ae79] hover:text-[#01ae79] text-base font-semibold rounded-lg"
+                      >
+                        Sign in
+                      </Button>
+                    </Link>
                   </div>
                 </SheetContent>
               </Sheet>

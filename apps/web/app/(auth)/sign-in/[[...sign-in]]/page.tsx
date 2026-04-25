@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { signIn } from "@/lib/auth-client";
 import { useUser } from "@/hooks/use-auth";
 import {
@@ -13,17 +13,11 @@ import {
 import { ForgotPasswordDialog } from "@/components/forgot-password-dialog";
 import { MagicLinkDialog } from "@/components/magic-link-dialog";
 
-const COMPLETED_ROLES = new Set(["athlete", "coach", "recruiter", "admin"]);
 const ALLOWED_SIGN_IN_PARAMS = ["verified", "reset", "error"] as const;
 
-function getPostAuthDestination(role?: string | null) {
-  return role && COMPLETED_ROLES.has(role) ? "/dashboard" : "/onboarding";
-}
-
 export default function SignInPage() {
-  const router = useRouter();
   const searchParams = useSearchParams();
-  const { user, isLoaded, isSignedIn } = useUser();
+  const { isLoaded, isSignedIn } = useUser();
   const [emailOrUsername, setEmailOrUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -31,7 +25,6 @@ export default function SignInPage() {
   const [loading, setLoading] = useState(false);
   const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [showMagicLink, setShowMagicLink] = useState(false);
-  const destination = getPostAuthDestination(user?.role as string | null | undefined);
 
   useEffect(() => {
     const sanitizedQuery = sanitizeAuthSearchParams(searchParams, ALLOWED_SIGN_IN_PARAMS);
@@ -56,27 +49,18 @@ export default function SignInPage() {
     }
   }, [searchParams]);
 
+  // If a signed-in user lands here directly (proxy didn't catch them), bounce them
+  // to the app entry point. Dashboard routes role-less users to onboarding itself,
+  // so we only need a single navigation here — no role lookup, no setTimeout race.
   useEffect(() => {
-    if (!isLoaded || !isSignedIn) {
-      return;
-    }
-
-    router.replace(destination);
-    router.refresh();
-
-    const fallbackRedirect = window.setTimeout(() => {
-      if (window.location.pathname !== destination) {
-        window.location.replace(destination);
-      }
-    }, 250);
-
-    return () => window.clearTimeout(fallbackRedirect);
-  }, [destination, isLoaded, isSignedIn, router]);
+    if (!isLoaded || !isSignedIn) return;
+    window.location.replace("/dashboard");
+  }, [isLoaded, isSignedIn]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
-    setSuccessMessage(""); // Clear success message on submit
+    setSuccessMessage("");
     setLoading(true);
 
     try {
@@ -86,21 +70,20 @@ export default function SignInPage() {
       });
 
       if (result.error) {
-        // Check if error is due to unverified email
+        // 403 means the email isn't verified yet — better-auth blocks the sign-in.
         if (result.error.status === 403) {
           persistVerificationEmail(emailOrUsername);
-          router.push("/verify-email");
+          window.location.replace("/verify-email");
           return;
-        } else {
-          setError(result.error.message || "Invalid credentials");
         }
+        setError(result.error.message || "Invalid credentials");
         setLoading(false);
         return;
       }
 
       setSuccessMessage("Signed in successfully. Redirecting...");
-      router.refresh();
-
+      // Hard-navigate so the new request carries the fresh session cookie and the
+      // proxy + dashboard see consistent auth state. Dashboard handles role routing.
       window.location.replace("/dashboard");
     } catch {
       setError("An unexpected error occurred. Please try again.");

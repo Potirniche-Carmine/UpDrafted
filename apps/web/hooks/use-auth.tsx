@@ -35,7 +35,8 @@ interface UseAuthReturn {
 
 /**
  * Drop-in replacement for Clerk's useUser hook.
- * Returns the current user from better-auth session.
+ * Returns the current user from better-auth session. The underlying client
+ * short-circuits the network call when no session cookie is present.
  */
 export function useUser(): UseUserReturn {
     const { data: session, isPending } = useBetterAuthSession();
@@ -68,7 +69,6 @@ export function useUser(): UseUserReturn {
 
 /**
  * Drop-in replacement for Clerk's useAuth hook.
- * Returns auth state from better-auth session.
  */
 export function useAuth(): UseAuthReturn {
     const { data: session, isPending } = useBetterAuthSession();
@@ -77,7 +77,6 @@ export function useAuth(): UseAuthReturn {
         userId: session?.user?.id ?? null,
         isLoaded: !isPending,
         isSignedIn: !!session?.user,
-        // better-auth uses cookies, so no token needed for API calls
         getToken: async () => null,
     };
 }

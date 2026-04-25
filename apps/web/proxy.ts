@@ -215,6 +215,12 @@ export default async function proxy(req: NextRequest) {
         if (sessionState.isAuthenticated && sessionState.emailVerified !== false && isVerifyEmailPage) {
             return secureRedirect(new URL('/dashboard', req.url));
         }
+
+        // Verified, signed-in users hitting the marketing landing page get sent to the app.
+        // Role-based routing (dashboard vs. onboarding) is handled by the destination page.
+        if (sessionState.isAuthenticated && sessionState.emailVerified !== false && pathname === '/') {
+            return secureRedirect(new URL('/dashboard', req.url));
+        }
     }
 
     return addSecurityHeaders(NextResponse.next());
