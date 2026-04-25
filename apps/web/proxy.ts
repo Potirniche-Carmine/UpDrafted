@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { CONFIG } from './utils/config';
-import { canAccessWithoutAppRole, getPostAuthPath, getRequiredRolesForPathname, hasAppRole } from './lib/auth-routing';
+import { canAccessWithoutAppRole, getPostAuthPath, hasAppRole } from './lib/auth-routing';
 
 /**
  * Proxy (middleware) for route protection and security headers.
@@ -199,7 +199,6 @@ export default async function proxy(req: NextRequest) {
         const signedInDestination = getPostAuthPath({ role: sessionState.role });
         const hasCompletedOnboarding = hasAppRole(sessionState.role);
         const canStayWithoutRole = canAccessWithoutAppRole(pathname);
-        const requiredRoles = getRequiredRolesForPathname(pathname);
 
         if (!sessionState.isAuthenticated && isProtectedPage) {
             return secureRedirect(new URL('/sign-in', req.url));
@@ -222,10 +221,6 @@ export default async function proxy(req: NextRequest) {
             }
 
             if (hasCompletedOnboarding && pathname.startsWith('/onboarding')) {
-                return secureRedirect(new URL('/dashboard', req.url));
-            }
-
-            if (requiredRoles && (!sessionState.role || !requiredRoles.includes(sessionState.role as typeof requiredRoles[number]))) {
                 return secureRedirect(new URL('/dashboard', req.url));
             }
         }

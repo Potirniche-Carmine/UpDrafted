@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { requireAnyRole, getSession } from '@/utils/roles';
+import { requireAnyRole } from '@/utils/roles';
 import { reportOperations, userOperations } from '@/database/db-utils';
 import { withRateLimit } from '@/utils/security';
 import { getCachedWithType, setCachedWithType, createErrorResponse, createSuccessResponse } from '@/utils/security';
@@ -24,7 +24,7 @@ export async function POST(request: NextRequest) {
     const authResult = await requireAnyRole();
     if (authResult instanceof NextResponse) return authResult;
 
-    const { userId: reporterId, role } = authResult;
+    const { userId: reporterId, role, user: authUser } = authResult;
 
     // Apply rate limiting for reports
     const rateLimitCheck = await withRateLimit(request, 'reports', reporterId, role);
@@ -47,19 +47,14 @@ export async function POST(request: NextRequest) {
     // Ensure the reporter exists in our database
     const reporterUser = await userOperations.getUserWithProfile(reporterId);
     if (!reporterUser) {
-      // Get user info from session to create the database record if needed (rare case)
       try {
-        const session = await getSession();
-        if (session?.user) {
-          // Create the user if they don't exist
-          const username = session.user.name || session.user.email.split('@')[0];
-          await userOperations.createUser({
-            id: reporterId,
-            name: username,
-            email: session.user.email,
-            role: session.user.role as any || 'athlete'
-          });
-        }
+        const username = authUser.name || authUser.email.split('@')[0];
+        await userOperations.createUser({
+          id: reporterId,
+          name: username,
+          email: authUser.email,
+          role,
+        });
       } catch (error) {
         console.error('Error creating reporter user:', error);
         return createErrorResponse('Unable to verify reporter account', 500);

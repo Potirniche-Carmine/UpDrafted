@@ -1,15 +1,12 @@
 import { NextResponse } from 'next/server'
 import { SubscriptionManager } from '@/lib/subscription'
-import { getSession } from "@/utils/roles"
+import { requireSession } from "@/utils/roles"
 
 export async function POST() {
   try {
-    const session = await getSession();
-    const userId = session?.user?.id;
-
-    if (!userId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+    const auth = await requireSession();
+    if (auth instanceof NextResponse) return auth;
+    const { userId } = auth;
 
     // Force invalidate server-side cache for the current user
     SubscriptionManager.invalidateUserCache(userId)

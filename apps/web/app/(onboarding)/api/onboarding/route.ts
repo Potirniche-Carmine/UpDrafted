@@ -1,4 +1,4 @@
-import { getSession } from '@/utils/roles'
+import { requireSession } from '@/utils/roles'
 import { NextRequest, NextResponse } from 'next/server'
 import { validateRoleAssignment, validateRoleEscalation } from '@/utils/validation'
 import { uploadProfilePicture, uploadOrganizationLogo } from '@/database/r2'
@@ -13,18 +13,11 @@ export const runtime = 'nodejs'
 export async function POST(request: NextRequest) {
   try {
     // Authenticate the request using better-auth session
-    const session = await getSession();
+    const auth = await requireSession();
+    if (auth instanceof NextResponse) return auth;
 
-    if (!session?.user) {
-      return NextResponse.json(
-        { error: 'Unauthorized - Missing or invalid session token' },
-        { status: 401 }
-      )
-    }
-
-    const userId = session.user.id;
-    // Check if user is admin
-    const isAdmin = session.user.role === 'admin';
+    const { userId, role: sessionRole, user } = auth;
+    const isAdmin = sessionRole === 'admin';
 
     // Parse the request body
     const formData = await request.formData()
@@ -32,7 +25,7 @@ export async function POST(request: NextRequest) {
     const profileImage = formData.get('profileImage') as File | null
     const organizationLogo = formData.get('organizationLogo') as File | null
     const userIdFromForm = formData.get('userId') as string
-    const email = formData.get('email') as string || session.user.email
+    const email = formData.get('email') as string || user.email
     const role = formData.get('role') as 'athlete' | 'coach' | 'recruiter'
 
     // Validate the userId matches the authenticated user

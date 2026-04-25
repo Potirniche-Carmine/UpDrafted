@@ -4,11 +4,10 @@ import type { ReactNode } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useSession, signIn, signUp, signOut } from "@/lib/auth-client";
+import type { Roles } from "@/lib/auth-routing";
 
 export { signIn, signUp, signOut };
-
-// Types matching what Clerk provided
-export type Roles = 'admin' | 'athlete' | 'coach' | 'recruiter';
+export type { Roles };
 
 export interface User {
     id: string;

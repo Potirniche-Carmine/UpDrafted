@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { schoolOperations } from '@/database/db-utils';
-import { getSession } from "@/utils/roles";
+import { requireSession } from "@/utils/roles";
 
 export async function GET(request: NextRequest) {
   try {
@@ -26,15 +26,8 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await getSession();
-  const userId = session?.user?.id;
-    
-    if (!userId) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
+    const auth = await requireSession();
+    if (auth instanceof NextResponse) return auth;
 
     const body = await request.json();
     const { name, classification } = body;

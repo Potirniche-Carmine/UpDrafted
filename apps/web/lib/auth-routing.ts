@@ -1,14 +1,16 @@
+// Single source of truth for app roles. Must stay in sync with
+// `userRoleEnum` in packages/db/src/schema.ts.
 export const APP_ROLES = ["admin", "athlete", "coach", "recruiter"] as const;
 
-export type AppRole = (typeof APP_ROLES)[number];
+export type Roles = (typeof APP_ROLES)[number];
 
 interface SessionUserLike {
   role?: unknown;
   emailVerified?: boolean | null;
 }
 
-export function hasAppRole(role: unknown): role is AppRole {
-  return typeof role === "string" && APP_ROLES.includes(role as AppRole);
+export function hasAppRole(role: unknown): role is Roles {
+  return typeof role === "string" && APP_ROLES.includes(role as Roles);
 }
 
 export function getPostAuthPath(user: SessionUserLike | null | undefined): "/dashboard" | "/onboarding" {
@@ -31,16 +33,4 @@ export function canAccessWithoutAppRole(pathname: string | null | undefined): bo
   }
 
   return pathname === "/account" || pathname.startsWith("/account/");
-}
-
-export function getRequiredRolesForPathname(pathname: string | null | undefined): AppRole[] | null {
-  if (!pathname) {
-    return null;
-  }
-
-  if (pathname === "/admin" || pathname.startsWith("/admin/")) {
-    return ["admin"];
-  }
-
-  return null;
 }

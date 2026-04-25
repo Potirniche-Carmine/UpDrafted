@@ -1,27 +1,13 @@
-import { getSession } from '@/utils/roles'
+import { requireAdmin } from '@/utils/roles'
 import { NextRequest, NextResponse } from 'next/server'
 import { userOperations } from '@/database/db-utils'
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await getSession()
+    const auth = await requireAdmin()
+    if (auth instanceof NextResponse) return auth
 
-    if (!session?.user) {
-      return NextResponse.json(
-        { error: 'Unauthorized - Missing or invalid session token' },
-        { status: 401 }
-      )
-    }
-
-    const userId = session.user.id;
-    // Check if user is admin using better-auth role field
-    const userRole = session.user.role as string | undefined;
-    if (userRole !== 'admin') {
-      return NextResponse.json(
-        { error: 'Forbidden - Admin role required' },
-        { status: 403 }
-      )
-    }
+    const { userId } = auth;
 
     const body = await request.json();
     const { email } = body;

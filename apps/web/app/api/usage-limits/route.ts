@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getSession } from "@/utils/roles"
+import { requireSession } from "@/utils/roles"
 import { db } from '@/database/db'
 import { connections } from '@/database/schema'
 import { eq, and, gte, count } from 'drizzle-orm'
@@ -30,12 +30,9 @@ function noStoreJson(body: unknown, init?: ResponseInit) {
 
 export async function GET(req: NextRequest) {
   try {
-    const session = await getSession(req.headers);
-    const userId = session?.user?.id;
-
-    if (!userId) {
-      return noStoreJson({ error: 'Unauthorized' }, { status: 401 })
-    }
+    const auth = await requireSession(req.headers);
+    if (auth instanceof NextResponse) return auth;
+    const { userId } = auth;
 
     // Check Redis/memory cache first with longer TTL for this data
     const cacheKey = `usage-limits:${userId}`

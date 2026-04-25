@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getSession } from "@/utils/roles"
+import { requireSession } from "@/utils/roles"
 import { SubscriptionManager } from '@/lib/subscription'
 
 function toClientSubscriptionPayload(subscription: Awaited<ReturnType<typeof SubscriptionManager.getUserSubscription>>) {
@@ -21,15 +21,9 @@ function noStoreJson(body: unknown, init?: ResponseInit) {
 
 export async function GET(req: NextRequest) {
   try {
-    const session = await getSession(req.headers);
-    const userId = session?.user?.id;
-
-    if (!userId) {
-      return noStoreJson(
-        { error: 'Authentication required' },
-        { status: 401 }
-      )
-    }
+    const auth = await requireSession(req.headers);
+    if (auth instanceof NextResponse) return auth;
+    const { userId } = auth;
 
     const { searchParams } = new URL(req.url)
     const force = searchParams.get('force') === 'true'

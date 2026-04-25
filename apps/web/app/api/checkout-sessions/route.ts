@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { headers } from 'next/headers'
-import { getSession } from '@/utils/roles'
+import { requireSession } from '@/utils/roles'
 import { stripe } from '@/lib/stripe'
 import { SubscriptionManager } from '@/lib/subscription'
 
@@ -50,17 +50,11 @@ function getAllowedPriceIdsForRole(role: string | null | undefined): Set<string>
 
 export async function POST(req: NextRequest) {
   try {
-    const session = await getSession();
-    if (!session?.user) {
-      return NextResponse.json(
-        { error: 'Authentication required' },
-        { status: 401 }
-      )
-    }
+    const auth = await requireSession();
+    if (auth instanceof NextResponse) return auth;
 
-    const userId = session.user.id;
-    const userEmail = session.user.email;
-    const userRole = session.user.role;
+    const { userId, role: userRole, user } = auth;
+    const userEmail = user.email;
 
     if (!userEmail) {
       return NextResponse.json(
