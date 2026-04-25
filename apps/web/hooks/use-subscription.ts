@@ -37,6 +37,13 @@ const subscriptionCache = new Map<string, {
   timestamp: number
 }>()
 
+// In-flight request map to dedupe concurrent fetches (e.g. React StrictMode
+// double-invoking effects, or two components mounting at the same time).
+const pendingFetches = new Map<string, Promise<{
+  subscription: SubscriptionData
+  features: SubscriptionFeatures
+}>>()
+
 const CACHE_DURATION = 5 * 60 * 1000 // 5 minutes
 
 const DEFAULT_FEATURES: SubscriptionFeatures = {
@@ -112,34 +119,53 @@ export function useSubscription(): UseSubscriptionReturn {
     setError(null)
 
     try {
-      let response = await fetchSubscriptionResponse()
+      // If another caller already kicked off a request for this user, just
+      // await its result instead of firing a duplicate /api/subscription call.
+      let pending = pendingFetches.get(userId)
+      if (!pending) {
+        pending = (async () => {
+          let response = await fetchSubscriptionResponse()
 
-      if (response.status === 401 || response.status === 403) {
-        await delay(AUTH_RETRY_DELAY_MS)
-        response = await fetchSubscriptionResponse()
+          if (response.status === 401 || response.status === 403) {
+            await delay(AUTH_RETRY_DELAY_MS)
+            response = await fetchSubscriptionResponse()
+          }
+
+          if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`)
+          }
+
+          const data = await response.json()
+
+          const subscriptionData: SubscriptionData = {
+            ...data.subscription,
+            currentPeriodEnd: data.subscription.currentPeriodEnd
+              ? new Date(data.subscription.currentPeriodEnd)
+              : null
+          }
+
+          const featuresData: SubscriptionFeatures = data.features || DEFAULT_FEATURES
+
+          subscriptionCache.set(userId, {
+            subscription: subscriptionData,
+            features: featuresData,
+            timestamp: Date.now()
+          })
+
+          return { subscription: subscriptionData, features: featuresData }
+        })()
+
+        pendingFetches.set(userId, pending)
+        // Always clear the in-flight entry once the promise settles so the
+        // next miss can refetch.
+        pending.finally(() => {
+          if (pendingFetches.get(userId) === pending) {
+            pendingFetches.delete(userId)
+          }
+        })
       }
 
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`)
-      }
-
-      const data = await response.json()
-
-      const subscriptionData: SubscriptionData = {
-        ...data.subscription,
-        currentPeriodEnd: data.subscription.currentPeriodEnd
-          ? new Date(data.subscription.currentPeriodEnd)
-          : null
-      }
-
-      const featuresData: SubscriptionFeatures = data.features || DEFAULT_FEATURES
-
-      // Cache the data
-      subscriptionCache.set(userId, {
-        subscription: subscriptionData,
-        features: featuresData,
-        timestamp: Date.now()
-      })
+      const { subscription: subscriptionData, features: featuresData } = await pending
 
       setSubscription(subscriptionData)
       setFeatures(featuresData)

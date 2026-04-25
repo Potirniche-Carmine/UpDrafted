@@ -71,8 +71,10 @@ async function getSessionState(req: NextRequest): Promise<SessionState> {
     }
 
     try {
+        // The better-auth config already sets `cookieCache.enabled: false`
+        // (see lib/auth.ts), so we don't need to pass `disableCookieCache=true`
+        // here — it's a no-op and just made every entry in the dev log noisy.
         const sessionUrl = new URL('/api/auth/get-session', req.url);
-        sessionUrl.searchParams.set('disableCookieCache', 'true');
 
         const sessionResponse = await fetch(sessionUrl, {
             method: 'GET',
@@ -137,19 +139,16 @@ export default async function proxy(req: NextRequest) {
     const isPublicRoute = CONFIG.ROUTES.PUBLIC.some(route => pathname === route || pathname.startsWith(route + '/'));
     const isAuthPage = CONFIG.ROUTES.AUTH_PAGES_SESSION_REDIRECT.some(route => pathname === route || pathname.startsWith(route + '/'));
 
-    // API routes - require session cookie
+    // API routes - require a session cookie. We deliberately do NOT call
+    // `/api/auth/get-session` here: every API route handler already validates
+    // the session against the DB via `auth.api.getSession`, and forcing a
+    // full session lookup at the proxy layer was effectively doubling every
+    // authenticated request (one DB hit for the proxy, one for the route).
+    // If the cookie is invalid or expired the route handler will return 401
+    // on its own.
     if (pathname.startsWith('/api/')) {
         if (!hasSession) {
             return addSecurityHeaders(NextResponse.json({ error: 'Unauthorized' }, { status: 401 }));
-        }
-
-        const sessionState = await getSessionState(req);
-        if (!sessionState.isAuthenticated) {
-            return addSecurityHeaders(NextResponse.json({ error: 'Unauthorized' }, { status: 401 }));
-        }
-
-        if (sessionState.emailVerified === false) {
-            return addSecurityHeaders(NextResponse.json({ error: 'Email verification required' }, { status: 403 }));
         }
 
         // Apply basic security checks for mutations
