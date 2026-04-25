@@ -3,13 +3,14 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { signIn } from "@/lib/auth-client";
+import { authClient, signIn } from "@/lib/auth-client";
 import { useUser } from "@/hooks/use-auth";
 import {
   persistVerificationEmail,
   replaceUrlWithoutReload,
   sanitizeAuthSearchParams,
 } from "@/lib/auth-flow";
+import { getAccessPathForUser } from "@/lib/auth-routing";
 import { ForgotPasswordDialog } from "@/components/forgot-password-dialog";
 import { MagicLinkDialog } from "@/components/magic-link-dialog";
 
@@ -17,7 +18,7 @@ const ALLOWED_SIGN_IN_PARAMS = ["verified", "reset", "error"] as const;
 
 export default function SignInPage() {
   const searchParams = useSearchParams();
-  const { isLoaded, isSignedIn } = useUser();
+  const { isLoaded, isSignedIn, user } = useUser();
   const [emailOrUsername, setEmailOrUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -50,12 +51,11 @@ export default function SignInPage() {
   }, [searchParams]);
 
   // If a signed-in user lands here directly (proxy didn't catch them), bounce them
-  // to the app entry point. Dashboard routes role-less users to onboarding itself,
-  // so we only need a single navigation here — no role lookup, no setTimeout race.
+  // to the correct destination for their auth state.
   useEffect(() => {
     if (!isLoaded || !isSignedIn) return;
-    window.location.replace("/dashboard");
-  }, [isLoaded, isSignedIn]);
+    window.location.replace(getAccessPathForUser(user));
+  }, [isLoaded, isSignedIn, user]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -81,10 +81,23 @@ export default function SignInPage() {
         return;
       }
 
-      setSuccessMessage("Signed in successfully. Redirecting...");
+      let destination = "/dashboard";
+
+      try {
+        const sessionResponse = await authClient.getSession({
+          query: {
+            disableCookieCache: true,
+          },
+        });
+
+        destination = getAccessPathForUser(sessionResponse.data?.user);
+      } catch {
+        destination = "/dashboard";
+      }
+
       // Hard-navigate so the new request carries the fresh session cookie and the
-      // proxy + dashboard see consistent auth state. Dashboard handles role routing.
-      window.location.replace("/dashboard");
+      // proxy sees consistent auth state on the next request.
+      window.location.replace(destination);
     } catch {
       setError("An unexpected error occurred. Please try again.");
       setLoading(false);

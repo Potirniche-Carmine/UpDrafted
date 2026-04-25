@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { CONFIG } from './utils/config';
+import { getPostAuthPath, hasAppRole } from './lib/auth-routing';
 
 /**
  * Proxy (middleware) for route protection and security headers.
@@ -27,6 +28,7 @@ function secureRedirect(url: URL | string) {
 interface SessionState {
     isAuthenticated: boolean;
     emailVerified: boolean | null;
+    role: string | null;
 }
 
 function getSanitizedAuthUrl(req: NextRequest, allowedParams: readonly string[]) {
@@ -65,7 +67,7 @@ function hasSessionCookie(request: NextRequest): boolean {
 async function getSessionState(req: NextRequest): Promise<SessionState> {
     const cookieHeader = req.headers.get('cookie');
     if (!cookieHeader) {
-        return { isAuthenticated: false, emailVerified: null };
+        return { isAuthenticated: false, emailVerified: null, role: null };
     }
 
     try {
@@ -78,20 +80,21 @@ async function getSessionState(req: NextRequest): Promise<SessionState> {
         });
 
         if (!sessionResponse.ok) {
-            return { isAuthenticated: false, emailVerified: null };
+            return { isAuthenticated: false, emailVerified: null, role: null };
         }
 
-        const sessionData = await sessionResponse.json() as { user?: { emailVerified?: boolean } };
+        const sessionData = await sessionResponse.json() as { user?: { emailVerified?: boolean; role?: string | null } };
         if (!sessionData?.user) {
-            return { isAuthenticated: false, emailVerified: null };
+            return { isAuthenticated: false, emailVerified: null, role: null };
         }
 
         return {
             isAuthenticated: true,
             emailVerified: typeof sessionData.user.emailVerified === 'boolean' ? sessionData.user.emailVerified : null,
+            role: typeof sessionData.user.role === 'string' ? sessionData.user.role : null,
         };
     } catch {
-        return { isAuthenticated: false, emailVerified: null };
+        return { isAuthenticated: false, emailVerified: null, role: null };
     }
 }
 
@@ -190,6 +193,8 @@ export default async function proxy(req: NextRequest) {
 
     if (hasSession || isVerifyEmailPage) {
         const sessionState = await getSessionState(req);
+        const signedInDestination = getPostAuthPath({ role: sessionState.role });
+        const hasCompletedOnboarding = hasAppRole(sessionState.role);
 
         if (!sessionState.isAuthenticated && isProtectedPage) {
             return secureRedirect(new URL('/sign-in', req.url));
@@ -197,29 +202,23 @@ export default async function proxy(req: NextRequest) {
 
         // Keep unverified users in a dedicated verification flow.
         if (sessionState.isAuthenticated && sessionState.emailVerified === false) {
-            if (!isVerifyEmailPage && isProtectedPage) {
-                return secureRedirect(new URL('/verify-email', req.url));
-            }
-
-            if (isAuthPage) {
+            if (!isVerifyEmailPage) {
                 return secureRedirect(new URL('/verify-email', req.url));
             }
         }
 
-        // Redirect authenticated users away from auth pages (sign-in, sign-up, etc.)
-        if (sessionState.isAuthenticated && sessionState.emailVerified !== false && isAuthPage) {
-            return secureRedirect(new URL('/dashboard', req.url));
-        }
+        if (sessionState.isAuthenticated && sessionState.emailVerified !== false) {
+            if (isAuthPage || pathname === '/' || (isVerifyEmailPage && sessionState.emailVerified === true)) {
+                return secureRedirect(new URL(signedInDestination, req.url));
+            }
 
-        // Verified users do not need the verification screen.
-        if (sessionState.isAuthenticated && sessionState.emailVerified !== false && isVerifyEmailPage) {
-            return secureRedirect(new URL('/dashboard', req.url));
-        }
+            if (!hasCompletedOnboarding && !pathname.startsWith('/onboarding')) {
+                return secureRedirect(new URL('/onboarding', req.url));
+            }
 
-        // Verified, signed-in users hitting the marketing landing page get sent to the app.
-        // Role-based routing (dashboard vs. onboarding) is handled by the destination page.
-        if (sessionState.isAuthenticated && sessionState.emailVerified !== false && pathname === '/') {
-            return secureRedirect(new URL('/dashboard', req.url));
+            if (hasCompletedOnboarding && pathname.startsWith('/onboarding')) {
+                return secureRedirect(new URL('/dashboard', req.url));
+            }
         }
     }
 

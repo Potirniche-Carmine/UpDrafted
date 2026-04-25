@@ -1,8 +1,9 @@
 "use client";
 
 import { useUser } from '@/hooks/use-auth';
-import { useRouter, usePathname } from 'next/navigation';
-import { useEffect, useState, ReactNode, useCallback } from 'react';
+import { usePathname } from 'next/navigation';
+import { useEffect, useState, ReactNode, useCallback, useRef } from 'react';
+import { getAccessPathForUser, hasAppRole } from '@/lib/auth-routing';
 
 interface AuthWrapperProps {
   children: ReactNode;
@@ -26,17 +27,24 @@ export function OnboardingWrapper({
   loadingComponent
 }: OnboardingWrapperProps) {
   const { isSignedIn, isLoaded, user } = useUser();
-  const router = useRouter();
   const [isAuthorized, setIsAuthorized] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isRedirecting, setIsRedirecting] = useState(false);
+  const redirectTargetRef = useRef<string | null>(null);
 
   const handleRedirect = useCallback(async (path: string) => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    if (window.location.pathname === path || redirectTargetRef.current === path) {
+      return;
+    }
+
+    redirectTargetRef.current = path;
     setIsRedirecting(true);
-    // Add a small delay for smoother transition
-    await new Promise(resolve => setTimeout(resolve, 300));
-    router.push(path);
-  }, [router]);
+    window.location.replace(path);
+  }, []);
 
   useEffect(() => {
     const checkOnboardingAuth = async () => {
@@ -50,9 +58,12 @@ export function OnboardingWrapper({
         return;
       }
 
-      // Check if user already has a role (completed onboarding)
-      const userRole = user?.role as string;
-      if (userRole && ['athlete', 'coach', 'recruiter', 'admin'].includes(userRole)) {
+      if (user?.emailVerified === false) {
+        await handleRedirect('/verify-email');
+        return;
+      }
+
+      if (hasAppRole(user?.role)) {
         // User already completed onboarding, redirect to dashboard
         await handleRedirect('/dashboard');
         return;
@@ -99,20 +110,26 @@ export function AuthWrapper({
   type = 'default'
 }: AuthWrapperProps) {
   const { isSignedIn, isLoaded, user } = useUser();
-  const router = useRouter();
   const pathname = usePathname();
   const [isAuthorized, setIsAuthorized] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isRedirecting, setIsRedirecting] = useState(false);
+  const redirectTargetRef = useRef<string | null>(null);
 
   const handleRedirect = useCallback(async (path: string) => {
-    // Avoid infinite redirects to the same page
-    if (pathname === path) return;
+    if (typeof window === 'undefined') {
+      return;
+    }
 
+    // Avoid infinite redirects to the same page
+    if (pathname === path || redirectTargetRef.current === path) {
+      return;
+    }
+
+    redirectTargetRef.current = path;
     setIsRedirecting(true);
-    await new Promise(resolve => setTimeout(resolve, 300));
-    router.push(path);
-  }, [router, pathname]);
+    window.location.replace(path);
+  }, [pathname]);
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -121,12 +138,7 @@ export function AuthWrapper({
       // 1. Landing Page Logic
       if (type === 'landing') {
         if (isSignedIn) {
-          const userRole = user?.role as string;
-          if (userRole && ['athlete', 'coach', 'recruiter', 'admin'].includes(userRole)) {
-            await handleRedirect('/dashboard');
-          } else {
-            await handleRedirect('/onboarding');
-          }
+          await handleRedirect(getAccessPathForUser(user));
         } else {
           setIsAuthorized(true);
           setIsLoading(false);
@@ -140,8 +152,11 @@ export function AuthWrapper({
           await handleRedirect('/sign-in');
           return;
         }
-        const userRole = user?.role as string;
-        if (userRole && ['athlete', 'coach', 'recruiter', 'admin'].includes(userRole)) {
+        if (user?.emailVerified === false) {
+          await handleRedirect('/verify-email');
+          return;
+        }
+        if (hasAppRole(user?.role)) {
           // Instead of showing component, redirect to dashboard for better UX
           await handleRedirect('/dashboard');
           return;
@@ -163,19 +178,16 @@ export function AuthWrapper({
         return;
       }
 
+      if (user?.emailVerified === false) {
+        await handleRedirect('/verify-email');
+        return;
+      }
+
       const userRole = user?.role as string;
-      const hasRole = userRole && ['athlete', 'coach', 'recruiter', 'admin'].includes(userRole);
+      const hasRole = hasAppRole(userRole);
 
-      // STRICT CHECK: Users without a role can ONLY access /onboarding and /account
+      // Users without a completed onboarding role stay on onboarding until they finish.
       if (!hasRole) {
-        // Allow access to account/settings pages for no-role users
-        if (pathname?.startsWith('/account')) {
-          setIsAuthorized(true);
-          setIsLoading(false);
-          return;
-        }
-
-        // Redirect all other attempts to onboarding
         if (!pathname?.startsWith('/onboarding')) {
           await handleRedirect('/onboarding');
           return;
