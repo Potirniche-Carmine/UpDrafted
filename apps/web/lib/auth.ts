@@ -102,32 +102,7 @@ export const auth = betterAuth({
 
     // Email verification configuration
     emailVerification: {
-        sendVerificationEmail: async ({ user, url }) => {
-            const verificationUrl = new URL(url);
-            if (!verificationUrl.searchParams.get("callbackURL")) {
-                verificationUrl.searchParams.set("callbackURL", `${APP_URL}/sign-in?verified=true`);
-            }
-
-            await resend.emails.send({
-                from: EMAIL_FROM,
-                to: user.email,
-                subject: "Verify Your Email - UpDrafted",
-                html: `
-                    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-                        <h2 style="color: #01ae79;">Welcome to UpDrafted!</h2>
-                        <p>Hi there,</p>
-                        <p>Thanks for signing up! Please verify your email address by clicking the button below:</p>
-                        <div style="text-align: center; margin: 30px 0;">
-                            <a href="${verificationUrl.toString()}" style="background-color: #01ae79; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; display: inline-block;">Verify Email</a>
-                        </div>
-                        <p>Or copy and paste this link into your browser:</p>
-                        <p style="color: #666; word-break: break-all;">${verificationUrl.toString()}</p>
-                        <p>If you didn't create this account, you can safely ignore this email.</p>
-                        <p>Best regards,<br>The UpDrafted Team</p>
-                    </div>
-                `,
-            });
-        },
+        sendOnSignUp: false,
     },
 
     // Account configuration
@@ -230,6 +205,9 @@ export const auth = betterAuth({
         }),
 
         emailOTP({
+            sendVerificationOnSignUp: true,
+            otpLength: 6,
+            expiresIn: 10 * 60,
             async sendVerificationOTP({ email, otp, type }) {
                 const subject = type === "forget-password"
                     ? "Password Reset Code - UpDrafted"

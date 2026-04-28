@@ -68,7 +68,7 @@ export default function SignUpPage() {
       }
 
       persistVerificationEmail(email);
-      router.push("/verify-email");
+      router.push("/verify-email?sent=true");
     } catch  {
       setError("An unexpected error occurred. Please try again.");
       setLoading(false);

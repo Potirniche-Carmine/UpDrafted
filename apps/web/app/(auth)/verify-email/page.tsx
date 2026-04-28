@@ -17,8 +17,10 @@ function VerifyEmailContent() {
   const [emailInput, setEmailInput] = useState(
     searchParams.get("email") || getPersistedVerificationEmail() || "",
   );
-  const [cooldownSeconds, setCooldownSeconds] = useState(60);
+  const [code, setCode] = useState("");
+  const [cooldownSeconds, setCooldownSeconds] = useState(searchParams.get("sent") === "true" ? 60 : 0);
   const [isSending, setIsSending] = useState(false);
+  const [isVerifying, setIsVerifying] = useState(false);
   const [error, setError] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
 
@@ -64,22 +66,50 @@ function VerifyEmailContent() {
     setSuccessMessage("");
 
     try {
-      const { error: resendError } = await authClient.sendVerificationEmail({
+      const { error: resendError } = await authClient.emailOtp.sendVerificationOtp({
         email: targetEmail,
-        callbackURL: "/sign-in?verified=true",
+        type: "email-verification",
       });
 
       if (resendError) {
-        setError(resendError.message || "Could not resend verification email.");
+        setError(resendError.message || "Could not resend verification code.");
         return;
       }
 
-      setSuccessMessage("Verification email sent. Please check your inbox.");
+      setSuccessMessage("New verification code sent. Please check your inbox.");
       setCooldownSeconds(60);
     } catch {
-      setError("Could not resend verification email. Please try again.");
+      setError("Could not resend verification code. Please try again.");
     } finally {
       setIsSending(false);
+    }
+  };
+
+  const handleVerify = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!targetEmail || code.trim().length < 6) return;
+
+    setIsVerifying(true);
+    setError("");
+    setSuccessMessage("");
+
+    try {
+      const { error: verifyError } = await authClient.emailOtp.verifyEmail({
+        email: targetEmail,
+        otp: code.replace(/\D/g, ""),
+      });
+
+      if (verifyError) {
+        setError(verifyError.message || "That code did not work. Please check it and try again.");
+        return;
+      }
+
+      clearPersistedVerificationEmail();
+      window.location.replace("/sign-in?verified=true");
+    } catch {
+      setError("Could not verify your email. Please try again.");
+    } finally {
+      setIsVerifying(false);
     }
   };
 
@@ -94,11 +124,11 @@ function VerifyEmailContent() {
           </div>
           <h1 className="text-3xl font-bold tracking-tight">Verify your email</h1>
           <p className="mt-2 text-muted-foreground">
-            Open the verification link from any device, then sign in.
+            Enter the 6-digit code we sent to your inbox.
           </p>
         </div>
 
-        <div className="rounded-lg border border-input bg-muted/40 p-4 space-y-3">
+        <form onSubmit={handleVerify} className="rounded-2xl border border-[#01ae79]/20 bg-white p-4 space-y-4 shadow-sm dark:bg-black dark:border-[#01ae79]/25">
           <label htmlFor="verification-email" className="block text-sm font-medium">
             Email address
           </label>
@@ -111,6 +141,28 @@ function VerifyEmailContent() {
             placeholder="you@example.com"
             className="block w-full rounded-lg border border-input bg-background px-4 py-3 text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
           />
+          <div className="space-y-2">
+            <label htmlFor="verification-code" className="block text-sm font-medium">
+              Verification code
+            </label>
+            <input
+              id="verification-code"
+              type="text"
+              inputMode="numeric"
+              autoComplete="one-time-code"
+              value={code}
+              onChange={(event) => setCode(event.target.value.replace(/\D/g, "").slice(0, 6))}
+              placeholder="123456"
+              className="block w-full rounded-lg border border-input bg-background px-4 py-3 text-center text-2xl font-bold tracking-[0.35em] text-foreground placeholder:tracking-normal placeholder:text-muted-foreground focus:border-[#01ae79] focus:outline-none focus:ring-2 focus:ring-[#01ae79]/20"
+            />
+          </div>
+          <button
+            type="submit"
+            disabled={isVerifying || !targetEmail || code.trim().length < 6}
+            className="w-full rounded-lg bg-[#01ae79] px-4 py-3 text-center font-medium text-white transition-colors hover:bg-[#018a60] disabled:opacity-50"
+          >
+            {isVerifying ? "Verifying..." : "Verify email"}
+          </button>
           <button
             type="button"
             onClick={handleResend}
@@ -120,10 +172,10 @@ function VerifyEmailContent() {
             {isSending
               ? "Resending..."
               : cooldownSeconds > 0
-                ? `Resend verification email in ${cooldownSeconds}s`
-                : "Resend verification email"}
+                ? `Resend code in ${cooldownSeconds}s`
+                : "Resend code"}
           </button>
-        </div>
+        </form>
 
         {error && (
           <div className="rounded-lg bg-destructive/10 p-3 text-sm text-destructive">
