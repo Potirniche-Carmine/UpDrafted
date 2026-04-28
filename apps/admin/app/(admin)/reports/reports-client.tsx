@@ -4,6 +4,7 @@ import * as React from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { SafeSubmissionPreview } from "@/components/safe-submission-preview";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -25,6 +26,7 @@ import {
   Flag,
   ChevronRight,
 } from "lucide-react";
+import { extractSafePreviewTargetsFromText } from "@/lib/submission-preview";
 import type { ReportListItem, ReportQueueMap } from "@/lib/reports";
 
 type StatusFilter = "pending" | "under_review" | "resolved" | "dismissed";
@@ -222,6 +224,12 @@ export function ReportsClient({
     action === "decline" ||
     (action === "ban_permanent" && reason.trim().length > 0) ||
     (action === "ban_temporary" && reason.trim().length > 0 && durationDays > 0);
+  const previewTargets = React.useMemo(() => {
+    if (!detail) return [];
+    return extractSafePreviewTargetsFromText(
+      `${detail.report.reportReason}\n${detail.report.additionalDetails ?? ""}`,
+    );
+  }, [detail]);
 
   return (
     <div className="space-y-6">
@@ -336,6 +344,10 @@ export function ReportsClient({
                     </>
                   ) : null}
                 </section>
+
+                {previewTargets.length > 0 ? (
+                  <SafeSubmissionPreview targets={previewTargets} />
+                ) : null}
 
                 {detail.report.actionTaken ? (
                   <section className="rounded-lg border border-[color:var(--border)] bg-[color:var(--muted)]/30 p-3">

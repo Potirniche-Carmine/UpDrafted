@@ -4,6 +4,7 @@ import * as React from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { SafeSubmissionPreview } from "@/components/safe-submission-preview";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -21,11 +22,16 @@ import {
   CheckCircle2,
   XCircle,
   MessageSquare,
-  ExternalLink,
   ShieldCheck,
   ChevronRight,
   Paperclip,
 } from "lucide-react";
+import {
+  getPreviewHostname,
+  isPdfPreviewTarget,
+  toSafeHttpUrl,
+  type SafePreviewTarget,
+} from "@/lib/submission-preview";
 import type {
   VerificationListItem,
   VerificationQueueMap,
@@ -204,6 +210,30 @@ export function VerificationsClient({
 
   const actionNeedsReason = action === "deny";
   const canSubmitAction = action === "approve" || (actionNeedsReason && reason.trim().length > 0);
+  const previewTargets = React.useMemo(() => {
+    if (!detail) return [];
+
+    return detail.request.files.reduce<SafePreviewTarget[]>((targets, file) => {
+      const safeUrl = toSafeHttpUrl(file.linkUrl);
+      if (!safeUrl) return targets;
+
+      targets.push({
+        id: `verification-file-${file.id}`,
+        label: file.fileName || getPreviewHostname(safeUrl),
+        url: safeUrl,
+        kind: isPdfPreviewTarget({
+          fileName: file.fileName,
+          fileType: file.fileType,
+          url: safeUrl,
+        })
+          ? "pdf"
+          : "link",
+        description: file.description,
+      });
+
+      return targets;
+    }, []);
+  }, [detail]);
 
   return (
     <div className="space-y-6">
@@ -305,35 +335,39 @@ export function VerificationsClient({
                       No files submitted.
                     </p>
                   ) : (
-                    <ul className="space-y-2">
-                      {detail.request.files.map((file) => (
-                        <li
-                          key={file.id}
-                          className="flex items-center justify-between gap-2 rounded-lg border border-[color:var(--border)] bg-[color:var(--muted)]/30 p-3 text-sm"
-                        >
-                          <div className="min-w-0">
-                            <p className="truncate font-medium">{file.fileName}</p>
-                            {file.description ? (
-                              <p className="truncate text-xs text-[color:var(--muted-foreground)]">
-                                {file.description}
-                              </p>
+                    <div className="space-y-3">
+                      <SafeSubmissionPreview
+                        targets={previewTargets}
+                        emptyMessage="No safe HTTP(S) attachment links were submitted."
+                      />
+                      <ul className="space-y-2">
+                        {detail.request.files.map((file) => (
+                          <li
+                            key={file.id}
+                            className="flex items-center justify-between gap-2 rounded-lg border border-[color:var(--border)] bg-[color:var(--muted)]/30 p-3 text-sm"
+                          >
+                            <div className="min-w-0">
+                              <p className="truncate font-medium">{file.fileName}</p>
+                              {file.description ? (
+                                <p className="truncate text-xs text-[color:var(--muted-foreground)]">
+                                  {file.description}
+                                </p>
+                              ) : null}
+                              {file.linkUrl ? (
+                                <p className="truncate text-xs text-[color:var(--muted-foreground)]">
+                                  {file.linkUrl}
+                                </p>
+                              ) : null}
+                            </div>
+                            {file.linkUrl ? (
+                              <Badge variant="outline" className="shrink-0">
+                                Previewed
+                              </Badge>
                             ) : null}
-                          </div>
-                          {file.linkUrl ? (
-                            <Button
-                              asChild
-                              variant="outline"
-                              size="sm"
-                              className="shrink-0"
-                            >
-                              <a href={file.linkUrl} target="_blank" rel="noopener noreferrer">
-                                Open <ExternalLink className="size-3.5" />
-                              </a>
-                            </Button>
-                          ) : null}
-                        </li>
-                      ))}
-                    </ul>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
                   )}
                 </section>
 
