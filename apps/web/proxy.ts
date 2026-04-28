@@ -52,7 +52,7 @@ function hasSessionCookie(request: NextRequest): boolean {
     // better-auth uses 'better-auth.session_token' over HTTP,
     // but '__Secure-better-auth.session_token' over HTTPS (production).
     // We must check both to work across all environments.
-    const sessionCookie = request.cookies.get('better-auth.session_token') 
+    const sessionCookie = request.cookies.get('better-auth.session_token')
         || request.cookies.get('__Secure-better-auth.session_token');
     return !!sessionCookie?.value;
 }
@@ -113,6 +113,13 @@ export default function proxy(req: NextRequest) {
 
     const hasSession = hasSessionCookie(req);
 
+    // API routes - require a session cookie. We deliberately do NOT call
+    // `/api/auth/get-session` here: every API route handler already validates
+    // the session against the DB via `auth.api.getSession`, and forcing a
+    // full session lookup at the proxy layer was effectively doubling every
+    // authenticated request (one DB hit for the proxy, one for the route).
+    // If the cookie is invalid or expired the route handler will return 401
+    // on its own.
     if (pathname.startsWith('/api/')) {
         if (!hasSession) {
             return addSecurityHeaders(NextResponse.json({ error: 'Unauthorized' }, { status: 401 }));
