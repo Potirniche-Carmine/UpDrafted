@@ -30,9 +30,14 @@ export async function handleVerificationSubmit(request: NextRequest): Promise<Ne
     // Parse request body
     const { role, additionalInfo, links } = await request.json();
 
-    // Validate role
+    // Validate role, then bind it to the authenticated session so callers
+    // cannot submit verification under a different role.
     if (!role || !['athlete', 'coach', 'recruiter'].includes(role)) {
       return createErrorResponse('Invalid role', 400);
+    }
+
+    if (userRole !== 'admin' && role !== userRole) {
+      return createErrorResponse('Forbidden - Role mismatch', 403);
     }
 
     if (role === 'athlete') {
@@ -160,4 +165,4 @@ export async function handleVerificationSubmit(request: NextRequest): Promise<Ne
     console.error('Error in verification submit API:', error);
     return createErrorResponse('Internal server error', 500);
   }
-} 
+}

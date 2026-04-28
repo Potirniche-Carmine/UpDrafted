@@ -34,3 +34,37 @@ export function canAccessWithoutAppRole(pathname: string | null | undefined): bo
 
   return pathname === "/account" || pathname.startsWith("/account/");
 }
+
+export const PUBLIC_PAGE_PATHS = [
+  "/",
+  "/about",
+  "/contact",
+  "/terms-of-service",
+  "/privacy-policy",
+  "/for-coaches",
+  "/for-athletes",
+  "/for-recruiters",
+] as const;
+
+export const AUTH_PAGE_PATHS = [
+  "/sign-in",
+  "/sign-up",
+  "/verify-email",
+  "/reset-password",
+] as const;
+
+function matchesPath(pathname: string, paths: readonly string[]) {
+  return paths.some((path) => pathname === path || pathname.startsWith(`${path}/`));
+}
+
+export function isPublicPagePath(pathname: string | null | undefined): boolean {
+  return Boolean(pathname && matchesPath(pathname, PUBLIC_PAGE_PATHS));
+}
+
+export function isAuthPagePath(pathname: string | null | undefined): boolean {
+  return Boolean(pathname && matchesPath(pathname, AUTH_PAGE_PATHS));
+}
+
+export function isUnauthenticatedPagePath(pathname: string | null | undefined): boolean {
+  return isPublicPagePath(pathname) || isAuthPagePath(pathname);
+}

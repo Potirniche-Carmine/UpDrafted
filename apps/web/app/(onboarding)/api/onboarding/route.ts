@@ -25,11 +25,18 @@ export async function POST(request: NextRequest) {
     const profileImage = formData.get('profileImage') as File | null
     const organizationLogo = formData.get('organizationLogo') as File | null
     const userIdFromForm = formData.get('userId') as string
-    const email = formData.get('email') as string || user.email
+    const email = user.email
     const role = formData.get('role') as 'athlete' | 'coach' | 'recruiter'
 
-    // Validate the userId matches the authenticated user
-    if (userIdFromForm !== userId) {
+    if (!isAdmin && sessionRole) {
+      return NextResponse.json(
+        { error: 'Forbidden - Role is already assigned' },
+        { status: 403 }
+      )
+    }
+
+    // Validate the userId matches the authenticated user when the client sends it.
+    if (userIdFromForm && userIdFromForm !== userId) {
       return NextResponse.json(
         { error: 'Forbidden - User ID mismatch' },
         { status: 403 }

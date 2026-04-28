@@ -6,7 +6,7 @@ import { usePathname } from "next/navigation";
 import { Search, MessageSquare, LayoutDashboard, Compass, UserPlus } from "lucide-react";
 import { useUser } from "@/hooks/use-auth";
 import { useNotifications } from '@/hooks/use-notifications';
-import { hasAppRole } from "@/lib/auth-routing";
+import { hasAppRole, isUnauthenticatedPagePath } from "@/lib/auth-routing";
 
 interface NavItem {
   key: string;
@@ -32,6 +32,15 @@ function NotificationBadge({ count }: { count: number }) {
 
 export function MobileBottomNav() {
   const pathname = usePathname();
+
+  if (isUnauthenticatedPagePath(pathname)) {
+    return null;
+  }
+
+  return <AuthenticatedMobileBottomGate pathname={pathname} />;
+}
+
+function AuthenticatedMobileBottomGate({ pathname }: { pathname: string }) {
   const { isSignedIn, user } = useUser();
 
   // Check if user has completed onboarding

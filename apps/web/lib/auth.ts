@@ -41,30 +41,16 @@ function normalizeHttpOrigin(value?: string | null): string | null {
     }
 }
 
-function getTrustedOrigins(request?: Request): string[] {
-    const originHeader = normalizeHttpOrigin(request?.headers.get("origin"));
-    const forwardedProto = request?.headers.get("x-forwarded-proto") ?? "http";
-    const forwardedHost = request?.headers.get("x-forwarded-host");
-    const host = request?.headers.get("host");
-
-    const forwardedOrigin = forwardedHost
-        ? normalizeHttpOrigin(`${forwardedProto}://${forwardedHost}`)
-        : null;
-    const hostOrigin = host
-        ? normalizeHttpOrigin(`${forwardedProto}://${host}`)
-        : null;
-
+function getTrustedOrigins(): string[] {
     return Array.from(new Set([
         APP_URL,
         process.env.NEXT_PUBLIC_APP_URL,
         process.env.BETTER_AUTH_BASE_URL,
         "https://updrafted.us",
+        "https://www.updrafted.us",
         ...(process.env.NODE_ENV === "production"
             ? []
             : ["http://localhost:3000", "http://127.0.0.1:3000"]),
-        originHeader,
-        forwardedOrigin,
-        hostOrigin,
     ].map((value) => normalizeHttpOrigin(value)).filter((value): value is string => Boolean(value))));
 }
 
@@ -281,7 +267,7 @@ export const auth = betterAuth({
     ],
 
     // Trust proxy for production environments
-    trustedOrigins: (request) => getTrustedOrigins(request),
+    trustedOrigins: getTrustedOrigins,
 });
 
 // Export types for use in other files

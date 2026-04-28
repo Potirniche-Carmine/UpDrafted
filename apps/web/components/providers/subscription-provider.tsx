@@ -1,8 +1,10 @@
 "use client"
 
 import React, { createContext, useContext } from 'react'
+import { usePathname } from 'next/navigation'
 import { useSession } from '@/lib/auth-client'
 import { useSubscription as useSubscriptionHook, type SubscriptionData, type SubscriptionFeatures } from '@/hooks/use-subscription'
+import { isUnauthenticatedPagePath } from '@/lib/auth-routing'
 
 interface SubscriptionContextType {
   subscription: SubscriptionData | null
@@ -33,6 +35,30 @@ const DEFAULT_FEATURES: SubscriptionFeatures = {
   maxConnectionsPerMonth: 5,
 }
 
+function DefaultSubscriptionProvider({
+  children,
+  loading = false,
+}: {
+  children: React.ReactNode
+  loading?: boolean
+}) {
+  const contextValue: SubscriptionContextType = {
+    subscription: DEFAULT_SUBSCRIPTION,
+    features: DEFAULT_FEATURES,
+    loading,
+    error: null,
+    refetch: async () => {},
+    isPremium: false,
+    isActive: true,
+  }
+
+  return (
+    <SubscriptionContext.Provider value={contextValue}>
+      {children}
+    </SubscriptionContext.Provider>
+  )
+}
+
 function AuthenticatedSubscriptionProvider({ children }: { children: React.ReactNode }) {
   const { subscription, features, loading, error, refetch } = useSubscriptionHook()
 
@@ -53,46 +79,28 @@ function AuthenticatedSubscriptionProvider({ children }: { children: React.React
   )
 }
 
-export function SubscriptionProvider({ children }: { children: React.ReactNode }) {
+function SessionSubscriptionProvider({ children }: { children: React.ReactNode }) {
   const { data: session, isPending } = useSession()
 
   if (isPending) {
-    const contextValue: SubscriptionContextType = {
-      subscription: DEFAULT_SUBSCRIPTION,
-      features: DEFAULT_FEATURES,
-      loading: true,
-      error: null,
-      refetch: async () => {},
-      isPremium: false,
-      isActive: true,
-    }
-
-    return (
-      <SubscriptionContext.Provider value={contextValue}>
-        {children}
-      </SubscriptionContext.Provider>
-    )
+    return <DefaultSubscriptionProvider loading>{children}</DefaultSubscriptionProvider>
   }
 
   if (!session?.user) {
-    const contextValue: SubscriptionContextType = {
-      subscription: DEFAULT_SUBSCRIPTION,
-      features: DEFAULT_FEATURES,
-      loading: false,
-      error: null,
-      refetch: async () => {},
-      isPremium: false,
-      isActive: true,
-    }
-
-    return (
-      <SubscriptionContext.Provider value={contextValue}>
-        {children}
-      </SubscriptionContext.Provider>
-    )
+    return <DefaultSubscriptionProvider>{children}</DefaultSubscriptionProvider>
   }
 
   return <AuthenticatedSubscriptionProvider>{children}</AuthenticatedSubscriptionProvider>
+}
+
+export function SubscriptionProvider({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname()
+
+  if (isUnauthenticatedPagePath(pathname)) {
+    return <DefaultSubscriptionProvider>{children}</DefaultSubscriptionProvider>
+  }
+
+  return <SessionSubscriptionProvider>{children}</SessionSubscriptionProvider>
 }
 
 export function useSubscription() {
