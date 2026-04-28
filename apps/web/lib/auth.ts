@@ -1,4 +1,5 @@
 import { betterAuth } from "better-auth";
+import { APIError } from "better-auth/api";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { emailOTP, magicLink } from "better-auth/plugins";
 import { db } from "@/database/db";
@@ -64,6 +65,40 @@ const APP_URL = (process.env.BETTER_AUTH_BASE_URL && process.env.BETTER_AUTH_BAS
     : (process.env.NEXT_PUBLIC_APP_URL && !process.env.NEXT_PUBLIC_APP_URL.includes("PLACEHOLDER") && process.env.NEXT_PUBLIC_APP_URL.startsWith("http")
         ? process.env.NEXT_PUBLIC_APP_URL
         : "http://localhost:3000");
+const EMAIL_VERIFICATION_RESEND_COOLDOWN_MS = 60 * 1000;
+const emailVerificationSentAt = new Map<string, number>();
+
+function enforceEmailVerificationCooldown(email: string, type: "sign-in" | "email-verification" | "forget-password" | "change-email") {
+    if (type !== "email-verification") {
+        return;
+    }
+
+    const key = email.toLowerCase();
+    const now = Date.now();
+    const lastSentAt = emailVerificationSentAt.get(key);
+
+    if (lastSentAt && now - lastSentAt < EMAIL_VERIFICATION_RESEND_COOLDOWN_MS) {
+        const retryAfter = Math.ceil((EMAIL_VERIFICATION_RESEND_COOLDOWN_MS - (now - lastSentAt)) / 1000);
+        throw APIError.fromStatus("TOO_MANY_REQUESTS", {
+            message: `Please wait ${retryAfter} second${retryAfter === 1 ? "" : "s"} before requesting another verification code.`,
+        });
+    }
+}
+
+function recordEmailVerificationSent(email: string, type: "sign-in" | "email-verification" | "forget-password" | "change-email") {
+    if (type !== "email-verification") {
+        return;
+    }
+
+    const now = Date.now();
+    emailVerificationSentAt.set(email.toLowerCase(), now);
+
+    for (const [key, sentAt] of emailVerificationSentAt.entries()) {
+        if (now - sentAt > 10 * 60 * 1000) {
+            emailVerificationSentAt.delete(key);
+        }
+    }
+}
 
 export const auth = betterAuth({
     database: drizzleAdapter(db, { provider: "pg" }),
@@ -71,6 +106,17 @@ export const auth = betterAuth({
     
     // Explicitly pass secret for build time validation
     secret: getEnvValue("BETTER_AUTH_SECRET", "better_auth_secret_placeholder_for_build"),
+
+    // Enforce resend cooldowns on the auth endpoint itself, not only in UI state.
+    rateLimit: {
+        enabled: true,
+        customRules: {
+            "/email-otp/send-verification-otp": {
+                window: 60,
+                max: 1,
+            },
+        },
+    },
 
     // Enable email/password authentication
     emailAndPassword: {
@@ -206,9 +252,12 @@ export const auth = betterAuth({
 
         emailOTP({
             sendVerificationOnSignUp: true,
+            resendStrategy: "reuse",
             otpLength: 6,
             expiresIn: 10 * 60,
             async sendVerificationOTP({ email, otp, type }) {
+                enforceEmailVerificationCooldown(email, type);
+
                 const subject = type === "forget-password"
                     ? "Password Reset Code - UpDrafted"
                     : "Verification Code - UpDrafted";
@@ -240,6 +289,8 @@ export const auth = betterAuth({
                         </div>
                     `,
                 });
+
+                recordEmailVerificationSent(email, type);
             },
         }),
     ],

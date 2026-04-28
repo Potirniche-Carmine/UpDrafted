@@ -48,26 +48,26 @@ function Toast({ type, title, message, duration = 5000, onClose }: ToastProps) {
   const getBorderColor = () => {
     switch (type) {
       case 'success':
-        return 'border-green-200 dark:border-green-800';
+        return 'border-green-200 dark:border-green-700';
       case 'error':
-        return 'border-red-200 dark:border-red-800';
+        return 'border-red-200 dark:border-red-700';
       case 'warning':
-        return 'border-yellow-200 dark:border-yellow-800';
+        return 'border-yellow-200 dark:border-yellow-700';
       case 'info':
-        return 'border-blue-200 dark:border-blue-800';
+        return 'border-blue-200 dark:border-blue-700';
     }
   };
 
   const getBackgroundColor = () => {
     switch (type) {
       case 'success':
-        return 'bg-green-50 dark:bg-green-950/20';
+        return 'bg-green-50 dark:bg-green-950';
       case 'error':
-        return 'bg-red-50 dark:bg-red-950/20';
+        return 'bg-red-50 dark:bg-red-950';
       case 'warning':
-        return 'bg-yellow-50 dark:bg-yellow-950/20';
+        return 'bg-yellow-50 dark:bg-yellow-950';
       case 'info':
-        return 'bg-blue-50 dark:bg-blue-950/20';
+        return 'bg-blue-50 dark:bg-blue-950';
     }
   };
 
@@ -88,7 +88,7 @@ function Toast({ type, title, message, duration = 5000, onClose }: ToastProps) {
     <div
       className={`
         ${getBackgroundColor()} ${getBorderColor()} ${getTextColor()}
-        border rounded-lg p-4 shadow-lg max-w-sm w-full
+        border rounded-lg p-4 shadow-lg dark:shadow-black/40 max-w-sm w-full
         animate-in slide-in-from-right-full duration-300
       `}
     >

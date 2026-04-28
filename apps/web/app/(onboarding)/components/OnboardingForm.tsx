@@ -135,7 +135,7 @@ export default function OnboardingForm({ role, onBack }: OnboardingFormProps) {
         } catch (sessionError) {
           console.error("Failed to refresh session", sessionError);
         }
-        window.location.href = "/dashboard";
+        window.location.href = user.role === "admin" ? "/admin" : "/dashboard";
       } else {
         const errorData = await response.json();
         if (errorData.validationErrors) {

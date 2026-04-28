@@ -67,7 +67,7 @@ function resolveAuthState({
       return { allow: false, loading: false };
     }
 
-    if (hasAppRole(user?.role)) {
+    if (hasAppRole(user?.role) && user.role !== "admin") {
       return { allow: false, loading: false };
     }
 

@@ -26,7 +26,7 @@ import { useProfileNavigation } from '@/hooks/use-profile-navigation';
 import { useNotifications } from '@/hooks/use-notifications';
 import { SearchBar } from '@/app/(search)/components/search-bar';
 import { useUser, signOut } from "@/hooks/use-auth";
-import { getAccessPathForUser, hasAppRole, isUnauthenticatedPagePath } from "@/lib/auth-routing";
+import { getAccessPathForUser, hasAppRole } from "@/lib/auth-routing";
 
 interface NavItem {
   key: string;
@@ -250,10 +250,6 @@ function OnboardedHeaderContent({
 
 export function Header() {
   const pathname = usePathname();
-
-  if (isUnauthenticatedPagePath(pathname)) {
-    return <PublicHeader pathname={pathname} />;
-  }
 
   return <AuthenticatedHeader pathname={pathname} />;
 }
@@ -480,156 +476,6 @@ function AuthenticatedHeader({ pathname }: { pathname: string }) {
               </Sheet>
             </>
           )}
-        </div>
-      </div>
-    </header>
-  );
-}
-
-function PublicHeader({ pathname }: { pathname: string }) {
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  useEffect(() => {
-    if (mobileMenuOpen) {
-      const timeout = setTimeout(() => {
-        if (document.activeElement instanceof HTMLElement) {
-          document.activeElement.blur();
-        }
-      }, 100);
-      return () => clearTimeout(timeout);
-    }
-  }, [mobileMenuOpen]);
-
-  const marketingLinks = [
-    { href: "/for-athletes", label: "For Athletes" },
-    { href: "/for-coaches", label: "For Coaches" },
-    { href: "/for-recruiters", label: "For Recruiters" },
-    { href: "/about", label: "About" },
-  ];
-
-  const renderLogo = () => (
-    <Link href="/" className="flex items-center shrink-0 logo-no-flash" aria-label="UpDrafted home">
-      <Image
-        src="/updrafted-logo.webp"
-        alt="UpDrafted"
-        width={140}
-        height={40}
-        priority
-        placeholder="empty"
-        sizes="(max-width: 640px) 110px, 140px"
-        style={{
-          width: "auto",
-          height: "auto",
-          maxHeight: "36px",
-        }}
-      />
-    </Link>
-  );
-
-  if (!mounted) {
-    return (
-      <header className="sticky top-0 z-51 w-full border-b border-gray-200/80 dark:border-gray-800/80 bg-white/90 dark:bg-gray-950/90 backdrop-blur supports-[backdrop-filter]:bg-white/70 dark:supports-[backdrop-filter]:bg-gray-950/70">
-        <div className="mx-auto max-w-screen-2xl flex h-14 lg:h-16 items-center justify-between px-4 sm:px-6 lg:px-8">
-          {renderLogo()}
-        </div>
-      </header>
-    );
-  }
-
-  return (
-    <header className="sticky top-0 z-51 w-full border-b border-gray-200/80 dark:border-gray-800/80 bg-white/90 dark:bg-gray-950/90 backdrop-blur supports-[backdrop-filter]:bg-white/70 dark:supports-[backdrop-filter]:bg-gray-950/70">
-      <div className="mx-auto max-w-screen-2xl flex h-14 lg:h-16 items-center justify-between gap-3 px-4 sm:px-6 lg:px-8">
-        {renderLogo()}
-
-        <nav className="hidden md:flex flex-1 justify-center items-center gap-1">
-          {marketingLinks.map((link) => {
-            const isActive = pathname === link.href;
-            return (
-              <Link
-                key={link.href}
-                href={link.href}
-                className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                  isActive
-                    ? 'text-[#01ae79] bg-[#01ae79]/10'
-                    : 'text-muted-foreground hover:text-[#01ae79] hover:bg-[#01ae79]/5'
-                }`}
-              >
-                {link.label}
-              </Link>
-            );
-          })}
-        </nav>
-
-        <div className="hidden md:flex items-center gap-2">
-          <ThemeToggle />
-          <Link href="/sign-in">
-            <Button variant="ghost" size="sm" className="text-sm font-semibold">
-              Sign in
-            </Button>
-          </Link>
-          <Link href="/sign-up">
-            <Button size="sm" className="bg-[#01ae79] hover:bg-[#018a60] text-white font-semibold">
-              Create profile
-            </Button>
-          </Link>
-        </div>
-
-        <div className="md:hidden flex items-center gap-2">
-          <ThemeToggle />
-          <Link href="/sign-in">
-            <Button variant="ghost" size="sm" className="h-9 w-9 p-0" aria-label="Sign in">
-              <LogIn className="h-5 w-5" />
-            </Button>
-          </Link>
-          <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
-            <SheetTrigger asChild>
-              <Button variant="ghost" size="sm" className="h-9 w-9 p-0" aria-label="Open menu">
-                <Menu className="h-5 w-5" />
-              </Button>
-            </SheetTrigger>
-            <SheetContent side="right" className="w-[85vw] max-w-sm p-0 flex flex-col">
-              <SheetHeader className="px-6 pt-6 pb-4 border-b border-border/60">
-                <SheetTitle className="text-left text-lg">UpDrafted</SheetTitle>
-              </SheetHeader>
-
-              <div className="flex-1 overflow-y-auto px-3 py-4 space-y-1">
-                {[
-                  ...marketingLinks,
-                  { href: "/contact", label: "Contact" },
-                ].map((link) => (
-                  <Link
-                    key={link.href}
-                    href={link.href}
-                    onClick={() => setMobileMenuOpen(false)}
-                    className="block px-3 py-3 rounded-lg text-base font-medium text-foreground hover:text-[#01ae79] hover:bg-[#01ae79]/5 transition-colors"
-                  >
-                    {link.label}
-                  </Link>
-                ))}
-              </div>
-
-              <div className="border-t border-border/60 p-4 space-y-2.5 bg-background">
-                <Link href="/sign-up" onClick={() => setMobileMenuOpen(false)} className="block">
-                  <Button className="w-full h-11 bg-[#01ae79] hover:bg-[#018a60] text-white text-base font-semibold rounded-lg shadow-sm">
-                    Create profile
-                  </Button>
-                </Link>
-                <Link href="/sign-in" onClick={() => setMobileMenuOpen(false)} className="block">
-                  <Button
-                    variant="outline"
-                    className="w-full h-11 border-[#01ae79]/40 hover:bg-[#01ae79]/5 text-[#01ae79] hover:text-[#01ae79] text-base font-semibold rounded-lg"
-                  >
-                    Sign in
-                  </Button>
-                </Link>
-              </div>
-            </SheetContent>
-          </Sheet>
         </div>
       </div>
     </header>

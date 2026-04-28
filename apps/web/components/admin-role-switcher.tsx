@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRoleView } from "@/hooks/use-role-view";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -189,8 +190,13 @@ export function AdminRoleSwitcher() {
         </div>
 
         {/* Help Text */}
-        <div className="text-xs text-muted-foreground">
-          Create demo profiles through the onboarding flow while in admin mode to enable role switching.
+        <div className="space-y-3 rounded-lg border border-border/60 bg-muted/30 p-3">
+          <p className="text-xs text-muted-foreground">
+            Create or replace demo profiles through onboarding while signed in as admin.
+          </p>
+          <Button asChild className="w-full">
+            <Link href="/onboarding">Create demo profile</Link>
+          </Button>
         </div>
       </CardContent>
     </Card>
