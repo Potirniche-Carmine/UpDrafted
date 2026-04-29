@@ -44,8 +44,7 @@ apps/*/next-env.d.ts
 # Cursor
 .cursor/
 
-#clerk
-.clerk/
+.codex/
 
 #VsCode
 .vscode/
