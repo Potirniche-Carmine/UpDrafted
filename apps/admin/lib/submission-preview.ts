@@ -40,7 +40,20 @@ export function toSafeHttpUrl(rawUrl: string | null | undefined): string | null 
   }
 }
 
+export function toSafePreviewUrl(rawUrl: string | null | undefined): string | null {
+  if (!rawUrl) return null;
+
+  const trimmed = rawUrl.trim();
+  if (/^\/api\/verifications\/\d+\/files\/\d+\/preview$/.test(trimmed)) {
+    return trimmed;
+  }
+
+  return toSafeHttpUrl(trimmed);
+}
+
 export function getPreviewHostname(rawUrl: string): string {
+  if (rawUrl.startsWith("/")) return "Admin file preview";
+
   try {
     return new URL(rawUrl).hostname.replace(/^www\./, "");
   } catch {

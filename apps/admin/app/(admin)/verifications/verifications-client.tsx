@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -18,6 +19,7 @@ import {
 } from "@/components/ui/dialog";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { formatDateTime, formatRelative } from "@/lib/utils";
+import { buildPublicProfileUrl } from "@/lib/utils";
 import {
   CheckCircle2,
   XCircle,
@@ -25,6 +27,8 @@ import {
   ShieldCheck,
   ChevronRight,
   Paperclip,
+  ExternalLink,
+  UserCog,
 } from "lucide-react";
 import {
   getPreviewHostname,
@@ -67,6 +71,7 @@ type DetailState = {
       fileName: string;
       fileType: string;
       linkUrl: string | null;
+      previewUrl: string | null;
       description: string | null;
     }>;
     comments: Array<{
@@ -210,11 +215,12 @@ export function VerificationsClient({
 
   const actionNeedsReason = action === "deny";
   const canSubmitAction = action === "approve" || (actionNeedsReason && reason.trim().length > 0);
+  const canReview = detail?.request.status === "pending";
   const previewTargets = React.useMemo(() => {
     if (!detail) return [];
 
     return detail.request.files.reduce<SafePreviewTarget[]>((targets, file) => {
-      const safeUrl = toSafeHttpUrl(file.linkUrl);
+      const safeUrl = toSafeHttpUrl(file.linkUrl) ?? file.previewUrl;
       if (!safeUrl) return targets;
 
       targets.push({
@@ -264,30 +270,53 @@ export function VerificationsClient({
           </CardContent>
         </Card>
       ) : (
-        <Card>
+        <Card className="overflow-hidden">
           <CardContent className="p-0">
             <ul className="divide-y divide-[color:var(--border)]">
               {items.map((item) => (
-                <li key={item.id}>
-                  <button
-                    type="button"
-                    onClick={() => openDetail(item.id)}
-                    className="flex w-full items-center gap-3 p-4 text-left transition-colors hover:bg-[color:var(--accent)] focus-visible:bg-[color:var(--accent)] focus-visible:outline-none"
-                  >
-                    <div className="min-w-0 flex-1">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <p className="truncate font-medium">
-                          {item.user?.name ?? "Unknown user"}
+                <li
+                  key={item.id}
+                  className="transition-colors hover:bg-[color:var(--accent)] focus-within:bg-[color:var(--accent)]"
+                >
+                  <div className="flex items-stretch gap-2">
+                    <button
+                      type="button"
+                      onClick={() => openDetail(item.id)}
+                      className="flex min-w-0 flex-1 items-center gap-3 p-4 text-left outline-none"
+                    >
+                      <div className="min-w-0 flex-1">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <p className="truncate font-medium">
+                            {item.user?.name ?? "Unknown user"}
+                          </p>
+                          <StatusBadge status={item.status} />
+                          <Badge variant="outline">{item.role}</Badge>
+                        </div>
+                        <p className="mt-1 truncate text-xs text-[color:var(--muted-foreground)] sm:text-sm">
+                          {item.user?.email ?? "—"} · submitted {formatRelative(item.submittedAt)}
                         </p>
-                        <StatusBadge status={item.status} />
-                        <Badge variant="outline">{item.role}</Badge>
                       </div>
-                      <p className="mt-1 truncate text-xs text-[color:var(--muted-foreground)] sm:text-sm">
-                        {item.user?.email ?? "—"} · submitted {formatRelative(item.submittedAt)}
-                      </p>
-                    </div>
-                    <ChevronRight className="size-4 shrink-0 text-[color:var(--muted-foreground)]" />
-                  </button>
+                      <ChevronRight className="size-4 shrink-0 text-[color:var(--muted-foreground)]" />
+                    </button>
+                    {item.user ? (
+                      <div className="flex shrink-0 items-center gap-1 py-3 pr-3">
+                        <Button asChild variant="ghost" size="icon" aria-label={`Open ${item.user.name} profile`}>
+                          <a
+                            href={buildPublicProfileUrl(item.user.name, item.user.id)}
+                            target="_blank"
+                            rel="noreferrer"
+                          >
+                            <ExternalLink className="size-4" />
+                          </a>
+                        </Button>
+                        <Button asChild variant="ghost" size="icon" aria-label={`Manage ${item.user.name}`}>
+                          <Link href={`/users?user=${encodeURIComponent(item.user.id)}`}>
+                            <UserCog className="size-4" />
+                          </Link>
+                        </Button>
+                      </div>
+                    ) : null}
+                  </div>
                 </li>
               ))}
             </ul>
@@ -307,9 +336,31 @@ export function VerificationsClient({
                   <StatusBadge status={detail.request.status} />
                   <Badge variant="outline">{detail.request.role}</Badge>
                 </div>
-                <DialogDescription>
-                  {detail.request.user?.email ?? "—"} · submitted{" "}
-                  {formatDateTime(detail.request.submittedAt)}
+                <DialogDescription asChild>
+                  <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                    <span>
+                      {detail.request.user?.email ?? "—"} · submitted{" "}
+                      {formatDateTime(detail.request.submittedAt)}
+                    </span>
+                    {detail.request.user ? (
+                      <>
+                        <a
+                          className="inline-flex items-center gap-1 text-[color:var(--primary)] hover:underline"
+                          href={buildPublicProfileUrl(detail.request.user.name, detail.request.user.id)}
+                          target="_blank"
+                          rel="noreferrer"
+                        >
+                          <ExternalLink className="size-3.5" /> View profile
+                        </a>
+                        <Link
+                          className="inline-flex items-center gap-1 text-[color:var(--primary)] hover:underline"
+                          href={`/users?user=${encodeURIComponent(detail.request.user.id)}`}
+                        >
+                          <UserCog className="size-3.5" /> Manage user
+                        </Link>
+                      </>
+                    ) : null}
+                  </div>
                 </DialogDescription>
               </DialogHeader>
 
@@ -430,58 +481,67 @@ export function VerificationsClient({
                   </div>
                 </section>
 
-                <section className="space-y-3 rounded-lg border border-[color:var(--border)] bg-[color:var(--muted)]/30 p-3">
-                  <h3 className="text-sm font-semibold">Decision</h3>
-                  <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                    <Button
-                      variant={action === "approve" ? "success" : "outline"}
-                      size="sm"
-                      className="w-full justify-center"
-                      onClick={() => setAction("approve")}
-                    >
-                      <CheckCircle2 className="size-4" /> Verify &amp; email
-                    </Button>
-                    <Button
-                      variant={action === "deny" ? "destructive" : "outline"}
-                      size="sm"
-                      className="w-full justify-center"
-                      onClick={() => setAction("deny")}
-                    >
-                      <XCircle className="size-4" /> Deny
-                    </Button>
-                  </div>
-                  {action ? (
-                    <div className="space-y-2">
-                      {actionNeedsReason ? (
+                {canReview ? (
+                  <section className="space-y-3 rounded-lg border border-[color:var(--border)] bg-[color:var(--muted)]/30 p-3">
+                    <h3 className="text-sm font-semibold">Decision</h3>
+                    <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                      <Button
+                        variant={action === "approve" ? "success" : "outline"}
+                        size="sm"
+                        className="w-full justify-center"
+                        onClick={() => setAction("approve")}
+                      >
+                        <CheckCircle2 className="size-4" /> Verify &amp; email
+                      </Button>
+                      <Button
+                        variant={action === "deny" ? "destructive" : "outline"}
+                        size="sm"
+                        className="w-full justify-center"
+                        onClick={() => setAction("deny")}
+                      >
+                        <XCircle className="size-4" /> Deny
+                      </Button>
+                    </div>
+                    {action ? (
+                      <div className="space-y-2">
+                        {actionNeedsReason ? (
+                          <div className="space-y-1.5">
+                            <Label htmlFor="reason">
+                              Reason for denial (shared with the user)
+                            </Label>
+                            <Textarea
+                              id="reason"
+                              required
+                              value={reason}
+                              onChange={(e) => setReason(e.target.value)}
+                            />
+                          </div>
+                        ) : (
+                          <p className="text-xs text-[color:var(--muted-foreground)]">
+                            Approving will flip the profile&apos;s verified flag and send the user
+                            an approval email.
+                          </p>
+                        )}
                         <div className="space-y-1.5">
-                          <Label htmlFor="reason">
-                            Reason for denial (shared with the user)
-                          </Label>
-                          <Textarea
-                            id="reason"
-                            required
-                            value={reason}
-                            onChange={(e) => setReason(e.target.value)}
+                          <Label htmlFor="notes">Internal moderator notes (optional)</Label>
+                          <Input
+                            id="notes"
+                            placeholder="Only visible to other moderators"
+                            value={notes}
+                            onChange={(e) => setNotes(e.target.value)}
                           />
                         </div>
-                      ) : (
-                        <p className="text-xs text-[color:var(--muted-foreground)]">
-                          Approving will flip the profile&apos;s verified flag and send the user an
-                          approval email.
-                        </p>
-                      )}
-                      <div className="space-y-1.5">
-                        <Label htmlFor="notes">Internal moderator notes (optional)</Label>
-                        <Input
-                          id="notes"
-                          placeholder="Only visible to other moderators"
-                          value={notes}
-                          onChange={(e) => setNotes(e.target.value)}
-                        />
                       </div>
-                    </div>
-                  ) : null}
-                </section>
+                    ) : null}
+                  </section>
+                ) : (
+                  <section className="rounded-lg border border-[color:var(--border)] bg-[color:var(--muted)]/30 p-3">
+                    <p className="text-sm text-[color:var(--muted-foreground)]">
+                      This request has already been reviewed. Use User Management for future
+                      verify or unverify changes.
+                    </p>
+                  </section>
+                )}
 
                 {errorMsg ? (
                   <p className="rounded-lg border border-[color:var(--destructive)]/40 bg-[color:var(--destructive)]/10 px-3 py-2 text-sm text-[color:var(--destructive)]">
@@ -495,7 +555,7 @@ export function VerificationsClient({
                   Close
                 </Button>
                 <Button
-                  disabled={!action || !canSubmitAction || submitting}
+                  disabled={!canReview || !action || !canSubmitAction || submitting}
                   onClick={submitAction}
                   className="sm:order-2"
                   variant={

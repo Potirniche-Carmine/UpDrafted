@@ -129,6 +129,7 @@ export type VerificationDetail = VerificationListItem & {
     fileName: string;
     fileType: string;
     linkUrl: string | null;
+    previewUrl: string | null;
     description: string | null;
     createdAt: string;
   }>;
@@ -177,6 +178,7 @@ export async function getVerificationDetail(
         fileName: f.fileName,
         fileType: f.fileType,
         linkUrl: f.linkUrl ?? f.fileUrl ?? null,
+        previewUrl: f.r2Key ? `/api/verifications/${row.id}/files/${f.id}/preview` : null,
         description: f.description,
         createdAt: f.createdAt.toISOString(),
       })),
@@ -249,6 +251,9 @@ export async function applyVerificationAction(
     });
     if (!request) throw new Error("Verification request not found");
     if (!request.user) throw new Error("Verification user record missing");
+    if (request.status !== "pending") {
+      throw new Error("This verification request has already been reviewed");
+    }
 
     const now = new Date();
 

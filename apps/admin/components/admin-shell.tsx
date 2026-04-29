@@ -9,6 +9,7 @@ import {
   Flag,
   LogOut,
   ChevronDown,
+  Users,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { authClient } from "@/lib/auth-client";
@@ -25,6 +26,7 @@ const NAV: NavItem[] = [
   { href: "/", label: "Overview", icon: LayoutDashboard },
   { href: "/verifications", label: "Verifications", icon: ShieldCheck },
   { href: "/reports", label: "Reports", icon: Flag },
+  { href: "/users", label: "Users", icon: Users },
 ];
 
 function isActive(pathname: string | null, href: string): boolean {
@@ -197,7 +199,7 @@ export function AdminShell({
         className="fixed inset-x-0 bottom-0 z-40 border-t border-[color:var(--border)] bg-[color:var(--card)]/90 backdrop-blur-md md:hidden"
         style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
       >
-        <ul className="mx-auto grid max-w-md grid-cols-3">
+        <ul className="mx-auto grid max-w-md grid-cols-4">
           {NAV.map(({ href, label, icon: Icon }) => {
             const active = isActive(pathname, href);
             return (

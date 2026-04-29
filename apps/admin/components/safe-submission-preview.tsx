@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils";
 import {
   getPreviewHostname,
   getSafePdfPreviewUrl,
-  toSafeHttpUrl,
+  toSafePreviewUrl,
   type SafePreviewTarget,
 } from "@/lib/submission-preview";
 
@@ -20,7 +20,7 @@ export function SafeSubmissionPreview({
 }) {
   const safeTargets = React.useMemo(() => {
     return targets.reduce<SafePreviewTarget[]>((items, target) => {
-      const safeUrl = toSafeHttpUrl(target.url);
+      const safeUrl = toSafePreviewUrl(target.url);
       if (!safeUrl) return items;
       items.push({ ...target, url: safeUrl });
       return items;

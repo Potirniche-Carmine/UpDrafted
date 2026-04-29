@@ -290,6 +290,9 @@ export async function applyReportAction(
     });
     if (!report) throw new Error("Report not found");
     if (!report.reportedUser) throw new Error("Reported user record missing");
+    if (report.status !== "pending" && report.status !== "under_review") {
+      throw new Error("This report has already been reviewed");
+    }
     if (report.reportedUser.id === admin.userId) {
       throw new Error("Cannot ban yourself");
     }

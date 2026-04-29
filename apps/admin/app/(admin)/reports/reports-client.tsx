@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -17,7 +18,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { formatDateTime, formatRelative } from "@/lib/utils";
+import { buildPublicProfileUrl, formatDateTime, formatRelative } from "@/lib/utils";
 import {
   Ban,
   Clock,
@@ -25,6 +26,8 @@ import {
   XCircle,
   Flag,
   ChevronRight,
+  ExternalLink,
+  UserCog,
 } from "lucide-react";
 import { extractSafePreviewTargetsFromText } from "@/lib/submission-preview";
 import type { ReportListItem, ReportQueueMap } from "@/lib/reports";
@@ -224,6 +227,8 @@ export function ReportsClient({
     action === "decline" ||
     (action === "ban_permanent" && reason.trim().length > 0) ||
     (action === "ban_temporary" && reason.trim().length > 0 && durationDays > 0);
+  const canReview =
+    detail?.report.status === "pending" || detail?.report.status === "under_review";
   const previewTargets = React.useMemo(() => {
     if (!detail) return [];
     return extractSafePreviewTargetsFromText(
@@ -260,33 +265,66 @@ export function ReportsClient({
           </CardContent>
         </Card>
       ) : (
-        <Card>
+        <Card className="overflow-hidden">
           <CardContent className="p-0">
             <ul className="divide-y divide-[color:var(--border)]">
               {items.map((item) => (
-                <li key={item.id}>
-                  <button
-                    type="button"
-                    onClick={() => openDetail(item.id)}
-                    className="flex w-full items-center gap-3 p-4 text-left transition-colors hover:bg-[color:var(--accent)] focus-visible:bg-[color:var(--accent)] focus-visible:outline-none"
-                  >
-                    <div className="min-w-0 flex-1">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <p className="truncate font-medium">
-                          {item.reportedUser?.name ?? "Unknown user"}
+                <li
+                  key={item.id}
+                  className="transition-colors hover:bg-[color:var(--accent)] focus-within:bg-[color:var(--accent)]"
+                >
+                  <div className="flex items-stretch gap-2">
+                    <button
+                      type="button"
+                      onClick={() => openDetail(item.id)}
+                      className="flex min-w-0 flex-1 items-center gap-3 p-4 text-left outline-none"
+                    >
+                      <div className="min-w-0 flex-1">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <p className="truncate font-medium">
+                            {item.reportedUser?.name ?? "Unknown user"}
+                          </p>
+                          <StatusBadge status={item.status} />
+                          {item.reportedUser?.banned ? (
+                            <Badge variant="destructive">Banned</Badge>
+                          ) : null}
+                        </div>
+                        <p className="mt-1 truncate text-xs text-[color:var(--muted-foreground)] sm:text-sm">
+                          {item.reportReason} · by {item.reporter?.name ?? "—"} ·{" "}
+                          {formatRelative(item.submittedAt)}
                         </p>
-                        <StatusBadge status={item.status} />
-                        {item.reportedUser?.banned ? (
-                          <Badge variant="destructive">Banned</Badge>
-                        ) : null}
                       </div>
-                      <p className="mt-1 truncate text-xs text-[color:var(--muted-foreground)] sm:text-sm">
-                        {item.reportReason} · by {item.reporter?.name ?? "—"} ·{" "}
-                        {formatRelative(item.submittedAt)}
-                      </p>
-                    </div>
-                    <ChevronRight className="size-4 shrink-0 text-[color:var(--muted-foreground)]" />
-                  </button>
+                      <ChevronRight className="size-4 shrink-0 text-[color:var(--muted-foreground)]" />
+                    </button>
+                    {item.reportedUser ? (
+                      <div className="flex shrink-0 items-center gap-1 py-3 pr-3">
+                        <Button
+                          asChild
+                          variant="ghost"
+                          size="icon"
+                          aria-label={`Open ${item.reportedUser.name} profile`}
+                        >
+                          <a
+                            href={buildPublicProfileUrl(item.reportedUser.name, item.reportedUser.id)}
+                            target="_blank"
+                            rel="noreferrer"
+                          >
+                            <ExternalLink className="size-4" />
+                          </a>
+                        </Button>
+                        <Button
+                          asChild
+                          variant="ghost"
+                          size="icon"
+                          aria-label={`Manage ${item.reportedUser.name}`}
+                        >
+                          <Link href={`/users?user=${encodeURIComponent(item.reportedUser.id)}`}>
+                            <UserCog className="size-4" />
+                          </Link>
+                        </Button>
+                      </div>
+                    ) : null}
+                  </div>
                 </li>
               ))}
             </ul>
@@ -309,9 +347,34 @@ export function ReportsClient({
                     <Badge variant="destructive">Banned</Badge>
                   ) : null}
                 </div>
-                <DialogDescription>
-                  {detail.report.reportedUser?.email ?? "—"} · submitted{" "}
-                  {formatDateTime(detail.report.submittedAt)}
+                <DialogDescription asChild>
+                  <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                    <span>
+                      {detail.report.reportedUser?.email ?? "—"} · submitted{" "}
+                      {formatDateTime(detail.report.submittedAt)}
+                    </span>
+                    {detail.report.reportedUser ? (
+                      <>
+                        <a
+                          className="inline-flex items-center gap-1 text-[color:var(--primary)] hover:underline"
+                          href={buildPublicProfileUrl(
+                            detail.report.reportedUser.name,
+                            detail.report.reportedUser.id,
+                          )}
+                          target="_blank"
+                          rel="noreferrer"
+                        >
+                          <ExternalLink className="size-3.5" /> View profile
+                        </a>
+                        <Link
+                          className="inline-flex items-center gap-1 text-[color:var(--primary)] hover:underline"
+                          href={`/users?user=${encodeURIComponent(detail.report.reportedUser.id)}`}
+                        >
+                          <UserCog className="size-3.5" /> Manage user
+                        </Link>
+                      </>
+                    ) : null}
+                  </div>
                 </DialogDescription>
               </DialogHeader>
 
@@ -320,12 +383,33 @@ export function ReportsClient({
                   <h3 className="text-xs font-semibold uppercase tracking-wide text-[color:var(--muted-foreground)]">
                     Reporter
                   </h3>
-                  <p className="mt-1 text-sm">
-                    <span className="font-medium">{detail.report.reporter?.name ?? "—"}</span>{" "}
+                  <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
+                    <span className="font-medium">{detail.report.reporter?.name ?? "—"}</span>
                     <span className="text-[color:var(--muted-foreground)]">
                       ({detail.report.reporter?.email ?? "—"})
                     </span>
-                  </p>
+                    {detail.report.reporter ? (
+                      <>
+                        <a
+                          className="inline-flex items-center gap-1 text-[color:var(--primary)] hover:underline"
+                          href={buildPublicProfileUrl(
+                            detail.report.reporter.name,
+                            detail.report.reporter.id,
+                          )}
+                          target="_blank"
+                          rel="noreferrer"
+                        >
+                          <ExternalLink className="size-3.5" /> View profile
+                        </a>
+                        <Link
+                          className="inline-flex items-center gap-1 text-[color:var(--primary)] hover:underline"
+                          href={`/users?user=${encodeURIComponent(detail.report.reporter.id)}`}
+                        >
+                          <UserCog className="size-3.5" /> Manage user
+                        </Link>
+                      </>
+                    ) : null}
+                  </div>
                 </section>
 
                 <section className="rounded-lg border border-[color:var(--border)] bg-[color:var(--muted)]/30 p-3">
@@ -417,77 +501,86 @@ export function ReportsClient({
                   </div>
                 </section>
 
-                <section className="space-y-3 rounded-lg border border-[color:var(--border)] bg-[color:var(--muted)]/30 p-3">
-                  <h3 className="text-sm font-semibold">Decision</h3>
-                  <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
-                    <Button
-                      variant={action === "ban_permanent" ? "destructive" : "outline"}
-                      size="sm"
-                      className="w-full justify-center"
-                      onClick={() => setAction("ban_permanent")}
-                    >
-                      <Ban className="size-4" /> Ban permanently
-                    </Button>
-                    <Button
-                      variant={action === "ban_temporary" ? "warning" : "outline"}
-                      size="sm"
-                      className="w-full justify-center"
-                      onClick={() => setAction("ban_temporary")}
-                    >
-                      <Clock className="size-4" /> Ban for X days
-                    </Button>
-                    <Button
-                      variant={action === "decline" ? "secondary" : "outline"}
-                      size="sm"
-                      className="w-full justify-center"
-                      onClick={() => setAction("decline")}
-                    >
-                      <XCircle className="size-4" /> Decline
-                    </Button>
-                  </div>
-
-                  {action === "ban_temporary" ? (
-                    <div className="flex items-center gap-2">
-                      <Label htmlFor="days" className="shrink-0">
-                        Duration (days)
-                      </Label>
-                      <Input
-                        id="days"
-                        type="number"
-                        min={1}
-                        max={3650}
-                        inputMode="numeric"
-                        className="w-28"
-                        value={durationDays}
-                        onChange={(e) => setDurationDays(Number.parseInt(e.target.value, 10) || 0)}
-                      />
+                {canReview ? (
+                  <section className="space-y-3 rounded-lg border border-[color:var(--border)] bg-[color:var(--muted)]/30 p-3">
+                    <h3 className="text-sm font-semibold">Decision</h3>
+                    <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+                      <Button
+                        variant={action === "ban_permanent" ? "destructive" : "outline"}
+                        size="sm"
+                        className="w-full justify-center"
+                        onClick={() => setAction("ban_permanent")}
+                      >
+                        <Ban className="size-4" /> Ban permanently
+                      </Button>
+                      <Button
+                        variant={action === "ban_temporary" ? "warning" : "outline"}
+                        size="sm"
+                        className="w-full justify-center"
+                        onClick={() => setAction("ban_temporary")}
+                      >
+                        <Clock className="size-4" /> Ban for X days
+                      </Button>
+                      <Button
+                        variant={action === "decline" ? "secondary" : "outline"}
+                        size="sm"
+                        className="w-full justify-center"
+                        onClick={() => setAction("decline")}
+                      >
+                        <XCircle className="size-4" /> Decline
+                      </Button>
                     </div>
-                  ) : null}
 
-                  {action && action !== "decline" ? (
-                    <div className="space-y-1.5">
-                      <Label htmlFor="report-reason">Reason (shared with the user)</Label>
-                      <Textarea
-                        id="report-reason"
-                        required
-                        value={reason}
-                        onChange={(e) => setReason(e.target.value)}
-                      />
-                    </div>
-                  ) : null}
+                    {action === "ban_temporary" ? (
+                      <div className="flex items-center gap-2">
+                        <Label htmlFor="days" className="shrink-0">
+                          Duration (days)
+                        </Label>
+                        <Input
+                          id="days"
+                          type="number"
+                          min={1}
+                          max={3650}
+                          inputMode="numeric"
+                          className="w-28"
+                          value={durationDays}
+                          onChange={(e) => setDurationDays(Number.parseInt(e.target.value, 10) || 0)}
+                        />
+                      </div>
+                    ) : null}
 
-                  {action ? (
-                    <div className="space-y-1.5">
-                      <Label htmlFor="report-notes">Internal moderator notes (optional)</Label>
-                      <Input
-                        id="report-notes"
-                        placeholder="Only visible to other moderators"
-                        value={notes}
-                        onChange={(e) => setNotes(e.target.value)}
-                      />
-                    </div>
-                  ) : null}
-                </section>
+                    {action && action !== "decline" ? (
+                      <div className="space-y-1.5">
+                        <Label htmlFor="report-reason">Reason (shared with the user)</Label>
+                        <Textarea
+                          id="report-reason"
+                          required
+                          value={reason}
+                          onChange={(e) => setReason(e.target.value)}
+                        />
+                      </div>
+                    ) : null}
+
+                    {action ? (
+                      <div className="space-y-1.5">
+                        <Label htmlFor="report-notes">Internal moderator notes (optional)</Label>
+                        <Input
+                          id="report-notes"
+                          placeholder="Only visible to other moderators"
+                          value={notes}
+                          onChange={(e) => setNotes(e.target.value)}
+                        />
+                      </div>
+                    ) : null}
+                  </section>
+                ) : (
+                  <section className="rounded-lg border border-[color:var(--border)] bg-[color:var(--muted)]/30 p-3">
+                    <p className="text-sm text-[color:var(--muted-foreground)]">
+                      This report has already been reviewed. Use User Management for future ban,
+                      unban, verify, or unverify changes.
+                    </p>
+                  </section>
+                )}
 
                 {errorMsg ? (
                   <p className="rounded-lg border border-[color:var(--destructive)]/40 bg-[color:var(--destructive)]/10 px-3 py-2 text-sm text-[color:var(--destructive)]">
@@ -510,7 +603,7 @@ export function ReportsClient({
                           ? "secondary"
                           : "default"
                   }
-                  disabled={!action || !canSubmit || submitting}
+                  disabled={!canReview || !action || !canSubmit || submitting}
                   onClick={submitAction}
                   className="sm:order-2"
                 >

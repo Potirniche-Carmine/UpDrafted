@@ -5,6 +5,20 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
+export function generateProfileSlug(fullName: string): string {
+  return fullName
+    .toLowerCase()
+    .trim()
+    .replace(/\s+/g, "-")
+    .replace(/[^a-z0-9-]/g, "");
+}
+
+export function buildPublicProfileUrl(fullName: string, userId: string): string {
+  const origin = process.env.NEXT_PUBLIC_UPDRAFTED_WEB_URL ?? "https://updrafted.us";
+  const slug = generateProfileSlug(fullName || "user");
+  return `${origin.replace(/\/$/, "")}/profile/${slug || "user"}/${userId}`;
+}
+
 export function formatDateTime(value: Date | string | null | undefined): string {
   if (!value) return "—";
   const date = value instanceof Date ? value : new Date(value);
