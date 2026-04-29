@@ -6,6 +6,7 @@ import { sanitizeText } from '@/utils/sanitization';
 import { User } from '@/database/schema';
 import { MessageValidation, validateSchema, ValidationError } from '@/utils/validation';
 import { withRateLimit } from '@/utils/security';
+import { SUSPENDED_PROFILE_MESSAGE } from '@/lib/suspension';
 
 interface ConversationData {
   id: number;
@@ -364,6 +365,15 @@ async function handleGetMessages(userId: string, body: GetMessagesRequestBody) {
     const partnerId = conversation.user1Id === userId 
       ? conversation.user2Id
       : conversation.user1Id;
+
+    const partnerUser = conversation.user1Id === userId ? conversation.user2 : conversation.user1;
+    if (partnerUser?.banned) {
+      return NextResponse.json({
+        success: false,
+        error: SUSPENDED_PROFILE_MESSAGE,
+        partnerSuspended: true,
+      }, { status: 403 });
+    }
     
     const connection = await connectionOperations.getConnectionBetweenUsers(userId, partnerId);
     const reverseConnection = await connectionOperations.getConnectionBetweenUsers(partnerId, userId);
@@ -424,8 +434,9 @@ async function handleGetMessages(userId: string, body: GetMessagesRequestBody) {
     if (!partnerInfo) {
       return NextResponse.json({
         success: false,
-        error: 'Partner information not found'
-      }, { status: 500 });
+        error: SUSPENDED_PROFILE_MESSAGE,
+        partnerSuspended: true,
+      }, { status: 403 });
     }
     
     return NextResponse.json({
@@ -515,6 +526,18 @@ async function handleSendMessage(userId: string, body: SendMessageRequestBody) {
     const partnerId = conversation.user1Id === userId 
       ? conversation.user2Id 
       : conversation.user1Id;
+
+    const partnerUser = conversation.user1Id === userId ? conversation.user2 : conversation.user1;
+    if (partnerUser?.banned) {
+      if (conversation.connectionActive) {
+        await messageOperations.updateConversationConnectionStatus(conversation.id, false);
+      }
+      return NextResponse.json({
+        success: false,
+        error: SUSPENDED_PROFILE_MESSAGE,
+        partnerSuspended: true,
+      }, { status: 403 });
+    }
     
     const connection = await connectionOperations.getConnectionBetweenUsers(userId, partnerId);
     const reverseConnection = await connectionOperations.getConnectionBetweenUsers(partnerId, userId);
@@ -668,6 +691,15 @@ async function handleGetOrCreateConversation(userId: string, body: GetOrCreateCo
 
     if (userId === partnerId) {
       return NextResponse.json({ success: false, error: 'Cannot start conversation with yourself' }, { status: 400 });
+    }
+
+    const partner = await profileOperations.getUserWithProfile(partnerId);
+    if (!partner || partner.banned) {
+      return NextResponse.json({
+        success: false,
+        error: SUSPENDED_PROFILE_MESSAGE,
+        partnerSuspended: true,
+      }, { status: 403 });
     }
 
     // Check if a connection exists between the users and is active

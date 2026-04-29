@@ -10,6 +10,7 @@ import { navigationStateManager } from '../../../lib/navigation-state';
 import type { AthleteProfileData } from '../../../components/athlete-profile';
 import type { CoachProfileData } from '../../../lib/base-profile-types';
 import type { RecruiterProfileData } from '../../../components/recruiter/recruiter-profile-types';
+import { SUSPENDED_PROFILE_MESSAGE } from '@/lib/suspension';
 
 // Global cache that persists across component mounts/unmounts
 const globalProfileCache = new Map<string, {
@@ -18,7 +19,7 @@ const globalProfileCache = new Map<string, {
   lastAccessed: number;
 }>();
 
-const CACHE_DURATION = 20 * 60 * 1000; // 20 minutes (increased from 10 minutes for better cost optimization)
+const CACHE_DURATION = 0; // Always re-check moderation state before showing a profile.
 const MAX_CACHE_SIZE = 150; // Increased from 100 to store more profiles
 
 // Cache management utilities
@@ -86,6 +87,8 @@ interface ProfileApiResponse {
   // Demo profile properties
   isDemoProfile?: boolean;
   adminViewingRole?: string;
+  profileSuspended?: boolean;
+  message?: string;
 }
 
 // New wrapper component that only loads after authentication passes
@@ -225,7 +228,9 @@ function ProfileContent({ profileId, slug }: { profileId: string; slug: string |
       const data: ProfileApiResponse = await response.json();
 
       // Cache the response in global cache
-      setCachedProfile(profileId, data);
+      if (!data.profileSuspended) {
+        setCachedProfile(profileId, data);
+      }
 
       setProfileData(data);
     } catch (err) {
@@ -389,6 +394,19 @@ function ProfileContent({ profileId, slug }: { profileId: string; slug: string |
   if (!profileData) {
     notFound();
     return null;
+  }
+
+  if (profileData.profileSuspended) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center px-4">
+        <div className="max-w-md rounded-lg border bg-card p-6 text-center shadow-sm">
+          <h1 className="text-2xl font-semibold tracking-tight text-foreground">Profile unavailable</h1>
+          <p className="mt-3 text-sm text-muted-foreground">
+            {profileData.message || SUSPENDED_PROFILE_MESSAGE}
+          </p>
+        </div>
+      </div>
+    );
   }
 
   // Override isOwnProfile if we're in preview mode

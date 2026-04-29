@@ -286,6 +286,7 @@ async function handleDiscoverRequest(request: NextRequest) {
     const baseExcludeConditions = [
       ne(users.id, userId), // Exclude self
       ne(users.role, 'admin'), // Exclude admin profiles
+      eq(users.banned, false), // Exclude suspended profiles
       not(exists(
         db.select()
           .from(connections)

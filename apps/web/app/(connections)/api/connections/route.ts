@@ -3,7 +3,7 @@ import { requireAnyRole } from '@/utils/roles';
 import { connectionOperations, userOperations, messageOperations, notificationOperations } from '@/database/db-utils';
 import { sanitizeText } from '@/utils/sanitization';
 import { withRateLimit } from '@/utils/security';
-import { getCachedWithType, setCachedWithType, invalidateCachePattern, createErrorResponse, createSuccessResponse } from '@/utils/security';
+import { invalidateCachePattern, createErrorResponse, createSuccessResponse } from '@/utils/security';
 import { getPartnerUserId } from '@/utils/connection-utils';
 
 export const runtime = 'nodejs';
@@ -149,6 +149,10 @@ export async function POST(request: NextRequest) {
       return createErrorResponse('One or both users not found', 404);
     }
 
+    if (currentUser.banned || targetUser.banned) {
+      return createErrorResponse('Cannot connect with a suspended user.', 403);
+    }
+
     // SECURITY: Only prevent athlete-to-athlete connections
     if (currentUser.role === 'athlete' && targetUser.role === 'athlete') {
       return createErrorResponse('Athletes cannot connect to other athletes', 400);
@@ -260,26 +264,7 @@ export async function GET(request: NextRequest) {
       minWeight,
     };
 
-    const hasFilters = Object.values(filters).some(v => v !== undefined && (!Array.isArray(v) || v.length > 0));
-
-    // Generate a more specific cache key if filters are applied
-    const cacheKey = hasFilters
-      ? `connections:${currentUserId}:${JSON.stringify(filters)}`
-      : `connections:${currentUserId}:all`;
-
-    if (hasFilters) {
-      // When filters are applied, we bypass the main cache for now
-      // to ensure fresh, filtered data is always served.
-      // Caching for filtered results can be complex and might be added later.
-    } else {
-      const cachedConnections = await getCachedWithType<ConnectionsResponse>(cacheKey);
-      if (cachedConnections) {
-        return createSuccessResponse({
-          success: true,
-          ...cachedConnections
-        }, rateLimitCheck.headers);
-      }
-    }
+    // Always fetch connections fresh so admin suspensions are reflected immediately.
 
     // Get connections using the appropriate db-util function
     const allConnections = await connectionOperations.getFilteredUserConnections(currentUserId, filters);
@@ -382,11 +367,6 @@ export async function GET(request: NextRequest) {
       }
     };
 
-    // Cache the result only if no filters were applied
-    if (!hasFilters) {
-      await setCachedWithType(cacheKey, result, 'userConnections');
-    }
-
     return createSuccessResponse({
       success: true,
       ...result
@@ -472,9 +452,28 @@ export async function PUT(request: NextRequest) {
       return createErrorResponse('Connection ID is required', 400);
     }
 
+    const parsedConnectionId = parseInt(connectionId);
+    const pendingConnection = await connectionOperations.getConnectionById(parsedConnectionId);
+    if (
+      !pendingConnection ||
+      pendingConnection.toUserId !== currentUserId ||
+      pendingConnection.status !== 'pending'
+    ) {
+      return createErrorResponse('Connection not found or unauthorized', 404);
+    }
+
+    const [currentUser, originalRequester] = await Promise.all([
+      userOperations.getUserWithProfile(currentUserId),
+      userOperations.getUserWithProfile(pendingConnection.fromUserId),
+    ]);
+
+    if (currentUser?.banned || originalRequester?.banned) {
+      return createErrorResponse('Cannot accept a connection with a suspended user.', 403);
+    }
+
     // Update the connection status from pending to connected
     const connection = await connectionOperations.updateConnectionStatusById(
-      parseInt(connectionId),
+      parsedConnectionId,
       currentUserId,
       'connected'
     );
@@ -483,8 +482,9 @@ export async function PUT(request: NextRequest) {
       return createErrorResponse('Connection not found or unauthorized', 404);
     }
 
-    // Create notification for the original requester that their connection was accepted
     const originalRequesterId = connection.fromUserId;
+
+    // Create notification for the original requester that their connection was accepted
     try {
       await notificationOperations.createConnectionNotification(
         originalRequesterId,

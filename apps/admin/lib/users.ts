@@ -13,6 +13,7 @@ import {
 import { count, desc, eq, ilike, or } from "drizzle-orm";
 import type { AdminSession } from "./admin-guard";
 import { executeAsAdmin } from "./db-access";
+import { sendReportBanEmail, sendVerificationApprovedEmail } from "./email";
 import { buildPublicProfileUrl } from "./utils";
 
 export type ManagedUserRole = "athlete" | "coach" | "recruiter" | "admin" | null;
@@ -318,10 +319,10 @@ export async function applyManagedUserAction(
   userId: string,
   input: ManagedUserActionInput,
 ): Promise<ManagedUserDetail> {
-  await executeAsAdmin(admin, async (tx) => {
+  const emailPayload = await executeAsAdmin(admin, async (tx) => {
     const target = await tx.query.users.findFirst({
       where: eq(users.id, userId),
-      columns: { id: true, role: true },
+      columns: { id: true, name: true, email: true, role: true },
     });
     if (!target) throw new Error("User not found");
 
@@ -360,7 +361,12 @@ export async function applyManagedUserAction(
           body: `${admin.name} ${isVerified ? "verified" : "unverified"} this profile from User Management.`,
         });
       }
-      return;
+      return isVerified
+        ? {
+            type: "verification_approved" as const,
+            user: { email: target.email, name: target.name },
+          }
+        : null;
     }
 
     if (input.action === "unban") {
@@ -387,7 +393,7 @@ export async function applyManagedUserAction(
           body: `${admin.name} unbanned this user from User Management.`,
         });
       }
-      return;
+      return null;
     }
 
     if (target.id === admin.userId) {
@@ -435,7 +441,28 @@ export async function applyManagedUserAction(
             : `${admin.name} temporarily banned this user from User Management for ${input.durationDays} days. Reason: ${reason}`,
       });
     }
+
+    return {
+      type: "ban" as const,
+      user: { email: target.email, name: target.name },
+      bannedUntil,
+      reason,
+    };
   });
+
+  if (emailPayload?.type === "verification_approved") {
+    await sendVerificationApprovedEmail({
+      to: emailPayload.user.email,
+      name: emailPayload.user.name,
+    });
+  } else if (emailPayload?.type === "ban") {
+    await sendReportBanEmail({
+      to: emailPayload.user.email,
+      name: emailPayload.user.name,
+      reason: emailPayload.reason,
+      bannedUntil: emailPayload.bannedUntil,
+    });
+  }
 
   const updated = await getManagedUserDetail(admin, userId);
   if (!updated) throw new Error("User not found after action");

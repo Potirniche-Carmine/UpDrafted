@@ -451,7 +451,7 @@ export function UsersClient({
                       id="ban-reason"
                       value={banReason}
                       onChange={(event) => setBanReason(event.target.value)}
-                      placeholder="Shared in admin records and ban emails from report actions"
+                      placeholder="Shared in admin records and the ban email"
                     />
                     <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
                       <div className="flex items-center gap-2">

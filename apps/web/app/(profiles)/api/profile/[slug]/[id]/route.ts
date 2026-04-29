@@ -12,6 +12,7 @@ import { withRateLimit, invalidateCache } from '@/utils/security';
 import { PRESENT_DATE, parseDateWithErrorHandling, dateToStringWithErrorHandling, validateDateDataset } from '@/lib/date-utils';
 import { createClientErrorResponse, logErrorWithContext } from '@/utils/error-sanitization';
 import { hasBufferedProfileView, queueProfileView } from '@/lib/activity-buffer';
+import { SUSPENDED_PROFILE_MESSAGE } from '@/lib/suspension';
 
 // Force Node.js runtime to avoid expensive edge function costs
 export const runtime = 'nodejs';
@@ -535,16 +536,29 @@ export async function GET(
         }
       }
 
-      // Track profile view if not viewing own profile
-      // Skip activity logging if viewer is admin OR profile owner is admin (for demo profiles)
+      // Get the user with their profile data before logging profile views.
+      const userWithProfile = await userOperations.getUserWithProfile(profileUserId, tx);
+
+      if (!userWithProfile) {
+        return NextResponse.json(
+          { error: 'User not found' },
+          { status: 404 }
+        );
+      }
+
+      if (userWithProfile.banned && !isOwnProfile && !isAdmin) {
+        return NextResponse.json({
+          success: false,
+          profileSuspended: true,
+          message: SUSPENDED_PROFILE_MESSAGE,
+        });
+      }
+
+      // Track profile view if not viewing own profile.
+      // Skip activity logging if viewer is admin OR profile owner is admin.
       if (!isOwnProfile && currentUserRole !== 'admin') {
         try {
-          // Check if the profile owner is an admin (to skip logging for demo profiles)
-          const profileOwner = await userOperations.getUserWithProfile(profileUserId, tx);
-          const profileOwnerRole = profileOwner?.role;
-
-          // Only log activity if profile owner is NOT an admin
-          if (profileOwnerRole !== 'admin') {
+          if (userWithProfile.role !== 'admin') {
             const existingActivity = await tx.query.activityLog.findFirst({
               where: and(
                 eq(activityLog.viewerId, currentUserId),
@@ -568,16 +582,6 @@ export async function GET(
         } catch {
           // Log error but don't fail the request
         }
-      }
-
-      // Get the user with their profile data
-      const userWithProfile = await userOperations.getUserWithProfile(profileUserId, tx);
-
-      if (!userWithProfile) {
-        return NextResponse.json(
-          { error: 'User not found' },
-          { status: 404 }
-        );
       }
 
       // Determine the user's role and get appropriate profile data

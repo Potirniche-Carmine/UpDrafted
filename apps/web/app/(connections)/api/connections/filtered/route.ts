@@ -3,7 +3,7 @@ import { requireAnyRole } from '@/utils/roles';
 import { connectionOperations } from '@/database/db-utils';
 import { sanitizeText } from '@/utils/sanitization';
 import { withRateLimit } from '@/utils/security';
-import { getCachedWithType, setCachedWithType, createErrorResponse, createSuccessResponse } from '@/utils/security';
+import { createErrorResponse, createSuccessResponse } from '@/utils/security';
 import { parseHeightToInches, parseWeightToPounds } from '@/lib/parsing-utils';
 import { SubscriptionManager } from '@/lib/subscription';
 
@@ -261,19 +261,7 @@ export async function POST(request: NextRequest) {
       sanitizedFilters.minHeight ||
       sanitizedFilters.minWeight ||
       sanitizedFilters.verified !== null;
-    const hasFilters = hasBasicFilters || hasAdvancedFilters;
-
-    const cacheKey = hasFilters ? null : `connections:${currentUserId}:all`;
-
-    if (cacheKey) {
-      const cachedConnections = await getCachedWithType<FilteredConnectionsResponse>(cacheKey);
-      if (cachedConnections) {
-        return createSuccessResponse({
-          success: true,
-          ...cachedConnections
-        }, rateLimitCheck.headers);
-      }
-    }
+    // Always fetch connections fresh so admin suspensions are reflected immediately.
 
     // Get connections from database with optimized filtering for basic filters
     const allConnections = hasBasicFilters
@@ -293,10 +281,6 @@ export async function POST(request: NextRequest) {
         outgoing: [],
         counts: { connected: 0, incoming: 0, outgoing: 0 }
       };
-
-      if (cacheKey) {
-        await setCachedWithType(cacheKey, emptyResponse, 'userConnections');
-      }
 
       return createSuccessResponse({
         success: true,
@@ -471,11 +455,6 @@ export async function POST(request: NextRequest) {
         outgoing: outgoingPendingRequests.length
       }
     };
-
-    // Cache the result only if no filters applied
-    if (cacheKey) {
-      await setCachedWithType(cacheKey, result, 'userConnections');
-    }
 
     return createSuccessResponse({
       success: true,

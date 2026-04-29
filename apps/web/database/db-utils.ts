@@ -548,6 +548,12 @@ export const connectionOperations = {
     return connection;
   },
 
+  async getConnectionById(connectionId: number) {
+    return await db.query.connections.findFirst({
+      where: eq(connections.id, connectionId),
+    });
+  },
+
   // Update connection status by connection ID with authorization check
   async updateConnectionStatusById(connectionId: number, currentUserId: string, status: 'connected' | 'pending') {
     const [connection] = await db
@@ -588,6 +594,7 @@ export const connectionOperations = {
           columns: {
             id: true,
             role: true,
+            banned: true,
           },
           with: {
             athleteProfile: {
@@ -664,6 +671,7 @@ export const connectionOperations = {
           columns: {
             id: true,
             role: true,
+            banned: true,
           },
           with: {
             athleteProfile: {
@@ -742,9 +750,14 @@ export const connectionOperations = {
 
     // For recruiting profiles, we need to fetch recruiting profile needs separately
     // as they're in a different table
+    const visibleConnections = userConnections.filter((connection) => {
+      const otherUser = connection.fromUserId === userId ? connection.toUser : connection.fromUser;
+      return !otherUser.banned;
+    });
+
     const allUsers = [
-      ...userConnections.map(conn => conn.fromUser),
-      ...userConnections.map(conn => conn.toUser)
+      ...visibleConnections.map(conn => conn.fromUser),
+      ...visibleConnections.map(conn => conn.toUser)
     ];
 
     const recruiterProfileIds = allUsers
@@ -789,7 +802,7 @@ export const connectionOperations = {
     });
 
     // Attach recruiting needs to recruiting profiles
-    const connectionsWithNeeds = userConnections.map(connection => ({
+    const connectionsWithNeeds = visibleConnections.map(connection => ({
       ...connection,
       fromUser: {
         ...connection.fromUser,
@@ -1496,7 +1509,8 @@ export const messageOperations = {
 
     // Filter out conversations where both users are the same person
     const filteredConversations = allConversations.filter(conversation =>
-      conversation.user1Id !== conversation.user2Id
+      conversation.user1Id !== conversation.user2Id &&
+      !(conversation.user1Id === userId ? conversation.user2?.banned : conversation.user1?.banned)
     );
 
     return filteredConversations;
@@ -1649,11 +1663,19 @@ export const messageOperations = {
         user2Id: true,
         user1UnreadCount: true,
         user2UnreadCount: true
+      },
+      with: {
+        user1: { columns: { banned: true } },
+        user2: { columns: { banned: true } },
       }
     });
 
     // Calculate total unread count safely
     const totalUnread = userConversations.reduce((total, conversation) => {
+      const partnerSuspended =
+        conversation.user1Id === userId ? conversation.user2?.banned : conversation.user1?.banned;
+      if (partnerSuspended) return total;
+
       if (conversation.user1Id === userId) {
         return total + (conversation.user1UnreadCount || 0);
       } else {
@@ -1725,7 +1747,7 @@ export const profileOperations = {
   async getUserProfileInfo(userId: string, tx: DbOrTx = db) {
     const user = await this.getUserWithProfile(userId, tx);
 
-    if (!user) return null;
+    if (!user || user.banned) return null;
 
     let fullName = 'Unknown User';
     let profileImageUrl = null;

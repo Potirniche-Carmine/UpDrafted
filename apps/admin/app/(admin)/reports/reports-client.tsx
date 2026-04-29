@@ -482,6 +482,17 @@ export function ReportsClient({
                   </section>
                 ) : null}
 
+                {detail.report.moderatorNotes ? (
+                  <section className="rounded-lg border border-[color:var(--border)] bg-[color:var(--muted)]/30 p-3">
+                    <h3 className="text-xs font-semibold uppercase tracking-wide text-[color:var(--muted-foreground)]">
+                      Internal moderator notes
+                    </h3>
+                    <p className="mt-1 whitespace-pre-wrap text-sm">
+                      {detail.report.moderatorNotes}
+                    </p>
+                  </section>
+                ) : null}
+
                 <section>
                   <h3 className="mb-2 flex items-center gap-2 text-sm font-semibold">
                     <MessageSquare className="size-4 text-[color:var(--muted-foreground)]" />
