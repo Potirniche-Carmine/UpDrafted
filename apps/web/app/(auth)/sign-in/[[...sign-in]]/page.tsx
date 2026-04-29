@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { authClient, signIn } from "@/lib/auth-client";
-import { useUser } from "@/hooks/use-auth";
+import { isUserBanned, signOut, useUser } from "@/hooks/use-auth";
 import {
   persistVerificationEmail,
   replaceUrlWithoutReload,
@@ -54,6 +54,7 @@ export default function SignInPage() {
   // to the correct destination for their auth state.
   useEffect(() => {
     if (!isLoaded || !isSignedIn) return;
+    if (isUserBanned(user)) return;
     window.location.replace(getAccessPathForUser(user));
   }, [isLoaded, isSignedIn, user]);
 
@@ -90,6 +91,12 @@ export default function SignInPage() {
           },
         });
 
+        if (isUserBanned(sessionResponse.data?.user)) {
+          setError("Your account has been banned and cannot access UpDrafted.");
+          setLoading(false);
+          return;
+        }
+
         destination = getAccessPathForUser(sessionResponse.data?.user);
       } catch {
         destination = "/dashboard";
@@ -103,6 +110,44 @@ export default function SignInPage() {
       setLoading(false);
     }
   };
+
+  if (isLoaded && isSignedIn && isUserBanned(user)) {
+    const expiresAt = user?.bannedUntil ? new Date(String(user.bannedUntil)) : null;
+    const hasValidExpiry = expiresAt && !Number.isNaN(expiresAt.getTime());
+
+    return (
+      <div className="flex min-h-[80vh] items-center justify-center px-4">
+        <div className="w-full max-w-md rounded-3xl border border-destructive/30 bg-card/90 p-8 text-center shadow-xl backdrop-blur">
+          <h1 className="text-2xl font-semibold tracking-tight text-foreground">Account banned</h1>
+          <p className="mt-2 text-sm text-muted-foreground">
+            Your UpDrafted account has been banned and cannot access the site.
+          </p>
+          <div className="mt-4 rounded-lg border border-border bg-muted/40 p-3 text-left text-sm">
+            <p>
+              <span className="font-medium">Expires: </span>
+              {hasValidExpiry ? expiresAt.toLocaleString() : "Never"}
+            </p>
+            {user?.banReason ? (
+              <p className="mt-2">
+                <span className="font-medium">Reason: </span>
+                {user.banReason}
+              </p>
+            ) : null}
+          </div>
+          <button
+            type="button"
+            className="mt-5 w-full rounded-lg bg-primary px-4 py-3 font-medium text-primary-foreground transition-colors hover:bg-primary/90"
+            onClick={async () => {
+              await signOut();
+              window.location.href = "/";
+            }}
+          >
+            Sign out
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   if (isLoaded && isSignedIn) {
     return (

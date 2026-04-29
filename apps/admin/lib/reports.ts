@@ -155,6 +155,7 @@ export type ReportDetail = ReportListItem & {
   additionalDetails: string | null;
   moderatorNotes: string | null;
   reviewedBy: string | null;
+  reviewedByUser: { id: string; name: string; email: string } | null;
   reviewedAt: string | null;
   comments: Array<{
     id: number;
@@ -185,6 +186,13 @@ export async function getReportDetail(
 
     if (!row) return null;
 
+    const reviewedByUser = row.reviewedBy
+      ? (await tx.query.users.findFirst({
+          where: eq(users.id, row.reviewedBy),
+          columns: { id: true, name: true, email: true },
+        })) ?? null
+      : null;
+
     return {
       id: row.id,
       reporterId: row.reporterId,
@@ -197,6 +205,7 @@ export async function getReportDetail(
       submittedAt: row.submittedAt.toISOString(),
       reviewedAt: row.reviewedAt ? row.reviewedAt.toISOString() : null,
       reviewedBy: row.reviewedBy,
+      reviewedByUser,
       reporter: row.reporter
         ? { id: row.reporter.id, name: row.reporter.name, email: row.reporter.email }
         : null,
@@ -314,6 +323,11 @@ export async function applyReportAction(
           updatedAt: now,
         })
         .where(eq(reports.id, input.reportId));
+      await tx.insert(reportModeratorComments).values({
+        reportId: input.reportId,
+        moderatorId: admin.userId,
+        body: `${admin.name} declined this report.`,
+      });
       return null;
     }
 
@@ -345,6 +359,15 @@ export async function applyReportAction(
         updatedAt: now,
       })
       .where(eq(reports.id, input.reportId));
+
+    await tx.insert(reportModeratorComments).values({
+      reportId: input.reportId,
+      moderatorId: admin.userId,
+      body:
+        action === "ban_permanent"
+          ? `${admin.name} permanently banned this user. Reason: ${reason}`
+          : `${admin.name} temporarily banned this user for ${input.durationDays} days. Reason: ${reason}`,
+    });
 
     return {
       user: {

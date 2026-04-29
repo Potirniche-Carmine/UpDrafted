@@ -186,6 +186,16 @@ export const auth = betterAuth({
                 defaultValue: false,
                 input: false,
             },
+            bannedUntil: {
+                type: "date",
+                required: false,
+                input: false,
+            },
+            banReason: {
+                type: "string",
+                required: false,
+                input: false,
+            },
         },
         changeEmail: {
             enabled: true,

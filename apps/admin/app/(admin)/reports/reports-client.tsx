@@ -59,6 +59,7 @@ type DetailState = {
     additionalDetails: string | null;
     moderatorNotes: string | null;
     reviewedBy: string | null;
+    reviewedByUser: { id: string; name: string; email: string } | null;
     reviewedAt: string | null;
     comments: Array<{
       id: number;
@@ -274,9 +275,16 @@ export function ReportsClient({
                   className="transition-colors hover:bg-[color:var(--accent)] focus-within:bg-[color:var(--accent)]"
                 >
                   <div className="flex items-stretch gap-2">
-                    <button
-                      type="button"
+                    <div
+                      role="button"
+                      tabIndex={0}
                       onClick={() => openDetail(item.id)}
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter" || event.key === " ") {
+                          event.preventDefault();
+                          void openDetail(item.id);
+                        }
+                      }}
                       className="flex min-w-0 flex-1 items-center gap-3 p-4 text-left outline-none"
                     >
                       <div className="min-w-0 flex-1">
@@ -290,12 +298,24 @@ export function ReportsClient({
                           ) : null}
                         </div>
                         <p className="mt-1 truncate text-xs text-[color:var(--muted-foreground)] sm:text-sm">
-                          {item.reportReason} · by {item.reporter?.name ?? "—"} ·{" "}
+                          {item.reportReason} · by{" "}
+                          {item.reporter ? (
+                            <Link
+                              className="underline underline-offset-2 hover:text-[color:var(--primary)]"
+                              href={`/users?user=${encodeURIComponent(item.reporter.id)}`}
+                              onClick={(event) => event.stopPropagation()}
+                            >
+                              {item.reporter.name}
+                            </Link>
+                          ) : (
+                            "—"
+                          )}{" "}
+                          ·{" "}
                           {formatRelative(item.submittedAt)}
                         </p>
                       </div>
                       <ChevronRight className="size-4 shrink-0 text-[color:var(--muted-foreground)]" />
-                    </button>
+                    </div>
                     {item.reportedUser ? (
                       <div className="flex shrink-0 items-center gap-1 py-3 pr-3">
                         <Button
@@ -384,7 +404,16 @@ export function ReportsClient({
                     Reporter
                   </h3>
                   <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
-                    <span className="font-medium">{detail.report.reporter?.name ?? "—"}</span>
+                    {detail.report.reporter ? (
+                      <Link
+                        className="font-medium underline underline-offset-2 hover:text-[color:var(--primary)]"
+                        href={`/users?user=${encodeURIComponent(detail.report.reporter.id)}`}
+                      >
+                        {detail.report.reporter.name}
+                      </Link>
+                    ) : (
+                      <span className="font-medium">—</span>
+                    )}
                     <span className="text-[color:var(--muted-foreground)]">
                       ({detail.report.reporter?.email ?? "—"})
                     </span>
@@ -458,12 +487,35 @@ export function ReportsClient({
                     <MessageSquare className="size-4 text-[color:var(--muted-foreground)]" />
                     Moderator comments
                   </h3>
-                  {detail.report.comments.length === 0 ? (
+                  {detail.report.comments.length === 0 && !detail.report.reviewedByUser ? (
                     <p className="text-sm text-[color:var(--muted-foreground)]">
                       No comments yet.
                     </p>
                   ) : (
                     <ul className="space-y-2">
+                      {detail.report.reviewedByUser ? (
+                        <li className="rounded-lg border border-[color:var(--border)] bg-[color:var(--muted)]/40 p-3">
+                          <div className="flex items-center justify-between gap-2 text-xs text-[color:var(--muted-foreground)]">
+                            <span className="font-semibold text-[color:var(--foreground)]">
+                              {detail.report.reviewedByUser.name}
+                            </span>
+                            {detail.report.reviewedAt ? (
+                              <time dateTime={detail.report.reviewedAt}>
+                                {formatDateTime(detail.report.reviewedAt)}
+                              </time>
+                            ) : null}
+                          </div>
+                          <p className="mt-1 whitespace-pre-wrap text-sm">
+                            {detail.report.actionTaken === "declined"
+                              ? "Declined this report."
+                              : detail.report.actionTaken === "ban_temporary"
+                                ? "Temporarily banned this user."
+                                : detail.report.actionTaken === "ban_permanent"
+                                  ? "Permanently banned this user."
+                                  : "Reviewed this report."}
+                          </p>
+                        </li>
+                      ) : null}
                       {detail.report.comments.map((c) => (
                         <li
                           key={c.id}

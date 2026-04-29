@@ -124,6 +124,7 @@ export type VerificationDetail = VerificationListItem & {
   moderatorNotes: string | null;
   additionalInfo: string | null;
   reviewedBy: string | null;
+  reviewedByUser: { id: string; name: string; email: string } | null;
   files: Array<{
     id: number;
     fileName: string;
@@ -160,6 +161,13 @@ export async function getVerificationDetail(
 
     if (!row) return null;
 
+    const reviewedByUser = row.reviewedBy
+      ? (await tx.query.users.findFirst({
+          where: eq(users.id, row.reviewedBy),
+          columns: { id: true, name: true, email: true },
+        })) ?? null
+      : null;
+
     return {
       id: row.id,
       userId: row.userId,
@@ -172,6 +180,7 @@ export async function getVerificationDetail(
       moderatorNotes: row.moderatorNotes,
       additionalInfo: row.additionalInfo,
       reviewedBy: row.reviewedBy,
+      reviewedByUser,
       user: row.user ? { id: row.user.id, name: row.user.name, email: row.user.email } : null,
       files: row.files.map((f) => ({
         id: f.id,
@@ -299,6 +308,15 @@ export async function applyVerificationAction(
         })
         .where(eq(verificationRequests.id, requestId));
     }
+
+    await tx.insert(verificationModeratorComments).values({
+      verificationRequestId: requestId,
+      moderatorId: admin.userId,
+      body:
+        action === "approve"
+          ? `${admin.name} approved this verification request.`
+          : `${admin.name} denied this verification request.${reason ? ` Reason: ${reason}` : ""}`,
+    });
 
     return { user: request.user };
   });

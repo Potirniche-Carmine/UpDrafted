@@ -7,10 +7,21 @@ export type Roles = (typeof APP_ROLES)[number];
 interface SessionUserLike {
   role?: unknown;
   emailVerified?: boolean | null;
+  banned?: unknown;
+  bannedUntil?: unknown;
 }
 
 export function hasAppRole(role: unknown): role is Roles {
   return typeof role === "string" && APP_ROLES.includes(role as Roles);
+}
+
+export function isActiveUserBan(user: SessionUserLike | null | undefined): boolean {
+  if (!user?.banned) return false;
+  const until = user.bannedUntil;
+  if (until == null) return true;
+  const expiresAt = until instanceof Date ? until : new Date(String(until));
+  if (Number.isNaN(expiresAt.getTime())) return true;
+  return expiresAt.getTime() > Date.now();
 }
 
 export function getPostAuthPath(user: SessionUserLike | null | undefined): "/dashboard" | "/onboarding" {

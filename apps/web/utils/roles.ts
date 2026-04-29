@@ -56,7 +56,18 @@ export type RoleGuardSuccess = GuardSuccess & { role: Roles };
 export const requireSession = async (
   requestHeaders?: Headers,
 ): Promise<GuardSuccess | NextResponse> => {
-  const session = await getSession(requestHeaders);
+  const session = await auth.api.getSession({
+    headers: requestHeaders ?? await headers(),
+    query: {
+      disableCookieCache: true,
+    },
+  });
+  if (session?.user && isSessionBanned(session.user as never)) {
+    return NextResponse.json(
+      { error: 'Account banned' },
+      { status: 403 },
+    );
+  }
   if (!session?.user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }

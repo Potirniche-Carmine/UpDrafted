@@ -1,15 +1,22 @@
 import { S3Client, PutObjectCommand, DeleteObjectCommand, GetObjectCommand, ListObjectsV2Command } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 
-// Validate R2 credentials
-// We relax this check to allow build-time execution without secrets
-// The application will fail at runtime if credentials are missing and R2 is accessed
 const isTestOrBuild = process.env.NODE_ENV === 'test';
+const R2_ACCOUNT_ID = process.env.R2_ACCOUNT_ID;
+const R2_ENDPOINT =
+  process.env.R2_ENDPOINT ||
+  (R2_ACCOUNT_ID ? `https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com` : undefined);
+
+function assertR2Configured(): void {
+  if (!R2_ENDPOINT || R2_ENDPOINT.includes('undefined')) {
+    throw new Error('Missing R2_ACCOUNT_ID or R2_ENDPOINT');
+  }
+}
 
 // Configure R2 client
 const r2Client = new S3Client({
   region: 'auto',
-  endpoint: isTestOrBuild ? 'https://placeholder.r2.cloudflarestorage.com' : `https://${process.env.R2_ACCOUNT_ID}.r2.cloudflarestorage.com`,
+  endpoint: isTestOrBuild ? 'https://placeholder.r2.cloudflarestorage.com' : R2_ENDPOINT,
   credentials: {
     accessKeyId: process.env.R2_ACCESS_KEY_ID || 'placeholder',
     secretAccessKey: process.env.R2_SECRET_ACCESS_KEY || 'placeholder',
@@ -205,6 +212,10 @@ export async function generatePresignedUrl(
   operation: 'GET' | 'PUT' | 'DELETE' = 'GET',
   isPrivateFile: boolean = true
 ): Promise<string> {
+  if (!isTestOrBuild) {
+    assertR2Configured();
+  }
+
   // Choose bucket based on file type
   const bucketName = isPrivateFile ? R2_PRIVATE_BUCKET_NAME : R2_PROFILE_BUCKET_NAME;
 
@@ -244,6 +255,10 @@ export async function generatePresignedUrl(
 
   try {
     const presignedUrl = await getSignedUrl(r2Client, command, { expiresIn });
+    const parsedUrl = new URL(presignedUrl);
+    if (parsedUrl.protocol !== 'https:') {
+      throw new Error('Generated presigned URL must use HTTPS');
+    }
     return presignedUrl;
   } catch (error) {
     console.error('Error generating presigned URL:', process.env.NODE_ENV === 'production' ? 'URL generation failed' : error);

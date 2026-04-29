@@ -4,8 +4,10 @@ import {
   connections,
   recruitingProfiles,
   reports,
+  reportModeratorComments,
   userSubscriptions,
   users,
+  verificationModeratorComments,
   verificationRequests,
 } from "@updrafted/db";
 import { count, desc, eq, ilike, or } from "drizzle-orm";
@@ -33,6 +35,7 @@ export type ManagedUserDetail = ManagedUserListItem & {
   image: string | null;
   bannedAt: string | null;
   bannedBy: string | null;
+  bannedByUser: { id: string; name: string; email: string } | null;
   banReason: string | null;
   updatedAt: string;
   connectionsCount: number;
@@ -211,6 +214,13 @@ export async function getManagedUserDetail(
       limit: 10,
     });
 
+    const bannedByUser = row.bannedBy
+      ? (await tx.query.users.findFirst({
+          where: eq(users.id, row.bannedBy),
+          columns: { id: true, name: true, email: true },
+        })) ?? null
+      : null;
+
     const profiles: ManagedUserDetail["profiles"] = [];
     if (row.athleteProfile) {
       const profile = row.athleteProfile;
@@ -258,6 +268,7 @@ export async function getManagedUserDetail(
       bannedUntil: toIso(row.bannedUntil),
       bannedAt: toIso(row.bannedAt),
       bannedBy: row.bannedBy,
+      bannedByUser,
       banReason: row.banReason,
       emailVerified: row.emailVerified,
       image: row.image,
@@ -336,6 +347,19 @@ export async function applyManagedUserAction(
       } else {
         throw new Error("Only athlete, coach, and recruiter profiles can be verified");
       }
+
+      const latestVerification = await tx.query.verificationRequests.findFirst({
+        where: eq(verificationRequests.userId, userId),
+        columns: { id: true },
+        orderBy: (v, { desc: orderDesc }) => orderDesc(v.submittedAt),
+      });
+      if (latestVerification) {
+        await tx.insert(verificationModeratorComments).values({
+          verificationRequestId: latestVerification.id,
+          moderatorId: admin.userId,
+          body: `${admin.name} ${isVerified ? "verified" : "unverified"} this profile from User Management.`,
+        });
+      }
       return;
     }
 
@@ -351,6 +375,18 @@ export async function applyManagedUserAction(
           updatedAt: now,
         })
         .where(eq(users.id, userId));
+      const latestReport = await tx.query.reports.findFirst({
+        where: eq(reports.reportedUserId, userId),
+        columns: { id: true },
+        orderBy: (r, { desc: orderDesc }) => orderDesc(r.submittedAt),
+      });
+      if (latestReport) {
+        await tx.insert(reportModeratorComments).values({
+          reportId: latestReport.id,
+          moderatorId: admin.userId,
+          body: `${admin.name} unbanned this user from User Management.`,
+        });
+      }
       return;
     }
 
@@ -383,6 +419,22 @@ export async function applyManagedUserAction(
         updatedAt: now,
       })
       .where(eq(users.id, userId));
+
+    const latestReport = await tx.query.reports.findFirst({
+      where: eq(reports.reportedUserId, userId),
+      columns: { id: true },
+      orderBy: (r, { desc: orderDesc }) => orderDesc(r.submittedAt),
+    });
+    if (latestReport) {
+      await tx.insert(reportModeratorComments).values({
+        reportId: latestReport.id,
+        moderatorId: admin.userId,
+        body:
+          input.action === "ban_permanent"
+            ? `${admin.name} permanently banned this user from User Management. Reason: ${reason}`
+            : `${admin.name} temporarily banned this user from User Management for ${input.durationDays} days. Reason: ${reason}`,
+      });
+    }
   });
 
   const updated = await getManagedUserDetail(admin, userId);

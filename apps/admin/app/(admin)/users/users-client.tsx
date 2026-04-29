@@ -438,7 +438,8 @@ export function UsersClient({
 
                   {detail.banned ? (
                     <p className="rounded-md border border-[color:var(--destructive)]/30 bg-[color:var(--destructive)]/10 p-2 text-sm">
-                      Banned {formatDateTime(detail.bannedAt)}. Expires{" "}
+                      Banned {formatDateTime(detail.bannedAt)}
+                      {detail.bannedByUser ? ` by ${detail.bannedByUser.name}` : ""}. Expires{" "}
                       {detail.bannedUntil ? formatDateTime(detail.bannedUntil) : "never"}.
                       {detail.banReason ? ` Reason: ${detail.banReason}` : ""}
                     </p>

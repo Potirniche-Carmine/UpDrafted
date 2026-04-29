@@ -2,7 +2,7 @@
 
 import { type ReactNode } from "react";
 import { usePathname } from "next/navigation";
-import { useUser } from "@/hooks/use-auth";
+import { isUserBanned, signOut, useUser } from "@/hooks/use-auth";
 import { canAccessWithoutAppRole, hasAppRole } from "@/lib/auth-routing";
 
 interface AuthWrapperProps {
@@ -26,6 +26,44 @@ function renderDefaultLoader(message: string) {
       <div className="flex flex-col items-center space-y-4">
         <div className="w-6 h-6 border-2 border-[#01ae79] border-t-transparent rounded-full animate-spin"></div>
         <p className="text-sm text-muted-foreground">{message}</p>
+      </div>
+    </div>
+  );
+}
+
+function renderBannedAccount(user: { bannedUntil?: Date | string | null; banReason?: string | null } | null) {
+  const expiresAt = user?.bannedUntil ? new Date(String(user.bannedUntil)) : null;
+  const hasValidExpiry = expiresAt && !Number.isNaN(expiresAt.getTime());
+
+  return (
+    <div className="min-h-screen bg-background flex items-center justify-center px-4">
+      <div className="w-full max-w-md rounded-2xl border border-destructive/30 bg-card p-6 text-center shadow-lg">
+        <h1 className="text-2xl font-semibold text-foreground">Account banned</h1>
+        <p className="mt-3 text-sm text-muted-foreground">
+          Your UpDrafted account has been banned and cannot access the site.
+        </p>
+        <div className="mt-4 rounded-lg border border-border bg-muted/40 p-3 text-left text-sm">
+          <p>
+            <span className="font-medium">Expires: </span>
+            {hasValidExpiry ? expiresAt.toLocaleString() : "Never"}
+          </p>
+          {user?.banReason ? (
+            <p className="mt-2">
+              <span className="font-medium">Reason: </span>
+              {user.banReason}
+            </p>
+          ) : null}
+        </div>
+        <button
+          type="button"
+          className="mt-5 w-full rounded-lg bg-primary px-4 py-3 font-medium text-primary-foreground transition-colors hover:bg-primary/90"
+          onClick={async () => {
+            await signOut();
+            window.location.href = "/";
+          }}
+        >
+          Sign out
+        </button>
       </div>
     </div>
   );
@@ -122,7 +160,14 @@ export function AuthWrapper({
   });
 
   if (resolution.allow) {
+    if (isUserBanned(user)) {
+      return renderBannedAccount(user);
+    }
     return <>{children}</>;
+  }
+
+  if (isLoaded && isUserBanned(user)) {
+    return renderBannedAccount(user);
   }
 
   if (loadingComponent) {

@@ -5,6 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useSession, signIn, signUp, signOut } from "@/lib/auth-client";
 import type { Roles } from "@/lib/auth-routing";
+import { isActiveUserBan } from "@/lib/auth-routing";
 
 export { signIn, signUp, signOut };
 export type { Roles };
@@ -16,6 +17,9 @@ export interface User {
     name?: string | null;
     image?: string | null;
     emailVerified?: boolean;
+    banned?: boolean | null;
+    bannedUntil?: Date | string | null;
+    banReason?: string | null;
     // Additional fields for backward compatibility
     primaryEmail?: string;
     primaryEmailAddress?: { emailAddress: string };
@@ -41,6 +45,9 @@ function mapSessionUser(session: { user?: {
     name?: string | null;
     image?: string | null;
     emailVerified?: boolean;
+    banned?: boolean | null;
+    bannedUntil?: Date | string | null;
+    banReason?: string | null;
 } } | null | undefined): User | null {
     if (!session?.user) {
         return null;
@@ -53,9 +60,21 @@ function mapSessionUser(session: { user?: {
         name: session.user.name,
         image: session.user.image ?? null,
         emailVerified: session.user.emailVerified,
+        banned: session.user.banned ?? false,
+        bannedUntil: session.user.bannedUntil ?? null,
+        banReason: session.user.banReason ?? null,
         primaryEmail: session.user.email,
         primaryEmailAddress: { emailAddress: session.user.email },
     };
+}
+
+export function isUserBanned(
+    user:
+        | (Partial<User> & { banned?: unknown; bannedUntil?: unknown })
+        | null
+        | undefined,
+): boolean {
+    return isActiveUserBan(user);
 }
 
 /**

@@ -43,6 +43,20 @@ export async function GET(
     return NextResponse.json({ error: "File preview unavailable" }, { status: 404 });
   }
 
-  const url = await generatePresignedUrl(file.r2Key, 300, "GET", true);
+  let url: string;
+  try {
+    url = await generatePresignedUrl(file.r2Key, 300, "GET", true);
+    const parsedUrl = new URL(url);
+    if (parsedUrl.protocol !== "https:") {
+      throw new Error("Preview URL must use HTTPS");
+    }
+  } catch (error) {
+    console.error("Failed to generate verification preview URL", error);
+    return NextResponse.json(
+      { error: "File preview storage is not configured correctly" },
+      { status: 503 },
+    );
+  }
+
   return NextResponse.redirect(url, 302);
 }

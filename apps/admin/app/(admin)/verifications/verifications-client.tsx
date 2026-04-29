@@ -66,6 +66,7 @@ type DetailState = {
     moderatorNotes: string | null;
     additionalInfo: string | null;
     reviewedBy: string | null;
+    reviewedByUser: { id: string; name: string; email: string } | null;
     files: Array<{
       id: number;
       fileName: string;
@@ -438,12 +439,33 @@ export function VerificationsClient({
                     <MessageSquare className="size-4 text-[color:var(--muted-foreground)]" />
                     Moderator comments
                   </h3>
-                  {detail.request.comments.length === 0 ? (
+                  {detail.request.comments.length === 0 && !detail.request.reviewedByUser ? (
                     <p className="text-sm text-[color:var(--muted-foreground)]">
                       No comments yet. Start the thread below.
                     </p>
                   ) : (
                     <ul className="space-y-2">
+                      {detail.request.reviewedByUser ? (
+                        <li className="rounded-lg border border-[color:var(--border)] bg-[color:var(--muted)]/40 p-3">
+                          <div className="flex items-center justify-between gap-2 text-xs text-[color:var(--muted-foreground)]">
+                            <span className="font-semibold text-[color:var(--foreground)]">
+                              {detail.request.reviewedByUser.name}
+                            </span>
+                            {detail.request.reviewedAt ? (
+                              <time dateTime={detail.request.reviewedAt}>
+                                {formatDateTime(detail.request.reviewedAt)}
+                              </time>
+                            ) : null}
+                          </div>
+                          <p className="mt-1 whitespace-pre-wrap text-sm">
+                            {detail.request.status === "approved"
+                              ? "Verified this user."
+                              : detail.request.status === "rejected"
+                                ? "Denied this verification request."
+                                : "Reviewed this verification request."}
+                          </p>
+                        </li>
+                      ) : null}
                       {detail.request.comments.map((c) => (
                         <li
                           key={c.id}
