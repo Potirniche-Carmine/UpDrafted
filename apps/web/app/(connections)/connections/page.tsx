@@ -14,7 +14,7 @@ import Link from 'next/link';
 import { AuthWrapper } from '../../../components/auth-wrapper';
 import { sanitizeText } from '@/utils/sanitization';
 import { useUser } from "@/hooks/use-auth";
-import { DIVISIONS, US_STATES, COUNTRIES, getPositionsForSport } from '@/lib/sports-data';
+import { DIVISIONS, US_STATES, COUNTRIES, formatSportName, getPositionsForSport } from '@/lib/sports-data';
 import { CONFERENCES_BY_DIVISION } from '@/lib/conference-data';
 import { useFeatureAccess } from '@/components/providers/subscription-provider';
 import { Label } from "@/components/ui/label";
@@ -33,8 +33,10 @@ import {
   CommandList,
 } from "@/components/ui/command";
 import { Checkbox } from "@/components/ui/checkbox";
+import { FILTER_POPOVER_CONTENT_PROPS } from "@/components/ui/filter-popover";
 import { cn } from "@/lib/utils";
 import { generateProfileUrl } from "@/lib/utils";
+import { getProfileImageUrl } from "@/lib/profile-images";
 import { SportFilter } from '@/components/ui/sport-filter';
 import { useUserPrimarySport } from '@/hooks/use-user-primary-sport';
 
@@ -304,7 +306,7 @@ function MultiSelectFilter({
           <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-[280px] sm:w-[var(--radix-popover-trigger-width)] max-w-[90vw] p-0" align="center" side="bottom" sideOffset={4}>
+      <PopoverContent {...FILTER_POPOVER_CONTENT_PROPS}>
         <Command>
           <CommandInput
             placeholder={searchPlaceholder}
@@ -579,22 +581,6 @@ const UserCard: React.FC<UserCardProps> = ({ connection, onRemoveConnection }) =
     return formatted.replace(/(\d+)/, `$1${suffix}`);
   };
 
-  // Process profile image URL to ensure it works with R2/CloudFlare
-  const getProfileImageUrl = (profileImage: string | null) => {
-    if (!profileImage) {
-      return null;
-    }
-    
-    // If it's already a full URL, return as is
-    if (profileImage.startsWith('http')) {
-      return profileImage;
-    }
-    
-    // Construct the full R2 URL using environment variable or fallback to known R2 domain
-    const baseUrl = process.env.NEXT_PUBLIC_R2_PUBLIC_URL || 'https://bucket.updrafted.us';
-    return `${baseUrl}/${profileImage}`;
-  };
-
   return (
     <div className="relative">
       <Card className="group transition-all duration-200 hover:shadow-xl hover:shadow-[#01ae79]/15 border border-border hover:border-[#01ae79]/40 dark:hover:border-[#01ae79]/50 overflow-hidden">
@@ -643,7 +629,7 @@ const UserCard: React.FC<UserCardProps> = ({ connection, onRemoveConnection }) =
                   </div>
 
                   <p className="text-sm font-medium text-muted-foreground truncate">
-                    {otherUser.title || (otherUser.role === 'athlete' ? otherUser.sport : 'No title specified')}
+                    {otherUser.title || (otherUser.role === 'athlete' ? formatSportName(otherUser.sport) : 'No title specified')}
                   </p>
                 </div>
               </div>
@@ -670,7 +656,7 @@ const UserCard: React.FC<UserCardProps> = ({ connection, onRemoveConnection }) =
             {otherUser.sport && (
               <div className="flex items-center text-muted-foreground">
                 <User className="h-4 w-4 mr-2 text-[#01ae79] flex-shrink-0" />
-                <span className="font-medium">{otherUser.sport}</span>
+                <span className="font-medium">{formatSportName(otherUser.sport)}</span>
               </div>
             )}
 
@@ -803,22 +789,6 @@ const PendingRequestCard: React.FC<PendingRequestCardProps> = ({ request, onAcce
     return formatted.replace(/(\d+)/, `$1${suffix}`);
   };
 
-  // Process profile image URL to ensure it works with R2/CloudFlare
-  const getProfileImageUrl = (profileImage: string | null) => {
-    if (!profileImage) {
-      return null;
-    }
-    
-    // If it's already a full URL, return as is
-    if (profileImage.startsWith('http')) {
-      return profileImage;
-    }
-    
-    // Construct the full R2 URL using environment variable or fallback to known R2 domain
-    const baseUrl = process.env.NEXT_PUBLIC_R2_PUBLIC_URL || 'https://pub-19c0754937db426497ca014f0e2a297c.r2.dev';
-    return `${baseUrl}/${profileImage}`;
-  };
-
   return (
     <div className="relative">
       <Card className="group transition-all duration-200 hover:shadow-xl hover:shadow-[#01ae79]/15 border border-border hover:border-[#01ae79]/40 dark:hover:border-[#01ae79]/50 overflow-hidden">
@@ -869,7 +839,7 @@ const PendingRequestCard: React.FC<PendingRequestCardProps> = ({ request, onAcce
                   </div>
 
                   <p className="text-sm font-medium text-muted-foreground truncate">
-                    {otherUser.title || (otherUser.role === 'athlete' ? otherUser.sport : 'No title specified')}
+                    {otherUser.title || (otherUser.role === 'athlete' ? formatSportName(otherUser.sport) : 'No title specified')}
                   </p>
                 </div>
               </div>
@@ -897,7 +867,7 @@ const PendingRequestCard: React.FC<PendingRequestCardProps> = ({ request, onAcce
             {otherUser.sport && (
               <div className="flex items-center text-muted-foreground">
                 <User className="h-4 w-4 mr-2 text-[#01ae79] flex-shrink-0" />
-                <span className="font-medium">{otherUser.sport}</span>
+                <span className="font-medium">{formatSportName(otherUser.sport)}</span>
               </div>
             )}
 
@@ -1045,22 +1015,6 @@ const SentRequestCard: React.FC<SentRequestCardProps> = ({ request, onWithdraw, 
     return formatted.replace(/(\d+)/, `$1${suffix}`);
   };
 
-  // Process profile image URL to ensure it works with R2/CloudFlare
-  const getProfileImageUrl = (profileImage: string | null) => {
-    if (!profileImage) {
-      return null;
-    }
-    
-    // If it's already a full URL, return as is
-    if (profileImage.startsWith('http')) {
-      return profileImage;
-    }
-    
-    // Construct the full R2 URL using environment variable or fallback to known R2 domain
-    const baseUrl = process.env.NEXT_PUBLIC_R2_PUBLIC_URL || 'https://pub-19c0754937db426497ca014f0e2a297c.r2.dev';
-    return `${baseUrl}/${profileImage}`;
-  };
-
   return (
     <div className="relative">
       <Card className="group transition-all duration-200 hover:shadow-xl hover:shadow-[#01ae79]/15 border border-border hover:border-[#01ae79]/40 dark:hover:border-[#01ae79]/50 overflow-hidden">
@@ -1111,7 +1065,7 @@ const SentRequestCard: React.FC<SentRequestCardProps> = ({ request, onWithdraw, 
                   </div>
 
                   <p className="text-sm font-medium text-muted-foreground truncate">
-                    {otherUser.title || (otherUser.role === 'athlete' ? otherUser.sport : 'No title specified')}
+                    {otherUser.title || (otherUser.role === 'athlete' ? formatSportName(otherUser.sport) : 'No title specified')}
                   </p>
                 </div>
               </div>
@@ -1139,7 +1093,7 @@ const SentRequestCard: React.FC<SentRequestCardProps> = ({ request, onWithdraw, 
             {otherUser.sport && (
               <div className="flex items-center text-muted-foreground">
                 <User className="h-4 w-4 mr-2 text-[#01ae79] flex-shrink-0" />
-                <span className="font-medium">{otherUser.sport}</span>
+                <span className="font-medium">{formatSportName(otherUser.sport)}</span>
               </div>
             )}
 
@@ -1770,7 +1724,7 @@ function App() {
     
     // Remove duplicates and convert to FilterOption format
     const uniqueSports = Array.from(new Set(sports));
-    return uniqueSports.map(sport => ({ value: sport, label: sport }));
+    return uniqueSports.map(sport => ({ value: sport, label: formatSportName(sport) }));
   }, [userSport, effectiveRole]);
   
   // Advanced filter states
@@ -1988,7 +1942,10 @@ function App() {
         return (
           otherUser.fullName.toLowerCase().includes(searchLower) ||
           (otherUser.organizationName && otherUser.organizationName.toLowerCase().includes(searchLower)) ||
-          (otherUser.sport && otherUser.sport.toLowerCase().includes(searchLower))
+          (otherUser.sport && (
+            formatSportName(otherUser.sport).toLowerCase().includes(searchLower) ||
+            otherUser.sport.toLowerCase().includes(searchLower)
+          ))
         );
       });
     }, [source]);

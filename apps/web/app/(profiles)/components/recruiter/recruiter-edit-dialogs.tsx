@@ -12,7 +12,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Save, X, Upload } from "lucide-react";
 import Image from 'next/image';
-import { US_STATES, DIVISIONS, getPositionsForSport, getStudentClassificationOptions } from '@/lib/sports-data';
+import { US_STATES, DIVISIONS, formatSportName, getPositionsForSport, getStudentClassificationOptions } from '@/lib/sports-data';
 import { RecruiterProfileData } from './recruiter-profile-types';
 import { sanitizeProfileData } from '@/utils/sanitization';
 import { ProfilePictureUpload } from '@/components/ui/profile-picture-upload';
@@ -1298,7 +1298,7 @@ export function RecruiterEditDialogs({
             {editData.newSport && (
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-lg">Recruiting Needs for {editData.newSport}</CardTitle>
+                  <CardTitle className="text-lg">Recruiting Needs for {formatSportName(editData.newSport)}</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-6">
                   {/* Student Classifications */}
@@ -1374,10 +1374,10 @@ export function RecruiterEditDialogs({
 
                   {/* Sport-Specific Recruiting Philosophy */}
                   <div className="space-y-3">
-                    <Label htmlFor={`${editData.newSport}-philosophy`} className="text-base font-medium">Recruiting Philosophy for {editData.newSport} *</Label>
+                    <Label htmlFor={`${editData.newSport}-philosophy`} className="text-base font-medium">Recruiting Philosophy for {formatSportName(editData.newSport)} *</Label>
                     <Textarea
                       id={`${editData.newSport}-philosophy`}
-                      placeholder={`Describe what you look for in ${editData.newSport} athletes, your coaching style for this sport, and what makes your ${editData.newSport} program unique.`}
+                      placeholder={`Describe what you look for in ${formatSportName(editData.newSport)} athletes, your coaching style for this sport, and what makes your ${formatSportName(editData.newSport)} program unique.`}
                       value={editData.recruitingPhilosophy || ''}
                       onChange={(e) => handleFieldChange('recruitingPhilosophy', e.target.value)}
                       className="min-h-24 bg-background resize-none"
@@ -1492,4 +1492,4 @@ export function RecruiterEditDialogs({
       </DialogContent>
     </Dialog>
   );
-} 
+}

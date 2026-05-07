@@ -5,6 +5,8 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
+import { getProfileImageUrl } from "@/lib/profile-images";
+import { formatSportName } from "@/lib/sports-data";
 import { 
   User, 
   Users, 
@@ -50,18 +52,6 @@ interface UserCardProps {
   onViewProfile: (userId: string) => void;
   generateProfileUrl: (user: DiscoverUser) => string;
 }
-
-// Helper functions
-const getProfileImageUrl = (profileImage: string | null) => {
-  if (!profileImage) return null;
-
-  if (profileImage.startsWith('http')) {
-    return profileImage;
-  }
-
-  const baseUrl = process.env.NEXT_PUBLIC_R2_PUBLIC_URL || 'https://pub-19c0754937db426497ca014f0e2a297c.r2.dev';
-  return `${baseUrl}/${profileImage}`;
-};
 
 const formatEducationLevel = (educationLevel?: string) => {
   if (educationLevel === 'high_school') return 'High School';
@@ -221,7 +211,7 @@ export const UserCard: React.FC<UserCardProps> = ({
             {user.sport && (  
               <div className="flex items-center text-muted-foreground col-span-full">
                 <Building2 className="h-4 w-4 mr-2 text-[#01ae79] flex-shrink-0" />
-                <span className="font-medium">{user.sport}</span>
+                <span className="font-medium">{formatSportName(user.sport)}</span>
               </div>
             )}
 

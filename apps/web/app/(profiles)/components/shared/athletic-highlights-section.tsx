@@ -13,7 +13,7 @@ import {
   Edit,
   X
 } from "lucide-react";
-import { getMeasurablesForSport } from '@/lib/sports-data';
+import { formatSportName, getMeasurablesForSport } from '@/lib/sports-data';
 import { Measurable } from '@/app/(profiles)/components/athlete-profile';
 
 interface AthleticHighlightsSectionProps {
@@ -55,7 +55,7 @@ export function AthleticHighlightsSection({ measurables = [], selectedSport, isO
           <div className="flex items-center justify-between">
             <CardTitle className="text-lg font-semibold flex items-center gap-2">
               <Trophy className="w-5 h-5 text-yellow-600" />
-              Athletic Performance - {selectedSport}
+              Athletic Performance - {formatSportName(selectedSport)}
             </CardTitle>
             {isOwnProfile && (
               <Button 
@@ -109,7 +109,7 @@ export function AthleticHighlightsSection({ measurables = [], selectedSport, isO
             {/* Suggested Measurables */}
             {isOwnProfile && (
               <div className="space-y-3">
-                <h4 className="font-medium text-sm text-muted-foreground">Popular {selectedSport} Metrics:</h4>
+                <h4 className="font-medium text-sm text-muted-foreground">Popular {formatSportName(selectedSport)} Metrics:</h4>
                 <div className="flex flex-wrap justify-center sm:justify-start gap-2">
                   {suggestedMeasurables.slice(0, 8).map((measurable) => (
                     <Badge 
@@ -138,7 +138,7 @@ export function AthleticHighlightsSection({ measurables = [], selectedSport, isO
         <div className="flex items-center justify-between">
           <CardTitle className="text-lg font-semibold flex items-center gap-2">
             <Trophy className="w-5 h-5 text-yellow-600" />
-            Athletic Performance - {selectedSport}
+            Athletic Performance - {formatSportName(selectedSport)}
           </CardTitle>
           {isOwnProfile && (
             <Button 
@@ -218,4 +218,4 @@ export function AthleticHighlightsSection({ measurables = [], selectedSport, isO
       </CardContent>
     </Card>
   );
-} 
+}

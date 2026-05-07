@@ -14,6 +14,7 @@ import {
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Search, MessageCircle, Send, Users } from "lucide-react";
 import { generateProfileUrl } from "@/lib/utils";
+import { getProfileImageUrl } from "@/lib/profile-images";
 
 interface Connection {
   id: string;
@@ -97,25 +98,6 @@ const getRoleBadge = (role: string, division?: string, educationLevel?: string) 
   }
 
   return <Badge variant="outline" className={`text-xs font-medium px-2 py-0.5 border ${roleColor} whitespace-nowrap`}>{roleText}</Badge>;
-};
-
-// Process profile image URL to ensure it works with R2/CloudFlare
-const getProfileImageUrl = (profileImage: string | null | undefined): string | undefined => {
-  if (!profileImage || typeof profileImage !== 'string') {
-    return undefined;
-  }
-  
-  // Clean up "undefined/" from the path, which seems to be a data issue
-  const cleanedProfileImage = profileImage.replace('undefined/', '');
-
-  // If it's already a full URL, return as is
-  if (cleanedProfileImage.startsWith('http')) {
-    return cleanedProfileImage;
-  }
-  
-  // Construct the full R2 URL using environment variable or fallback to known R2 domain
-  const baseUrl = process.env.NEXT_PUBLIC_R2_PUBLIC_URL || 'https://pub-19c0754937db426497ca014f0e2a297c.r2.dev';
-  return `${baseUrl}/${cleanedProfileImage}`;
 };
 
 export function SendOverChatDialog({

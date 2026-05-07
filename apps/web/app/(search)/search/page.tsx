@@ -12,6 +12,8 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { AuthWrapper } from '../../../components/auth-wrapper';
 import { UnifiedSportSelector } from "@/components/ui/unified-sport-selector";
 import { generateProfileUrl } from "@/lib/utils";
+import { getProfileImageUrl } from "@/lib/profile-images";
+import { formatSportName } from "@/lib/sports-data";
 
 interface SearchResult {
   id: string;
@@ -206,13 +208,6 @@ function SearchPageContent() {
     setSportFilter('all');
   };
 
-  const getProfileImageUrl = (profileImage: string | null) => {
-    if (!profileImage) return null;
-    if (profileImage.startsWith('http')) return profileImage;
-    const baseUrl = process.env.NEXT_PUBLIC_R2_PUBLIC_URL || 'https://pub-19c0754937db426497ca014f0e2a297c.r2.dev';
-    return `${baseUrl}/${profileImage}`;
-  };
-
   const getCurrentPageResults = () => {
     const startIndex = (currentPage - 1) * RESULTS_PER_PAGE;
     const endIndex = startIndex + RESULTS_PER_PAGE;
@@ -348,7 +343,7 @@ function SearchPageContent() {
                     <div className="space-y-1 text-xs text-muted-foreground">
                       <div className="flex items-center gap-1.5">
                         <Building2 className="w-3.5 h-3.5 text-[#01ae79] shrink-0" />
-                        <span className="truncate">{user.role === 'athlete' ? user.sport : user.title}</span>
+                        <span className="truncate">{user.role === 'athlete' ? formatSportName(user.sport) : user.title}</span>
                       </div>
 
                       <div className="flex items-center gap-1.5">

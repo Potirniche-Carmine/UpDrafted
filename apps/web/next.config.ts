@@ -52,6 +52,12 @@ const nextConfig: NextConfig = {
         hostname: 'bucket.updrafted.us',
         port: '',
         pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'images.updrafted.us',
+        port: '',
+        pathname: '/**',
       }
     ],
     // Optimize image formats and quality for cost efficiency

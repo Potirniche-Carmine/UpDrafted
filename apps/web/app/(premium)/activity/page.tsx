@@ -9,6 +9,7 @@ import { Eye, Users, ArrowRight, TrendingUp, Lock, Crown } from "lucide-react";
 import Link from "next/link";
 import { AuthWrapper } from "../../../components/auth-wrapper";
 import { generateProfileUrl } from "@/lib/utils";
+import { getProfileImageUrl } from "@/lib/profile-images";
 
 interface ActivityItem {
   id: number;
@@ -40,21 +41,6 @@ interface ActivityResponse {
   requiresUpgrade?: boolean;
   error?: string;
 }
-
-const getProfileImageUrl = (profileImage: string | null): string | null => {
-  if (!profileImage || typeof profileImage !== 'string') {
-    return null;
-  }
-
-  const cleanedProfileImage = profileImage.replace('undefined/', '');
-
-  if (cleanedProfileImage.startsWith('http')) {
-    return cleanedProfileImage;
-  }
-
-  const baseUrl = process.env.NEXT_PUBLIC_R2_PUBLIC_URL || 'https://pub-19c0754937db426497ca014f0e2a297c.r2.dev';
-  return `${baseUrl}/${cleanedProfileImage}`;
-};
 
 const getRoleLabel = (role: string) => {
   return (

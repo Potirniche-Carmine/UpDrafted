@@ -11,6 +11,10 @@ import {
   Shield,
   Gift,
 } from "lucide-react";
+import {
+  CompanyHeroHeadline,
+  CompanyHeroTrigger,
+} from "../components/company-hero-headline";
 
 export default function AboutPageContent() {
   return (
@@ -23,13 +27,10 @@ export default function AboutPageContent() {
 
         <div className="relative container mx-auto max-w-5xl px-4 md:px-6 pt-16 pb-20 md:pt-24 md:pb-28">
           <div className="max-w-3xl space-y-7">
-            <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold tracking-tight leading-[0.95]">
-              Athletes first.
-              <br />
-              <span className="bg-clip-text text-transparent bg-gradient-to-br from-[#01ae79] to-[#018a60]">
-                Free forever.
-              </span>
-            </h1>
+            <CompanyHeroHeadline
+              lead="Athletes first."
+              emphasis={<CompanyHeroTrigger>Free forever.</CompanyHeroTrigger>}
+            />
             <p className="text-xl md:text-2xl text-muted-foreground leading-relaxed">
               UpDrafted is the platform where athletes run their own recruiting —
               and where college programs find the right fit without paying a

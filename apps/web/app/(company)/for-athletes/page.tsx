@@ -16,6 +16,10 @@ import {
   School,
 } from "lucide-react";
 import { pageMetadata } from "@/lib/seo";
+import {
+  CompanyHeroHeadline,
+  CompanyHeroTrigger,
+} from "../components/company-hero-headline";
 
 export const metadata = pageMetadata.forAthletes();
 
@@ -30,13 +34,14 @@ export default function ForAthletesPage() {
 
         <div className="relative container mx-auto max-w-6xl px-4 md:px-6 pt-16 pb-20 md:pt-24 md:pb-28">
           <div className="max-w-3xl space-y-7">
-            <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold tracking-tight leading-[0.95]">
-              You don&apos;t need an agent.
-              <br />
-              <span className="bg-clip-text text-transparent bg-gradient-to-br from-[#01ae79] to-[#018a60]">
-                You need a platform.
-              </span>
-            </h1>
+            <CompanyHeroHeadline
+              lead="You don't need an agent."
+              emphasis={
+                <>
+                  You need a <CompanyHeroTrigger>platform.</CompanyHeroTrigger>
+                </>
+              }
+            />
             <p className="text-xl md:text-2xl text-muted-foreground leading-relaxed">
               UpDrafted hands you the same tools recruiting services have been
               charging you for — profile, exposure, and a direct line to

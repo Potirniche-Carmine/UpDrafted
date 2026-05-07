@@ -11,6 +11,10 @@ import {
   Inbox,
 } from "lucide-react";
 import { pageMetadata } from "@/lib/seo";
+import {
+  CompanyHeroHeadline,
+  CompanyHeroTrigger,
+} from "../components/company-hero-headline";
 
 export const metadata = pageMetadata.forRecruiters();
 
@@ -25,13 +29,14 @@ export default function ForRecruitersPage() {
 
         <div className="relative container mx-auto max-w-6xl px-4 md:px-6 pt-16 pb-20 md:pt-24 md:pb-28">
           <div className="max-w-3xl space-y-7">
-            <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold tracking-tight leading-[0.95]">
-              Every program.
-              <br />
-              <span className="bg-clip-text text-transparent bg-gradient-to-br from-[#01ae79] to-[#018a60]">
-                Every sport. One hub.
-              </span>
-            </h1>
+            <CompanyHeroHeadline
+              lead="Every program."
+              emphasis={
+                <>
+                  Every sport. <CompanyHeroTrigger>One hub.</CompanyHeroTrigger>
+                </>
+              }
+            />
             <p className="text-xl md:text-2xl text-muted-foreground leading-relaxed">
               Coaches work one sport. You work twenty. UpDrafted gives you
               cross-sport search and one verified profile that represents your

@@ -19,6 +19,7 @@ import { OfflineIndicator } from '../../../components/offline-indicator';
 import { useOfflineStatus } from '../../../hooks/use-offline-status';
 import { formatMessageTimestamp } from '../../../lib/date-utils';
 import { useFeatureAccess } from '../../../components/providers/subscription-provider';
+import { getProfileImageUrl } from '@/lib/profile-images';
 
 // Define real API types
 interface Conversation {
@@ -59,25 +60,6 @@ interface ApiConnection {
     educationLevel?: string;
   };
 }
-
-// Process profile image URL to ensure it works with R2/CloudFlare
-const getProfileImageUrl = (profileImage: string | null): string | null => {
-  if (!profileImage || typeof profileImage !== 'string') {
-    return null;
-  }
-
-  // Clean up "undefined/" from the path, which seems to be a data issue
-  const cleanedProfileImage = profileImage.replace('undefined/', '');
-
-  // If it's already a full URL, return as is
-  if (cleanedProfileImage.startsWith('http')) {
-    return cleanedProfileImage;
-  }
-
-  // Construct the full R2 URL using environment variable or fallback to known R2 domain
-  const baseUrl = process.env.NEXT_PUBLIC_R2_PUBLIC_URL || 'https://pub-19c0754937db426497ca014f0e2a297c.r2.dev';
-  return `${baseUrl}/${cleanedProfileImage}`;
-};
 
 // Helper function to get role badge with descriptive text and improved styling
 const getRoleBadge = (role: string, division?: string, educationLevel?: string) => {

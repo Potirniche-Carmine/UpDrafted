@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback, useRef } from "react";
+import { formatSportName } from "@/lib/sports-data";
 import type { FilterOption } from './use-filter-options';
 
 type TabValue = 'all' | 'athletes' | 'coaches' | 'recruiters';
@@ -111,10 +112,10 @@ export const useSearchState = ({ effectiveRole, initialTab, defaultSport, defaul
   // Helper function to get initial sports
   const getInitialSports = (): FilterOption[] => {
     if (defaultSports && defaultSports.length > 0) {
-      return defaultSports.map(sport => ({ value: sport, label: sport }));
+      return defaultSports.map(sport => ({ value: sport, label: formatSportName(sport) }));
     }
     if (defaultSport) {
-      return [{ value: defaultSport, label: defaultSport }];
+      return [{ value: defaultSport, label: formatSportName(defaultSport) }];
     }
     return [];
   };
@@ -220,9 +221,9 @@ export const useSearchState = ({ effectiveRole, initialTab, defaultSport, defaul
     setClearingFilters(true);
     // Reset to initial default sports
     const initialSports = defaultSports && defaultSports.length > 0
-      ? defaultSports.map(sport => ({ value: sport, label: sport }))
+      ? defaultSports.map(sport => ({ value: sport, label: formatSportName(sport) }))
       : defaultSport 
-        ? [{ value: defaultSport, label: defaultSport }]
+        ? [{ value: defaultSport, label: formatSportName(defaultSport) }]
         : [];
     setSelectedSports(initialSports);
     setSelectedDivisions([]);

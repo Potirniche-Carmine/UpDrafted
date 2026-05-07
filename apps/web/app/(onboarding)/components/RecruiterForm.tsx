@@ -13,6 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import {
   DIVISIONS,
   US_STATES,
+  formatSportName,
   getPositionsForSport,
   getStudentClassificationOptions
 } from "@/lib/sports-data";
@@ -448,7 +449,7 @@ export default function RecruiterForm({ data, onInputChange }: RecruiterFormProp
           <div className="flex flex-wrap gap-2 mt-3">
             {data.secondarySportsRecruiting.map(sport => (
               <Badge key={sport} variant="secondary" className="cursor-pointer" onClick={() => toggleSecondarySport(sport)}>
-                {sport} <X className="w-3 h-3 ml-1" />
+                {formatSportName(sport)} <X className="w-3 h-3 ml-1" />
               </Badge>
             ))}
           </div>
@@ -653,7 +654,7 @@ export default function RecruiterForm({ data, onInputChange }: RecruiterFormProp
                   size="sm"
                   onClick={() => setActiveSportForNeeds(sport)}
                 >
-                  {sport}
+                  {formatSportName(sport)}
                 </Button>
               ))}
             </div>
@@ -662,7 +663,7 @@ export default function RecruiterForm({ data, onInputChange }: RecruiterFormProp
           {activeSportForNeeds && (
             <Card>
               <CardHeader>
-                <CardTitle className="text-lg">Recruiting Needs for {activeSportForNeeds}</CardTitle>
+                <CardTitle className="text-lg">Recruiting Needs for {formatSportName(activeSportForNeeds)}</CardTitle>
               </CardHeader>
               <CardContent className="space-y-6">
                 {/* Student Classifications */}
@@ -726,10 +727,10 @@ export default function RecruiterForm({ data, onInputChange }: RecruiterFormProp
 
                 {/* Sport-Specific Recruiting Philosophy */}
                 <div className="space-y-3">
-                  <Label htmlFor={`${activeSportForNeeds}-philosophy`} className="text-base font-medium">Recruiting Philosophy for {activeSportForNeeds} *</Label>
+                  <Label htmlFor={`${activeSportForNeeds}-philosophy`} className="text-base font-medium">Recruiting Philosophy for {formatSportName(activeSportForNeeds)} *</Label>
                   <Textarea
                     id={`${activeSportForNeeds}-philosophy`}
-                    placeholder={`Describe what you look for in ${activeSportForNeeds} athletes, your coaching style for this sport, and what makes your ${activeSportForNeeds} program unique.`}
+                    placeholder={`Describe what you look for in ${formatSportName(activeSportForNeeds)} athletes, your coaching style for this sport, and what makes your ${formatSportName(activeSportForNeeds)} program unique.`}
                     value={data.sportSpecificNeeds[activeSportForNeeds]?.recruitingPhilosophy || ''}
                     onChange={(e) => updateSportSpecificNeeds(activeSportForNeeds, 'recruitingPhilosophy', e.target.value)}
                     className="min-h-24 bg-background resize-none"
@@ -746,4 +747,4 @@ export default function RecruiterForm({ data, onInputChange }: RecruiterFormProp
       )}
     </>
   );
-} 
+}

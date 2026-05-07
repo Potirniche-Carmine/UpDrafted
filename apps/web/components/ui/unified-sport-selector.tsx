@@ -7,7 +7,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Check, ChevronsUpDown, X } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { getCategorizedSports, getSportCategory } from "@/lib/sports-data";
+import { formatSportName, getCategorizedSports, getSportCategory } from "@/lib/sports-data";
 
 // Unified interface for both single and multi selection
 export interface UnifiedSportSelectorProps {
@@ -168,7 +168,7 @@ export function UnifiedSportSelector({
   // Get current display text
   const getDisplayText = () => {
     if (mode === 'single') {
-      return value || placeholder;
+      return value ? formatSportName(value) : placeholder;
     } else {
       if (selectedSports.length === 0) {
         return placeholder;
@@ -185,7 +185,7 @@ export function UnifiedSportSelector({
         <div className="flex flex-wrap gap-2">
           {selectedSports.map(sport => (
             <Badge key={sport} variant="secondary" className="flex items-center gap-1">
-              {sport}
+              {formatSportName(sport)}
               {!disabled && (
                 <Button
                   variant="ghost"
@@ -240,7 +240,7 @@ export function UnifiedSportSelector({
                             mode === 'single' && value === sport ? "opacity-100" : "opacity-0"
                           )}
                         />
-                        {sport}
+                        {formatSportName(sport)}
                       </CommandItem>
                     ))}
                   </CommandGroup>
@@ -261,7 +261,7 @@ export function UnifiedSportSelector({
       {/* Disabled state display */}
       {disabled && (
         <div className={cn("h-11 w-full flex items-center px-3 border border-border rounded-md bg-muted text-muted-foreground", className)}>
-          {mode === 'single' && value ? value : placeholder}
+          {mode === 'single' && value ? formatSportName(value) : placeholder}
         </div>
       )}
     </div>

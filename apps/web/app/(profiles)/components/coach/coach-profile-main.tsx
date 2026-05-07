@@ -34,7 +34,7 @@ import { SendOverChatDialog } from "../shared/send-over-chat-dialog";
 import { useToast } from "@/components/ui/toast";
 import { useUser } from "@/hooks/use-auth";
 import { useRoleView } from '@/hooks/use-role-view';
-import { getStudentClassificationDisplayName, StudentClassification } from '@/lib/sports-data';
+import { formatSportName, getStudentClassificationDisplayName, StudentClassification } from '@/lib/sports-data';
 import { generateProfileSlug, generateProfileUrl } from '@/lib/utils';
 import { useRouter } from 'next/navigation';
 import { showUnverifiedAccountWarning } from '@/utils/toast-helpers';
@@ -1262,7 +1262,7 @@ export function CoachProfile({
                   <div className="flex items-center justify-between">
                     <CardTitle className="flex items-center gap-2 text-primary">
                       <Target className="w-5 h-5" />
-                      Current Recruiting Needs - {profileData.sportCoaching}
+                      Current Recruiting Needs - {formatSportName(profileData.sportCoaching)}
                     </CardTitle>
                     {effectiveIsOwnProfile && (
                       <Button
@@ -1377,7 +1377,7 @@ export function CoachProfile({
                   <div className="flex items-center justify-between">
                     <CardTitle className="flex items-center gap-2 text-primary">
                       <Target className="w-5 h-5" />
-                      Current Recruiting Needs - {profileData.sportCoaching}
+                      Current Recruiting Needs - {formatSportName(profileData.sportCoaching)}
                     </CardTitle>
                     <Button
                       size="sm"
@@ -1468,7 +1468,7 @@ export function CoachProfile({
                   <Users className="w-12 h-12 mx-auto text-[#01ae79] mb-4" />
                   <h3 className="text-xl font-bold mb-2">Ready to Take the Next Step?</h3>
                   <p className="text-muted-foreground mb-4">
-                    Join our {profileData.sportCoaching} program and compete at the highest level while pursuing your academic goals.
+                    Join our {formatSportName(profileData.sportCoaching)} program and compete at the highest level while pursuing your academic goals.
                   </p>
                   <Button
                     size="lg"
@@ -1506,4 +1506,4 @@ export function CoachProfile({
       </Dialog>
     </div>
   );
-} 
+}

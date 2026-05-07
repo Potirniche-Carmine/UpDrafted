@@ -35,6 +35,7 @@ import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
 import { useToast } from "@/components/ui/toast";
 import { useUser } from "@/hooks/use-auth";
 import { generateProfileSlug, generateProfileUrl } from '@/lib/utils';
+import { formatSportName } from '@/lib/sports-data';
 import { useRouter } from "next/navigation";
 import { showUnverifiedAccountWarning } from '@/utils/toast-helpers';
 import { handleAcceptConnection as acceptConnection } from '@/utils/connection-utils';
@@ -109,7 +110,7 @@ const MeasurablesSection = memo(({ measurables, allSports, selectedSport, onSpor
                     className="text-xs h-8"
                     onClick={() => onSportChange(sport)}
                   >
-                    {sport}
+                    {formatSportName(sport)}
                   </Button>
                 ))}
               </div>
@@ -130,7 +131,7 @@ const MeasurablesSection = memo(({ measurables, allSports, selectedSport, onSpor
                 <>
                   <h3 className="font-semibold text-lg mb-2">Showcase Your Athletic Performance</h3>
                   <p className="text-muted-foreground mb-6 max-w-md mx-auto">
-                    Add your performance metrics for {selectedSport} to stand out to coaches.
+                    Add your performance metrics for {formatSportName(selectedSport)} to stand out to coaches.
                   </p>
                   <div className="flex justify-center">
                     <Button 
@@ -147,7 +148,7 @@ const MeasurablesSection = memo(({ measurables, allSports, selectedSport, onSpor
                 <>
                   <h3 className="font-semibold text-lg mb-2">Performance Metrics</h3>
                   <p className="text-muted-foreground">
-                    {selectedSport} performance data will be displayed here when available.
+                    {formatSportName(selectedSport)} performance data will be displayed here when available.
                   </p>
                 </>
               )}
@@ -398,7 +399,7 @@ function CampExperienceCard({ experiences, isOwnProfile, onEdit }: {
                   {/* Badges always at the top of the card */}
                   <div className="flex gap-1 mb-2">
                                                 <Badge className={`text-white text-[10px] px-2 py-0.5 ${exp.type === 'Camp' ? 'bg-blue-600' : 'bg-cyan-700'}`}>{exp.type === 'Camp' ? 'Camp' : 'Club'}</Badge>
-                            <Badge className="bg-muted text-foreground text-[10px] px-2 py-0.5 border border-border">{exp.sport}</Badge>
+                            <Badge className="bg-muted text-foreground text-[10px] px-2 py-0.5 border border-border">{formatSportName(exp.sport)}</Badge>
                   </div>
                   <div className="font-semibold text-base mb-1">{exp.name}</div>
                   <div className="flex flex-wrap gap-4 text-sm text-muted-foreground mb-1">
@@ -1212,16 +1213,16 @@ export function AthleteProfile({
                            safeProfileData.teamLevel === 'jv' ? 'Junior Varsity ' :
                            safeProfileData.teamLevel === 'freshman' ? 'Freshman ' :
                            safeProfileData.teamLevel === 'none' ? '' : 'Varsity '}
-                          {safeProfileData.sport}
+                          {formatSportName(safeProfileData.sport)}
                         </Badge>
                       ) : (
                         <Badge className="bg-gradient-to-r from-cyan-500 to-teal-600 text-white hover:from-cyan-600 hover:to-teal-700 text-xs shadow-md">
-                          {safeProfileData.sport}
+                          {formatSportName(safeProfileData.sport)}
                         </Badge>
                       )}
                       {safeProfileData.secondarySports?.map(sport => (
                         <Badge key={sport} variant="outline" className="text-xs">
-                          {sport}
+                          {formatSportName(sport)}
                         </Badge>
                       ))}
                     </div>
@@ -1801,4 +1802,4 @@ export function AthleteProfile({
       </div>
     </div>
   );
-} 
+}

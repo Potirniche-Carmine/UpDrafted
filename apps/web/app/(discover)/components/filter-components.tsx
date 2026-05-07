@@ -18,6 +18,7 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
+import { FILTER_POPOVER_CONTENT_PROPS } from "@/components/ui/filter-popover";
 import { ChevronDown, Lock, Crown, Shield } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -99,7 +100,7 @@ export function MultiSelectFilter({
           <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-[280px] sm:w-[var(--radix-popover-trigger-width)] max-w-[90vw] p-0" align="center" side="bottom" sideOffset={4}>
+      <PopoverContent {...FILTER_POPOVER_CONTENT_PROPS}>
         <Command>
           <CommandInput
             placeholder={searchPlaceholder}

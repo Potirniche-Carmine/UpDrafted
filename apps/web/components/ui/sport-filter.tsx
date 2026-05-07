@@ -16,9 +16,10 @@ import {
   CommandInput,
   CommandList,
 } from "@/components/ui/command";
+import { FILTER_POPOVER_CONTENT_PROPS } from "@/components/ui/filter-popover";
 import { ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { getCategorizedSports } from "@/lib/sports-data";
+import { formatSportName, getCategorizedSports } from "@/lib/sports-data";
 
 // Filter option interface
 export interface FilterOption {
@@ -53,7 +54,7 @@ export function SportFilter({
       sportData.sport.toLowerCase().includes(searchTerm.toLowerCase())
     ).map(sportData => ({
       value: sportData.sport,
-      label: sportData.sport
+      label: formatSportName(sportData.sport)
     }));
 
   const filteredMensSports = filterSports(categorizedSports.mens);
@@ -103,7 +104,7 @@ export function SportFilter({
           <ChevronDown className="ml-2 h-3.5 w-3.5 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-72 p-0" align="start">
+      <PopoverContent {...FILTER_POPOVER_CONTENT_PROPS}>
         <Command>
           <CommandInput
             placeholder={searchPlaceholder}

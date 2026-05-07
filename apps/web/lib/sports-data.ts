@@ -12,6 +12,14 @@ export interface CategorizedSportData {
   // coed: SportPosition[];
 }
 
+export function formatSportName(sport?: string | null): string {
+  return sport || '';
+}
+
+function findSportData(sport: string): SportPosition | undefined {
+  return SPORTS_DATA.find(s => s.sport === sport);
+}
+
 export const SPORTS_DATA: SportPosition[] = [
   // Baseball
   {
@@ -186,18 +194,18 @@ export const SPORTS_DATA: SportPosition[] = [
       'Striker', 'Center Forward'
     ]
   },
-  // Swimming (Men's)
+  // Swim & Dive (Men's)
   {
-    sport: 'Swimming (M)',
+    sport: 'Swim & Dive (M)',
     gender: 'male',
     positions: [
       'Freestyle (Sprint)', 'Freestyle (Distance)', 'Backstroke', 'Breaststroke',
       'Butterfly', 'Individual Medley', 'Relay'
     ]
   },
-  // Swimming (Women's)
+  // Swim & Dive (Women's)
   {
-    sport: 'Swimming (W)',
+    sport: 'Swim & Dive (W)',
     gender: 'female',
     positions: [
       'Freestyle (Sprint)', 'Freestyle (Distance)', 'Backstroke', 'Breaststroke',
@@ -432,7 +440,7 @@ export function getStudentClassificationOptions(): Array<{ value: StudentClassif
 }
 
 export function getPositionsForSport(sport: string): string[] {
-  const sportData = SPORTS_DATA.find(s => s.sport === sport);
+  const sportData = findSportData(sport);
   return sportData?.positions || [];
 }
 
@@ -472,7 +480,7 @@ export function getSportsListByGenderPreference(userGender?: 'male' | 'female' |
   // If user has a sport, determine their gender category from it
   let preferredCategory: SportCategory | null = null;
   if (userSport) {
-    const sportData = SPORTS_DATA.find(s => s.sport === userSport);
+    const sportData = findSportData(userSport);
     if (sportData) {
       preferredCategory = sportData.gender === 'male' ? 'mens' : 'females';
       // sportData.gender === 'female' ? 'females' : 'coed';
@@ -520,7 +528,7 @@ export function getSportsForCategory(category: SportCategory): SportPosition[] {
 
 // Get sport category from sport name
 export function getSportCategory(sport: string): SportCategory | null {
-  const sportData = SPORTS_DATA.find(s => s.sport === sport);
+  const sportData = findSportData(sport);
   if (!sportData) return null;
   
   return sportData.gender === 'male' ? 'mens' : 'females';
@@ -529,7 +537,7 @@ export function getSportCategory(sport: string): SportCategory | null {
 
 // Check if user can select a sport based on their gender/role
 export function canUserSelectSport(sport: string, userGender?: 'male' | 'female' | null, userRole?: string): boolean {
-  const sportData = SPORTS_DATA.find(s => s.sport === sport);
+  const sportData = findSportData(sport);
   if (!sportData) return false;
   
   // Recruiters can select any sport
@@ -640,13 +648,13 @@ export const PERFORMANCE_MEASURABLES: { [key: string]: string[] } = {
     'Goals Per Season', 'Assists Per Season', 'Pass Accuracy %', 'Shots on Goal',
     'Minutes Played', 'Yellow Cards', 'Red Cards'
   ],
-  'Swimming (M)': [
+  'Swim & Dive (M)': [
     '50m Freestyle', '100m Freestyle', '200m Freestyle', '400m Freestyle', '800m Freestyle',
     '1500m Freestyle', '50m Backstroke', '100m Backstroke', '200m Backstroke',
     '50m Breaststroke', '100m Breaststroke', '200m Breaststroke', '50m Butterfly',
     '100m Butterfly', '200m Butterfly', '200m IM', '400m IM'
   ],
-  'Swimming (W)': [
+  'Swim & Dive (W)': [
     '50m Freestyle', '100m Freestyle', '200m Freestyle', '400m Freestyle', '800m Freestyle',
     '1500m Freestyle', '50m Backstroke', '100m Backstroke', '200m Backstroke',
     '50m Breaststroke', '100m Breaststroke', '200m Breaststroke', '50m Butterfly',
@@ -678,4 +686,4 @@ export const PERFORMANCE_MEASURABLES: { [key: string]: string[] } = {
 
 export function getMeasurablesForSport(sport: string): string[] {
   return PERFORMANCE_MEASURABLES[sport] || ['Speed', 'Strength', 'Agility', 'Endurance'];
-} 
+}

@@ -4,6 +4,7 @@ import React from "react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { GraduationCap, Users, Trophy, Building } from "lucide-react";
+import { formatSportName } from "@/lib/sports-data";
 
 interface LevelBannerProps {
   division: string;
@@ -123,7 +124,7 @@ export function LevelBanner({
                 )}
               </div>
               <p className={`text-sm ${config.textColor} opacity-80`}>
-                {sportActivity} • {organizationName}
+                {formatSportName(sportActivity)} • {organizationName}
               </p>
             </div>
           </div>
@@ -160,7 +161,7 @@ export function LevelBanner({
                 </div>
               </div>
               <p className={`text-sm ${config.textColor} opacity-80`}>
-                {sportActivity} • {organizationName}
+                {formatSportName(sportActivity)} • {organizationName}
               </p>
             </div>
           </div>
@@ -168,4 +169,4 @@ export function LevelBanner({
       </CardContent>
     </Card>
   );
-} 
+}

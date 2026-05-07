@@ -12,7 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Save, X, Plus, Shield, CalendarIcon, Trophy } from "lucide-react";
-import { US_STATES, GRADUATION_YEARS, getPositionsForSport, getMeasurablesForSport, DIVISIONS } from '@/lib/sports-data';
+import { US_STATES, GRADUATION_YEARS, formatSportName, getPositionsForSport, getMeasurablesForSport, DIVISIONS } from '@/lib/sports-data';
 import { EducationLevel } from '@/app/(onboarding)/lib/onboarding';
 import { sanitizeProfileData } from '@/utils/sanitization';
 import { ProfilePictureUpload } from '@/components/ui/profile-picture-upload';
@@ -1589,7 +1589,7 @@ export function AthleteEditDialogs({
                     <div className="flex flex-wrap gap-2">
                       {(editData.secondarySports as string[]).map(sport => (
                         <Badge key={sport} variant="secondary" className="px-2 py-1">
-                          {sport}
+                          {formatSportName(sport)}
                           <Button
                             variant="ghost"
                             size="sm"
@@ -2352,7 +2352,7 @@ export function AthleteEditDialogs({
           <>
             <DialogHeader>
               <DialogTitle>
-                {isEditingExisting ? 'Edit' : 'Add'} Performance Metric - {selectedSport}
+                {isEditingExisting ? 'Edit' : 'Add'} Performance Metric - {formatSportName(selectedSport)}
               </DialogTitle>
               <DialogDescription>
                 {isEditingExisting 
@@ -2577,7 +2577,7 @@ export function AthleteEditDialogs({
                           return `${monthNames[parseInt(month) - 1]} ${year}`;
                         })()}
                       </p>
-                      <p className="text-sm text-muted-foreground">Sport: {measurableToDelete.sport}</p>
+                      <p className="text-sm text-muted-foreground">Sport: {formatSportName(measurableToDelete.sport)}</p>
                     </div>
                   </div>
                 </div>
@@ -2808,7 +2808,7 @@ export function AthleteEditDialogs({
                         {/* Badges always at the top of the card */}
                         <div className="flex gap-1 mb-2">
                           <Badge className={exp.type === 'Camp' ? 'bg-blue-600 text-white' : 'bg-cyan-700 text-white'}>{exp.type}</Badge>
-                          <Badge className="bg-muted text-foreground border border-border">{exp.sport}</Badge>
+                          <Badge className="bg-muted text-foreground border border-border">{formatSportName(exp.sport)}</Badge>
                         </div>
                         {/* Title underneath badges */}
                         <div className="font-semibold text-base mb-1">{exp.name}</div>
@@ -3439,4 +3439,4 @@ export function AthleteEditDialogs({
       />
     </>
   );
-} 
+}

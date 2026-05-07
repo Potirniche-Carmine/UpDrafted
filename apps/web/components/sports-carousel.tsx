@@ -12,7 +12,7 @@ export function SportsCarousel() {
     { name: 'Softball' },
     { name: 'Soccer' },
     { name: 'Track & Field' },
-    { name: 'Swimming' },
+    { name: 'Swim & Dive' },
     { name: 'Tennis' },
     { name: 'Volleyball' },
     { name: 'Lacrosse' },

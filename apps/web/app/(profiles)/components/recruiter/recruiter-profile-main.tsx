@@ -33,7 +33,7 @@ import { SendOverChatDialog } from "../shared/send-over-chat-dialog";
 import { useToast } from "@/components/ui/toast";
 import { useUser } from "@/hooks/use-auth";
 import { useRoleView } from '@/hooks/use-role-view';
-import { getStudentClassificationDisplayName, StudentClassification } from '@/lib/sports-data';
+import { formatSportName, getStudentClassificationDisplayName, StudentClassification } from '@/lib/sports-data';
 import { generateProfileSlug, generateProfileUrl } from '@/lib/utils';
 import { useRouter } from 'next/navigation';
 import { showUnverifiedAccountWarning } from '@/utils/toast-helpers';
@@ -291,7 +291,7 @@ const SportSpecificNeedsSection = ({
                       className="text-xs h-8 pr-8"
                       onClick={() => onSportChange(sport)}
                     >
-                      {sport}
+                      {formatSportName(sport)}
                       {sport === allSports[0] && <Badge variant="secondary" className="ml-2 text-xs">Primary</Badge>}
                     </Button>
                     {/* Red X button - only show for non-primary sports and when user owns profile */}
@@ -422,9 +422,9 @@ const SportSpecificNeedsSection = ({
               {isOwnProfile ? (
                 <>
                   <h3 className="font-semibold text-lg mb-2 text-center">Set Your Recruiting Needs</h3>
-                  <p className="text-sm text-muted-foreground mb-2 text-center">For {selectedSport}</p>
+                  <p className="text-sm text-muted-foreground mb-2 text-center">For {formatSportName(selectedSport)}</p>
                   <p className="text-muted-foreground mb-6 max-w-md mx-auto">
-                    Help student-athletes understand what you&apos;re looking for in {selectedSport} recruits.
+                    Help student-athletes understand what you&apos;re looking for in {formatSportName(selectedSport)} recruits.
                   </p>
                   <div className="flex justify-center">
                     <Button 
@@ -440,9 +440,9 @@ const SportSpecificNeedsSection = ({
               ) : (
                 <>
                   <h3 className="font-semibold text-lg mb-2 text-center">Recruiting Needs</h3>
-                  <p className="text-sm text-muted-foreground mb-2 text-center">For {selectedSport}</p>
+                  <p className="text-sm text-muted-foreground mb-2 text-center">For {formatSportName(selectedSport)}</p>
                   <p className="text-muted-foreground">
-                    {selectedSport} recruiting information will be displayed here when available.
+                    {formatSportName(selectedSport)} recruiting information will be displayed here when available.
                   </p>
                 </>
               )}
@@ -1498,7 +1498,7 @@ export function RecruiterProfile({
                   <Users className="w-12 h-12 mx-auto text-[#01ae79] mb-4" />
                   <h3 className="text-xl font-bold mb-2">Ready to Take the Next Step?</h3>
                   <p className="text-muted-foreground mb-4">
-                    Join our {profileData.sportRecruiting} program and compete at the highest level while pursuing your academic goals.
+                    Join our {formatSportName(profileData.sportRecruiting)} program and compete at the highest level while pursuing your academic goals.
                   </p>
                   <Button
                     size="lg"
@@ -1560,4 +1560,4 @@ export function RecruiterProfile({
         />
     </div>
   );
-} 
+}

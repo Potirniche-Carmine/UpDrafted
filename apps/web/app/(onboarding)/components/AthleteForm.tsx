@@ -14,6 +14,7 @@ import { Check, ChevronsUpDown, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { 
   US_STATES, 
+  formatSportName,
   getPositionsForSport, 
   getGraduationYearsForEducationLevel,
   DIVISIONS
@@ -478,7 +479,7 @@ export default function AthleteForm({ data, onInputChange }: AthleteFormProps) {
             <div className="flex flex-wrap gap-2">
               {data.secondarySports.map(sport => (
                 <Badge key={sport} variant="secondary" className="flex items-center gap-1">
-                  {sport}
+                  {formatSportName(sport)}
                   <X 
                     className="w-3 h-3 cursor-pointer" 
                     onClick={() => removeSecondarySport(sport)}
@@ -870,4 +871,4 @@ export default function AthleteForm({ data, onInputChange }: AthleteFormProps) {
       </div>
     </div>
   );
-} 
+}
