@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import {
   ArrowRight,
@@ -13,11 +14,19 @@ import {
   Zap,
 } from "lucide-react";
 import { pageMetadata } from "@/lib/seo";
+import { getAccessPathForUser } from "@/lib/auth-routing";
+import { getSession } from "@/utils/roles";
 import { SportsCarousel } from "@/components/sports-carousel";
 
 export const metadata = pageMetadata.home();
 
-export default function HomePage() {
+export default async function HomePage() {
+  const session = await getSession();
+
+  if (session?.user) {
+    redirect(getAccessPathForUser(session.user));
+  }
+
   return (
     <div className="flex flex-col">
       {/* ============== HERO ============== */}
