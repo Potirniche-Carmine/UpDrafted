@@ -35,7 +35,7 @@ export default function RoleSelection({ onRoleSelect }: RoleSelectionProps) {
             </CardHeader>
             <CardContent>
               <p className="text-center text-muted-foreground mb-4">
-                I&apos;m a student-athlete looking to get recruited for college sports.
+                Build your athlete profile, showcase film and stats, and connect with verified college programs.
               </p>
               <div className="space-y-2">
                 <Badge variant="outline" className="w-full justify-center">Profile Creation</Badge>
@@ -58,7 +58,7 @@ export default function RoleSelection({ onRoleSelect }: RoleSelectionProps) {
             </CardHeader>
             <CardContent>
               <p className="text-center text-muted-foreground mb-4">
-                I&apos;m a coach looking to connect with other coaches and discover athletes.
+                Use this if you coach a team or program and want to discover athletes for your roster.
               </p>
               <div className="space-y-2">
                 <Badge variant="outline" className="w-full justify-center">Program Showcase</Badge>
@@ -77,16 +77,16 @@ export default function RoleSelection({ onRoleSelect }: RoleSelectionProps) {
               <div className="mx-auto w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center mb-4">
                 <Target className="w-8 h-8 text-orange-600" />
               </div>
-              <CardTitle className="text-xl">Recruiter</CardTitle>
+              <CardTitle className="text-xl">Recruiter / Athletics Staff</CardTitle>
             </CardHeader>
             <CardContent>
               <p className="text-center text-muted-foreground mb-4">
-                I&apos;m a recruiting specialist helping connect athletes with college opportunities.
+                For recruiting coordinators, athletics administrators, and other institutional staff who support recruiting but are not coaches.
               </p>
               <div className="space-y-2">
                 <Badge variant="outline" className="w-full justify-center">Multi-Sport Recruiting</Badge>
                 <Badge variant="outline" className="w-full justify-center">Athlete Discovery</Badge>
-                <Badge variant="outline" className="w-full justify-center">Profile Showcase</Badge>
+                <Badge variant="outline" className="w-full justify-center">Athletics Staff Profile</Badge>
               </div>
             </CardContent>
           </Card>
@@ -94,4 +94,4 @@ export default function RoleSelection({ onRoleSelect }: RoleSelectionProps) {
       </div>
     </div>
   );
-} 
+}
