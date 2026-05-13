@@ -4,7 +4,7 @@ import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import Image from "next/image";
+import { TwitterXIcon } from "./social-icons";
 import {
   MapPin,
   Instagram,
@@ -145,7 +145,7 @@ export function ProfileCard({
                     rel="noopener noreferrer"
                     className="flex items-center gap-2 px-3 py-2 bg-black text-white rounded-lg hover:opacity-90 transition-opacity"
                   >
-                    <Image src="/icons/x-white-logo.png" alt="X" width={16} height={16} />
+                    <TwitterXIcon />
                     <span className="text-sm font-medium">{data.twitterHandle}</span>
                   </a>
                 )}

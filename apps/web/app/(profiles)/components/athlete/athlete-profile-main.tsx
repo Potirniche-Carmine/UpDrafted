@@ -22,6 +22,7 @@ import {
   Crown
 } from "lucide-react";
 import { ProfileHeader } from "../shared/profile-header";
+import { TwitterXIcon } from "../shared/social-icons";
 import { AcademicSummaryCard } from "../shared/academic-summary-card";
 import { AthleteEditDialogs } from "./athlete-edit-dialogs";
 import { VerificationSection } from "./athlete-verification-section";
@@ -291,7 +292,7 @@ const SocialMediaSection = memo(({ socialMedia, isOwnProfile, onEdit }: {
                 className="flex items-center justify-center gap-2 px-3 py-2 bg-black text-white rounded-lg hover:opacity-90 transition-opacity min-w-0"
                 title={`@${socialMedia.twitter.replace('@', '')}`}
             >
-              <Image src="/icons/x-white-logo.png" alt="X" width={16} height={16} className="flex-shrink-0" />
+              <TwitterXIcon className="h-4 w-4 flex-shrink-0" />
               <span className={`${getTextSizeClass(socialMedia.twitter)} font-medium break-words`}>
                 {formatHandle(socialMedia.twitter)}
               </span>
