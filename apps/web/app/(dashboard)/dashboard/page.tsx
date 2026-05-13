@@ -210,7 +210,7 @@ function DashboardContent({
             className="w-full border-[#01ae79]/30 text-[#01ae79] hover:bg-[#01ae79]/5 hover:text-[#01ae79] hover:border-[#01ae79]/40"
             onClick={() =>
               window.open(
-                'https://www.ncsasports.org/ncaa-eligibility-center/recruiting-rules',
+                'https://www.ncaa.org/sports/2018/5/8/division-i-and-ii-recruiting-calendars.aspx',
                 '_blank',
                 'noopener,noreferrer'
               )
