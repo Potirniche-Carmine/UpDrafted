@@ -6,7 +6,8 @@ import { ADMIN_APP_URL, getEnvValue } from "./env";
 
 const resend = new Resend(getEnvValue("RESEND_API_KEY", "re_placeholder"));
 
-const EMAIL_FROM = "UpDrafted Admin <noreply@updrafted.us>";
+const EMAIL_FROM = "UpDrafted Admin <support@updrafted.us>";
+const EMAIL_REPLY_TO = "support@updrafted.us";
 
 /**
  * Admin-dashboard better-auth instance.
@@ -53,6 +54,7 @@ export const auth = betterAuth({
     sendVerificationEmail: async ({ user, url }) => {
       await resend.emails.send({
         from: EMAIL_FROM,
+        replyTo: EMAIL_REPLY_TO,
         to: user.email,
         subject: "Verify your admin login - UpDrafted",
         html: `<p>Click <a href="${url}">here</a> to verify your email for the UpDrafted admin dashboard.</p>`,

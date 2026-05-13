@@ -58,8 +58,10 @@ function getTrustedOrigins(): string[] {
 // Initialize Resend client
 const resend = new Resend(getEnvValue("RESEND_API_KEY", "re_placeholder"));
 
-// Email configuration - hardcoded since it's not sensitive
-const EMAIL_FROM = "UpDrafted <noreply@updrafted.us>";
+// Email configuration - hardcoded since it's not sensitive.
+// Use a replyable mailbox for deliverability and recipient trust.
+const EMAIL_FROM = "UpDrafted <support@updrafted.us>";
+const EMAIL_REPLY_TO = "support@updrafted.us";
 const APP_URL = (process.env.BETTER_AUTH_BASE_URL && process.env.BETTER_AUTH_BASE_URL !== "NEXT_PUBLIC_APP_URL_PLACEHOLDER")
     ? process.env.BETTER_AUTH_BASE_URL
     : (process.env.NEXT_PUBLIC_APP_URL && !process.env.NEXT_PUBLIC_APP_URL.includes("PLACEHOLDER") && process.env.NEXT_PUBLIC_APP_URL.startsWith("http")
@@ -126,6 +128,7 @@ export const auth = betterAuth({
         sendResetPassword: async ({ user, url }) => {
             await resend.emails.send({
                 from: EMAIL_FROM,
+                replyTo: EMAIL_REPLY_TO,
                 to: user.email,
                 subject: "Reset Your Password - UpDrafted",
                 html: `
@@ -203,6 +206,7 @@ export const auth = betterAuth({
                 // Send email to new address for verification
                 await resend.emails.send({
                     from: EMAIL_FROM,
+                    replyTo: EMAIL_REPLY_TO,
                     to: newEmail,
                     subject: "Verify Your New Email - UpDrafted",
                     html: `
@@ -240,6 +244,7 @@ export const auth = betterAuth({
             sendMagicLink: async ({ email, url }: { email: string; url: string }) => {
                 await resend.emails.send({
                     from: EMAIL_FROM,
+                    replyTo: EMAIL_REPLY_TO,
                     to: email,
                     subject: "Sign in to UpDrafted - Magic Link",
                     html: `
@@ -282,6 +287,7 @@ export const auth = betterAuth({
 
                 await resend.emails.send({
                     from: EMAIL_FROM,
+                    replyTo: EMAIL_REPLY_TO,
                     to: email,
                     subject,
                     html: `

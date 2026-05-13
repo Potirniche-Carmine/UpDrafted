@@ -3,7 +3,8 @@ import { MAIN_APP_URL, getEnvValue } from "./env";
 
 const resend = new Resend(getEnvValue("RESEND_API_KEY", "re_placeholder"));
 
-const EMAIL_FROM = "UpDrafted <noreply@updrafted.us>";
+const EMAIL_FROM = "UpDrafted <support@updrafted.us>";
+const EMAIL_REPLY_TO = "support@updrafted.us";
 
 type SendArgs = { to: string; subject: string; html: string };
 
@@ -11,7 +12,7 @@ async function send({ to, subject, html }: SendArgs): Promise<void> {
   // In dev with a placeholder key, Resend will throw — swallow so
   // local development doesn't fail the moderator action.
   try {
-    await resend.emails.send({ from: EMAIL_FROM, to, subject, html });
+    await resend.emails.send({ from: EMAIL_FROM, replyTo: EMAIL_REPLY_TO, to, subject, html });
   } catch (error) {
     if (process.env.NODE_ENV !== "production") {
       console.warn("[admin] Resend failed (dev fallback):", error);

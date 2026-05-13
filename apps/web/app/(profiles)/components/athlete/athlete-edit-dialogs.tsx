@@ -709,9 +709,8 @@ export function AthleteEditDialogs({
         if (typeof value === 'string' && value.trim()) {
           const url = value.trim();
           
-          // Validate ESPN URL format: [https://][www.]espn.com/college-{sport}/player/_/id/{id}/{name}
-          // or [https://][www.]espn.com/college-sports/{sport}/recruiting/player/_/id/{id}/{name}
-          const espnRegex = /^(https?:\/\/)?(www\.)?espn\.com\/college(-sports)?\/(football|basketball|recruiting\/basketball|basketball\/recruiting)\/player\/_\/id\/\d+\//i;
+          // Validate ESPN player and recruiting profile URLs.
+          const espnRegex = /^(https?:\/\/)?(www\.)?espn\.com\/(?:college-(?:football|basketball)|college(?:-sports)?\/(?:football|basketball)(?:\/recruiting)?|college(?:-sports)?\/recruiting\/basketball)\/player\/_\/id\/\d+\//i;
           
           if (!espnRegex.test(url)) {
             return 'Please enter a valid ESPN player URL that contains "/player/_/id/" in the path';

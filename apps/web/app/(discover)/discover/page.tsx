@@ -10,7 +10,7 @@ import { useFeatureAccess } from '@/components/providers/subscription-provider';
 // Import our new components
 import { SearchFilters } from '../components/search-filters';
 import { SearchHeader } from '../components/search-header';
-import { SearchTabs, getAvailableTabs, getTabRole, getValidTab } from '../components/search-tabs';
+import { SearchTabs, getAvailableTabs, getTabRole, getValidTab, getDefaultTab } from '../components/search-tabs';
 
 // Import our custom hooks
 import { useFilterOptions } from '../hooks/use-filter-options';
@@ -153,18 +153,17 @@ function SearchPageContent() {
   // Initialize filters and mark ready when user sport data is loaded
   useEffect(() => {
     if (!userSportLoading && userSport !== null && !searchState.initialLoadTriggered.current) {
-      // Try to load filters from cache first
       const hasCache = searchState.loadSearchState();
-      const shouldUseRoleDefaults = effectiveRole === 'coach' || effectiveRole === 'recruiter';
+      const shouldForceRoleTab = effectiveRole === 'athlete' || effectiveRole === 'coach' || effectiveRole === 'recruiter';
       const userDefaultSports = getUserDefaultSports();
 
-      if (shouldUseRoleDefaults) {
-        searchState.setActiveTab('athletes');
+      if (shouldForceRoleTab) {
+        searchState.setActiveTab(getDefaultTab(effectiveRole));
       }
 
-      // If no cache, set default sports. Coaches and recruiters should always
-      // start from the sport they recruit/coach, matching the connections page.
-      if (!hasCache || shouldUseRoleDefaults) {
+      // Cache wins on refresh. If no prior search exists, fall back to the
+      // user's profile sports for athletes, coaches, and recruiters.
+      if (!hasCache) {
         if (userDefaultSports.length > 0) {
           searchState.setSelectedSports(userDefaultSports);
         }
