@@ -213,13 +213,15 @@ export function PremiumLimitsCard() {
   const isPremium = subscription?.isPremium && subscription?.status === 'active'
   const connectionLimit = features?.maxConnectionsPerMonth || 5
   const connectionUsage = usageData?.connections || { current: 0, limit: connectionLimit, monthlyUsed: 0, monthlyLimit: connectionLimit }
+  const hasUnlimitedMonthlyConnections = isPremium || connectionUsage.monthlyLimit === -1 || connectionUsage.monthlyLimit >= 999999
+  const hasUnlimitedActiveConnections = isPremium || usageData?.activeConnections.limit === null
 
   // Calculate percentages
-  const monthlyConnectionPercent = connectionUsage.monthlyLimit > 0
+  const monthlyConnectionPercent = !hasUnlimitedMonthlyConnections && connectionUsage.monthlyLimit > 0
     ? Math.min((connectionUsage.monthlyUsed / connectionUsage.monthlyLimit) * 100, 100)
     : 0
 
-  const activeConnectionPercent = usageData?.activeConnections.limit
+  const activeConnectionPercent = !hasUnlimitedActiveConnections && usageData?.activeConnections.limit
     ? Math.min((usageData.activeConnections.current / usageData.activeConnections.limit) * 100, 100)
     : 0
 
@@ -292,10 +294,10 @@ export function PremiumLimitsCard() {
             <div className="flex items-center justify-between text-sm">
               <span className="text-muted-foreground">Monthly Connection Requests</span>
               <span className="font-semibold text-foreground">
-                {connectionUsage.monthlyUsed} / {connectionUsage.monthlyLimit === 999999 ? '∞' : connectionUsage.monthlyLimit}
+                {connectionUsage.monthlyUsed} / {hasUnlimitedMonthlyConnections ? 'Unlimited' : connectionUsage.monthlyLimit}
               </span>
             </div>
-            {connectionUsage.monthlyLimit !== 999999 && (
+            {!hasUnlimitedMonthlyConnections && (
               <div className="mt-3">
                 <Progress value={monthlyConnectionPercent} className="h-2" />
               </div>
@@ -312,11 +314,11 @@ export function PremiumLimitsCard() {
               <span className="text-muted-foreground">Active connections</span>
               <span className="font-semibold text-foreground">
                 {usageData?.activeConnections.current || 0} / {
-                  usageData?.activeConnections.limit === null ? '∞' : usageData?.activeConnections.limit || 5
+                  hasUnlimitedActiveConnections ? 'Unlimited' : usageData?.activeConnections.limit || 5
                 }
               </span>
             </div>
-            {usageData?.activeConnections.limit && (
+            {!hasUnlimitedActiveConnections && usageData?.activeConnections.limit && (
               <div className="mt-3">
                 <Progress value={activeConnectionPercent} className="h-2" />
               </div>

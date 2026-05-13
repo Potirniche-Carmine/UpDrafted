@@ -155,10 +155,16 @@ function SearchPageContent() {
     if (!userSportLoading && userSport !== null && !searchState.initialLoadTriggered.current) {
       // Try to load filters from cache first
       const hasCache = searchState.loadSearchState();
+      const shouldUseRoleDefaults = effectiveRole === 'coach' || effectiveRole === 'recruiter';
+      const userDefaultSports = getUserDefaultSports();
 
-      // If no cache, set default sports
-      if (!hasCache) {
-        const userDefaultSports = getUserDefaultSports();
+      if (shouldUseRoleDefaults) {
+        searchState.setActiveTab('athletes');
+      }
+
+      // If no cache, set default sports. Coaches and recruiters should always
+      // start from the sport they recruit/coach, matching the connections page.
+      if (!hasCache || shouldUseRoleDefaults) {
         if (userDefaultSports.length > 0) {
           searchState.setSelectedSports(userDefaultSports);
         }
@@ -167,7 +173,7 @@ function SearchPageContent() {
       // Mark filters as ready
       setFiltersReady(true);
     }
-  }, [userSportLoading, userSport, getUserDefaultSports, searchState]);
+  }, [userSportLoading, userSport, effectiveRole, getUserDefaultSports, searchState]);
 
   // Get available tabs based on user role
   const availableTabs = useMemo(() =>
@@ -194,7 +200,7 @@ function SearchPageContent() {
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [effectiveRole]); // Only depend on effectiveRole and activeTab
+  }, [effectiveRole, searchState.activeTab]);
 
   // Show discover button when filters change (always show after first search)
   useEffect(() => {
