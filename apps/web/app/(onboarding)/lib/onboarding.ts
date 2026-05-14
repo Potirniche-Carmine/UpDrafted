@@ -1,5 +1,19 @@
 export type UserRole = "athlete" | "coach" | "recruiter";
 export type EducationLevel = 'high_school' | 'undergraduate' | 'graduate' | 'associate';
+export type InstitutionType = 'high_school' | 'juco' | 'club' | 'undergraduate' | 'graduate' | 'other';
+
+export interface InstitutionHistoryEntry {
+  id: string;
+  name: string;
+  type: InstitutionType;
+  startYear: string;
+  endYear: string;
+  city?: string;
+  state?: string;
+  country?: string;
+}
+
+export type SportPositions = Record<string, string[]>;
 
 // Interface for the onboarding form data (what the frontend sends)
 export interface OnboardingFormData {
@@ -12,8 +26,11 @@ export interface OnboardingFormData {
   // Athlete fields
   sport: string;
   secondarySports: string[];
+  sportPositions: SportPositions;
   graduationYear: number | null;
   educationLevel: EducationLevel;
+  institutionType: InstitutionType;
+  institutionHistory: InstitutionHistoryEntry[];
   organizationName: string;
   city: string;
   state: string;
@@ -70,8 +87,11 @@ export interface OnboardingProfileData {
   // Athlete specific
   sport?: string;
   secondarySports?: string[];
+  sportPositions?: SportPositions;
   graduationYear?: number;
   educationLevel?: EducationLevel;
+  institutionType?: InstitutionType;
+  institutionHistory?: InstitutionHistoryEntry[];
   organizationName?: string;
   city: string;
   state: string;
@@ -120,8 +140,11 @@ export function convertFormDataToProfileData(formData: OnboardingFormData): Onbo
     fullName: formData.fullName.trim(),
     sport: formData.sport,
     secondarySports: formData.secondarySports,
+    sportPositions: formData.sportPositions,
     graduationYear: formData.graduationYear || undefined,
     educationLevel: formData.educationLevel,
+    institutionType: formData.institutionType,
+    institutionHistory: formData.institutionHistory,
     organizationName: formData.organizationName.trim(),
     city: formData.city.trim(),
     state: formData.state,
@@ -149,8 +172,8 @@ export function convertFormDataToProfileData(formData: OnboardingFormData): Onbo
     conference: formData.conference.trim(),
     programWebsite: formData.programWebsite.trim(),
     schoolWebsite: formData.schoolWebsite.trim(),
-    orgInstagramHandle: formData.orgInstagramHandle.trim(),
-    orgTwitterHandle: formData.orgTwitterHandle.trim(),
+    orgInstagramHandle: (formData.orgInstagramHandle || formData.instagramHandle).trim(),
+    orgTwitterHandle: (formData.orgTwitterHandle || formData.twitterHandle).trim(),
     recruitingPhilosophy: formData.recruitingPhilosophy.trim(),
     recruitingStudentClassifications: formData.recruitingStudentClassifications,
     recruitingPositions: formData.recruitingPositions,

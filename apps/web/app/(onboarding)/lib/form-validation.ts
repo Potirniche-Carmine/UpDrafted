@@ -441,27 +441,10 @@ export class FormValidator {
       }
     }
 
-    // Academic requirements depend on education level
-    if (data.educationLevel === 'high_school') {
-      // High school students need at least one: GPA, SAT, or ACT
-      if (!data.gpa && !data.satScore && !data.actScore) {
-        errors.academicInfo = 'High school students must provide at least one: GPA, SAT score, or ACT score';
-      }
+    if (data.intendedMajor) {
+      const majorResult = this.validateText(data.intendedMajor, 'Intended major', FIELD_LIMITS.INTENDED_MAJOR);
+      if (!majorResult.isValid) errors.intendedMajor = majorResult.error!;
     }
-
-    // Academic scores validation (validate format if provided)
-    const gpaResult = this.validateGPA(data.gpa);
-    if (!gpaResult.isValid) errors.gpa = gpaResult.error!;
-
-    const satResult = this.validateSATScore(data.satScore);
-    if (!satResult.isValid) errors.satScore = satResult.error!;
-
-    const actResult = this.validateACTScore(data.actScore);
-    if (!actResult.isValid) errors.actScore = actResult.error!;
-
-    // Intended major validation
-    const majorResult = this.validateText(data.intendedMajor, 'Intended major', FIELD_LIMITS.INTENDED_MAJOR, true);
-    if (!majorResult.isValid) errors.intendedMajor = majorResult.error!;
 
     // Graduation year validation
     const graduationResult = this.validateGraduationYear(data.graduationYear, data.educationLevel);
@@ -549,7 +532,13 @@ export class FormValidator {
     }
 
     // Check that at least one contact method is provided
-    const hasContact = data.programWebsite || data.schoolWebsite || data.orgInstagramHandle || data.orgTwitterHandle;
+    const hasContact =
+      data.programWebsite ||
+      data.schoolWebsite ||
+      data.orgInstagramHandle ||
+      data.orgTwitterHandle ||
+      data.instagramHandle ||
+      data.twitterHandle;
     if (!hasContact) {
       errors.contact = 'Please provide at least one: website or social media handle';
     }
@@ -581,13 +570,15 @@ export class FormValidator {
     }
 
     // Social media validation (optional fields)
-    if (data.orgInstagramHandle) {
-      const igResult = this.validateSocialHandle(data.orgInstagramHandle, 'instagram');
+    const instagramHandle = data.orgInstagramHandle || data.instagramHandle;
+    if (instagramHandle) {
+      const igResult = this.validateSocialHandle(instagramHandle, 'instagram');
       if (!igResult.isValid) errors.orgInstagramHandle = igResult.error!;
     }
 
-    if (data.orgTwitterHandle) {
-      const twitterResult = this.validateSocialHandle(data.orgTwitterHandle, 'twitter');
+    const twitterHandle = data.orgTwitterHandle || data.twitterHandle;
+    if (twitterHandle) {
+      const twitterResult = this.validateSocialHandle(twitterHandle, 'twitter');
       if (!twitterResult.isValid) errors.orgTwitterHandle = twitterResult.error!;
     }
 
@@ -610,9 +601,7 @@ export class FormValidator {
             errors[`sportSpecificNeeds_${mainSport}_positions`] = `Positions for ${mainSport} are required`;
           }
           
-          if (!mainSportNeeds.recruitingPhilosophy || !mainSportNeeds.recruitingPhilosophy.trim()) {
-            errors[`sportSpecificNeeds_${mainSport}_philosophy`] = `Recruiting philosophy for ${mainSport} is required`;
-          } else {
+          if (mainSportNeeds.recruitingPhilosophy && mainSportNeeds.recruitingPhilosophy.trim()) {
             const philosophyResult = this.validateText(mainSportNeeds.recruitingPhilosophy, `${mainSport} recruiting philosophy`, FIELD_LIMITS.RECRUITING_PHILOSOPHY, true);
             if (!philosophyResult.isValid) {
               errors[`sportSpecificNeeds_${mainSport}_philosophy`] = philosophyResult.error!;
@@ -623,8 +612,10 @@ export class FormValidator {
     } else {
       // For coaches, validate single recruiting philosophy and needs (only required if not high school)
       if (data.division !== 'High School') {
-        const philosophyResult = this.validateText(data.recruitingPhilosophy, 'Recruiting philosophy', FIELD_LIMITS.RECRUITING_PHILOSOPHY, true);
-        if (!philosophyResult.isValid) errors.recruitingPhilosophy = philosophyResult.error!;
+        if (data.recruitingPhilosophy) {
+          const philosophyResult = this.validateText(data.recruitingPhilosophy, 'Recruiting philosophy', FIELD_LIMITS.RECRUITING_PHILOSOPHY);
+          if (!philosophyResult.isValid) errors.recruitingPhilosophy = philosophyResult.error!;
+        }
         
         // Validate recruiting needs for coaches
         if (!data.recruitingPositions || data.recruitingPositions.length === 0) {

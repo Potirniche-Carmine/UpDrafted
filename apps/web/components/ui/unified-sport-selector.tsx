@@ -75,12 +75,16 @@ export function UnifiedSportSelector({
   const currentExclusions = getExcludedSports();
   
   // Filter out excluded sports from each category
-  const mensSports = categorizedSports.mens
-    .map(s => s.sport)
-    .filter(sport => !currentExclusions.includes(sport));
-  const femalesSports = categorizedSports.females
-    .map(s => s.sport)
-    .filter(sport => !currentExclusions.includes(sport));
+  const mensSports = userGender === 'female'
+    ? []
+    : categorizedSports.mens
+        .map(s => s.sport)
+        .filter(sport => !currentExclusions.includes(sport));
+  const femalesSports = userGender === 'male'
+    ? []
+    : categorizedSports.females
+        .map(s => s.sport)
+        .filter(sport => !currentExclusions.includes(sport));
 
   // Apply search filter
   const filterSports = (sports: string[]) => 

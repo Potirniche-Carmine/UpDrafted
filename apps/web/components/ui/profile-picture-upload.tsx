@@ -16,6 +16,7 @@ interface ProfilePictureUploadProps {
   onRemove?: () => void;
   disabled?: boolean;
   className?: string;
+  variant?: 'default' | 'compact';
 }
 
 // Helper function to create image from URL
@@ -88,6 +89,7 @@ export function ProfilePictureUpload({
   onRemove,
   disabled = false,
   className = '',
+  variant = 'default',
 }: ProfilePictureUploadProps) {
   const [imageSrc, setImageSrc] = useState<string | null>(null);
   const [crop, setCrop] = useState<Point>({ x: 0, y: 0 });
@@ -183,6 +185,80 @@ export function ProfilePictureUpload({
 
   // Edit mode - show cropper
   if (isEditMode && imageSrc) {
+    if (variant === 'compact') {
+      return (
+        <div className={`flex min-h-[356px] flex-col gap-3 ${className}`}>
+          <div className="relative h-56 w-full overflow-hidden rounded-md bg-muted">
+            <Cropper
+              image={imageSrc}
+              crop={crop}
+              zoom={zoom}
+              aspect={1}
+              cropShape="round"
+              showGrid={false}
+              onCropChange={setCrop}
+              onCropComplete={onCropComplete}
+              onZoomChange={setZoom}
+            />
+          </div>
+
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => setZoom(Math.max(1, zoom - 0.1))}
+              disabled={disabled || zoom <= 1}
+              className="flex size-9 shrink-0 items-center justify-center rounded-full bg-muted transition-colors hover:bg-muted/80 disabled:cursor-not-allowed disabled:opacity-50"
+              aria-label="Zoom out"
+            >
+              <ZoomOut className="size-4 text-foreground" />
+            </button>
+            <Slider
+              value={[zoom]}
+              onValueChange={(value) => setZoom(value[0])}
+              min={1}
+              max={3}
+              step={0.05}
+              className="flex-1"
+            />
+            <button
+              type="button"
+              onClick={() => setZoom(Math.min(3, zoom + 0.1))}
+              disabled={disabled || zoom >= 3}
+              className="flex size-9 shrink-0 items-center justify-center rounded-full bg-muted transition-colors hover:bg-muted/80 disabled:cursor-not-allowed disabled:opacity-50"
+              aria-label="Zoom in"
+            >
+              <ZoomIn className="size-4 text-foreground" />
+            </button>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleCancel}
+              disabled={disabled}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              onClick={handleApplyCrop}
+              disabled={disabled}
+            >
+              <Check className="size-4" />
+              Apply
+            </Button>
+          </div>
+
+          <p className="text-center text-xs text-muted-foreground">
+            Drag to reposition. Use slider or buttons to zoom.
+          </p>
+
+          {error && <p className="text-sm text-red-500 text-center">{error}</p>}
+        </div>
+      );
+    }
+
     return (
       <div className={`space-y-6 ${className}`}>
         <div className="relative w-full h-[400px] bg-muted rounded-lg overflow-hidden">
@@ -264,6 +340,59 @@ export function ProfilePictureUpload({
 
   // Display mode - show current image or upload prompt
   if (value) {
+    if (variant === 'compact') {
+      return (
+        <div className={`flex min-h-[356px] flex-col gap-3 ${className}`}>
+          <div className="flex min-h-64 flex-1 flex-col items-center justify-center gap-4 rounded-md border border-border bg-background p-5 text-center">
+            <div className="relative size-28 shrink-0 overflow-hidden rounded-full bg-muted border border-border">
+              <Image
+                src={value}
+                alt="Profile picture"
+                fill
+                className="object-cover"
+                unoptimized
+              />
+            </div>
+            <div className="min-w-0">
+              <p className="text-sm font-medium">Profile photo added</p>
+              <p className="text-xs text-muted-foreground">JPG, PNG, or WebP</p>
+            </div>
+            {onRemove && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                onClick={handleRemove}
+                disabled={disabled}
+                title="Remove profile picture"
+              >
+                <X className="size-4" />
+              </Button>
+            )}
+          </div>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={triggerFileInput}
+            disabled={disabled}
+            className="w-full"
+          >
+            Change Picture
+          </Button>
+          <input
+            ref={fileInputRef}
+            id={id}
+            type="file"
+            accept="image/jpeg,image/jpg,image/png,image/webp"
+            onChange={handleFileChange}
+            disabled={disabled}
+            className="sr-only"
+          />
+          {error && <p className="text-sm text-red-500 text-center">{error}</p>}
+        </div>
+      );
+    }
+
     return (
       <div className={`space-y-4 ${className}`}>
         <div className="relative mx-auto w-32 h-32">
@@ -317,6 +446,51 @@ export function ProfilePictureUpload({
   }
 
   // Upload mode - no image selected
+  if (variant === 'compact') {
+    return (
+      <div className={`flex min-h-[356px] flex-col gap-3 ${className}`}>
+        <button
+          type="button"
+          className="flex min-h-64 flex-1 w-full flex-col items-center justify-center gap-4 rounded-md border border-dashed border-border bg-background p-5 text-center transition-colors hover:border-primary/50"
+          onClick={triggerFileInput}
+          disabled={disabled}
+        >
+          <span className="flex size-28 shrink-0 items-center justify-center rounded-full bg-muted">
+            <Upload className="size-12 text-muted-foreground" />
+          </span>
+          <span className="min-w-0">
+            <span className="block text-sm font-medium">Upload profile photo</span>
+            <span className="block text-xs text-muted-foreground">
+              PNG, JPG or WebP (max. {CONFIG.FILES.MAX_SIZE_IMAGE / 1024 / 1024}MB)
+            </span>
+          </span>
+        </button>
+
+        <Button
+          type="button"
+          variant="outline"
+          onClick={triggerFileInput}
+          disabled={disabled}
+          className="w-full"
+        >
+          Choose Picture
+        </Button>
+
+        <input
+          ref={fileInputRef}
+          id={id}
+          type="file"
+          accept="image/jpeg,image/jpg,image/png,image/webp"
+          onChange={handleFileChange}
+          disabled={disabled}
+          className="sr-only"
+        />
+
+        {error && <p className="text-sm text-red-500 text-center">{error}</p>}
+      </div>
+    );
+  }
+
   return (
     <div className={`space-y-4 ${className}`}>
       <div

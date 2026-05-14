@@ -4,6 +4,7 @@ export interface SportPosition {
   gender: 'male' | 'female' | 'coed';
 }
 
+export type SportGenderCategory = 'male' | 'female';
 export type SportCategory = 'mens' | 'females'; // | 'coed';
 
 export interface CategorizedSportData {
@@ -11,6 +12,16 @@ export interface CategorizedSportData {
   females: SportPosition[];
   // coed: SportPosition[];
 }
+
+export const SPORT_GENDER_LABELS: Record<SportGenderCategory, string> = {
+  male: "Men's Sports",
+  female: "Women's Sports",
+};
+
+export const FEATURED_ONBOARDING_SPORTS: Record<SportGenderCategory, string[]> = {
+  male: ['Football', 'Basketball (M)', 'Baseball', 'Soccer (M)'],
+  female: ['Basketball (W)', 'Soccer (W)', 'Volleyball (W)', 'Softball'],
+};
 
 export function formatSportName(sport?: string | null): string {
   return sport || '';
@@ -192,6 +203,16 @@ export const SPORTS_DATA: SportPosition[] = [
       'Defensive Midfielder', 'Central Midfielder', 'Attacking Midfielder',
       'Left Midfielder', 'Right Midfielder', 'Left Wing', 'Right Wing',
       'Striker', 'Center Forward'
+    ]
+  },
+  // Softball
+  {
+    sport: 'Softball',
+    gender: 'female',
+    positions: [
+      'Pitcher', 'Catcher', 'First Base', 'Second Base', 'Third Base',
+      'Shortstop', 'Left Field', 'Center Field', 'Right Field',
+      'Designated Player'
     ]
   },
   // Swim & Dive (Men's)
@@ -524,6 +545,15 @@ export function getSportsListByGenderPreference(userGender?: 'male' | 'female' |
 export function getSportsForCategory(category: SportCategory): SportPosition[] {
   const categorized = getCategorizedSports();
   return categorized[category];
+}
+
+export function getSportsForGender(gender: SportGenderCategory): SportPosition[] {
+  return SPORTS_DATA.filter(sport => sport.gender === gender);
+}
+
+export function isSportInGenderCategory(sport: string, gender: SportGenderCategory): boolean {
+  const sportData = findSportData(sport);
+  return sportData?.gender === gender;
 }
 
 // Get sport category from sport name

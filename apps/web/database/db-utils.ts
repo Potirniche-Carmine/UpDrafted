@@ -1290,6 +1290,31 @@ export const onboardingOperations = {
 
     const athleteProfile = await athleteOperations.createAthleteProfile(newProfile);
 
+    if (profileData.institutionHistory && profileData.institutionHistory.length > 0) {
+      const experiencesData: NewAthleteExperience[] = profileData.institutionHistory
+        .filter((entry) => entry.name && entry.startYear)
+        .map((entry) => {
+          const endYear = entry.endYear && entry.endYear !== 'Present' ? entry.endYear : '9999';
+
+          return {
+            athleteId: athleteProfile.id,
+            type: entry.type === 'club' ? 'Club' : 'School',
+            name: entry.name,
+            city: entry.city || profileData.city || 'Unknown',
+            country: entry.country || profileData.country || 'United States',
+            state: entry.state || profileData.state || null,
+            startDate: `${entry.startYear}-01-01`,
+            endDate: endYear === '9999' ? '9999-12-31' : `${endYear}-12-31`,
+            sport: profileData.sport || 'General',
+            description: schoolClassificationLabel(entry.type),
+          };
+        });
+
+      if (experiencesData.length > 0) {
+        await athleteExperienceOperations.replaceAthleteExperiences(athleteProfile.id, experiencesData);
+      }
+    }
+
     return { user, athleteProfile, school };
   },
 
@@ -2773,6 +2798,19 @@ export function createWeightFilter(_minWeight: number): boolean {
   // For security, we'll do weight filtering in application code
   // Return true to not filter at database level
   return true;
+}
+
+function schoolClassificationLabel(type: string): string {
+  const labels: Record<string, string> = {
+    high_school: 'High School',
+    juco: 'JUCO',
+    club: 'Club',
+    undergraduate: 'Undergraduate',
+    graduate: 'Graduate',
+    other: 'Other',
+  };
+
+  return labels[type] || 'Institution';
 }
 
 /**

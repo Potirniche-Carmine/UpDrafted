@@ -1,9 +1,10 @@
 "use client";
 
 import { type ReactNode } from "react";
-import { usePathname } from "next/navigation";
+import { useEffect } from "react";
+import { usePathname, useRouter } from "next/navigation";
 import { isUserBanned, signOut, useUser } from "@/hooks/use-auth";
-import { canAccessWithoutAppRole, hasAppRole } from "@/lib/auth-routing";
+import { canAccessWithoutAppRole, getAccessPathForUser, hasAppRole } from "@/lib/auth-routing";
 
 interface AuthWrapperProps {
   children: ReactNode;
@@ -18,6 +19,7 @@ interface AuthWrapperProps {
 interface AuthResolution {
   allow: boolean;
   loading: boolean;
+  redirectPath?: string;
 }
 
 function renderDefaultLoader(message: string) {
@@ -92,21 +94,21 @@ function resolveAuthState({
 
   if (type === "landing") {
     return isSignedIn
-      ? { allow: false, loading: false }
+      ? { allow: false, loading: false, redirectPath: getAccessPathForUser(user) }
       : { allow: true, loading: false };
   }
 
   if (type === "onboarding") {
     if (!isSignedIn) {
-      return { allow: false, loading: false };
+      return { allow: false, loading: false, redirectPath: "/sign-in" };
     }
 
     if (user?.emailVerified === false) {
-      return { allow: false, loading: false };
+      return { allow: false, loading: false, redirectPath: "/verify-email" };
     }
 
     if (hasAppRole(user?.role) && user.role !== "admin") {
-      return { allow: false, loading: false };
+      return { allow: false, loading: false, redirectPath: "/dashboard" };
     }
 
     return { allow: true, loading: false };
@@ -117,11 +119,11 @@ function resolveAuthState({
   }
 
   if (!isSignedIn) {
-    return { allow: false, loading: false };
+    return { allow: false, loading: false, redirectPath: "/sign-in" };
   }
 
   if (user?.emailVerified === false) {
-    return { allow: false, loading: false };
+    return { allow: false, loading: false, redirectPath: "/verify-email" };
   }
 
   const userRole = user?.role;
@@ -129,11 +131,11 @@ function resolveAuthState({
   const canStayWithoutRole = canAccessWithoutAppRole(pathname);
 
   if (!hasRole && !pathname?.startsWith("/onboarding") && !canStayWithoutRole) {
-    return { allow: false, loading: false };
+    return { allow: false, loading: false, redirectPath: "/onboarding" };
   }
 
   if (requireRole.length > 0 && (!userRole || !requireRole.includes(userRole))) {
-    return { allow: false, loading: false };
+    return { allow: false, loading: false, redirectPath: "/dashboard" };
   }
 
   return { allow: true, loading: false };
@@ -147,6 +149,7 @@ export function AuthWrapper({
   type = "default",
 }: AuthWrapperProps) {
   const pathname = usePathname();
+  const router = useRouter();
   const { user, isLoaded, isSignedIn } = useUser();
 
   const resolution = resolveAuthState({
@@ -158,6 +161,12 @@ export function AuthWrapper({
     requireRole,
     type,
   });
+
+  useEffect(() => {
+    if (!resolution.allow && !resolution.loading && resolution.redirectPath && pathname !== resolution.redirectPath) {
+      router.replace(resolution.redirectPath);
+    }
+  }, [pathname, resolution.allow, resolution.loading, resolution.redirectPath, router]);
 
   if (resolution.allow) {
     if (isUserBanned(user)) {

@@ -23,6 +23,7 @@ interface ConferenceSelectorProps {
   labelClassName?: string; // Add this prop for label styling
   description?: string; // Add this prop for description text
   height?: string; // Add this prop for height customization
+  reserveSpace?: boolean;
 }
 
 export function ConferenceSelector({
@@ -36,16 +37,40 @@ export function ConferenceSelector({
   inDialog = false,
   labelClassName = "text-sm font-medium",
   description,
-  height = "h-11"
+  height = "h-11",
+  reserveSpace = false
 }: ConferenceSelectorProps) {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [newConferenceName, setNewConferenceName] = useState("");
   const [open, setOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
 
-  // Don't show for high school or if no division selected
   if (!division || !divisionHasConferences(division)) {
-    return null;
+    if (!reserveSpace) return null;
+
+    return (
+      <div className="space-y-2">
+        {label && (
+          <Label htmlFor="conference" className={labelClassName}>
+            {label} {required && '*'}
+          </Label>
+        )}
+        <Button
+          type="button"
+          variant="outline"
+          className={cn("w-full justify-between bg-background text-left font-normal text-muted-foreground", height)}
+          disabled
+        >
+          {division ? "Conference not needed" : placeholder}
+          <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+        </Button>
+        {description && (
+          <p className="text-xs text-muted-foreground">
+            {description}
+          </p>
+        )}
+      </div>
+    );
   }
 
   const conferences = getConferencesForDivision(division);
@@ -73,7 +98,7 @@ export function ConferenceSelector({
   };
 
   return (
-    <>
+    <div className="space-y-2">
       {label && (
         <Label htmlFor="conference" className={labelClassName}>
           {label} {required && '*'}
@@ -206,6 +231,6 @@ export function ConferenceSelector({
           {description}
         </p>
       )}
-    </>
+    </div>
   );
 }
