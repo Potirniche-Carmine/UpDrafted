@@ -39,6 +39,7 @@ import { generateProfileUrl } from "@/lib/utils";
 import { getProfileImageUrl } from "@/lib/profile-images";
 import { SportFilter } from '@/components/ui/sport-filter';
 import { useUserPrimarySport } from '@/hooks/use-user-primary-sport';
+import type { TransferPortalCommunicationStatus } from '@/hooks/use-transfer-portal-status';
 
 
 interface Connection {
@@ -1700,6 +1701,7 @@ function App() {
   const [connections, setConnections] = useState<Connection[]>([]);
   const [pendingRequests, setPendingRequests] = useState<PendingRequest[]>([]);
   const [sentRequests, setSentRequests] = useState<PendingRequest[]>([]);
+  const [transferPortalStatus, setTransferPortalStatus] = useState<TransferPortalCommunicationStatus | null>(null);
   const [loading, setLoading] = useState(true);
   
   // Get subscription features using the custom hook
@@ -1809,6 +1811,7 @@ function App() {
             throw new Error(errorData.error || 'Failed to fetch filtered connections');
           }
           const data = await response.json();
+          setTransferPortalStatus(data.transferPortalStatus ?? null);
           setConnections(data.connected || []);
           setPendingRequests(data.incoming || []);
           setSentRequests(data.outgoing || []);
@@ -1821,6 +1824,7 @@ function App() {
             throw new Error(errorData.error || 'Failed to fetch connections');
           }
           const data = await response.json();
+          setTransferPortalStatus(data.transferPortalStatus ?? null);
           setConnections(data.connected || []);
           setPendingRequests(data.incoming || []);
           setSentRequests(data.outgoing || []);
@@ -1872,6 +1876,7 @@ function App() {
           throw new Error(errorData.error || 'Failed to fetch connections');
         }
         const data = await response.json();
+        setTransferPortalStatus(data.transferPortalStatus ?? null);
         setConnections(data.connected || []);
         setPendingRequests(data.incoming || []);
         setSentRequests(data.outgoing || []);
@@ -2076,6 +2081,10 @@ function App() {
   // Alias for compatibility
   const applyFilters = handleApplyFilters;
   const clearAllFilters = handleResetFilters;
+
+  if (transferPortalStatus?.isCommunicationLocked) {
+    return <LockedCommunicationNotice area="Connections" />;
+  }
 
   // Show page layout first, then load data (like messages page)
   return (
@@ -2441,6 +2450,30 @@ function App() {
 export default function ConnectionsPage() {
   return (
     <AuthWrapper>
+      <ConnectionsGate />
+    </AuthWrapper>
+  );
+}
+
+function LockedCommunicationNotice({ area }: { area: string }) {
+  return (
+    <div className="container py-10">
+      <div className="mx-auto max-w-2xl rounded-xl border border-amber-200 bg-amber-50 p-6 text-center dark:border-amber-800 dark:bg-amber-950/20">
+        <Lock className="mx-auto h-10 w-10 text-amber-600" />
+        <h1 className="mt-4 text-xl font-semibold text-amber-950 dark:text-amber-100">{area} unavailable</h1>
+        <p className="mt-2 text-sm text-amber-800 dark:text-amber-200">
+          Communication is disabled for NCAA Division I and II athletes until transfer portal verification is approved.
+        </p>
+        <Link href="/dashboard" className="mt-4 inline-flex">
+          <Button className="bg-amber-600 text-white hover:bg-amber-700">Go to dashboard</Button>
+        </Link>
+      </div>
+    </div>
+  );
+}
+
+function ConnectionsGate() {
+  return (
       <Suspense fallback={
         <div className="container py-8">
           <div className="text-center">
@@ -2451,6 +2484,5 @@ export default function ConnectionsPage() {
       }>
         <App />
       </Suspense>
-    </AuthWrapper>
   );
 }

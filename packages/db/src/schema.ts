@@ -26,7 +26,7 @@ export const initiatedByEnum = pgEnum('initiated_by', ['athlete', 'coach', 'recr
 export const genderEnum = pgEnum('gender', ['male', 'female', 'coed']);
 export const reportStatusEnum = pgEnum('report_status', ['pending', 'under_review', 'resolved', 'dismissed']);
 export const verificationRequestStatusEnum = pgEnum('verification_request_status', ['pending', 'approved', 'rejected']);
-export const verificationTypeEnum = pgEnum('verification_type', ['general']);
+export const verificationTypeEnum = pgEnum('verification_type', ['general', 'transfer_portal']);
 export const educationLevelEnum = pgEnum('education_level', ['high_school', 'undergraduate', 'graduate', 'associate']);
 export const notificationTypeEnum = pgEnum('notification_type', ['profileView', 'newConnection', 'newMessage', 'systemUpdate', 'premiumFeature', 'connectionAccepted']);
 export const studentClassificationEnum = pgEnum('student_classification', ['high_school', 'university_transfers', 'juco_students', 'graduate_transfers', 'international_students']);
@@ -359,7 +359,19 @@ export const connections = pgTable('connections', {
   pgPolicy('connections_insert_policy', {
     for: 'insert',
     to: 'public',
-    withCheck: sql`${table.fromUserId} = ${authUid}`,
+    withCheck: sql`${table.fromUserId} = ${authUid} AND NOT EXISTS (
+      SELECT 1
+      FROM athlete_profiles ap
+      WHERE ap.user_id IN (${table.fromUserId}, ${table.toUserId})
+        AND ap.division IN ('NCAA Division I', 'NCAA Division II')
+        AND NOT EXISTS (
+          SELECT 1
+          FROM verification_requests vr
+          WHERE vr.user_id = ap.user_id
+            AND vr.verification_type = 'transfer_portal'
+            AND vr.status = 'approved'
+        )
+    )`,
   }),
 ]).enableRLS();
 
@@ -431,7 +443,20 @@ export const messages = pgTable('messages', {
   pgPolicy('messages_insert_policy', {
     for: 'insert',
     to: 'public',
-    withCheck: sql`${table.senderId} = ${authUid}`, // Only send as yourself
+    withCheck: sql`${table.senderId} = ${authUid} AND NOT EXISTS (
+      SELECT 1
+      FROM conversations c
+      JOIN athlete_profiles ap ON ap.user_id IN (c.user1_id, c.user2_id)
+      WHERE c.id = ${table.conversationId}
+        AND ap.division IN ('NCAA Division I', 'NCAA Division II')
+        AND NOT EXISTS (
+          SELECT 1
+          FROM verification_requests vr
+          WHERE vr.user_id = ap.user_id
+            AND vr.verification_type = 'transfer_portal'
+            AND vr.status = 'approved'
+        )
+    )`, // Only send as yourself and never into a locked D1/D2 conversation
   }),
 ]).enableRLS();
 

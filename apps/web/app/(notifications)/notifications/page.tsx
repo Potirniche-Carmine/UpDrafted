@@ -8,6 +8,8 @@ import { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { AuthWrapper } from '../../../components/auth-wrapper';
 import { useNotifications } from '@/hooks/use-notifications';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
+import type { TransferPortalCommunicationStatus } from '@/hooks/use-transfer-portal-status';
 
 interface Notification {
   id: number;
@@ -51,6 +53,7 @@ export default function NotificationsPage() {
 
 
   const { setUnreadCount } = useNotifications();
+  const [transferPortalStatus, setTransferPortalStatus] = useState<TransferPortalCommunicationStatus | null>(null);
   const router = useRouter();
 
   const filteredNotifications = useMemo(() => {
@@ -95,6 +98,7 @@ export default function NotificationsPage() {
       const data = await response.json();
 
       if (data.success) {
+        setTransferPortalStatus(data.transferPortalStatus ?? null);
         setNotifications(data.notifications);
         setError(null);
         // Clear the banner count when visiting the notifications page
@@ -204,6 +208,25 @@ export default function NotificationsPage() {
       router.push(notification.link);
     }
   }, [markAsRead, router]);
+
+  if (transferPortalStatus?.isCommunicationLocked) {
+    return (
+      <AuthWrapper>
+        <div className="container py-10">
+          <div className="mx-auto max-w-2xl rounded-xl border border-amber-200 bg-amber-50 p-6 text-center dark:border-amber-800 dark:bg-amber-950/20">
+            <Lock className="mx-auto h-10 w-10 text-amber-600" />
+            <h1 className="mt-4 text-xl font-semibold text-amber-950 dark:text-amber-100">Notifications unavailable</h1>
+            <p className="mt-2 text-sm text-amber-800 dark:text-amber-200">
+              Communication is disabled for NCAA Division I and II athletes until transfer portal verification is approved.
+            </p>
+            <Link href="/dashboard" className="mt-4 inline-flex">
+              <Button className="bg-amber-600 text-white hover:bg-amber-700">Go to dashboard</Button>
+            </Link>
+          </div>
+        </div>
+      </AuthWrapper>
+    );
+  }
 
   if (loading) {
     return (

@@ -20,6 +20,7 @@ import { useOfflineStatus } from '../../../hooks/use-offline-status';
 import { formatMessageTimestamp } from '../../../lib/date-utils';
 import { useFeatureAccess } from '../../../components/providers/subscription-provider';
 import { getProfileImageUrl } from '@/lib/profile-images';
+import type { TransferPortalCommunicationStatus } from '@/hooks/use-transfer-portal-status';
 
 // Define real API types
 interface Conversation {
@@ -141,6 +142,7 @@ export default function MessagingPage() {
   const [reportDialogOpen, setReportDialogOpen] = useState(false);
   const [targetConnectionId, setTargetConnectionId] = useState<string | null>(null);
   const [showReadReceiptUpgrade, setShowReadReceiptUpgrade] = useState(false);
+  const [transferPortalStatus, setTransferPortalStatus] = useState<TransferPortalCommunicationStatus | null>(null);
 
   // Get premium features
   const features = useFeatureAccess();
@@ -285,6 +287,7 @@ export default function MessagingPage() {
 
       const conversationsResult = await conversationsResponse.json();
       const connectionsResult = await connectionsResponse.json();
+      setTransferPortalStatus(conversationsResult.transferPortalStatus ?? connectionsResult.transferPortalStatus ?? null);
 
       // Debug logging removed for production
 
@@ -353,6 +356,7 @@ export default function MessagingPage() {
 
         if (fallbackResponse.ok) {
           const fallbackResult = await fallbackResponse.json();
+          setTransferPortalStatus(fallbackResult.transferPortalStatus ?? null);
           if (fallbackResult.success) {
             // Fallback successful
             setConversations(fallbackResult.conversations || []);
@@ -827,6 +831,20 @@ export default function MessagingPage() {
 
   return (
     <AuthWrapper>
+      {transferPortalStatus?.isCommunicationLocked ? (
+        <div className="container py-10">
+          <div className="mx-auto max-w-2xl rounded-xl border border-amber-200 bg-amber-50 p-6 text-center dark:border-amber-800 dark:bg-amber-950/20">
+            <Lock className="mx-auto h-10 w-10 text-amber-600" />
+            <h1 className="mt-4 text-xl font-semibold text-amber-950 dark:text-amber-100">Messages unavailable</h1>
+            <p className="mt-2 text-sm text-amber-800 dark:text-amber-200">
+              Communication is disabled for NCAA Division I and II athletes until transfer portal verification is approved.
+            </p>
+            <Link href="/dashboard" className="mt-4 inline-flex">
+              <Button className="bg-amber-600 text-white hover:bg-amber-700">Go to dashboard</Button>
+            </Link>
+          </div>
+        </div>
+      ) : (
       <div className="bg-background p-4 md:p-6">
         <div className="max-w-7xl mx-auto">
           {/* Unified messaging interface */}
@@ -1319,6 +1337,7 @@ export default function MessagingPage() {
           </DialogContent>
         </Dialog>
       </div>
+      )}
     </AuthWrapper>
   );
 }

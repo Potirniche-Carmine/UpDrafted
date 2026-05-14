@@ -84,6 +84,12 @@ interface ProfileApiResponse {
   hasRejectedVerification?: boolean;
   rejectionReason?: string;
   rejectedAt?: string;
+  transferPortalStatus?: {
+    isD1D2Athlete: boolean;
+    hasApprovedTransferPortalVerification: boolean;
+    isCommunicationLocked: boolean;
+    currentRequestStatus: 'pending' | 'approved' | 'rejected' | null;
+  };
   // Demo profile properties
   isDemoProfile?: boolean;
   adminViewingRole?: string;
@@ -426,6 +432,7 @@ function ProfileContent({ profileId, slug }: { profileId: string; slug: string |
           hasRejectedVerification={profileData.hasRejectedVerification}
           rejectionReason={profileData.rejectionReason}
           rejectedAt={profileData.rejectedAt}
+          transferPortalStatus={profileData.transferPortalStatus}
         />
       )}
 

@@ -1,7 +1,7 @@
 "use client";
 
 import { useUser } from '@/hooks/use-auth';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Button } from "@/components/ui/button";
 import {
   ArrowRight,
@@ -19,6 +19,8 @@ import { useProfileNavigation } from '@/hooks/use-profile-navigation';
 import { AuthWrapper } from '../../../components/auth-wrapper';
 import { PWAInstallPrompt } from '../../../components/pwa-install-prompt';
 import { PremiumLimitsCard } from '@/components/premium-limits-card';
+import { useTransferPortalStatus } from '@/hooks/use-transfer-portal-status';
+import { VerificationDialog } from '@/app/(profiles)/components/shared/verification-dialog';
 
 interface NavItemWithHref {
   label: string;
@@ -55,9 +57,16 @@ const ncaaRules = [
   }
 ];
 
-const getUserContent = (role: string, handleViewProfile: () => void, profileNavigating: boolean = false): {
+const getUserContent = (role: string, handleViewProfile: () => void, profileNavigating: boolean = false, communicationLocked = false): {
   primaryNav: NavItem[];
 } => {
+  const communicationNav: NavItem[] = communicationLocked ? [] : [
+    { label: "Connections", href: "/connections", icon: Users },
+    { label: "Messages", href: "/messages", icon: MessageSquare },
+    { label: "Notifications", href: "/notifications", icon: Bell },
+    { label: "Activity", href: "/activity", icon: BarChart3 },
+  ];
+
   const baseAthleteNav: NavItem[] = [
     {
       label: profileNavigating ? "Loading..." : "View Profile",
@@ -65,10 +74,7 @@ const getUserContent = (role: string, handleViewProfile: () => void, profileNavi
       icon: Eye,
     },
     { label: "Discover", href: "/discover", icon: Compass },
-    { label: "Connections", href: "/connections", icon: Users },
-    { label: "Messages", href: "/messages", icon: MessageSquare },
-    { label: "Notifications", href: "/notifications", icon: Bell },
-    { label: "Activity", href: "/activity", icon: BarChart3 },
+    ...communicationNav,
   ];
 
   const baseCoachNav: NavItem[] = [
@@ -78,10 +84,7 @@ const getUserContent = (role: string, handleViewProfile: () => void, profileNavi
       icon: Eye,
     },
     { label: "Discover", href: "/discover", icon: Compass },
-    { label: "Connections", href: "/connections", icon: Users },
-    { label: "Messages", href: "/messages", icon: MessageSquare },
-    { label: "Notifications", href: "/notifications", icon: Bell },
-    { label: "Activity", href: "/activity", icon: BarChart3 },
+    ...communicationNav,
   ];
 
   switch (role) {
@@ -141,6 +144,8 @@ function DashboardContent({
 }) {
   const { user } = useUser();
   const userRole = (user?.role as string) || 'athlete';
+  const { status: transferPortalStatus } = useTransferPortalStatus();
+  const [transferPortalDialogOpen, setTransferPortalDialogOpen] = useState(false);
 
   if (!user) {
     return (
@@ -157,7 +162,7 @@ function DashboardContent({
     );
   }
 
-  const userContent = getUserContent(userRole, handleViewProfile, profileNavigating);
+  const userContent = getUserContent(userRole, handleViewProfile, profileNavigating, transferPortalStatus.isCommunicationLocked);
 
   return (
     <div className="container mx-auto max-w-7xl px-0 md:px-2 space-y-10">
@@ -173,6 +178,28 @@ function DashboardContent({
       {/* ============== GRID: LIMITS + NCAA ============== */}
       <section className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2">
+          {transferPortalStatus.isCommunicationLocked && (
+            <div className="mb-6 rounded-xl border border-amber-200 bg-amber-50 p-5 dark:border-amber-800 dark:bg-amber-950/20">
+              <h3 className="text-lg font-semibold text-amber-950 dark:text-amber-100">
+                Transfer portal verification required
+              </h3>
+              <p className="mt-2 text-sm text-amber-800 dark:text-amber-200">
+                Communication is disabled for NCAA Division I and II athletes until transfer portal verification is approved.
+              </p>
+              {transferPortalStatus.currentRequestStatus === 'pending' ? (
+                <p className="mt-3 text-sm font-medium text-amber-900 dark:text-amber-100">
+                  Your request is pending review.
+                </p>
+              ) : (
+                <Button
+                  className="mt-4 bg-amber-600 text-white hover:bg-amber-700"
+                  onClick={() => setTransferPortalDialogOpen(true)}
+                >
+                  Submit Transfer Portal Verification
+                </Button>
+              )}
+            </div>
+          )}
           <PremiumLimitsCard />
         </div>
 
@@ -221,6 +248,13 @@ function DashboardContent({
           </Button>
         </div>
       </section>
+      <VerificationDialog
+        open={transferPortalDialogOpen}
+        onOpenChange={setTransferPortalDialogOpen}
+        role="athlete"
+        verificationType="transfer_portal"
+        onVerificationSubmitted={() => window.location.reload()}
+      />
     </div>
   );
 }

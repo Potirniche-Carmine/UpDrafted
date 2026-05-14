@@ -10,6 +10,7 @@ import Link from "next/link";
 import { AuthWrapper } from "../../../components/auth-wrapper";
 import { generateProfileUrl } from "@/lib/utils";
 import { getProfileImageUrl } from "@/lib/profile-images";
+import type { TransferPortalCommunicationStatus } from "@/hooks/use-transfer-portal-status";
 
 interface ActivityItem {
   id: number;
@@ -39,6 +40,7 @@ interface ActivityResponse {
     message: string;
   };
   requiresUpgrade?: boolean;
+  transferPortalStatus?: TransferPortalCommunicationStatus;
   error?: string;
 }
 
@@ -97,6 +99,7 @@ function StatCard({
 
 function ActivityLogContent() {
   const { isSignedIn, isLoaded } = useAuth();
+  const [transferPortalStatus, setTransferPortalStatus] = useState<TransferPortalCommunicationStatus | null>(null);
   const [activities, setActivities] = useState<ActivityItem[]>([]);
   const [insights, setInsights] = useState<{
     totalViews: number;
@@ -126,6 +129,7 @@ function ActivityLogContent() {
       });
 
       const data: ActivityResponse = await response.json();
+      setTransferPortalStatus(data.transferPortalStatus ?? null);
 
       if (!response.ok) {
         setError(data.error || 'Failed to fetch activity data');
@@ -155,6 +159,23 @@ function ActivityLogContent() {
     hasInitialized.current = true;
     fetchActivityData();
   }, [isLoaded, isSignedIn, fetchActivityData]);
+
+  if (transferPortalStatus?.isCommunicationLocked) {
+    return (
+      <div className="container py-10">
+        <div className="mx-auto max-w-2xl rounded-xl border border-amber-200 bg-amber-50 p-6 text-center dark:border-amber-800 dark:bg-amber-950/20">
+          <Lock className="mx-auto h-10 w-10 text-amber-600" />
+          <h1 className="mt-4 text-xl font-semibold text-amber-950 dark:text-amber-100">Activity unavailable</h1>
+          <p className="mt-2 text-sm text-amber-800 dark:text-amber-200">
+            Communication is disabled for NCAA Division I and II athletes until transfer portal verification is approved.
+          </p>
+          <Link href="/dashboard" className="mt-4 inline-flex">
+            <Button className="bg-amber-600 text-white hover:bg-amber-700">Go to dashboard</Button>
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   if (loading) {
     return (

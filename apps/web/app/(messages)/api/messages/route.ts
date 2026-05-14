@@ -1,5 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { messageOperations, connectionOperations, profileOperations, notificationOperations } from '@/database/db-utils';
+import {
+  messageOperations,
+  connectionOperations,
+  profileOperations,
+  notificationOperations,
+  getTransferPortalCommunicationPairStatus,
+  getTransferPortalCommunicationStatus,
+  TRANSFER_PORTAL_LOCK_MESSAGE,
+} from '@/database/db-utils';
 import { requireAnyRole } from '@/utils/roles';
 import { decryptMessage } from '@/utils/encryption';
 import { sanitizeText } from '@/utils/sanitization';
@@ -203,6 +211,17 @@ async function handleGetConversations(userId: string, body: GetConversationsRequ
   try {
     const { includeFirstConversationMessages } = body;
 
+    const portalStatus = await getTransferPortalCommunicationStatus(userId);
+    if (portalStatus.isCommunicationLocked) {
+      return NextResponse.json({
+        success: true,
+        conversations: [],
+        totalUnreadCount: 0,
+        ...(includeFirstConversationMessages && { firstConversationMessages: [] }),
+        transferPortalStatus: portalStatus,
+      });
+    }
+
     // Get conversations
     const conversations = await messageOperations.getUserConversations(userId);
     
@@ -374,6 +393,15 @@ async function handleGetMessages(userId: string, body: GetMessagesRequestBody) {
         partnerSuspended: true,
       }, { status: 403 });
     }
+
+    const portalStatus = await getTransferPortalCommunicationPairStatus(userId, partnerId);
+    if (portalStatus.isCommunicationLocked) {
+      return NextResponse.json({
+        success: false,
+        error: TRANSFER_PORTAL_LOCK_MESSAGE,
+        transferPortalStatus: portalStatus,
+      }, { status: 403 });
+    }
     
     const connection = await connectionOperations.getConnectionBetweenUsers(userId, partnerId);
     const reverseConnection = await connectionOperations.getConnectionBetweenUsers(partnerId, userId);
@@ -538,6 +566,18 @@ async function handleSendMessage(userId: string, body: SendMessageRequestBody) {
         partnerSuspended: true,
       }, { status: 403 });
     }
+
+    const portalStatus = await getTransferPortalCommunicationPairStatus(userId, partnerId);
+    if (portalStatus.isCommunicationLocked) {
+      if (conversation.connectionActive) {
+        await messageOperations.updateConversationConnectionStatus(conversation.id, false);
+      }
+      return NextResponse.json({
+        success: false,
+        error: TRANSFER_PORTAL_LOCK_MESSAGE,
+        transferPortalStatus: portalStatus,
+      }, { status: 403 });
+    }
     
     const connection = await connectionOperations.getConnectionBetweenUsers(userId, partnerId);
     const reverseConnection = await connectionOperations.getConnectionBetweenUsers(partnerId, userId);
@@ -663,6 +703,15 @@ async function handleMarkRead(userId: string, body: MarkReadRequestBody) {
  */
 async function handleGetUnreadCount(userId: string) {
   try {
+    const portalStatus = await getTransferPortalCommunicationStatus(userId);
+    if (portalStatus.isCommunicationLocked) {
+      return NextResponse.json({
+        success: true,
+        unreadCount: 0,
+        transferPortalStatus: portalStatus,
+      });
+    }
+
     const unreadCount = await messageOperations.getUnreadMessageCount(userId);
     
     return NextResponse.json({
@@ -699,6 +748,15 @@ async function handleGetOrCreateConversation(userId: string, body: GetOrCreateCo
         success: false,
         error: SUSPENDED_PROFILE_MESSAGE,
         partnerSuspended: true,
+      }, { status: 403 });
+    }
+
+    const portalStatus = await getTransferPortalCommunicationPairStatus(userId, partnerId);
+    if (portalStatus.isCommunicationLocked) {
+      return NextResponse.json({
+        success: false,
+        error: TRANSFER_PORTAL_LOCK_MESSAGE,
+        transferPortalStatus: portalStatus,
       }, { status: 403 });
     }
 

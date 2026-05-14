@@ -28,7 +28,7 @@ export async function handleVerificationSubmit(request: NextRequest): Promise<Ne
     if (!rateLimitCheck.success && rateLimitCheck.response) return rateLimitCheck.response;
 
     // Parse request body
-    const { role, additionalInfo, links } = await request.json();
+    const { role, additionalInfo, links, verificationType = 'general', hasFiles = false } = await request.json();
 
     // Validate role, then bind it to the authenticated session so callers
     // cannot submit verification under a different role.
@@ -40,18 +40,33 @@ export async function handleVerificationSubmit(request: NextRequest): Promise<Ne
       return createErrorResponse('Forbidden - Role mismatch', 403);
     }
 
+    if (!['general', 'transfer_portal'].includes(verificationType)) {
+      return createErrorResponse('Invalid verification type', 400);
+    }
+
     if (role === 'athlete') {
       const athleteProfile = await db.query.athleteProfiles.findFirst({
         where: eq(athleteProfiles.userId, userId),
         columns: {
           educationLevel: true,
+          division: true,
         },
       });
+
+      if (verificationType === 'transfer_portal') {
+        if (!['NCAA Division I', 'NCAA Division II'].includes(athleteProfile?.division || '')) {
+          return createErrorResponse('Transfer portal verification is only available for NCAA Division I and II athletes.', 400);
+        }
+
+        if (!hasFiles) {
+          return createErrorResponse('Transfer portal verification requires an uploaded screenshot or PDF.', 400);
+        }
+      }
 
       const isHighSchoolAthlete = athleteProfile?.educationLevel === 'high_school';
       const submittedLinks = Array.isArray(links) ? links : [];
 
-      if (isHighSchoolAthlete) {
+      if (verificationType === 'general' && isHighSchoolAthlete) {
         const hasRequiredProfileLink = submittedLinks.some((link: { url?: string }) =>
           typeof link?.url === 'string' && isAllowedAthleteVerificationLink(link.url)
         );
@@ -60,6 +75,8 @@ export async function handleVerificationSubmit(request: NextRequest): Promise<Ne
           return createErrorResponse('High school athlete verification requires at least one Hudl or MaxPreps profile link.', 400);
         }
       }
+    } else if (verificationType === 'transfer_portal') {
+      return createErrorResponse('Transfer portal verification is only available for athletes.', 400);
     }
 
     try {
@@ -69,7 +86,7 @@ export async function handleVerificationSubmit(request: NextRequest): Promise<Ne
         .from(verificationRequests)
         .where(and(
           eq(verificationRequests.userId, userId),
-          eq(verificationRequests.verificationType, 'general')
+          eq(verificationRequests.verificationType, verificationType)
         ))
         .limit(1);
 
@@ -83,7 +100,7 @@ export async function handleVerificationSubmit(request: NextRequest): Promise<Ne
             .update(verificationRequests)
             .set({
               status: 'pending',
-              verificationType: 'general',
+              verificationType,
               submittedAt: new Date(),
               reviewedAt: null,
               reviewedBy: null,
@@ -130,7 +147,7 @@ export async function handleVerificationSubmit(request: NextRequest): Promise<Ne
       const verificationRequest = await db.insert(verificationRequests).values({
         userId: userId,
         role: role,
-        verificationType: 'general',
+        verificationType,
         status: 'pending',
         additionalInfo: additionalInfo || null,
       }).returning();

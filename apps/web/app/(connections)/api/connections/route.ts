@@ -1,6 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAnyRole } from '@/utils/roles';
-import { connectionOperations, userOperations, messageOperations, notificationOperations } from '@/database/db-utils';
+import {
+  connectionOperations,
+  getTransferPortalCommunicationPairStatus,
+  getTransferPortalCommunicationStatus,
+  messageOperations,
+  notificationOperations,
+  TRANSFER_PORTAL_LOCK_MESSAGE,
+  userOperations,
+} from '@/database/db-utils';
 import { sanitizeText } from '@/utils/sanitization';
 import { withRateLimit } from '@/utils/security';
 import { invalidateCachePattern, createErrorResponse, createSuccessResponse } from '@/utils/security';
@@ -153,6 +161,11 @@ export async function POST(request: NextRequest) {
       return createErrorResponse('Cannot connect with a suspended user.', 403);
     }
 
+    const portalStatus = await getTransferPortalCommunicationPairStatus(currentUserId, targetUserId);
+    if (portalStatus.isCommunicationLocked) {
+      return createErrorResponse(TRANSFER_PORTAL_LOCK_MESSAGE, 403);
+    }
+
     // SECURITY: Only prevent athlete-to-athlete connections
     if (currentUser.role === 'athlete' && targetUser.role === 'athlete') {
       return createErrorResponse('Athletes cannot connect to other athletes', 400);
@@ -265,6 +278,21 @@ export async function GET(request: NextRequest) {
     };
 
     // Always fetch connections fresh so admin suspensions are reflected immediately.
+    const portalStatus = await getTransferPortalCommunicationStatus(currentUserId);
+    if (portalStatus.isCommunicationLocked) {
+      return createSuccessResponse({
+        success: true,
+        connected: [],
+        incoming: [],
+        outgoing: [],
+        counts: {
+          connected: 0,
+          incoming: 0,
+          outgoing: 0,
+        },
+        transferPortalStatus: portalStatus,
+      }, rateLimitCheck.headers);
+    }
 
     // Get connections using the appropriate db-util function
     const allConnections = await connectionOperations.getFilteredUserConnections(currentUserId, filters);
@@ -469,6 +497,11 @@ export async function PUT(request: NextRequest) {
 
     if (currentUser?.banned || originalRequester?.banned) {
       return createErrorResponse('Cannot accept a connection with a suspended user.', 403);
+    }
+
+    const portalStatus = await getTransferPortalCommunicationPairStatus(currentUserId, pendingConnection.fromUserId);
+    if (portalStatus.isCommunicationLocked) {
+      return createErrorResponse(TRANSFER_PORTAL_LOCK_MESSAGE, 403);
     }
 
     // Update the connection status from pending to connected

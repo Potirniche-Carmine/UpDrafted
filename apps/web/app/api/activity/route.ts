@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAnyRole } from '@/utils/roles';
-import { activityOperations, profileOperations } from '@/database/db-utils';
+import { activityOperations, profileOperations, getTransferPortalCommunicationStatus } from '@/database/db-utils';
 import { withRateLimit } from '@/utils/security';
 import { SubscriptionManager } from '@/lib/subscription';
 import { flushBufferedProfileViews } from '@/lib/activity-buffer';
@@ -19,6 +19,22 @@ export async function GET(request: NextRequest) {
     const rateLimitCheck = await withRateLimit(request, 'general', userId, role);
     if (!rateLimitCheck.success) {
       return rateLimitCheck.response;
+    }
+
+    const portalStatus = await getTransferPortalCommunicationStatus(userId);
+    if (portalStatus.isCommunicationLocked) {
+      return NextResponse.json({
+        success: true,
+        isPremium: false,
+        insights: {
+          totalViews: 0,
+          viewsToday: 0,
+          viewsThisWeek: 0,
+          viewsThisMonth: 0,
+          message: 'Communication is disabled until transfer portal verification is approved.'
+        },
+        transferPortalStatus: portalStatus,
+      });
     }
 
     // Check if user has premium access to profile view insights

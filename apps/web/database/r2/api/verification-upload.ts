@@ -66,6 +66,14 @@ export async function handleVerificationUpload(request: NextRequest): Promise<Ne
         return createErrorResponse('Forbidden - You can only upload files to your own verification requests', 403);
       }
 
+      if (
+        verificationRequest[0].verificationType === 'transfer_portal' &&
+        !file.type.startsWith('image/') &&
+        file.type !== 'application/pdf'
+      ) {
+        return createErrorResponse('Transfer portal verification only accepts image or PDF uploads.', 400);
+      }
+
       // Upload file to R2
       const uploadResult = await uploadVerificationFile(
         file,

@@ -3,7 +3,7 @@ import { db } from '@/database/db';
 import { notifications } from '@/database/schema';
 import { requireSession } from '@/utils/roles';
 import { eq, desc, and } from 'drizzle-orm';
-import { profileOperations, notificationOperations } from '@/database/db-utils';
+import { profileOperations, notificationOperations, getTransferPortalCommunicationStatus } from '@/database/db-utils';
 import { withRateLimit } from '@/utils/security';
 import { createErrorResponse } from '@/utils/security';
 import { generateProfileUrl } from '@/lib/utils';
@@ -65,6 +65,23 @@ export async function GET(request: NextRequest) {
     const limit = parseInt(searchParams.get('limit') || '50');
     const offset = parseInt(searchParams.get('offset') || '0');
     const unreadOnly = searchParams.get('unreadOnly') === 'true';
+
+    const portalStatus = await getTransferPortalCommunicationStatus(userId);
+    if (portalStatus.isCommunicationLocked) {
+      if (operation === 'getUnreadCount') {
+        return NextResponse.json({
+          success: true,
+          unreadCount: 0,
+          transferPortalStatus: portalStatus,
+        });
+      }
+
+      return NextResponse.json({
+        success: true,
+        notifications: [],
+        transferPortalStatus: portalStatus,
+      });
+    }
 
     if (operation === 'getNotifications') {
       return await handleGetNotifications(userId, { operation: 'getNotifications', limit, offset, unreadOnly }, rateLimitCheck.headers);

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAnyRole, requireOwnershipOrAdmin } from '@/utils/roles';
-import { userOperations, athleteOperations, coachOperations, recruitingOperations, recruitingNeedsOperations, connectionOperations, notificationOperations, adminOperations } from '@/database/db-utils';
+import { userOperations, athleteOperations, coachOperations, recruitingOperations, recruitingNeedsOperations, connectionOperations, notificationOperations, adminOperations, getTransferPortalCommunicationStatus } from '@/database/db-utils';
 import { R2_PUBLIC_URL, constructR2Url } from '@/database/r2';
 import { NewAthleteProfile, NewAthleteMeasurable, NewAthleteVideo, NewAthleteExperience, NewCoachProfile, NewRecruitingProfile, verificationRequests, AthleteProfile, CoachProfile, RecruitingProfile, athleteExperience, activityLog } from '@/database/schema';
 import { db } from '@/database/db';
@@ -556,7 +556,9 @@ export async function GET(
 
       // Track profile view if not viewing own profile.
       // Skip activity logging if viewer is admin OR profile owner is admin.
-      if (!isOwnProfile && currentUserRole !== 'admin') {
+      const viewedPortalStatus = await getTransferPortalCommunicationStatus(profileUserId, tx);
+
+      if (!isOwnProfile && currentUserRole !== 'admin' && !viewedPortalStatus.isCommunicationLocked) {
         try {
           if (userWithProfile.role !== 'admin') {
             const existingActivity = await tx.query.activityLog.findFirst({
@@ -794,6 +796,7 @@ export async function GET(
         connectionStatus: !isOwnProfile ? connectionStatus : undefined,
         connectionDirection: !isOwnProfile ? connectionDirection : undefined,
         connectionId: !isOwnProfile ? connectionId : undefined,
+        transferPortalStatus: viewedPortalStatus,
         ...(verificationStatus && verificationStatus)
       };
 

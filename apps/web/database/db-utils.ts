@@ -16,6 +16,7 @@ import {
   messages,
   conversations,
   notifications,
+  verificationRequests,
   adminRolePreferences,
   schools,
   type NewUser,
@@ -38,6 +39,86 @@ import { R2_PUBLIC_URL, constructR2Url } from './r2/config';
 import { dateToStringWithErrorHandling } from '@/lib/date-utils';
 
 type DbOrTx = typeof db | Parameters<Parameters<typeof db.transaction>[0]>[0];
+
+export const TRANSFER_PORTAL_LOCKED_DIVISIONS = ['NCAA Division I', 'NCAA Division II'] as const;
+
+export type TransferPortalCommunicationStatus = {
+  isD1D2Athlete: boolean;
+  hasApprovedTransferPortalVerification: boolean;
+  isCommunicationLocked: boolean;
+  currentRequestStatus: 'pending' | 'approved' | 'rejected' | null;
+};
+
+export const TRANSFER_PORTAL_LOCK_MESSAGE =
+  'Communication is disabled for NCAA Division I and II athletes until transfer portal verification is approved.';
+
+export async function getTransferPortalCommunicationStatus(
+  userId: string,
+  tx: DbOrTx = db
+): Promise<TransferPortalCommunicationStatus> {
+  const user = await tx.query.users.findFirst({
+    where: eq(users.id, userId),
+    columns: { role: true },
+    with: {
+      athleteProfile: {
+        columns: {
+          division: true,
+        },
+      },
+    },
+  });
+
+  const isD1D2Athlete =
+    user?.role === 'athlete' &&
+    !!user.athleteProfile?.division &&
+    (TRANSFER_PORTAL_LOCKED_DIVISIONS as readonly string[]).includes(user.athleteProfile.division);
+
+  if (!isD1D2Athlete) {
+    return {
+      isD1D2Athlete: false,
+      hasApprovedTransferPortalVerification: false,
+      isCommunicationLocked: false,
+      currentRequestStatus: null,
+    };
+  }
+
+  const request = await tx.query.verificationRequests.findFirst({
+    where: and(
+      eq(verificationRequests.userId, userId),
+      eq(verificationRequests.verificationType, 'transfer_portal')
+    ),
+    columns: {
+      status: true,
+    },
+  });
+
+  const currentRequestStatus = request?.status ?? null;
+  const hasApprovedTransferPortalVerification = currentRequestStatus === 'approved';
+
+  return {
+    isD1D2Athlete,
+    hasApprovedTransferPortalVerification,
+    isCommunicationLocked: !hasApprovedTransferPortalVerification,
+    currentRequestStatus,
+  };
+}
+
+export async function getTransferPortalCommunicationPairStatus(
+  firstUserId: string,
+  secondUserId: string,
+  tx: DbOrTx = db
+) {
+  const [first, second] = await Promise.all([
+    getTransferPortalCommunicationStatus(firstUserId, tx),
+    getTransferPortalCommunicationStatus(secondUserId, tx),
+  ]);
+
+  return {
+    first,
+    second,
+    isCommunicationLocked: first.isCommunicationLocked || second.isCommunicationLocked,
+  };
+}
 
 // User operations
 export const userOperations = {
@@ -1923,6 +2004,11 @@ export const notificationOperations = {
         return null; // Skip notification for admin immunity
       }
 
+      const viewedPortalStatus = await getTransferPortalCommunicationStatus(viewedUserId, tx);
+      if (viewedPortalStatus.isCommunicationLocked) {
+        return null;
+      }
+
       const viewerInfo = await profileOperations.getUserProfileInfo(viewerUserId, tx);
       if (!viewerInfo) return null;
 
@@ -1971,6 +2057,9 @@ export const notificationOperations = {
     try {
       const fromUserInfo = await profileOperations.getUserProfileInfo(fromUserId);
       if (!fromUserInfo) return null;
+
+      const portalStatus = await getTransferPortalCommunicationPairStatus(toUserId, fromUserId);
+      if (portalStatus.isCommunicationLocked) return null;
 
       // For new connection requests, check if notification already exists more robustly
       if (type === 'newConnection') {
@@ -2028,6 +2117,9 @@ export const notificationOperations = {
     try {
       const senderInfo = await profileOperations.getUserProfileInfo(senderUserId);
       if (!senderInfo) return null;
+
+      const portalStatus = await getTransferPortalCommunicationPairStatus(recipientUserId, senderUserId);
+      if (portalStatus.isCommunicationLocked) return null;
 
       return await this.createNotification(
         recipientUserId,

@@ -14,6 +14,12 @@ interface AthleteProfileWrapperProps {
   hasRejectedVerification?: boolean;
   rejectionReason?: string;
   rejectedAt?: string;
+  transferPortalStatus?: {
+    isD1D2Athlete: boolean;
+    hasApprovedTransferPortalVerification: boolean;
+    isCommunicationLocked: boolean;
+    currentRequestStatus: 'pending' | 'approved' | 'rejected' | null;
+  };
 }
 
 export function AthleteProfileWrapper({ 
@@ -26,7 +32,8 @@ export function AthleteProfileWrapper({
   pendingSubmittedAt,
   hasRejectedVerification,
   rejectionReason,
-  rejectedAt
+  rejectedAt,
+  transferPortalStatus
 }: AthleteProfileWrapperProps) {
   const handleConnect = () => {
   };
@@ -41,6 +48,7 @@ export function AthleteProfileWrapper({
       hasRejectedVerification={hasRejectedVerification}
       rejectionReason={rejectionReason}
       rejectedAt={rejectedAt}
+      transferPortalStatus={transferPortalStatus}
       connectionStatus={connectionStatus}
       connectionDirection={connectionDirection}
       connectionId={connectionId}

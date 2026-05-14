@@ -433,6 +433,7 @@ export function AthleteProfile({
   hasRejectedVerification,
   rejectionReason,
   rejectedAt,
+  transferPortalStatus,
   connectionStatus = "none",
   connectionDirection,
   connectionId
@@ -441,6 +442,7 @@ export function AthleteProfile({
   const [editDialogOpen, setEditDialogOpen] = useState<string | null>(null);
   const [measurableIdToEdit, setMeasurableIdToEdit] = useState<string | null>(null);
   const [verificationDialogOpen, setVerificationDialogOpen] = useState(false);
+  const [verificationDialogType, setVerificationDialogType] = useState<"general" | "transfer_portal">("general");
   const [profileData, setProfileData] = useState(data);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -547,6 +549,7 @@ export function AthleteProfile({
 
   const handleEditSection = (section: string, measurableId?: string) => {
     if (section === 'manual-verification') {
+      setVerificationDialogType("general");
       setVerificationDialogOpen(true);
       return;
     }
@@ -1037,6 +1040,7 @@ export function AthleteProfile({
         connectionStatus={currentConnectionStatus}
         connectionDirection={connectionDirection}
         isConnecting={isConnecting}
+        isCommunicationLocked={transferPortalStatus?.isCommunicationLocked}
         hasUnsavedChanges={hasUnsavedChanges}
         isSaving={isSaving}
         onSaveChanges={saveProfile}
@@ -1060,6 +1064,7 @@ export function AthleteProfile({
         onOpenChange={setVerificationDialogOpen}
         role="athlete"
         athleteEducationLevel={safeProfileData.educationLevel}
+        verificationType={verificationDialogType}
         onVerificationSubmitted={() => {
           // Refresh the page or update verification status
           window.location.reload();
@@ -1477,12 +1482,20 @@ export function AthleteProfile({
                 displayData={safeProfileData}
                 isOwnProfile={effectiveIsOwnProfile}
                 onEditHudl={safeProfileData.isVerified ? undefined : () => handleEditSection('hudl-highlights')}
-                onShowVerificationDialog={() => handleEditSection('manual-verification')}
+                onShowVerificationDialog={() => {
+                  setVerificationDialogType("general");
+                  handleEditSection('manual-verification');
+                }}
+                onShowTransferPortalDialog={() => {
+                  setVerificationDialogType("transfer_portal");
+                  setVerificationDialogOpen(true);
+                }}
                 hasPendingVerification={hasPendingVerification}
                 pendingSubmittedAt={pendingSubmittedAt}
                 hasRejectedVerification={hasRejectedVerification}
                 rejectionReason={rejectionReason}
                 rejectedAt={rejectedAt}
+                transferPortalStatus={transferPortalStatus}
               />
             )}
             

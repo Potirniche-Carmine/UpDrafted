@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAnyRole } from '@/utils/roles';
-import { connectionOperations } from '@/database/db-utils';
+import { connectionOperations, getTransferPortalCommunicationStatus } from '@/database/db-utils';
 import { sanitizeText } from '@/utils/sanitization';
 import { withRateLimit } from '@/utils/security';
 import { createErrorResponse, createSuccessResponse } from '@/utils/security';
@@ -200,6 +200,18 @@ export async function POST(request: NextRequest) {
     // Apply rate limiting
     const rateLimitCheck = await withRateLimit(request, 'connections', currentUserId, role);
     if (!rateLimitCheck.success) return rateLimitCheck.response;
+
+    const portalStatus = await getTransferPortalCommunicationStatus(currentUserId);
+    if (portalStatus.isCommunicationLocked) {
+      return createSuccessResponse({
+        success: true,
+        connected: [],
+        incoming: [],
+        outgoing: [],
+        counts: { connected: 0, incoming: 0, outgoing: 0 },
+        transferPortalStatus: portalStatus,
+      }, rateLimitCheck.headers);
+    }
 
     // Parse filters from request body and validate/sanitize them
     let body: unknown;

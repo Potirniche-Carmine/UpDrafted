@@ -19,6 +19,7 @@ import {
 import { useRouter } from "next/navigation";
 import { ChevronLeft, Flag, Star, Share2, Copy, Mail, MessageCircle, Save, Clock, CheckCircle, X,Edit } from "lucide-react";
 import { ReportDialog } from "./report-dialog";
+import { useTransferPortalStatus } from "@/hooks/use-transfer-portal-status";
 
 interface ProfileHeaderProps {
   isOwnProfile?: boolean;
@@ -39,6 +40,7 @@ interface ProfileHeaderProps {
   connectionStatus?: "none" | "pending" | "connected";
   connectionDirection?: "incoming" | "outgoing" | null;
   isConnecting?: boolean;
+  isCommunicationLocked?: boolean;
   // Save functionality props
   hasUnsavedChanges?: boolean;
   isSaving?: boolean;
@@ -64,14 +66,17 @@ export function ProfileHeader({
   connectionStatus = "none",
   connectionDirection,
   isConnecting = false,
+  isCommunicationLocked = false,
   hasUnsavedChanges = false,
   isSaving = false,
   onSaveChanges,
   onDiscardChanges
 }: ProfileHeaderProps) {
   const router = useRouter();
+  const { status: currentPortalStatus } = useTransferPortalStatus();
   const [showReportDialog, setShowReportDialog] = useState(false);
   const [showWithdrawDialog, setShowWithdrawDialog] = useState(false);
+  const communicationLocked = isCommunicationLocked || currentPortalStatus.isCommunicationLocked;
 
   const handleBackClick = () => {
     router.push('/discover');
@@ -296,14 +301,16 @@ export function ProfileHeader({
                         <Mail className="w-4 h-4 mr-2" />
                         Send via Email
                       </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => handleShareAction('chat')}>
-                        <MessageCircle className="w-4 h-4 mr-2" />
-                        Send over Chat
-                      </DropdownMenuItem>
+                      {!communicationLocked && (
+                        <DropdownMenuItem onClick={() => handleShareAction('chat')}>
+                          <MessageCircle className="w-4 h-4 mr-2" />
+                          Send over Chat
+                        </DropdownMenuItem>
+                      )}
                     </DropdownMenuContent>
                   </DropdownMenu>
                   
-                  {onConnect && (
+                  {onConnect && !communicationLocked && (
                     getConnectionButton()
                   )}
                 </>
@@ -388,16 +395,18 @@ export function ProfileHeader({
                         <Mail className="w-4 h-4 mr-2" />
                         Send via Email
                       </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => handleShareAction('chat')}>
-                        <MessageCircle className="w-4 h-4 mr-2" />
-                        Send over Chat
-                      </DropdownMenuItem>
+                      {!communicationLocked && (
+                        <DropdownMenuItem onClick={() => handleShareAction('chat')}>
+                          <MessageCircle className="w-4 h-4 mr-2" />
+                          Send over Chat
+                        </DropdownMenuItem>
+                      )}
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </div>
               )}
             </div>
-            {!isOwnProfile && onConnect && (
+            {!isOwnProfile && onConnect && !communicationLocked && (
               <div className="flex justify-center">
                 {getConnectionButton()}
               </div>

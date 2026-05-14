@@ -42,11 +42,18 @@ import type {
 } from "@/lib/verifications";
 
 type StatusFilter = "pending" | "approved" | "rejected";
+type TypeFilter = "all" | "general" | "transfer_portal";
 
 const STATUS_TABS: { id: StatusFilter; label: string }[] = [
   { id: "pending", label: "Pending" },
   { id: "approved", label: "Approved" },
   { id: "rejected", label: "Rejected" },
+];
+
+const TYPE_TABS: { id: TypeFilter; label: string }[] = [
+  { id: "all", label: "All" },
+  { id: "general", label: "General" },
+  { id: "transfer_portal", label: "Transfer portal" },
 ];
 
 function StatusBadge({ status }: { status: VerificationListItem["status"] }) {
@@ -58,6 +65,14 @@ function StatusBadge({ status }: { status: VerificationListItem["status"] }) {
     default:
       return <Badge variant="secondary">Pending</Badge>;
   }
+}
+
+function TypeBadge({ type }: { type: string }) {
+  return (
+    <Badge variant={type === "transfer_portal" ? "secondary" : "outline"}>
+      {type === "transfer_portal" ? "Transfer portal" : "General"}
+    </Badge>
+  );
 }
 
 type DetailState = {
@@ -86,12 +101,15 @@ type DetailState = {
 
 export function VerificationsClient({
   initialStatus,
+  initialType,
   initialQueues,
 }: {
   initialStatus: StatusFilter;
+  initialType: TypeFilter;
   initialQueues: VerificationQueueMap;
 }) {
   const [status, setStatus] = React.useState<StatusFilter>(initialStatus);
+  const [type, setType] = React.useState<TypeFilter>(initialType);
   const [queues, setQueues] = React.useState<VerificationQueueMap>(initialQueues);
   const [detail, setDetail] = React.useState<DetailState | null>(null);
   const [loadingDetail, setLoadingDetail] = React.useState(false);
@@ -102,18 +120,27 @@ export function VerificationsClient({
   const [submitting, setSubmitting] = React.useState(false);
   const [errorMsg, setErrorMsg] = React.useState<string | null>(null);
 
-  const items = queues[status];
+  const items = React.useMemo(
+    () => queues[status].filter((item) => type === "all" || item.verificationType === type),
+    [queues, status, type],
+  );
 
-  const updateStatusUrl = React.useCallback((next: StatusFilter) => {
+  const updateUrl = React.useCallback((nextStatus: StatusFilter, nextType: TypeFilter) => {
     if (typeof window === "undefined") return;
     const url = new URL(window.location.href);
-    url.searchParams.set("status", next);
+    url.searchParams.set("status", nextStatus);
+    url.searchParams.set("type", nextType);
     window.history.replaceState(window.history.state, "", url);
   }, []);
 
   const onStatusChange = (next: StatusFilter) => {
     setStatus(next);
-    updateStatusUrl(next);
+    updateUrl(next, type);
+  };
+
+  const onTypeChange = (next: TypeFilter) => {
+    setType(next);
+    updateUrl(status, next);
   };
 
   const openDetail = async (id: number) => {
@@ -258,6 +285,16 @@ export function VerificationsClient({
         </TabsList>
       </Tabs>
 
+      <Tabs value={type} onValueChange={(v) => onTypeChange(v as TypeFilter)}>
+        <TabsList>
+          {TYPE_TABS.map((t) => (
+            <TabsTrigger key={t.id} value={t.id}>
+              {t.label}
+            </TabsTrigger>
+          ))}
+        </TabsList>
+      </Tabs>
+
       {items.length === 0 ? (
         <Card>
           <CardContent className="flex min-h-72 flex-col items-center justify-center gap-3 px-6 py-14 text-center">
@@ -291,6 +328,7 @@ export function VerificationsClient({
                             {item.user?.name ?? "Unknown user"}
                           </p>
                           <StatusBadge status={item.status} />
+                          <TypeBadge type={item.verificationType} />
                           <Badge variant="outline">{item.role}</Badge>
                         </div>
                         <p className="mt-1 truncate text-xs text-[color:var(--muted-foreground)] sm:text-sm">
@@ -335,6 +373,7 @@ export function VerificationsClient({
                     {detail.request.user?.name ?? "Unknown user"}
                   </DialogTitle>
                   <StatusBadge status={detail.request.status} />
+                  <TypeBadge type={detail.request.verificationType} />
                   <Badge variant="outline">{detail.request.role}</Badge>
                 </div>
                 <DialogDescription asChild>
@@ -540,8 +579,9 @@ export function VerificationsClient({
                           </div>
                         ) : (
                           <p className="text-xs text-[color:var(--muted-foreground)]">
-                            Approving will flip the profile&apos;s verified flag and send the user
-                            an approval email.
+                            {detail.request.verificationType === "transfer_portal"
+                              ? "Approving will unlock communication and send the user an approval email."
+                              : "Approving will flip the profile's verified flag and send the user an approval email."}
                           </p>
                         )}
                         <div className="space-y-1.5">

@@ -3,7 +3,7 @@
 import React from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Plus, Shield, ExternalLink, Clock, X } from "lucide-react";
+import { Plus, Shield, ExternalLink, Clock, X, Lock } from "lucide-react";
 import { AthleteProfileData } from "./athlete-profile-types";
 
 interface VerificationSectionProps {
@@ -17,6 +17,13 @@ interface VerificationSectionProps {
   hasRejectedVerification?: boolean;
   rejectionReason?: string;
   rejectedAt?: string;
+  transferPortalStatus?: {
+    isD1D2Athlete: boolean;
+    hasApprovedTransferPortalVerification: boolean;
+    isCommunicationLocked: boolean;
+    currentRequestStatus: 'pending' | 'approved' | 'rejected' | null;
+  };
+  onShowTransferPortalDialog?: () => void;
 }
 
 export function VerificationSection({
@@ -29,7 +36,9 @@ export function VerificationSection({
   pendingSubmittedAt,
   hasRejectedVerification = false,
   rejectionReason,
-  rejectedAt
+  rejectedAt,
+  transferPortalStatus,
+  onShowTransferPortalDialog
 }: VerificationSectionProps) {
 
   // Use displayData for UI display, profileData for verification logic
@@ -42,9 +51,10 @@ export function VerificationSection({
   const shouldShowGeneralManual = !currentData.isVerified && !hasPendingVerification && !hasRejectedVerification;
   const shouldShowGeneralPending = hasPendingVerification;
   const shouldShowGeneralRejected = hasRejectedVerification;
+  const shouldShowTransferPortal = !!transferPortalStatus?.isD1D2Athlete && !transferPortalStatus.hasApprovedTransferPortalVerification;
 
   // Determine if we should show the verification section (not including Hudl display)
-  const shouldShowVerificationSection = shouldShowGeneralManual || shouldShowGeneralPending || shouldShowGeneralRejected;
+  const shouldShowVerificationSection = shouldShowGeneralManual || shouldShowGeneralPending || shouldShowGeneralRejected || shouldShowTransferPortal;
 
   // If no verification sections needed, don't render
   if (!shouldShowVerificationSection) {
@@ -69,6 +79,46 @@ export function VerificationSection({
       </CardHeader>
       
       <CardContent className="space-y-6">
+        {shouldShowTransferPortal && (
+          <div className="bg-amber-50 dark:bg-amber-950/20 rounded-xl p-4 sm:p-6 border border-amber-200 dark:border-amber-800">
+            <div className="text-center space-y-3 sm:space-y-4">
+              <div className="w-12 h-12 sm:w-16 sm:h-16 bg-amber-100 dark:bg-amber-900 rounded-full flex items-center justify-center mx-auto">
+                <Lock className="w-6 h-6 sm:w-8 sm:h-8 text-amber-600" />
+              </div>
+
+              <div className="space-y-3">
+                <h3 className="font-semibold text-base sm:text-lg text-amber-900 dark:text-amber-100">
+                  Transfer Portal Verification Required
+                </h3>
+                <p className="text-sm text-amber-700 dark:text-amber-200 px-2 sm:px-4">
+                  NCAA Division I and II athletes cannot use connections, messages, notifications, or activity until transfer portal verification is approved.
+                </p>
+                {transferPortalStatus.currentRequestStatus === 'pending' && (
+                  <div className="inline-block px-3 py-2 bg-amber-100 dark:bg-amber-900/50 rounded-lg text-xs font-medium text-amber-800 dark:text-amber-200">
+                    Transfer portal request pending review
+                  </div>
+                )}
+                {transferPortalStatus.currentRequestStatus === 'rejected' && (
+                  <p className="text-sm text-amber-800 dark:text-amber-200">
+                    Your prior transfer portal request was not approved. Upload a current screenshot or PDF of the confirmation email to reapply.
+                  </p>
+                )}
+              </div>
+              {isOwnProfile && transferPortalStatus.currentRequestStatus !== 'pending' && onShowTransferPortalDialog && (
+                <div className="pt-2">
+                  <Button
+                    onClick={onShowTransferPortalDialog}
+                    className="w-full sm:w-auto bg-amber-600 hover:bg-amber-700 text-white text-sm sm:text-base py-2.5 sm:py-2 px-4 sm:px-6"
+                  >
+                    <Shield className="w-4 h-4 mr-2 flex-shrink-0" />
+                    Submit Transfer Portal Verification
+                  </Button>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* Manual Verification Section */}
         {shouldShowGeneralManual && (
           <div className="bg-white dark:bg-slate-800 rounded-xl p-4 sm:p-6 border border-slate-200 dark:border-slate-700">

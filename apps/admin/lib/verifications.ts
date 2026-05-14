@@ -19,6 +19,8 @@ export type VerificationStatusFilter =
   | "approved"
   | "rejected";
 
+export type VerificationTypeFilter = "all" | "general" | "transfer_portal";
+
 const VERIFICATION_STATUS_FILTERS: readonly VerificationStatusFilter[] = [
   "pending",
   "approved",
@@ -41,8 +43,16 @@ export type VerificationQueueMap = Record<VerificationStatusFilter, Verification
 export async function listVerifications(
   admin: AdminSession,
   statusFilter: VerificationStatusFilter = "pending",
+  typeFilter: VerificationTypeFilter = "all",
 ): Promise<VerificationListItem[]> {
   return executeAsAdmin(admin, async (tx) => {
+    const where = typeFilter === "all"
+      ? eq(verificationRequests.status, statusFilter)
+      : and(
+          eq(verificationRequests.status, statusFilter),
+          eq(verificationRequests.verificationType, typeFilter),
+        );
+
     const rows = await tx
       .select({
         id: verificationRequests.id,
@@ -57,7 +67,7 @@ export async function listVerifications(
       })
       .from(verificationRequests)
       .leftJoin(users, eq(users.id, verificationRequests.userId))
-      .where(eq(verificationRequests.status, statusFilter))
+      .where(where)
       .orderBy(desc(verificationRequests.submittedAt))
       .limit(200);
 
@@ -76,6 +86,7 @@ export async function listVerifications(
 
 export async function listVerificationQueues(
   admin: AdminSession,
+  typeFilter: VerificationTypeFilter = "all",
 ): Promise<VerificationQueueMap> {
   return executeAsAdmin(admin, async (tx) => {
     const queues: VerificationQueueMap = {
@@ -85,6 +96,13 @@ export async function listVerificationQueues(
     };
 
     for (const statusFilter of VERIFICATION_STATUS_FILTERS) {
+      const where = typeFilter === "all"
+        ? eq(verificationRequests.status, statusFilter)
+        : and(
+            eq(verificationRequests.status, statusFilter),
+            eq(verificationRequests.verificationType, typeFilter),
+          );
+
       const rows = await tx
         .select({
           id: verificationRequests.id,
@@ -99,7 +117,7 @@ export async function listVerificationQueues(
         })
         .from(verificationRequests)
         .leftJoin(users, eq(users.id, verificationRequests.userId))
-        .where(eq(verificationRequests.status, statusFilter))
+        .where(where)
         .orderBy(desc(verificationRequests.submittedAt))
         .limit(200);
 
@@ -284,7 +302,7 @@ export async function applyVerificationAction(
         .where(eq(verificationRequests.id, requestId));
 
       const role = request.role as VerifiableRole;
-      if ((VERIFIABLE_ROLES as readonly string[]).includes(role)) {
+      if (request.verificationType === "general" && (VERIFIABLE_ROLES as readonly string[]).includes(role)) {
         const profileTable =
           role === "athlete"
             ? athleteProfiles

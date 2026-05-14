@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic";
 export default async function VerificationsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ status?: string }>;
+  searchParams: Promise<{ status?: string; type?: string }>;
 }) {
   const session = await getAdminSession();
   if (!session) redirect("/sign-in");
@@ -20,8 +20,14 @@ export default async function VerificationsPage({
       ? statusParam
       : "pending"
   ) as "pending" | "approved" | "rejected";
+  const typeParam = params.type ?? "all";
+  const type = (
+    ["all", "general", "transfer_portal"].includes(typeParam)
+      ? typeParam
+      : "all"
+  ) as "all" | "general" | "transfer_portal";
 
   const queues = await listVerificationQueues(session);
 
-  return <VerificationsClient initialStatus={status} initialQueues={queues} />;
+  return <VerificationsClient initialStatus={status} initialType={type} initialQueues={queues} />;
 }

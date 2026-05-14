@@ -30,6 +30,7 @@ interface VerificationDialogProps {
   onOpenChange: (open: boolean) => void;
   role: "coach" | "recruiter" | "athlete";
   athleteEducationLevel?: string;
+  verificationType?: "general" | "transfer_portal";
   onVerificationSubmitted?: () => void;
 }
 
@@ -62,6 +63,7 @@ export function VerificationDialog({
   onOpenChange, 
   role, 
   athleteEducationLevel,
+  verificationType = "general",
   onVerificationSubmitted 
 }: VerificationDialogProps) {
   const { userId } = useAuth();
@@ -73,6 +75,7 @@ export function VerificationDialog({
   const [submitSuccess, setSubmitSuccess] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const isHighSchoolAthlete = role === "athlete" && athleteEducationLevel === "high_school";
+  const isTransferPortalVerification = verificationType === "transfer_portal";
 
   // Reset form when dialog opens/closes
   React.useEffect(() => {
@@ -95,6 +98,11 @@ export function VerificationDialog({
     const uploadedFiles = Array.from(event.target.files || []);
     
     uploadedFiles.forEach((file) => {
+      if (isTransferPortalVerification && !file.type.startsWith("image/") && file.type !== "application/pdf") {
+        setErrorMessage("Transfer portal verification only accepts image or PDF uploads.");
+        return;
+      }
+
       let fileType: "pdf" | "image" | "link";
       if (file.type.startsWith("image/")) {
         fileType = "image";
@@ -199,7 +207,13 @@ export function VerificationDialog({
           description: f.description,
         }));
 
-      if (isHighSchoolAthlete && !links.some((link) => isAthleteVerificationLink(link.url))) {
+      const filesToUpload = files.filter(f => f.file && !f.uploaded);
+
+      if (isTransferPortalVerification && filesToUpload.length === 0) {
+        throw new Error('Transfer portal verification requires a screenshot or PDF upload.');
+      }
+
+      if (!isTransferPortalVerification && isHighSchoolAthlete && !links.some((link) => isAthleteVerificationLink(link.url))) {
         throw new Error('High school athlete verification requires at least one Hudl or MaxPreps profile link.');
       }
 
@@ -211,6 +225,8 @@ export function VerificationDialog({
         body: JSON.stringify({
           role,
           additionalInfo,
+          verificationType,
+          hasFiles: filesToUpload.length > 0,
           links,
         }),
       });
@@ -223,8 +239,6 @@ export function VerificationDialog({
       const { verificationRequest } = await submitResponse.json();
 
       // Upload files if any
-      const filesToUpload = files.filter(f => f.file && !f.uploaded);
-      
       if (filesToUpload.length > 0) {
         // Upload files one by one
         for (const file of filesToUpload) {
@@ -267,6 +281,19 @@ export function VerificationDialog({
 
   // Get content based on role and verification type
   const getVerificationContent = () => {
+    if (isTransferPortalVerification) {
+      return {
+        title: "Transfer Portal Verification",
+        description: "Submit proof that you are in the transfer portal so communication can be enabled.",
+        proofList: [
+          "• Screenshot of the email confirming you are in the transfer portal",
+          "• PDF export of the transfer portal confirmation email",
+          "• Image of the official confirmation page or notice"
+        ],
+        helpText: "Upload an image or PDF of the transfer portal confirmation email. Hudl and MaxPreps links are not required.",
+      };
+    }
+
     if (role === "athlete") {
       return {
         title: "Get Verified as an Athlete",
@@ -351,7 +378,7 @@ export function VerificationDialog({
             {role === "athlete" && (
               <div className="mt-3 p-2 bg-blue-100 dark:bg-blue-900/30 rounded border border-blue-200 dark:border-blue-800">
                 <p className="text-xs sm:text-sm text-blue-700 dark:text-blue-200 font-medium">
-                  💡 {verificationContent?.helpText}
+                {verificationContent?.helpText}
                 </p>
               </div>
             )}
@@ -367,7 +394,9 @@ export function VerificationDialog({
                 id="file-upload"
                 type="file"
                 multiple
-                accept=".pdf,.jpg,.jpeg,.png,.mp4,.mov,image/jpeg,image/jpg,image/png,image/webp,video/mp4,video/quicktime"
+                accept={isTransferPortalVerification
+                  ? ".pdf,.jpg,.jpeg,.png,image/jpeg,image/jpg,image/png,image/webp,application/pdf"
+                  : ".pdf,.jpg,.jpeg,.png,.mp4,.mov,image/jpeg,image/jpg,image/png,image/webp,video/mp4,video/quicktime"}
                 onChange={handleFileUpload}
                 className="hidden"
                 capture="environment"
@@ -384,7 +413,9 @@ export function VerificationDialog({
                 </span>
               </Button>
               <p className="text-xs text-muted-foreground mt-1">
-                {role === "athlete"
+                {isTransferPortalVerification
+                  ? 'Upload a screenshot or PDF of the email confirming you are in the transfer portal. Max 10MB per file.'
+                  : role === "athlete"
                   ? (isHighSchoolAthlete
                     ? 'High school athletes must include at least one Hudl or MaxPreps link. Files are optional supporting evidence. Max 10MB per file.'
                     : 'Upload supporting evidence here. Max 10MB per file.')
@@ -394,6 +425,7 @@ export function VerificationDialog({
           </div>
 
           {/* Add Link */}
+          {!isTransferPortalVerification && (
           <div>
             <Label className="text-sm sm:text-base font-medium">Add Website Links</Label>
             <div className="mt-2 space-y-3">
@@ -435,6 +467,7 @@ export function VerificationDialog({
               </Button>
             </div>
           </div>
+          )}
 
           {/* Submitted Files */}
           {files.length > 0 && (
@@ -550,7 +583,7 @@ export function VerificationDialog({
                 </div>
                 <div className="flex-1 min-w-0">
                   <h3 className="text-lg font-semibold text-green-900 dark:text-green-100 mb-2">
-                    Verification Submitted Successfully! 🎉
+                    Verification Submitted Successfully!
                   </h3>
                   <div className="space-y-2 text-sm text-green-800 dark:text-green-200">
                     <p>
@@ -558,13 +591,15 @@ export function VerificationDialog({
                     </p>
                     <div className="bg-green-100 dark:bg-green-900/50 rounded-lg p-3 border border-green-200 dark:border-green-700">
                       <p className="font-medium text-green-900 dark:text-green-100 mb-1">
-                        ⏰ What happens next?
+                        What happens next?
                       </p>
                       <ul className="text-green-800 dark:text-green-200 space-y-1">
                         <li>• We&apos;ll usually review your submission within 1-2 hours</li>
                         <li>• In busy periods, review can take up to 48 hours</li>
-                        <li>• Once approved, a verified badge will appear on your profile</li>
-                        <li>• This badge shows other users that you&apos;re a legitimate {role}</li>
+                        <li>• Once approved, {isTransferPortalVerification ? 'communication will be enabled' : 'a verified badge will appear on your profile'}</li>
+                        {!isTransferPortalVerification && (
+                          <li>• This badge shows other users that you&apos;re a legitimate {role}</li>
+                        )}
                       </ul>
                     </div>
                     <p className="text-xs text-green-700 dark:text-green-300">

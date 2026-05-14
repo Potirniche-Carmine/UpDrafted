@@ -94,6 +94,12 @@ export interface AthleteProfileProps {
   hasRejectedVerification?: boolean;
   rejectionReason?: string;
   rejectedAt?: string;
+  transferPortalStatus?: {
+    isD1D2Athlete: boolean;
+    hasApprovedTransferPortalVerification: boolean;
+    isCommunicationLocked: boolean;
+    currentRequestStatus: 'pending' | 'approved' | 'rejected' | null;
+  };
   connectionStatus?: "none" | "pending" | "connected";
   connectionDirection?: "incoming" | "outgoing" | null;
   connectionId?: number | null;
